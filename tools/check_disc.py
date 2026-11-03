@@ -4,13 +4,16 @@
 Comprueba que un disco extraído coincide con el binario objetivo (G4AEE9 rev 0).
 
 Usage / Uso:
-    python3 tools/check_disc.py disc/
+    python3 tools/check_disc.py orig/G4AEE9
 """
 
 import hashlib
-import struct
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from dol import Dol  # noqa: E402
 
 EXPECTED_GAME_ID = b"G4AEE9"
 EXPECTED_REVISION = 0
@@ -18,11 +21,11 @@ EXPECTED_DOL_SHA1 = "5977972cd798d60ecfcf5c1f26a86dcecc36446f"
 
 
 def sha1_of(path: Path) -> str:
-    h = hashlib.sha1()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    hasher = hashlib.sha1()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1 << 20), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def main() -> int:
@@ -31,45 +34,47 @@ def main() -> int:
         return 1
 
     disc = Path(sys.argv[1])
-    boot = disc / "sys" / "boot.bin"
-    dol = disc / "sys" / "main.dol"
+    boot_path = disc / "sys" / "boot.bin"
+    dol_path = disc / "sys" / "main.dol"
 
-    if not boot.is_file() or not dol.is_file():
+    if not boot_path.is_file() or not dol_path.is_file():
         print(f"{disc} does not look like an extracted disc (missing sys/boot.bin or sys/main.dol)")
         return 1
 
-    header = boot.read_bytes()
-    game_id = header[0:6]
-    revision = header[7]
-    title = header[0x20:0x60].split(b"\0", 1)[0].decode("ascii", "replace")
+    # boot.bin starts with the disc header: game ID at 0x00, revision at
+    # 0x07, internal title at 0x20.
+    disc_header = boot_path.read_bytes()
+    game_id = disc_header[0:6]
+    revision = disc_header[7]
+    title = disc_header[0x20:0x60].split(b"\0", 1)[0].decode("ascii", "replace")
 
-    ok = True
+    matches_target = True
     print(f"Title:    {title}")
     print(f"Game ID:  {game_id.decode()}  (expected {EXPECTED_GAME_ID.decode()})")
     print(f"Revision: {revision}  (expected {EXPECTED_REVISION})")
     if game_id != EXPECTED_GAME_ID or revision != EXPECTED_REVISION:
-        ok = False
+        matches_target = False
 
-    digest = sha1_of(dol)
-    print(f"main.dol: {digest}")
-    if digest != EXPECTED_DOL_SHA1:
+    dol_sha1 = sha1_of(dol_path)
+    print(f"main.dol: {dol_sha1}")
+    if dol_sha1 != EXPECTED_DOL_SHA1:
         print(f"          expected {EXPECTED_DOL_SHA1}")
-        ok = False
+        matches_target = False
 
-    # Print the DOL layout; handy when comparing against the docs.
-    data = dol.read_bytes()
-    offsets = struct.unpack(">18I", data[0:72])
-    addrs = struct.unpack(">18I", data[72:144])
-    sizes = struct.unpack(">18I", data[144:216])
-    bss_addr, bss_size, entry = struct.unpack(">3I", data[216:228])
-    print(f"entry:    0x{entry:08X}   bss: 0x{bss_addr:08X} (+0x{bss_size:X})")
-    for i in range(18):
-        if sizes[i]:
-            kind = f"text{i}" if i < 7 else f"data{i - 7}"
-            print(f"  {kind:6} file 0x{offsets[i]:08X}  addr 0x{addrs[i]:08X}  size 0x{sizes[i]:08X}")
+    # The DOL layout, handy when comparing against docs/DISC_ANALYSIS.md.
+    dol = Dol(dol_path)
+    print(f"entry:    0x{dol.entry:08X}   bss: 0x{dol.bss_address:08X} (+0x{dol.bss_size:X})")
+    for section in dol.sections:
+        print(
+            f"  {section.name:6} file 0x{section.file_offset:08X}  "
+            f"address 0x{section.address:08X}  size 0x{section.size:08X}"
+        )
 
-    print("\nOK: this is the target binary." if ok else "\nMISMATCH: this is not the target binary.")
-    return 0 if ok else 2
+    if matches_target:
+        print("\nOK: this is the target binary.")
+        return 0
+    print("\nMISMATCH: this is not the target binary.")
+    return 2
 
 
 if __name__ == "__main__":
