@@ -175,7 +175,12 @@ extract_disc() {
 
     install_nodtool
     step "Extracting your disc into $EXTRACTED_DIRECTORY"
-    python3 "$REPOSITORY_ROOT/tools/extract_disc.py" "$disc_image" "$EXTRACTED_DIRECTORY"
+    # Extract beside the final folder and rename it once done, so a stopped
+    # extraction never looks finished; whatever it left behind is redone.
+    local partial_directory="$EXTRACTED_DIRECTORY.partial"
+    rm -rf "$partial_directory" "$EXTRACTED_DIRECTORY"
+    python3 "$REPOSITORY_ROOT/tools/extract_disc.py" "$disc_image" "$partial_directory"
+    mv "$partial_directory" "$EXTRACTED_DIRECTORY"
 }
 
 # Checked on every run, so a wrong disc never reaches the recompiler.
