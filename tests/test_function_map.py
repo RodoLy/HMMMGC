@@ -16,7 +16,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 from dol import Dol  # noqa: E402
-from function_finder import FunctionFinder, find_small_data_bases  # noqa: E402
+from function_finder import INSTRUCTION_SIZE, FunctionFinder, find_small_data_bases  # noqa: E402
 from sdk_names import name_sdk_functions  # noqa: E402
 
 DOL_PATH = os.environ.get("HM_MM_DOL")
@@ -30,9 +30,26 @@ def finder() -> FunctionFinder:
     return finder
 
 
+# Known-good totals for G4AEE9. If an improvement to the analysis changes
+# them, update them here on purpose, in the same commit, and say why.
+EXPECTED_EXCEPTION_INDEX_FUNCTIONS = 2597
+EXPECTED_FUNCTIONS = 4486
+EXPECTED_JUMP_TABLES = 274
+EXPECTED_JUMP_TABLES_WITHOUT_BOUNDS_CHECK = 4
+EXPECTED_SDK_LIBRARIES = 13
+# The DOL header rounds every section size up to a multiple of 32 bytes.
+DOL_SECTION_ALIGNMENT = 32
+
+
 def test_walker_agrees_with_every_extabindex_entry(finder):
-    assert len(finder.exception_index_sizes) == 2597
+    assert len(finder.exception_index_sizes) == EXPECTED_EXCEPTION_INDEX_FUNCTIONS
     assert finder.compare_with_exception_index() == []
+
+
+def test_known_good_totals(finder):
+    assert len(finder.function_sizes) == EXPECTED_FUNCTIONS
+    assert len(finder.jump_tables) == EXPECTED_JUMP_TABLES
+    assert len(finder.unbounded_jump_table_bctrs) == EXPECTED_JUMP_TABLES_WITHOUT_BOUNDS_CHECK
 
 
 def test_no_function_overlaps_another(finder):
@@ -40,7 +57,7 @@ def test_no_function_overlaps_another(finder):
 
 
 def test_every_switch_table_is_accepted(finder):
-    assert finder.rejected_jump_tables == []
+    assert finder.rejected_jump_table_bctrs == []
 
 
 def test_no_branch_leaves_its_function(finder):
@@ -48,7 +65,7 @@ def test_no_branch_leaves_its_function(finder):
     `b` either stays inside or is a tail call to another function's start."""
     for start, size in finder.function_sizes.items():
         end = start + size
-        for address in range(start, end, 4):
+        for address in range(start, end, INSTRUCTION_SIZE):
             instruction = finder.instructions[address]
             target = instruction.branch_target()
             if instruction.is_conditional_branch:
@@ -60,7 +77,7 @@ def test_no_branch_leaves_its_function(finder):
 def test_all_real_code_is_covered(finder):
     covered = set()
     for start, size in finder.function_sizes.items():
-        covered.update(range(start, start + size, 4))
+        covered.update(range(start, start + size, INSTRUCTION_SIZE))
     leftovers = [
         address
         for address in finder.instructions
@@ -69,13 +86,14 @@ def test_all_real_code_is_covered(finder):
     assert leftovers == []
 
 
-def test_startup_tables_match_the_dol_header(finder):
-    """_rom_copy_info lists the same sections the DOL header does (the DOL
-    rounds sizes up to 32 bytes, the table has the exact sizes)."""
+def test_startup_tables_list_exactly_the_dol_sections(finder):
+    """_rom_copy_info lists exactly the sections of the DOL header, in both
+    directions. The DOL rounds sizes up; the table has the exact sizes."""
     copied = {destination: size for _, destination, size in finder.rom_copy_entries()}
+    assert set(copied) == {section.address for section in finder.dol.sections}
     for section in finder.dol.sections:
-        assert section.address in copied
-        assert copied[section.address] <= section.size < copied[section.address] + 32
+        exact_size = copied[section.address]
+        assert exact_size <= section.size < exact_size + DOL_SECTION_ALIGNMENT
 
 
 def test_small_data_bases_come_from_init_registers(finder):
@@ -92,4 +110,4 @@ def test_sdk_init_chain_names(finder):
     # AX splits its init: AXInit() { AXInitEx(0); }
     assert by_name["AXInit"] == 0x8017FEDC
     assert by_name["AXInitEx"] == 0x8017FF00
-    assert len(names.libraries) == 13
+    assert len(names.libraries) == EXPECTED_SDK_LIBRARIES

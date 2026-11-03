@@ -33,10 +33,13 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from dol import Dol
-from function_finder import FunctionFinder
+from function_finder import INSTRUCTION_SIZE, FunctionFinder
 
 VERSION_STRING_PREFIXES = (b"<< Dolphin SDK - ", b"<< RVL_SDK - ")
 LIBRARY_NAME = re.compile(rb"<< (?:Dolphin SDK|RVL_SDK) - (\w+)")
+# Enough bytes to cover the prefix and the longest library name.
+VERSION_STRING_HEAD_SIZE = 48
+POINTER_SIZE = 4
 
 # Instructions allowed between loading __<LIB>Version and calling
 # OSRegisterVersion with it.
@@ -44,6 +47,8 @@ REGISTER_VERSION_CALL_LOOKAHEAD = 6
 # An "Init calls InitEx(0)" wrapper is a tiny function: prologue, li r3, 0,
 # bl, epilogue.
 EX_WRAPPER_MAX_INSTRUCTIONS = 12
+# The PowerPC EABI passes the first integer argument in r3.
+FIRST_ARGUMENT_REGISTER = 3
 
 
 @dataclass
@@ -74,13 +79,16 @@ def find_sdk_libraries(dol: Dol, finder: FunctionFinder) -> list[SdkLibrary]:
     ordered_starts = sorted(finder.function_sizes)
     libraries = []
     for string_address in _version_string_addresses(dol):
-        library_name = LIBRARY_NAME.match(dol.read(string_address, 48)).group(1).decode()
+        name_match = LIBRARY_NAME.match(dol.read_up_to(string_address, VERSION_STRING_HEAD_SIZE))
+        if name_match is None:
+            continue
+        library_name = name_match.group(1).decode()
 
         # The global is the one data word that holds the string's address.
         holders = [
             address
-            for address in dol.find_bytes(string_address.to_bytes(4, "big"))
-            if not dol.is_code(address) and address % 4 == 0
+            for address in dol.find_bytes(string_address.to_bytes(POINTER_SIZE, "big"))
+            if not dol.is_code(address) and address % POINTER_SIZE == 0
         ]
         if len(holders) != 1:
             continue
@@ -107,48 +115,63 @@ def find_sdk_libraries(dol: Dol, finder: FunctionFinder) -> list[SdkLibrary]:
 
 def _first_call_after(finder: FunctionFinder, address: int) -> int | None:
     for step in range(1, REGISTER_VERSION_CALL_LOOKAHEAD + 1):
-        instruction = finder.instructions.get(address + 4 * step)
+        instruction = finder.instructions.get(address + INSTRUCTION_SIZE * step)
         if instruction is not None and instruction.is_call:
             return instruction.branch_target()
     return None
 
 
+def _is_tail_call(finder: FunctionFinder, function_start: int, address: int) -> bool:
+    """A `b` at address that leaves the function for another one's start."""
+    instruction = finder.instructions[address]
+    if not instruction.is_jump:
+        return False
+    target = instruction.branch_target()
+    function_end = function_start + finder.function_sizes[function_start]
+    return target in finder.function_sizes and not function_start <= target < function_end
+
+
 def _calls_inside(finder: FunctionFinder, function_start: int) -> list[int]:
-    size = finder.function_sizes[function_start]
+    """Functions called (bl) or tail-called (b) from inside a function."""
+    function_end = function_start + finder.function_sizes[function_start]
     return [
         finder.instructions[address].branch_target()
-        for address in range(function_start, function_start + size, 4)
-        if finder.instructions[address].is_call
+        for address in range(function_start, function_end, INSTRUCTION_SIZE)
+        if finder.instructions[address].is_call or _is_tail_call(finder, function_start, address)
     ]
 
 
 def _call_sites(finder: FunctionFinder) -> dict[int, list[int]]:
-    """target -> addresses of every bl or tail-call b that reaches it."""
+    """function start -> addresses of every bl or tail-call b that reaches it."""
     sites = defaultdict(list)
-    for address, instruction in finder.instructions.items():
-        if instruction.is_call or instruction.is_jump:
-            sites[instruction.branch_target()].append(address)
+    for function_start, size in finder.function_sizes.items():
+        for address in range(function_start, function_start + size, INSTRUCTION_SIZE):
+            instruction = finder.instructions[address]
+            if instruction.is_call or _is_tail_call(finder, function_start, address):
+                sites[instruction.branch_target()].append(address)
     return sites
 
 
 def _ex_wrapper_of(
-    finder: FunctionFinder, function_start: int, call_sites: dict[int, list[int]]
+    finder: FunctionFinder,
+    function_start: int,
+    call_sites: dict[int, list[int]],
+    ordered_starts: list[int],
 ) -> int | None:
     """The `XInit() { XInitEx(0); }` wrapper around function_start, if any."""
     sites = call_sites.get(function_start, [])
     if len(sites) != 1:
         return None
-    ordered_starts = sorted(finder.function_sizes)
     wrapper = finder.function_containing(sites[0], ordered_starts)
-    if wrapper is None or finder.function_sizes[wrapper] > 4 * EX_WRAPPER_MAX_INSTRUCTIONS:
+    if wrapper is None or finder.function_sizes[wrapper] > INSTRUCTION_SIZE * EX_WRAPPER_MAX_INSTRUCTIONS:
         return None
     if _calls_inside(finder, wrapper) != [function_start]:
         return None
     passes_zero = any(
         finder.instructions[address].is_load_immediate
-        and finder.instructions[address].rd == 3
+        and finder.instructions[address].rd == FIRST_ARGUMENT_REGISTER
         and finder.instructions[address].signed_immediate == 0
-        for address in range(wrapper, sites[0], 4)
+        for address in range(wrapper, sites[0], INSTRUCTION_SIZE)
     )
     return wrapper if passes_zero else None
 
@@ -169,9 +192,10 @@ def name_sdk_functions(dol: Dol, finder: FunctionFinder) -> SdkNames:
             functions[calls[0]] = "OSReport"
 
     call_sites = _call_sites(finder)
+    ordered_starts = sorted(finder.function_sizes)
     for library in libraries:
         variables[library.version_variable] = f"__{library.name}Version"
-        wrapper = _ex_wrapper_of(finder, library.init_function, call_sites)
+        wrapper = _ex_wrapper_of(finder, library.init_function, call_sites, ordered_starts)
         if wrapper is None:
             functions[library.init_function] = f"{library.name}Init"
         else:

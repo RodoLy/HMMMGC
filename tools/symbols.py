@@ -11,48 +11,37 @@ en todos los decomps de GameCube/Wii basados en dtk. Un símbolo por línea:
     OSInit = .text:0x8016EF2C; // type:function size:0x4E0
     jumptable_80202AB4 = .data:0x80202AB4; // type:object size:0x30 scope:local
 
-Names that people give by hand are kept when the file is regenerated;
-generated placeholders (fn_XXXXXXXX, ...) are replaced freely.
+When the file is regenerated, names people gave by hand are kept (with
+their scope and any extra attributes); generated placeholders
+(fn_XXXXXXXX, ...) are replaced freely. Sizes come from the analysis, and
+every size that changes for a hand-named symbol is reported. Lines that do
+not parse are reported too, never dropped silently.
 
-Los nombres puestos a mano se conservan al regenerar el archivo; los
-genéricos (fn_XXXXXXXX, ...) se reemplazan libremente.
+Al regenerar el archivo se conservan los nombres puestos a mano (con su
+scope y atributos extra); los genéricos (fn_XXXXXXXX, ...) se reemplazan
+libremente. Los tamaños salen del análisis y se reporta cada cambio en un
+símbolo con nombre. Las líneas que no se entienden también se reportan.
 """
 
 import bisect
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from codewarrior import BSS_SECTION_NAMES, SECTION_NAMES
 from dol import Dol
-
-# DOL section -> the section name CodeWarrior gave it. makedol always writes
-# them in this order; the content confirms each one (data1 is a table of
-# function/size/extab triples, data2 and data3 are NULL-terminated function
-# lists, and _rom_copy_info lists the same addresses). See docs/FUNCTION_MAP.md.
-SECTION_NAMES = {
-    "text0": ".init",
-    "text1": ".text",
-    "data0": "extab",
-    "data1": "extabindex",
-    "data2": ".ctors",
-    "data3": ".dtors",
-    "data4": ".rodata",
-    "data5": ".data",
-    "data6": ".sdata",
-    "data7": ".sdata2",
-}
 
 # Prefixes of names the tools make up. Anything else was chosen by a person
 # (or by a naming rule with evidence) and must survive regeneration.
 GENERATED_NAME_PREFIXES = ("fn_", "jumptable_", "string_", "lbl_")
 
+# `name = section:0xADDRESS; // key:value key:value ...`, spacing tolerant.
 SYMBOL_LINE = re.compile(
-    r"^(?P<name>\S+) = (?P<section>\S+):0x(?P<address>[0-9A-Fa-f]+);"
-    r" // type:(?P<kind>\w+)"
-    r"(?: size:0x(?P<size>[0-9A-Fa-f]+))?"
-    r"(?: scope:(?P<scope>\w+))?"
+    r"^\s*(?P<name>\S+)\s*=\s*(?P<section>[^:\s]+):0x(?P<address>[0-9A-Fa-f]+)\s*;"
+    r"\s*(?://\s*(?P<attributes>.*))?$"
 )
+COMMENT_LINE = re.compile(r"^\s*(//|#|$)")
 
 
 @dataclass
@@ -63,31 +52,44 @@ class Symbol:
     kind: str  # "function" or "object"
     size: int
     scope: str | None = None
+    # Other dtk attributes (align:4, data:string, ...), kept as written.
+    extra_attributes: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def has_generated_name(self) -> bool:
         return self.name.startswith(GENERATED_NAME_PREFIXES)
 
     def to_line(self) -> str:
-        line = f"{self.name} = {self.section}:0x{self.address:08X}; // type:{self.kind} size:0x{self.size:X}"
+        attributes = [f"type:{self.kind}", f"size:0x{self.size:X}"]
         if self.scope:
-            line += f" scope:{self.scope}"
-        return line
+            attributes.append(f"scope:{self.scope}")
+        attributes.extend(self.extra_attributes)
+        return f"{self.name} = {self.section}:0x{self.address:08X}; // {' '.join(attributes)}"
 
 
-def section_name_for(dol: Dol, address: int) -> str:
-    """Section name for an address, including .bss/.sbss which the DOL does
-    not store as sections."""
+def section_name_for(dol: Dol, address: int, bss_ranges: Iterable[tuple[int, int]] = ()) -> str:
+    """Linker section name for an address.
+
+    The DOL header keeps the zero-initialised sections as one combined range,
+    so their individual names come from bss_ranges: the (address, size)
+    pairs of _bss_init_info, which list .bss, .sbss and .sbss2 in order."""
     section = dol.section_at(address)
     if section is not None:
+        if section.name not in SECTION_NAMES:
+            raise ValueError(f"no linker name known for DOL section {section.name}")
         return SECTION_NAMES[section.name]
-    return ".bss"
+    for name, (start, size) in zip(BSS_SECTION_NAMES, bss_ranges, strict=False):
+        if start <= address < start + size:
+            return name
+    raise ValueError(f"0x{address:08X} is not inside any section of {dol.path.name}")
 
 
 class SymbolTable:
     def __init__(self, symbols: Iterable[Symbol] = ()):
         self.by_address: dict[int, Symbol] = {}
         self._sorted_addresses: list[int] | None = None  # built on first lookup
+        # Lines read() could not understand, as (line number, text).
+        self.unparsed_lines: list[tuple[int, str]] = []
         for symbol in symbols:
             self.add(symbol)
 
@@ -123,8 +125,12 @@ class SymbolTable:
         return f"0x{address:08X}"
 
     def keep_names_from(self, previous: "SymbolTable") -> list[str]:
-        """Copy hand-given names from an earlier symbols.txt onto the same
-        addresses. Returns warnings for names that no longer match anything."""
+        """Carry what people decided in an earlier symbols.txt over to this one.
+
+        For every symbol with a hand-given name: the name, the scope and any
+        extra attributes are kept. The size comes from the analysis, which
+        can improve, but every change against the earlier file is reported so
+        a person can check it. Returns those reports as warnings."""
         warnings = []
         for address, old in previous.by_address.items():
             if old.has_generated_name:
@@ -135,7 +141,11 @@ class SymbolTable:
                 continue
             if not current.has_generated_name and current.name != old.name:
                 warnings.append(f"0x{address:08X}: keeping {old.name}, a naming rule suggests {current.name}")
+            if current.size != old.size:
+                warnings.append(f"{old.name}: size changed from 0x{old.size:X} to 0x{current.size:X}")
             current.name = old.name
+            current.scope = old.scope or current.scope
+            current.extra_attributes = old.extra_attributes
         return warnings
 
     @classmethod
@@ -143,18 +153,29 @@ class SymbolTable:
         table = cls()
         if not path.is_file():
             return table
-        for line in path.read_text().splitlines():
+        for line_number, line in enumerate(path.read_text().splitlines(), start=1):
             match = SYMBOL_LINE.match(line)
             if match is None:
+                if not COMMENT_LINE.match(line):
+                    table.unparsed_lines.append((line_number, line))
                 continue
+            attributes = dict(
+                attribute.split(":", 1)
+                for attribute in (match["attributes"] or "").split()
+                if ":" in attribute
+            )
+            known = {"type", "size", "scope"}
             table.add(
                 Symbol(
                     name=match["name"],
                     section=match["section"],
                     address=int(match["address"], 16),
-                    kind=match["kind"],
-                    size=int(match["size"] or "0", 16),
-                    scope=match["scope"],
+                    kind=attributes.get("type", "object"),
+                    size=int(attributes.get("size", "0"), 16),
+                    scope=attributes.get("scope"),
+                    extra_attributes=tuple(
+                        f"{key}:{value}" for key, value in attributes.items() if key not in known
+                    ),
                 )
             )
         return table
