@@ -31,6 +31,12 @@ readonly TEMPLATE_URL="https://github.com/ExpansionPak/ModernGekko-Template.git"
 readonly TEMPLATE_COMMIT="c2553a99584b2045dbe46a70e1570994dae8beef"
 readonly TEMPLATE_DIRECTORY="${MODERNGEKKO_TEMPLATE:-$HOME/ModernGekko-Template}"
 
+# Dolphin externals only its Windows (Qt, FFmpeg-bin) and Android
+# (libadrenotools) builds use; ModernGekko builds Dolphin without Qt. Skipping
+# them saves about 600 MB, most of it Qt, the download most likely to break.
+readonly SUBMODULES_UNUSED_ON_LINUX=(Externals/Qt Externals/FFmpeg-bin Externals/libadrenotools)
+readonly SUBMODULE_DOWNLOAD_ATTEMPTS=3
+
 # The template keeps each game under extracted/<slug>/.
 readonly GAME_SLUG="Harvest-Moon-Magical-Melody"
 readonly EXTRACTED_DIRECTORY="$TEMPLATE_DIRECTORY/extracted/$GAME_SLUG"
@@ -90,9 +96,12 @@ install_missing_packages() {
 # Pick the graphics backend that reaches the GPU. Sets GRAPHICS_BACKEND.
 choose_graphics_backend() {
     step "Looking for GPU acceleration"
+    # "|| true": with no working driver these tools fail, and that is an
+    # answer here, not a reason for set -e to stop the script.
     local opengl_renderer vulkan_device_types
-    opengl_renderer="$(glxinfo -B 2> /dev/null | sed -n 's/^OpenGL renderer string: //p')"
-    vulkan_device_types="$(vulkaninfo --summary 2> /dev/null | sed -n 's/^[[:space:]]*deviceType[[:space:]]*= //p')"
+    opengl_renderer="$(glxinfo -B 2> /dev/null | sed -n 's/^OpenGL renderer string: //p' || true)"
+    vulkan_device_types="$(vulkaninfo --summary 2> /dev/null |
+        sed -n 's/^[[:space:]]*deviceType[[:space:]]*= //p' || true)"
     note "OpenGL renderer: ${opengl_renderer:-none}"
     note "Vulkan devices:  $(echo "${vulkan_device_types:-none}" | paste -sd ' ' -)"
 
@@ -127,17 +136,32 @@ download_template() {
     local download_finished_marker="$TEMPLATE_DIRECTORY/.git/hm-mm-recomp-download-finished"
     [[ -f "$download_finished_marker" ]] && return
 
-    step "Downloading ModernGekko-Template and its submodules (about 1 GB)"
+    step "Downloading ModernGekko-Template and its submodules (a few hundred MB)"
     note "Keep the computer awake until this finishes; a sleeping PC stalls the download."
     if [[ ! -d "$TEMPLATE_DIRECTORY/.git" ]]; then
         git clone --no-checkout "$TEMPLATE_URL" "$TEMPLATE_DIRECTORY"
     fi
     git -C "$TEMPLATE_DIRECTORY" checkout --quiet "$TEMPLATE_COMMIT"
     git -C "$TEMPLATE_DIRECTORY" submodule sync --recursive --quiet
-    # --force checks every submodule out again, which also restores the files
-    # an interrupted earlier run never got to write.
-    git -C "$TEMPLATE_DIRECTORY" submodule update --init --recursive --force
-    touch "$download_finished_marker"
+
+    # Options passed with -c reach the nested submodules too.
+    local download_options=(-c http.version=HTTP/1.1) # HTTP/2 often cuts big fetches ("curl 92")
+    local submodule
+    for submodule in "${SUBMODULES_UNUSED_ON_LINUX[@]}"; do
+        download_options+=(-c "submodule.$submodule.update=none")
+    done
+    local attempt
+    for ((attempt = 1; attempt <= SUBMODULE_DOWNLOAD_ATTEMPTS; attempt++)); do
+        # --force checks every submodule out again, which also restores the
+        # files an interrupted earlier run never got to write.
+        if git -C "$TEMPLATE_DIRECTORY" "${download_options[@]}" \
+            submodule update --init --recursive --force; then
+            touch "$download_finished_marker"
+            return
+        fi
+        note "download attempt $attempt of $SUBMODULE_DOWNLOAD_ATTEMPTS failed"
+    done
+    fail "could not download ModernGekko-Template's submodules; check the internet connection and run the script again"
 }
 
 build_tools() {

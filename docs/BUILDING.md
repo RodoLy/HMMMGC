@@ -38,7 +38,7 @@ bash /mnt/c/Users/<tu usuario>/Documents/hm-mm-recomp/scripts/build_and_run_linu
 ```
 
 También acepta la ruta como la copia el Explorador (`C:\Users\...`). La
-primera vez tarda: descarga cerca de 1 GB, compila ModernGekko (15 a 40
+primera vez tarda: descarga unos cientos de MB, compila ModernGekko (15 a 40
 minutos) y recompila el juego (unos minutos). Después basta con:
 
 ```sh
@@ -152,7 +152,7 @@ bash /mnt/c/Users/<your user>/Documents/hm-mm-recomp/scripts/build_and_run_linux
 ```
 
 A path copied from Explorer (`C:\Users\...`) works too. The first run takes
-a while: it downloads about 1 GB, builds ModernGekko (15 to 40 minutes) and
+a while: it downloads a few hundred MB, builds ModernGekko (15 to 40 minutes) and
 recompiles the game (a few minutes). After that, this is enough:
 
 ```sh
