@@ -92,8 +92,9 @@ ModernGekko genera su configuración cuando lo pones en `config.ini`
 
 ### Ajustes útiles (`~/.local/share/moderngekko/config.ini`)
 
-- `resolution=3840x2160` para 4K interno (por defecto `1920x1080`). Acepta
-  640x528, 1280x720, 1920x1080, 2560x1440, 3840x2160, 5120x2880 y 7680x4320.
+- `resolution=3840x2160` para 4K interno (por defecto `1920x1080`; sin GPU, el
+  script empieza en `640x528`). Acepta 640x528, 1280x720, 1920x1080,
+  2560x1440, 3840x2160, 5120x2880 y 7680x4320.
 - `fullscreen=true` para pantalla completa.
 - El backend gráfico lo elige el script; para forzarlo:
   `GRAPHICS_BACKEND=Vulkan bash .../build_and_run_linux.sh`.
@@ -110,10 +111,13 @@ ModernGekko genera su configuración cuando lo pones en `config.ini`
   actualiza Windows, el driver de la GPU y WSL (`wsl --update`). En laptops
   Windows con procesador ARM (Snapdragon), WSL2 todavía no puede usar la GPU
   ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)) y
-  esos pasos no ayudan. Pon `resolution=640x528` en `config.ini` para que el
-  procesador tenga menos que dibujar. La solución de fondo sería una versión
-  nativa para Windows ARM64; está en [PLAN.md](PLAN.md), pero todavía no
-  existe.
+  esos pasos no ayudan. Sin GPU, el script escribe `resolution=640x528` en
+  `config.ini` la primera vez, para que el procesador tenga menos que
+  dibujar. Si ya habías corrido el juego antes, el archivo existe y el script
+  no lo toca: cámbialo tú con
+  `sed -i 's/^resolution=.*/resolution=640x528/' ~/.local/share/moderngekko/config.ini`.
+  La solución de fondo sería una versión nativa para Windows ARM64; está en
+  [PLAN.md](PLAN.md), pero todavía no existe.
 - **"WSL has no window support yet":** corre `wsl --update` y vuelve a abrir
   Ubuntu.
 - **`$'\r': command not found`:** el script tiene saltos de línea de
@@ -213,9 +217,9 @@ ModernGekko generates its mapping once you name it in `config.ini`
 
 ### Useful settings (`~/.local/share/moderngekko/config.ini`)
 
-- `resolution=3840x2160` for 4K internal resolution (default `1920x1080`).
-  Accepts 640x528, 1280x720, 1920x1080, 2560x1440, 3840x2160, 5120x2880 and
-  7680x4320.
+- `resolution=3840x2160` for 4K internal resolution (default `1920x1080`;
+  without a GPU the script starts at `640x528`). Accepts 640x528, 1280x720,
+  1920x1080, 2560x1440, 3840x2160, 5120x2880 and 7680x4320.
 - `fullscreen=true` for full screen.
 - The script picks the graphics backend; to force one:
   `GRAPHICS_BACKEND=Vulkan bash .../build_and_run_linux.sh`.
@@ -232,9 +236,13 @@ ModernGekko generates its mapping once you name it in `config.ini`
   Windows, the GPU driver and WSL (`wsl --update`). On Windows laptops with
   an ARM processor (Snapdragon), WSL2 cannot use the GPU yet
   ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)) and
-  those steps do not help. Set `resolution=640x528` in `config.ini` so the
-  processor has less to draw. The real fix would be a native Windows ARM64
-  build; it is in [PLAN.md](PLAN.md) but does not exist yet.
+  those steps do not help. Without a GPU the script writes
+  `resolution=640x528` to `config.ini` the first time, so the processor has
+  less to draw. If you ran the game before, the file already exists and the
+  script leaves it alone: change it yourself with
+  `sed -i 's/^resolution=.*/resolution=640x528/' ~/.local/share/moderngekko/config.ini`.
+  The real fix would be a native Windows ARM64 build; it is in
+  [PLAN.md](PLAN.md) but does not exist yet.
 - **"WSL has no window support yet":** run `wsl --update` and reopen Ubuntu.
 - **`$'\r': command not found`:** the script has Windows line endings. The
   repository's `.gitattributes` prevents that; if it happens,
