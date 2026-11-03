@@ -23,8 +23,8 @@ disco (ISO, GCM o RVZ).
 - **Fase 1 en curso:** con DolRecomp + ModernGekko el juego ya llega a la
   pantalla de título y empieza una partida nueva, todo desde código
   recompilado ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
-  Los mods pueden nombrar las funciones del juego con
-  `python3 tools/export_mod_symbols.py`.
+  Ya se pueden compilar mods que enganchan funciones del juego por su nombre
+  (`scripts/build_mods.sh`; guía en [mods/README.md](mods/README.md)).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -107,8 +107,9 @@ This repository contains no game data. You need your own backup of the disc
   functions, validated against CodeWarrior's exception index).
 - **Phase 1 in progress:** with DolRecomp + ModernGekko the game already
   reaches the title screen and starts a new game, all from recompiled code
-  ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)). Mods can
-  name the game's functions with `python3 tools/export_mod_symbols.py`.
+  ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)). Mods that
+  attach to the game's functions by name can now be built
+  (`scripts/build_mods.sh`; guide in [mods/README.md](mods/README.md)).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and
