@@ -22,7 +22,7 @@ CPU) y qué la ejecuta en PC (el runtime: video, audio, controles, disco).
 | CPU | C11, backends C y LLVM, ~44 000 líneas | C++, ~22 000 líneas (con runtime) | Por escribir |
 | Pruebas | 30+ suites (opcodes, FPSCR, paired singles, tablas de saltos, comparación con Dolphin), CI en Linux/Windows/macOS | Su CMake no define pruebas | Por escribir |
 | Runtime | ModernGekko: núcleo derivado de Dolphin para video, audio y HLE | Propio: rasterizador, HLE e interfaz de hardware; GX todavía en "seguimiento de estructuras" | Por escribir (GX es lo más largo) |
-| Encaja con nuestro mapa | Sí: `--map` acepta `dirección tamaño nombre` y usa cada dirección como entrada y partición | Tiene su propio analizador | Sí, por diseño |
+| Encaja con nuestro mapa | Sí: `--map` acepta `dirección tamaño nombre`; todos los backends escriben una macro `DOLRECOMP_SYMBOL_*` por función y el de LLVM además usa cada dirección como entrada y partición | Tiene su propio analizador | Sí, por diseño |
 | Mods y parches | Parches por función en C con verificación FNV-64 del código original; reemplazo de funciones por código nativo | Hooks HLE por juego en TOML | Por diseñar |
 | Estado público | El README de ModernGekko lista recomps de Super Mario Sunshine, Smash Bros. Brawl, Melee, Luigi's Mansion, Kirby Wii y 007 Agent Under Fire (no verifiqué qué tan completos están) | Juegos que llegan a intros (Mario Party 7) | — |
 
@@ -32,9 +32,12 @@ CPU) y qué la ejecuta en PC (el runtime: video, audio, controles, disco).
    núcleo de Dolphin trae video (con resolución interna, o sea 4K), audio y
    HLE ya resueltos. Eso elimina la parte de meses del plan: escribir un
    renderizador de GX desde cero.
-2. **Nuestro trabajo encaja directo.** `tools/export_dolrecomp_map.py`
-   convierte `symbols.txt` al formato de `--map`. Con eso DolRecomp usa
-   nuestras 4 486 funciones validadas y los nombres del SDK.
+2. **Nuestro trabajo encaja directo.** Nuestras 4 486 funciones validadas y
+   los nombres del SDK llegan a los mods como macros `DOLRECOMP_SYMBOL_*`,
+   con el mismo header que DolRecomp escribe con `--map`
+   (`tools/export_mod_symbols.py`); `tools/export_dolrecomp_map.py` da el
+   mapa por si algún día usamos el backend LLVM, que sí toma sus direcciones
+   como puntos de entrada.
 3. **Las metas del juego son parches, que es lo que mejor soporta.** El mod
    de Jamie, la velocidad y la fricción del personaje, los cheats y el
    anclaje del HUD en widescreen son reemplazos de funciones en C. DolRecomp
@@ -62,7 +65,7 @@ Riesgos:
 | Paso | Resultado |
 |---|---|
 | Compilar DolRecomp | Bien; sus 20 suites de pruebas pasan. |
-| Recompilar `main.dol` | 448 834 de 448 840 instrucciones reconocidas, 0 desconocidas, 110 archivos de C. Con `--map` usó nuestras 4 486 funciones. |
+| Recompilar `main.dol` | 448 834 de 448 840 instrucciones reconocidas, 0 desconocidas, 111 archivos de C. Con `--map` escribe una macro `DOLRECOMP_SYMBOL_*` para cada una de nuestras 4 486 funciones; el C generado es el mismo con o sin mapa. |
 | Compilar el módulo nativo (gcc, 2 núcleos) | `gG4AEE9_recomp.so` en 21 minutos. |
 | Ejecutar en ModernGekko | Carga el módulo con el entry point `0x80003154`. |
 | 40 s | Pantalla "LICENSED BY NINTENDO". |
@@ -78,8 +81,9 @@ con GPU debería ir a velocidad normal, falta comprobarlo.
 Notas para repetir la prueba:
 
 - El módulo del pipeline de ModernGekko se recompiló sin `--map`
-  (`moderngekko-port` todavía no lo pasa), con la detección de funciones de
-  DolRecomp. Nuestro mapa se probó aparte con DolRecomp directamente.
+  (`moderngekko-port` no lo pasa). Con el backend de C eso no cambia el
+  código; los nombres para mods salen de `tools/export_mod_symbols.py`
+  (ver [MODERNGEKKO_INTEGRATION.md](MODERNGEKKO_INTEGRATION.md)).
 - La plantilla descarga GameTDB y `wit`, que solo sirven para Wii; si la red
   no lo permite, basta con llamar a
   `moderngekko-port build <juego extraído> --backend c --toolchain auto --output build/modules`.
@@ -130,7 +134,7 @@ which runs it on PC (the runtime: video, audio, input, disc).
 | CPU | C11, C and LLVM backends, ~44,000 lines | C++, ~22,000 lines (runtime included) | To be written |
 | Tests | 30+ suites (opcodes, FPSCR, paired singles, jump tables, cross-checks against Dolphin), CI on Linux/Windows/macOS | Its CMake defines no tests | To be written |
 | Runtime | ModernGekko: Dolphin-derived core for video, audio and HLE | Its own rasterizer, HLE and hardware interface; GX still at "structure tracking" | To be written (GX is the longest part) |
-| Fits our map | Yes: `--map` takes "address size name" lines and uses every address as an entry and partition point | Has its own analyzer | Yes, by design |
+| Fits our map | Yes: `--map` takes "address size name" lines; every backend writes a `DOLRECOMP_SYMBOL_*` macro per function and the LLVM one also uses every address as an entry and partition point | Has its own analyzer | Yes, by design |
 | Mods and patches | Per-function C patches verified with an FNV-64 hash of the original code; native function replacements | Per-game HLE hooks in TOML | To be designed |
 | Public status | ModernGekko's README lists recomps of Super Mario Sunshine, Smash Bros. Brawl, Melee, Luigi's Mansion, Kirby Wii and 007 Agent Under Fire (how complete they are was not checked) | Games that reach their intros (Mario Party 7) | — |
 
@@ -139,9 +143,11 @@ which runs it on PC (the runtime: video, audio, input, disc).
 1. The Dolphin-derived runtime solves video (internal resolution, i.e. 4K),
    audio and HLE, which removes the months-long part of the plan: writing a
    GX renderer from scratch.
-2. Our work plugs straight in: `tools/export_dolrecomp_map.py` turns
-   `symbols.txt` into `--map` input, so DolRecomp uses our 4,486 validated
-   functions and the SDK names.
+2. Our work plugs straight in: our 4,486 validated functions and the SDK
+   names reach mods as `DOLRECOMP_SYMBOL_*` macros, the same header DolRecomp
+   writes with `--map` (`tools/export_mod_symbols.py`);
+   `tools/export_dolrecomp_map.py` provides the map in case we ever use the
+   LLVM backend, which does take its addresses as entry points.
 3. The game's goals (Jamie mod, player speed and friction, cheats,
    widescreen HUD anchoring) are function replacements in C, which DolRecomp
    checks against a hash of the original code before applying.
@@ -164,7 +170,7 @@ dependencies; input is configured through a hand-written Dolphin `.ini`.
 | Step | Result |
 |---|---|
 | Build DolRecomp | Fine; its 20 test suites pass. |
-| Recompile `main.dol` | 448,834 of 448,840 instructions known, 0 unknown, 110 C files. With `--map` it used our 4,486 functions. |
+| Recompile `main.dol` | 448,834 of 448,840 instructions known, 0 unknown, 111 C files. With `--map` it writes a `DOLRECOMP_SYMBOL_*` macro for each of our 4,486 functions; the generated C is the same with or without a map. |
 | Build the native module (gcc, 2 cores) | `gG4AEE9_recomp.so` in 21 minutes. |
 | Run on ModernGekko | Loads the module with entry point `0x80003154`. |
 | 40 s | "LICENSED BY NINTENDO" screen. |
@@ -180,8 +186,9 @@ should run at full speed, which is still to be confirmed.
 Notes for repeating the test:
 
 - The module from ModernGekko's pipeline was recompiled without `--map`
-  (`moderngekko-port` does not pass it yet), using DolRecomp's own function
-  discovery. Our map was tested separately with DolRecomp directly.
+  (`moderngekko-port` does not pass it). With the C backend that does not
+  change the code; names for mods come from `tools/export_mod_symbols.py`
+  (see [MODERNGEKKO_INTEGRATION.md](MODERNGEKKO_INTEGRATION.md)).
 - The template downloads GameTDB and `wit`, which only Wii games need; when
   the network does not allow it, call
   `moderngekko-port build <extracted game> --backend c --toolchain auto --output build/modules`

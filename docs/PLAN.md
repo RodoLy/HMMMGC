@@ -34,8 +34,10 @@ le sirve.
       (render por software, sin GPU).
 - [ ] Hito: pantalla de título y partida nueva con controles reales, a
       velocidad completa en una PC con GPU.
-- [ ] Pasar nuestro mapa al pipeline de ModernGekko (`--map` en
-      `moderngekko-port`, proponerlo al proyecto).
+- [x] Nombres de funciones para mods: `tools/export_mod_symbols.py` genera
+      el mismo header que DolRecomp con `--map` (idéntico byte por byte).
+      Con el backend de C el mapa no cambia el código, así que
+      `moderngekko-port` no necesita cambios.
 - Si se adopta ModernGekko, la fase 2 se reduce mucho: video, audio, disco y
   controles ya vienen del núcleo de Dolphin.
 
@@ -111,8 +113,10 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       (software rendering, no GPU).
 - [ ] Milestone: title screen and a new game with real input, at full
       speed on a PC with a GPU.
-- [ ] Feed our map to ModernGekko's pipeline (`--map` in
-      `moderngekko-port`, proposed upstream).
+- [x] Function names for mods: `tools/export_mod_symbols.py` writes the
+      same header DolRecomp writes with `--map` (byte-identical). With the C
+      backend the map does not change the code, so `moderngekko-port` needs
+      no changes.
 - If ModernGekko is adopted, phase 2 shrinks a lot: video, audio, disc and
   input already come from the Dolphin core.
 
