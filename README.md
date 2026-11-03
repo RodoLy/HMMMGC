@@ -59,6 +59,25 @@ HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 python3 tools/disasm.py main
 ```
 
+#### En Windows
+
+- Instala el Python **x64** de [python.org](https://www.python.org/downloads/windows/),
+  también si tu PC tiene procesador ARM: `capstone` no publica paquete
+  precompilado (wheel) para Windows ARM64, y Python x64 corre ahí gracias a la
+  emulación de Windows 11.
+- Usa `py` en lugar de `python3`. En PowerShell, la variable de los tests se
+  define así:
+
+  ```powershell
+  $env:HM_MM_DOL = "orig/G4AEE9/sys/main.dol"
+  py -m pytest
+  ```
+
+- Si ya usas Dolphin no necesitas Rust ni `nodtool`: clic derecho en el juego →
+  *Properties* → pestaña *Filesystem* → clic derecho en el disco →
+  *Extract Entire Disc...*, y elige la carpeta `orig\G4AEE9`. Después
+  `py tools/check_disc.py` confirma que quedó bien.
+
 Antes de contribuir lee [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
@@ -117,5 +136,24 @@ HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 # 4. Read any function
 python3 tools/disasm.py main
 ```
+
+#### On Windows
+
+- Install the **x64** Python from [python.org](https://www.python.org/downloads/windows/),
+  even if your PC has an ARM processor: `capstone` ships no prebuilt package
+  (wheel) for Windows ARM64, and x64 Python runs there through Windows 11's
+  emulation.
+- Use `py` instead of `python3`. In PowerShell, set the tests' variable like
+  this:
+
+  ```powershell
+  $env:HM_MM_DOL = "orig/G4AEE9/sys/main.dol"
+  py -m pytest
+  ```
+
+- If you already use Dolphin you need neither Rust nor `nodtool`: right-click
+  the game → *Properties* → *Filesystem* tab → right-click the disc →
+  *Extract Entire Disc...*, and pick the `orig\G4AEE9` folder. Then
+  `py tools/check_disc.py` confirms it came out right.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
