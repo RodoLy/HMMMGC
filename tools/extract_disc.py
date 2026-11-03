@@ -41,6 +41,7 @@ def main() -> int:
         return 1
 
     print(f"Extracting {image} -> {output_directory}")
+    output_directory.mkdir(parents=True, exist_ok=True)
     subprocess.run(["nodtool", "extract", str(image), str(output_directory)], check=True)
     print("Done. Now run: python3 tools/check_disc.py", output_directory)
     return 0
