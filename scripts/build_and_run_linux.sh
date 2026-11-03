@@ -122,7 +122,13 @@ choose_graphics_backend() {
         # machine without a GPU: it works, at a few frames per second.
         GRAPHICS_BACKEND=Vulkan
         note "no GPU acceleration found: the game will run, but very slowly"
-        if running_in_wsl && [[ ! -e /dev/dxg ]]; then
+        if running_in_wsl && [[ "$(uname -m)" == aarch64 ]]; then
+            # On Windows-on-ARM laptops (Snapdragon) /dev/dxg exists but
+            # /dev/dri/renderD128 never appears, so Mesa falls back to
+            # software; updating drivers has not helped anyone so far.
+            note "WSL2 on Windows-on-ARM laptops has not been able to use the GPU so far (microsoft/wslg issue 1470)"
+            note "to make the game lighter, set resolution=640x528 in ~/.local/share/moderngekko/config.ini"
+        elif running_in_wsl && [[ ! -e /dev/dxg ]]; then
             note "WSL cannot see the GPU (/dev/dxg is missing): update Windows, the GPU driver and WSL"
         fi
     fi

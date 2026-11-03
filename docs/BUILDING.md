@@ -105,8 +105,15 @@ ModernGekko genera su configuración cuando lo pones en `config.ini`
   el script, que termina la descarga, o a mano:
   `git -C ~/ModernGekko-Template submodule update --init --recursive --force`.
   Durante la primera corrida no dejes que la computadora se suspenda.
-- **Va muy lento:** el script avisó "no GPU acceleration found". En WSL,
-  actualiza Windows, el driver de la GPU y WSL (`wsl --update`).
+- **Va muy lento:** el script avisó "no GPU acceleration found", así que el
+  juego se dibuja con el procesador. Con una GPU Intel, AMD o NVIDIA,
+  actualiza Windows, el driver de la GPU y WSL (`wsl --update`). En laptops
+  Windows con procesador ARM (Snapdragon), WSL2 todavía no puede usar la GPU
+  ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)) y
+  esos pasos no ayudan. Pon `resolution=640x528` en `config.ini` para que el
+  procesador tenga menos que dibujar. La solución de fondo sería una versión
+  nativa para Windows ARM64; está en [PLAN.md](PLAN.md), pero todavía no
+  existe.
 - **"WSL has no window support yet":** corre `wsl --update` y vuelve a abrir
   Ubuntu.
 - **`$'\r': command not found`:** el script tiene saltos de línea de
@@ -220,8 +227,14 @@ ModernGekko generates its mapping once you name it in `config.ini`
   script again, which finishes the download, or by hand:
   `git -C ~/ModernGekko-Template submodule update --init --recursive --force`.
   Keep the computer awake during the first run.
-- **It is very slow:** the script said "no GPU acceleration found". In WSL,
-  update Windows, the GPU driver and WSL (`wsl --update`).
+- **It is very slow:** the script said "no GPU acceleration found", so the
+  game is drawn by the processor. With an Intel, AMD or NVIDIA GPU, update
+  Windows, the GPU driver and WSL (`wsl --update`). On Windows laptops with
+  an ARM processor (Snapdragon), WSL2 cannot use the GPU yet
+  ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)) and
+  those steps do not help. Set `resolution=640x528` in `config.ini` so the
+  processor has less to draw. The real fix would be a native Windows ARM64
+  build; it is in [PLAN.md](PLAN.md) but does not exist yet.
 - **"WSL has no window support yet":** run `wsl --update` and reopen Ubuntu.
 - **`$'\r': command not found`:** the script has Windows line endings. The
   repository's `.gitattributes` prevents that; if it happens,
