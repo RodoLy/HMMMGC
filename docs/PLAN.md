@@ -24,10 +24,16 @@ le sirve.
       reemplaza en la fase 2).
 
 **Fase 1 – Recompilación de CPU**
-- [ ] Probar DolRecomp y NWiiRecomp sobre `main.dol`; quedarse con el que
-      genere C compilable.
-- [ ] Stubs vacíos con log para OS, PAD, DVD, CARD, AX/DSP, GX, VI, AI, AR.
-- [ ] Hito: el juego arranca y llega a la pantalla de título (sin gráficos).
+- [x] Evaluar recompiladores. Recomendación: DolRecomp + ModernGekko
+      (runtime derivado de Dolphin). Ver
+      [RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md).
+- [x] Exportar nuestro mapa al formato `--map` de DolRecomp
+      (`tools/export_dolrecomp_map.py`).
+- [ ] Probar Magical Melody con ModernGekko-Template en una máquina donde se
+      pueda compilar (pendiente: este entorno no ejecuta código descargado).
+- [ ] Hito: el juego arranca y llega a la pantalla de título.
+- Si se adopta ModernGekko, la fase 2 se reduce mucho: video, audio, disco y
+  controles ya vienen del núcleo de Dolphin.
 
 **Fase 2 – Runtime** (la parte pesada)
 - [ ] Renderizador GX sobre OpenGL/Vulkan. Referencia: Dolphin para la
@@ -91,10 +97,16 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       runtime replaces in phase 2).
 
 **Phase 1 – CPU recompilation**
-- [ ] Try DolRecomp and NWiiRecomp on `main.dol`; keep whichever yields
-      compilable C.
-- [ ] Logging stubs for OS, PAD, DVD, CARD, AX/DSP, GX, VI, AI, AR.
-- [ ] Milestone: game boots to the title screen (no graphics yet).
+- [x] Evaluate recompilers. Recommendation: DolRecomp + ModernGekko
+      (Dolphin-derived runtime). See
+      [RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md).
+- [x] Export our map to DolRecomp's `--map` format
+      (`tools/export_dolrecomp_map.py`).
+- [ ] Try Magical Melody with ModernGekko-Template on a machine that can
+      build it (pending: this environment does not run downloaded code).
+- [ ] Milestone: the game boots to the title screen.
+- If ModernGekko is adopted, phase 2 shrinks a lot: video, audio, disc and
+  input already come from the Dolphin core.
 
 **Phase 2 – Runtime** (the heavy part)
 - [ ] GX renderer on OpenGL/Vulkan. Reference: Dolphin for GX semantics,
