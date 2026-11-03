@@ -20,8 +20,10 @@ Un recompilador estático traduce una función a la vez, así que primero
 necesita saber dónde empieza y termina cada una, cuáles saltos son tablas de
 `switch` y qué partes de las secciones de código son en realidad datos. Este
 mapa es esa base. Vive en `config/G4AEE9/symbols.txt`, con la sintaxis de
-decomp-toolkit, así que también sirve si algún día se descompila. DolRecomp
-lo usa con `tools/export_dolrecomp_map.py`.
+decomp-toolkit, así que también sirve si algún día se descompila. Con el
+backend de C, DolRecomp detecta las funciones por su cuenta; nuestro mapa
+llega a los mods como nombres (`tools/export_mod_symbols.py`) y al backend
+LLVM como puntos de entrada (`tools/export_dolrecomp_map.py`).
 
 ### Resultado
 
@@ -216,8 +218,10 @@ A static recompiler translates one function at a time, so it first needs to
 know where each function starts and ends, which jumps are `switch` tables,
 and which parts of the code sections are really data. This map is that
 foundation. It lives in `config/G4AEE9/symbols.txt`, in decomp-toolkit
-syntax, so it is also usable if the game is ever decompiled. DolRecomp
-consumes it through `tools/export_dolrecomp_map.py`.
+syntax, so it is also usable if the game is ever decompiled. With the C
+backend DolRecomp finds functions on its own; our map reaches mods as names
+(`tools/export_mod_symbols.py`) and the LLVM backend as entry points
+(`tools/export_dolrecomp_map.py`).
 
 ### Result
 
