@@ -16,6 +16,7 @@ GAME_ID = "G4AEE9"  # Harvest Moon: Magical Melody (USA), revision 0
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DISC_DIRECTORY = REPOSITORY_ROOT / "orig" / GAME_ID  # the user's extracted disc
 MAIN_DOL_PATH = DISC_DIRECTORY / "sys" / "main.dol"
+SCRIPT_DIRECTORY = DISC_DIRECTORY / "files" / "script"  # the .lsb event scripts
 CONFIG_DIRECTORY = REPOSITORY_ROOT / "config" / GAME_ID
 SYMBOLS_PATH = CONFIG_DIRECTORY / "symbols.txt"
 BUILD_DIRECTORY = REPOSITORY_ROOT / "build"
