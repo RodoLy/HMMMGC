@@ -100,6 +100,11 @@ ModernGekko genera su configuración cuando lo pones en `config.ini`
 
 ### Si algo falla
 
+- **`does not contain a CMakeLists.txt file` al compilar:** la descarga se
+  cortó a la mitad (Ctrl+C, o la computadora se suspendió). Vuelve a correr
+  el script, que termina la descarga, o a mano:
+  `git -C ~/ModernGekko-Template submodule update --init --recursive --force`.
+  Durante la primera corrida no dejes que la computadora se suspenda.
 - **Va muy lento:** el script avisó "no GPU acceleration found". En WSL,
   actualiza Windows, el driver de la GPU y WSL (`wsl --update`).
 - **"WSL has no window support yet":** corre `wsl --update` y vuelve a abrir
@@ -210,6 +215,11 @@ ModernGekko generates its mapping once you name it in `config.ini`
 
 ### If something goes wrong
 
+- **`does not contain a CMakeLists.txt file` while building:** the download
+  was cut off halfway (Ctrl+C, or the computer went to sleep). Run the
+  script again, which finishes the download, or by hand:
+  `git -C ~/ModernGekko-Template submodule update --init --recursive --force`.
+  Keep the computer awake during the first run.
 - **It is very slow:** the script said "no GPU acceleration found". In WSL,
   update Windows, the GPU driver and WSL (`wsl --update`).
 - **"WSL has no window support yet":** run `wsl --update` and reopen Ubuntu.
