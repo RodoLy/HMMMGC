@@ -56,7 +56,8 @@ def main() -> int:
 
     lines = dolrecomp_map_lines(table)
     arguments.out.parent.mkdir(parents=True, exist_ok=True)
-    arguments.out.write_text("\n".join(lines) + "\n")
+    # Same bytes on every OS: Windows would otherwise write CRLF in its ANSI code page.
+    arguments.out.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {arguments.out}: {len(lines)} functions")
     return 0
 

@@ -38,6 +38,7 @@ def test_lines_use_decomp_toolkit_syntax():
 def test_write_then_read_gives_the_same_symbols(tmp_path):
     path = tmp_path / "symbols.txt"
     make_table().write(path)
+    assert b"\r" not in path.read_bytes()  # LF line endings, also on Windows
     reread = SymbolTable.read(path)
     assert [symbol.to_line() for symbol in reread] == [symbol.to_line() for symbol in make_table()]
     assert reread.unparsed_lines == []
@@ -49,7 +50,8 @@ def test_reading_tolerates_spacing_and_keeps_unknown_attributes(tmp_path):
         "// a comment\n"
         "\n"
         "__OSVersion  =  .sdata:0x803219D8;  //type:object size:0x4 scope:global align:4\n"
-        "this line is broken\n"
+        "this line is broken\n",
+        encoding="utf-8",
     )
     table = SymbolTable.read(path)
     symbol = table.by_address[0x803219D8]
