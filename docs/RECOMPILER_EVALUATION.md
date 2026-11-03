@@ -74,6 +74,12 @@ make run GAME=Harvest-Moon-Magical-Melody
 (La otra opción es convertir el RVZ a ISO en Dolphin, con clic derecho →
 *Convert File…* → ISO, y usar `make run ISO=archivo.iso`.)
 
+**En Windows, usar WSL2 con Ubuntu.** Los README se contradicen: el de
+ModernGekko-Template pide Visual Studio (MSVC), pero el de DolRecomp, más
+reciente, dice que ModernGekko no compila con MSVC por ahora. La ruta de
+Linux es la mejor documentada (lista exacta de paquetes `apt`) y WSL2 la da
+también en Windows ARM64, con ventanas gráficas vía WSLg.
+
 Resultado esperado de la prueba, de menos a más: compila el C generado →
 arranca y llega a `main` → muestra el logo de Natsume → título → jugable.
 Cualquier punto de ese camino sirve: dice dónde empezar.
@@ -133,6 +139,10 @@ done in, so the test happens on your machine with the commands in the
 Spanish section. DolRecomp's extractor reads ISO and WBFS but not RVZ, so
 the disc is first extracted with this repository's `tools/extract_disc.py`
 into the template's `extracted/<name>/` folder (or converted to ISO in
-Dolphin). Expected milestones, from least to most: the generated C
+Dolphin). On Windows, use WSL2 with Ubuntu: the template's README asks for
+MSVC, but DolRecomp's newer README says ModernGekko does not build under
+MSVC yet, and the Linux path is the best documented one (it also works on
+Windows ARM64, with GUI windows through WSLg). Expected milestones, from
+least to most: the generated C
 compiles → boots and reaches `main` → Natsume logo → title screen →
 playable. Wherever it stops tells us where to start.
