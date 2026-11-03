@@ -11,39 +11,44 @@ juego del usuario, así que la estructura le resulta familiar a cualquiera que
 venga de otro decomp.
 
 Usage / Uso:
-    python3 tools/extract_disc.py path/to/disc.rvz [output_dir]
+    python3 tools/extract_disc.py path/to/disc.rvz               # into orig/G4AEE9
+    python3 tools/extract_disc.py path/to/disc.rvz other/folder
 """
 
+import argparse
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from project import DISC_DIRECTORY  # noqa: E402
+
 
 def main() -> int:
-    if len(sys.argv) < 2:
-        print(__doc__)
-        return 1
+    parser = argparse.ArgumentParser(description="Extract a GameCube disc image with nodtool.")
+    parser.add_argument("image", type=Path, help="your disc image (.iso, .gcm or .rvz)")
+    parser.add_argument(
+        "output_directory",
+        type=Path,
+        nargs="?",
+        default=DISC_DIRECTORY,
+        help=f"where to extract it (default: {DISC_DIRECTORY})",
+    )
+    arguments = parser.parse_args()
 
-    image = Path(sys.argv[1])
-    output_directory = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("orig/G4AEE9")
-
-    if not image.is_file():
-        print(f"Disc image not found: {image}")
-        return 1
-
+    if not arguments.image.is_file():
+        parser.error(f"disc image not found: {arguments.image}")
     if shutil.which("nodtool") is None:
-        print("nodtool is not installed. Run: cargo install nodtool")
-        return 1
+        parser.error("nodtool is not installed. Run: cargo install nodtool")
+    if (arguments.output_directory / "sys").exists():
+        parser.error(f"{arguments.output_directory} already holds an extracted disc")
 
-    if (output_directory / "sys").exists():
-        print(f"{output_directory} already holds an extracted disc")
-        return 1
-
-    print(f"Extracting {image} -> {output_directory}")
-    output_directory.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["nodtool", "extract", str(image), str(output_directory)], check=True)
-    print("Done. Now run: python3 tools/check_disc.py", output_directory)
+    print(f"Extracting {arguments.image} -> {arguments.output_directory}")
+    arguments.output_directory.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["nodtool", "extract", str(arguments.image), str(arguments.output_directory)], check=True)
+    print(f"Done. Now run: python3 tools/check_disc.py {arguments.output_directory}")
     return 0
 
 

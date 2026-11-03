@@ -14,7 +14,8 @@ alguien ya puso a mano en symbols.txt, imprime las comprobaciones que
 demuestran que el mapa es consistente y escribe el resultado.
 
 Usage / Uso:
-    python3 tools/analyze.py orig/G4AEE9/sys/main.dol [--out config/G4AEE9]
+    python3 tools/analyze.py                         # orig/G4AEE9/sys/main.dol -> config/G4AEE9
+    python3 tools/analyze.py other/main.dol --out other/config
 """
 
 import argparse
@@ -23,29 +24,39 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from codewarrior import WORD_SIZE  # noqa: E402
 from dol import Dol  # noqa: E402
 from function_finder import FunctionFinder, functions_by_source_file  # noqa: E402
+from project import CONFIG_DIRECTORY, MAIN_DOL_PATH  # noqa: E402
 from sdk_names import SdkNames, name_sdk_functions  # noqa: E402
 from symbols import Symbol, SymbolTable, section_name_for  # noqa: E402
 
+# How many examples of each kind of problem to print before summarising.
+EXAMPLES_SHOWN = 10
+
 
 def build_symbol_table(dol: Dol, finder: FunctionFinder, sdk_names: SdkNames) -> SymbolTable:
+    bss_ranges = finder.bss_init_entries()
+
+    def section_of(address: int) -> str:
+        return section_name_for(dol, address, bss_ranges)
+
     table = SymbolTable()
     for start, size in finder.function_sizes.items():
         name = sdk_names.functions.get(start, f"fn_{start:08X}")
-        table.add(Symbol(name, section_name_for(dol, start), start, "function", size))
+        table.add(Symbol(name, section_of(start), start, "function", size))
     for start, (size, name) in finder.data_in_code.items():
-        table.add(Symbol(name, section_name_for(dol, start), start, "object", size))
+        table.add(Symbol(name, section_of(start), start, "object", size))
     for address, name in sdk_names.variables.items():
-        table.add(Symbol(name, section_name_for(dol, address), address, "object", 4))
+        table.add(Symbol(name, section_of(address), address, "object", WORD_SIZE))
     for table_address, case_targets in finder.jump_tables.items():
         table.add(
             Symbol(
                 f"jumptable_{table_address:08X}",
-                section_name_for(dol, table_address),
+                section_of(table_address),
                 table_address,
                 "object",
-                4 * len(case_targets),
+                WORD_SIZE * len(case_targets),
                 scope="local",
             )
         )
@@ -63,18 +74,27 @@ def print_checks(dol: Dol, finder: FunctionFinder) -> bool:
     print(f"functions found:        {len(finder.function_sizes)}")
     print(f"  listed in extabindex: {checked}")
     print(f"  called with bl:       {len(finder.call_targets)}")
-    print(f"switch jump tables:     {len(finder.jump_tables)} (rejected: {len(finder.rejected_jump_tables)})")
+    print(
+        f"switch jump tables:     {len(finder.jump_tables)} "
+        f"(rejected: {len(finder.rejected_jump_table_bctrs)}, "
+        f"without a bounds check: {len(finder.unbounded_jump_table_bctrs)})"
+    )
     print(f"data inside code:       {len(finder.data_in_code)}")
-    print(f"code covered:           0x{covered_bytes:X} of 0x{code_bytes:X} bytes (the rest is padding)")
+    print(
+        f"code covered:           0x{covered_bytes:X} of 0x{code_bytes:X} bytes "
+        "(the rest is padding or data inside code)"
+    )
     print(f"overlapping functions:  {len(overlaps)}")
-    for start, following in overlaps[:10]:
+    for start, following in overlaps[:EXAMPLES_SHOWN]:
         print(f"  0x{start:08X} (size 0x{finder.function_sizes[start]:X}) overlaps 0x{following:08X}")
     print(f"walker vs extabindex:   {checked - len(disagreements)}/{checked} agree")
-    for start, real_size, walked_size in disagreements[:15]:
+    for start, real_size, walked_size in disagreements[:EXAMPLES_SHOWN]:
         print(f"  0x{start:08X}: real size 0x{real_size:X}, walker 0x{walked_size:X}")
-    for bctr_address in finder.rejected_jump_tables[:10]:
+    for bctr_address in finder.rejected_jump_table_bctrs[:EXAMPLES_SHOWN]:
         print(f"  rejected jump table at bctr 0x{bctr_address:08X}")
-    return not disagreements and not overlaps and not finder.rejected_jump_tables
+    for bctr_address in finder.unbounded_jump_table_bctrs[:EXAMPLES_SHOWN]:
+        print(f"  jump table without a bounds check at bctr 0x{bctr_address:08X}")
+    return not disagreements and not overlaps and not finder.rejected_jump_table_bctrs
 
 
 def print_sections(finder: FunctionFinder) -> None:
@@ -89,14 +109,22 @@ def print_sections(finder: FunctionFinder) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build symbols.txt from main.dol.")
-    parser.add_argument("dol", type=Path, help="path to the extracted sys/main.dol")
+    parser.add_argument(
+        "dol",
+        type=Path,
+        nargs="?",
+        default=MAIN_DOL_PATH,
+        help=f"the extracted sys/main.dol (default: {MAIN_DOL_PATH})",
+    )
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path("config/G4AEE9"),
-        help="folder holding symbols.txt (default: config/G4AEE9)",
+        default=CONFIG_DIRECTORY,
+        help=f"folder holding symbols.txt (default: {CONFIG_DIRECTORY})",
     )
     arguments = parser.parse_args()
+    if not arguments.dol.is_file():
+        parser.error(f"{arguments.dol} not found; extract your disc first (tools/extract_disc.py)")
 
     dol = Dol(arguments.dol)
     finder = FunctionFinder(dol)
@@ -114,8 +142,11 @@ def main() -> int:
         print(f"  {file_name:22} {len(functions):3} functions  0x{functions[0]:08X} - 0x{functions[-1]:08X}")
 
     symbols_path = arguments.out / "symbols.txt"
+    previous = SymbolTable.read(symbols_path)
+    for line_number, line in previous.unparsed_lines:
+        print(f"warning: {symbols_path}:{line_number} could not be parsed and was not kept: {line}")
     table = build_symbol_table(dol, finder, sdk_names)
-    for warning in table.keep_names_from(SymbolTable.read(symbols_path)):
+    for warning in table.keep_names_from(previous):
         print(f"warning: {warning}")
     named = sum(1 for symbol in table if symbol.kind == "function" and not symbol.has_generated_name)
 
