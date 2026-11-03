@@ -3,19 +3,30 @@
 
 Exporta las funciones de symbols.txt como mapa de símbolos para DolRecomp.
 
-DolRecomp (github.com/ExpansionPak/DolRecomp) accepts `--map file` and uses
-every address in it as a function entry and partition point, and every name
-for the generated C symbols. Its parser (src/analysis/symbol_map.c) accepts a
-plain "address size name" line, which is what this writes.
+DolRecomp (github.com/ExpansionPak/DolRecomp) accepts `--map file`. Its
+parser (src/analysis/symbol_map.c) takes a plain "address size name" line,
+which is what this writes. Every backend then writes `<output>_symbols.h`,
+one DOLRECOMP_SYMBOL_<name> macro per function, and that is all the C
+backend does with the map: its generated code is the same with or without
+one (diffed for main.dol with 1bec355, the version ModernGekko-Template
+pins). The LLVM backend also takes every address as a function entry point,
+and from 02e27ac on as a partition point too. For mods,
+tools/export_mod_symbols.py writes the same header directly.
 
 Only functions are exported. Data objects that live inside text sections
-(_rom_copy_info, strings) must stay out: DolRecomp would take their
+(_rom_copy_info, strings) must stay out: the LLVM backend would take their
 addresses as code entry points.
 
-DolRecomp acepta `--map archivo` y usa cada dirección como punto de entrada
-y de partición, y cada nombre para los símbolos del C generado. Solo se
+DolRecomp acepta `--map archivo` con líneas "dirección tamaño nombre". Todos
+los backends escriben entonces `<salida>_symbols.h`, una macro
+DOLRECOMP_SYMBOL_<nombre> por función, y eso es todo lo que hace el backend
+de C con el mapa: su código generado es el mismo con o sin mapa (comparado
+con main.dol en la 1bec355 que fija ModernGekko-Template). El backend LLVM
+además toma cada dirección como punto de entrada de una función, y desde la
+02e27ac también como punto de partición. Para los mods,
+tools/export_mod_symbols.py escribe ese mismo header directamente. Solo se
 exportan funciones: los datos dentro de secciones de código se quedan fuera,
-porque DolRecomp los tomaría como código.
+porque el backend LLVM los tomaría como código.
 
 Usage / Uso:
     python3 tools/export_dolrecomp_map.py [--symbols config/G4AEE9/symbols.txt] [--out build/G4AEE9.map]
