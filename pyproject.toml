@@ -10,7 +10,7 @@ target-version = "py311"
 select = ["E", "W", "F", "I", "N", "B", "SIM", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["codewarrior", "dol", "export_dolrecomp_map", "function_finder", "ppc", "project", "sdk_names", "symbols", "synthetic"]
+known-first-party = ["codewarrior", "dol", "export_dolrecomp_map", "export_mod_symbols", "function_finder", "ppc", "project", "sdk_names", "symbols", "synthetic"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
