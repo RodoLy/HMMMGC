@@ -29,9 +29,13 @@ le sirve.
       [RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md).
 - [x] Exportar nuestro mapa al formato `--map` de DolRecomp
       (`tools/export_dolrecomp_map.py`).
-- [ ] Probar Magical Melody con ModernGekko-Template en una máquina donde se
-      pueda compilar (pendiente: este entorno no ejecuta código descargado).
-- [ ] Hito: el juego arranca y llega a la pantalla de título.
+- [x] Probar Magical Melody con ModernGekko-Template: arranca, muestra los
+      logos de Nintendo, Natsume y Marvelous, y la escena 3D de apertura
+      (render por software, sin GPU).
+- [ ] Hito: pantalla de título y partida nueva con controles reales, a
+      velocidad completa en una PC con GPU.
+- [ ] Pasar nuestro mapa al pipeline de ModernGekko (`--map` en
+      `moderngekko-port`, proponerlo al proyecto).
 - Si se adopta ModernGekko, la fase 2 se reduce mucho: video, audio, disco y
   controles ya vienen del núcleo de Dolphin.
 
@@ -102,9 +106,13 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       [RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md).
 - [x] Export our map to DolRecomp's `--map` format
       (`tools/export_dolrecomp_map.py`).
-- [ ] Try Magical Melody with ModernGekko-Template on a machine that can
-      build it (pending: this environment does not run downloaded code).
-- [ ] Milestone: the game boots to the title screen.
+- [x] Try Magical Melody with ModernGekko-Template: it boots, shows the
+      Nintendo, Natsume and Marvelous logos, and the 3D opening scene
+      (software rendering, no GPU).
+- [ ] Milestone: title screen and a new game with real input, at full
+      speed on a PC with a GPU.
+- [ ] Feed our map to ModernGekko's pipeline (`--map` in
+      `moderngekko-port`, proposed upstream).
 - If ModernGekko is adopted, phase 2 shrinks a lot: video, audio, disc and
   input already come from the Dolphin core.
 
