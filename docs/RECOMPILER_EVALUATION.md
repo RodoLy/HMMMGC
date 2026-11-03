@@ -129,26 +129,14 @@ completa en una PC con GPU.
 
 ### Cómo probarlo en tu PC
 
-La extracción de DolRecomp lee ISO y WBFS, no RVZ, así que primero extrae
-con la herramienta de este repo dentro de la carpeta que usa la plantilla:
-
-```sh
-git clone --recurse-submodules https://github.com/ExpansionPak/ModernGekko-Template.git
-python3 hm-mm-recomp/tools/extract_disc.py Harvest_Moon_-_Magical_Melody__USA_.rvz \
-    ModernGekko-Template/extracted/Harvest-Moon-Magical-Melody
-cd ModernGekko-Template
-make check
-make run GAME=Harvest-Moon-Magical-Melody
-```
-
-(La otra opción es convertir el RVZ a ISO en Dolphin, con clic derecho →
-*Convert File…* → ISO, y usar `make run ISO=archivo.iso`.)
-
-**En Windows, usar WSL2 con Ubuntu.** Los README se contradicen: el de
-ModernGekko-Template pide Visual Studio (MSVC), pero el de DolRecomp, más
-reciente, dice que ModernGekko no compila con MSVC por ahora. La ruta de
-Linux es la mejor documentada (lista exacta de paquetes `apt`) y WSL2 la da
-también en Windows ARM64, con ventanas gráficas vía WSLg.
+Ver [BUILDING.md](BUILDING.md): `scripts/build_and_run_linux.sh` hace todos
+los pasos en Ubuntu o en WSL2. Se usa WSL2 en Windows porque los README se
+contradicen: el de ModernGekko-Template pide Visual Studio (MSVC), pero el de
+DolRecomp, más reciente, dice que ModernGekko no compila con MSVC por ahora.
+La ruta de Linux es la mejor documentada (lista exacta de paquetes `apt`) y
+WSL2 la da también en Windows ARM64, con ventanas gráficas vía WSLg. El
+script llama a `moderngekko-port` directamente en vez de `make run`, que
+además descarga herramientas que solo sirven para Wii.
 
 ---
 
@@ -270,23 +258,11 @@ playing at full speed on a PC with a GPU.
 
 ### Trying it on your PC
 
-DolRecomp's extractor reads ISO and WBFS but not RVZ, so extract the disc
-with this repository's tool into the template's folder first:
-
-```sh
-git clone --recurse-submodules https://github.com/ExpansionPak/ModernGekko-Template.git
-python3 hm-mm-recomp/tools/extract_disc.py Harvest_Moon_-_Magical_Melody__USA_.rvz \
-    ModernGekko-Template/extracted/Harvest-Moon-Magical-Melody
-cd ModernGekko-Template
-make check
-make run GAME=Harvest-Moon-Magical-Melody
-```
-
-(Or convert the RVZ to ISO in Dolphin, right click → *Convert File…* → ISO,
-and use `make run ISO=file.iso`.)
-
-**On Windows, use WSL2 with Ubuntu.** The template's README asks for Visual
-Studio (MSVC), but DolRecomp's newer README says ModernGekko does not build
-under MSVC yet. The Linux path is the best documented one (exact `apt`
-package list), and WSL2 provides it on Windows ARM64 too, with GUI windows
-through WSLg.
+See [BUILDING.md](BUILDING.md): `scripts/build_and_run_linux.sh` does every
+step on Ubuntu or in WSL2. WSL2 is used on Windows because the READMEs
+disagree: the template's asks for Visual Studio (MSVC), but DolRecomp's newer
+README says ModernGekko does not build under MSVC yet. The Linux path is the
+best documented one (exact `apt` package list), and WSL2 provides it on
+Windows ARM64 too, with GUI windows through WSLg. The script calls
+`moderngekko-port` directly instead of `make run`, which also downloads
+tools only Wii games need.
