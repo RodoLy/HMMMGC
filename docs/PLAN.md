@@ -41,7 +41,7 @@ le sirve.
 - [ ] Audio AX → SDL/miniaudio.
 - [ ] PAD → SDL gamepad y teclado.
 - [ ] CARD → archivos de guardado en disco.
-- [ ] DVD → lectura directa de la carpeta `disc/files` (esto ya da cargas
+- [ ] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
       instantáneas).
 - [ ] Hito 1.0: jugable de principio a fin a 480p 4:3.
 
@@ -114,7 +114,7 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 - [ ] AX audio → SDL/miniaudio.
 - [ ] PAD → SDL gamepad and keyboard.
 - [ ] CARD → save files on disk.
-- [ ] DVD → direct reads from `disc/files` (this alone gives instant loads).
+- [ ] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
 - [ ] Milestone 1.0: playable start to finish at 480p 4:3.
 
 **Phase 3 – Enhancements**
