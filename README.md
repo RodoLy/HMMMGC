@@ -20,7 +20,9 @@ disco (ISO, GCM o RVZ).
 
 - **Fase 0 terminada:** análisis del disco y mapa de funciones del ejecutable
   (4 486 funciones, validado contra el índice de excepciones de CodeWarrior).
-- **Siguiente:** fase 1, recompilación de la CPU.
+- **Fase 1 en curso:** recompiladores evaluados; se recomienda DolRecomp +
+  ModernGekko ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
+  Falta la prueba de arranque en una máquina que pueda compilarlos.
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -77,7 +79,9 @@ This repository contains no game data. You need your own backup of the disc
 
 - **Phase 0 done:** disc analysis and function map of the executable (4,486
   functions, validated against CodeWarrior's exception index).
-- **Next:** phase 1, CPU recompilation.
+- **Phase 1 in progress:** recompilers evaluated; DolRecomp + ModernGekko is
+  recommended ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
+  The boot test on a machine that can build them is still pending.
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and
