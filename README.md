@@ -20,9 +20,11 @@ disco (ISO, GCM o RVZ).
 
 - **Fase 0 terminada:** análisis del disco y mapa de funciones del ejecutable
   (4 486 funciones, validado contra el índice de excepciones de CodeWarrior).
-- **Fase 1 en curso:** con DolRecomp + ModernGekko el juego ya arranca y
-  llega a la escena 3D de apertura
-  ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
+- **Fase 1 en curso:** con DolRecomp + ModernGekko el juego ya llega a la
+  pantalla de título y empieza una partida nueva, todo desde código
+  recompilado ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
+  Los mods pueden nombrar las funciones del juego con
+  `python3 tools/export_mod_symbols.py`.
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -99,8 +101,9 @@ This repository contains no game data. You need your own backup of the disc
 - **Phase 0 done:** disc analysis and function map of the executable (4,486
   functions, validated against CodeWarrior's exception index).
 - **Phase 1 in progress:** with DolRecomp + ModernGekko the game already
-  boots and reaches the 3D opening scene
-  ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
+  reaches the title screen and starts a new game, all from recompiled code
+  ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)). Mods can
+  name the game's functions with `python3 tools/export_mod_symbols.py`.
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and

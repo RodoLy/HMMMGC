@@ -32,8 +32,11 @@ le sirve.
 - [x] Probar Magical Melody con ModernGekko-Template: arranca, muestra los
       logos de Nintendo, Natsume y Marvelous, y la escena 3D de apertura
       (render por software, sin GPU).
-- [ ] Hito: pantalla de título y partida nueva con controles reales, a
-      velocidad completa en una PC con GPU.
+- [x] Pantalla de título, menú y partida nueva con entrada de control
+      (automatización de ModernGekko), hasta el saludo del alcalde en el
+      intro; `fallback=0`, todo corre recompilado.
+- [ ] Hito: mover al personaje y jugar a velocidad completa en una PC con
+      GPU.
 - [x] Nombres de funciones para mods: `tools/export_mod_symbols.py` genera
       el mismo header que DolRecomp con `--map` (idéntico byte por byte).
       Con el backend de C el mapa no cambia el código, así que
@@ -111,8 +114,11 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 - [x] Try Magical Melody with ModernGekko-Template: it boots, shows the
       Nintendo, Natsume and Marvelous logos, and the 3D opening scene
       (software rendering, no GPU).
-- [ ] Milestone: title screen and a new game with real input, at full
-      speed on a PC with a GPU.
+- [x] Title screen, menu and a new game with controller input
+      (ModernGekko's automation), up to the mayor's greeting in the intro;
+      `fallback=0`, everything runs recompiled.
+- [ ] Milestone: move the character and play at full speed on a PC with a
+      GPU.
 - [x] Function names for mods: `tools/export_mod_symbols.py` writes the
       same header DolRecomp writes with `--map` (byte-identical). With the C
       backend the map does not change the code, so `moderngekko-port` needs

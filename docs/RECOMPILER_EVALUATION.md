@@ -93,6 +93,40 @@ Notas para repetir la prueba:
 - La prueba se automatiza con `--automation-dir` (comandos de botones y
   capturas en archivos de texto, estado en `status.txt`).
 
+### Pantalla de título y partida nueva (2026-11-03)
+
+**Con el mismo módulo, el juego llega a la pantalla de título, abre el menú y
+empieza una partida nueva.** Los botones se mandan por la carpeta de
+automatización de ModernGekko, igual que si vinieran de un control.
+
+| Paso | Resultado |
+|---|---|
+| Sin tocar nada tras los logos | Pantalla negra mientras carga (el contador de frames se queda en 420) y luego la apertura en 3D: el molino, el perro, las ovejas, las vacas y el granjero. |
+| Start durante la apertura | Pantalla de título: logo de *Harvest Moon: Magical Melody*, "Push START" y los créditos de Natsume (2006) y Marvelous (2005). |
+| Start en el título | Menú: New Game, Continue, Mini Games y Options. |
+| New Game | Las preguntas de la partida nueva: estación del cumpleaños (Spring), chico o chica (Boy), confirmación e "Information registered". |
+| Después | El protagonista en 3D en un camino empedrado y el anuncio del alcalde ("The Exciting Ranch Plan! ...") escribiéndose letra por letra. |
+| Unos 25 A más | Escenas animadas del intro hasta la plaza del pueblo, donde el alcalde Theodore te recibe con confeti y empieza a hablar. |
+
+Unos 26 minutos y 3 016 frames sin errores ni comandos fallidos, y el juego
+cerró limpio. En las estadísticas de cierre `fallback=0`: el intérprete nunca
+tuvo que ejecutar código, todo corrió desde el módulo recompilado (las
+instrucciones que el código nativo le pasa al núcleo, como operaciones de
+caché, se cuentan aparte en `hook_fb`).
+
+Detalles útiles para la próxima prueba:
+
+- Los menús mueven el cursor con el stick analógico (`main_y`); `dpad_up` no
+  lo movía.
+- Las confirmaciones Sí/No empiezan en "No".
+- Con render por software en 2 núcleos va a 1–5 fps: unos 3 fps en los menús
+  2D y 1.3–2 en las escenas 3D.
+- El comando `screenshot` se marca como procesado antes de que la imagen se
+  guarde; hay que esperar a que aparezca el archivo.
+
+Falta la otra mitad del hito: mover al personaje y jugar a velocidad
+completa en una PC con GPU.
+
 ### Cómo probarlo en tu PC
 
 La extracción de DolRecomp lee ISO y WBFS, no RVZ, así que primero extrae
@@ -199,6 +233,40 @@ Notes for repeating the test:
   did.
 - The test is automated with `--automation-dir` (button and screenshot
   commands as text files, state in `status.txt`).
+
+### Title screen and new game (2026-11-03)
+
+**With the same module, the game reaches the title screen, opens its menu and
+starts a new game.** Buttons are sent through ModernGekko's automation
+folder, exactly as if they came from a controller.
+
+| Step | Result |
+|---|---|
+| No input after the logos | A black screen while it loads (the frame counter holds at 420), then the 3D opening: the windmill, the dog, sheep, cows and the farmer. |
+| Start during the opening | Title screen: the *Harvest Moon: Magical Melody* logo, "Push START" and the Natsume (2006) and Marvelous (2005) credits. |
+| Start on the title | Menu: New Game, Continue, Mini Games and Options. |
+| New Game | The new-game questions: birthday season (Spring), boy or girl (Boy), confirmation and "Information registered". |
+| Then | The 3D protagonist on a cobbled road and the mayor's flyer ("The Exciting Ranch Plan! ...") typing out letter by letter. |
+| About 25 more A presses | Animated intro scenes up to the village square, where Mayor Theodore welcomes you with confetti and starts talking. |
+
+About 26 minutes and 3,016 frames with no errors or failed commands, and the
+game shut down cleanly. Its shutdown statistics show `fallback=0`: the
+interpreter never had to run any code, everything ran from the recompiled
+module (instructions the native code hands to the core, such as cache
+operations, are counted separately as `hook_fb`).
+
+Useful details for the next test:
+
+- Menus move their cursor with the analog stick (`main_y`); `dpad_up` did not
+  move it.
+- Yes/No confirmations start on "No".
+- With software rendering on 2 cores it runs at 1–5 fps: about 3 fps in 2D
+  menus and 1.3–2 in 3D scenes.
+- The `screenshot` command is marked processed before the image is saved;
+  wait for the file to appear.
+
+The other half of the milestone is still open: moving the character and
+playing at full speed on a PC with a GPU.
 
 ### Trying it on your PC
 
