@@ -121,11 +121,23 @@ choose_graphics_backend() {
 }
 
 download_template() {
-    [[ -d "$TEMPLATE_DIRECTORY/.git" ]] && return
+    # Written only once every submodule is in place. Checking for the folder
+    # alone is not enough: a download stopped halfway (Ctrl+C, the computer
+    # going to sleep) leaves the folder with submodules missing.
+    local download_finished_marker="$TEMPLATE_DIRECTORY/.git/hm-mm-recomp-download-finished"
+    [[ -f "$download_finished_marker" ]] && return
+
     step "Downloading ModernGekko-Template and its submodules (about 1 GB)"
-    git clone --no-checkout "$TEMPLATE_URL" "$TEMPLATE_DIRECTORY"
+    note "Keep the computer awake until this finishes; a sleeping PC stalls the download."
+    if [[ ! -d "$TEMPLATE_DIRECTORY/.git" ]]; then
+        git clone --no-checkout "$TEMPLATE_URL" "$TEMPLATE_DIRECTORY"
+    fi
     git -C "$TEMPLATE_DIRECTORY" checkout --quiet "$TEMPLATE_COMMIT"
-    git -C "$TEMPLATE_DIRECTORY" submodule update --init --recursive
+    git -C "$TEMPLATE_DIRECTORY" submodule sync --recursive --quiet
+    # --force checks every submodule out again, which also restores the files
+    # an interrupted earlier run never got to write.
+    git -C "$TEMPLATE_DIRECTORY" submodule update --init --recursive --force
+    touch "$download_finished_marker"
 }
 
 build_tools() {
