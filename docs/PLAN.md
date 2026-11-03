@@ -79,8 +79,12 @@ le sirve.
 
 **Fase 4 – Cheats y mods**
 - [ ] Menú in-game: dinero, stamina, hora, notas, afecto.
-- [ ] Sistema de mods: carpeta de reemplazo de assets + hooks de funciones.
-      Diseñar los hooks desde la fase 1.
+- [x] Hooks de funciones para mods: `scripts/build_mods.sh` compila mods que
+      enganchan funciones del juego por su nombre
+      ([mods/README.md](../mods/README.md)); `boot_logger` lo prueba. Los
+      *patch* (reemplazar una función) existen en la API, pero ningún mod los
+      ha probado todavía dentro del juego.
+- [ ] Carpeta de reemplazo de assets para mods.
 
 **Fase 5 – Release**
 - [ ] Instalador que toma la ISO/RVZ del usuario, verifica hash y extrae.
@@ -175,8 +179,11 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 
 **Phase 4 – Cheats and mods**
 - [ ] In-game menu: money, stamina, time, notes, affection.
-- [ ] Mod system: asset-override folder + function hooks. Design the hooks
-      from phase 1 onward.
+- [x] Function hooks for mods: `scripts/build_mods.sh` builds mods that hook
+      the game's functions by name ([mods/README.md](../mods/README.md));
+      `boot_logger` proves it. *Patches* (replacing a function) exist in the
+      API, but no mod has tried one inside the game yet.
+- [ ] Asset-override folder for mods.
 
 **Phase 5 – Release**
 - [ ] Installer that takes the user's ISO/RVZ, verifies the hash and extracts.
