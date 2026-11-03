@@ -131,8 +131,22 @@ distinguirlas: desensamblar `lsrun_bltin.cpp` y comparar el bytecode de
 
 ### DOL layout
 
-See the table in the Spanish section; addresses are identical.
-`text1` holds all game code (1.7 MB); `data5` is the large data section (768 KB).
+```
+entry 0x80003154   bss 0x802AED40 (+0x73A24)
+text0  file 0x00000100  addr 0x80003100  size 0x000024E0   <- init / crt0
+text1  file 0x000025E0  addr 0x800184C0  size 0x001B6520   <- all game code (1.7 MB)
+data0  file 0x001B8B00  addr 0x800055E0  size 0x0000B500
+data1  file 0x001C4000  addr 0x80010AE0  size 0x000079E0
+data2  file 0x001CB9E0  addr 0x801CE9E0  size 0x00000060
+data3  file 0x001CBA40  addr 0x801CEA40  size 0x00000020
+data4  file 0x001CBA60  addr 0x801CEA60  size 0x00020860
+data5  file 0x001EC2C0  addr 0x801EF2C0  size 0x000BFA80   <- large data (768 KB)
+data6  file 0x002ABD40  addr 0x80321080  size 0x00000C20
+data7  file 0x002AC960  addr 0x80322780  size 0x00003C80
+```
+
+The linker names of these sections (`.init`, `extab`, `.text`, ...) are in
+[FUNCTION_MAP.md](FUNCTION_MAP.md).
 
 ### Toolchain and SDK
 
@@ -141,11 +155,34 @@ See the table in the Spanish section; addresses are identical.
 - Dolphin SDK: **Nov 10 2004** build (OS, GX) and Apr 2004 (the rest).
   Libraries present: AI, AR, ARQ, AX, CARD, DSP, DVD, EXI, GX, OS, PAD, SI, VI.
 - C++ with asserts enabled, so original source file names survive in the
-  binary (list in the Spanish section).
+  binary:
+
+```
+Building.cpp  CDColiseum.cpp  CastControl.cpp  Cell.cpp  Field.cpp
+FurnitureArrange.cpp  KusaKeiba.cpp  LiveStock.cpp  LiveStockDb.cpp
+Parameter.cpp  Sound.cpp  UnitArrange.cpp  WinRadar.cpp  shipment.cpp
+lsrun.cpp  lsrun_bltin.cpp            <- script interpreter (see below)
+GCN_Mem_Alloc.c  dvdfs.c  gcaxSndMemory.c  opdvd.c  texPalette.c  vi.c
+```
 
 ### Filesystem
 
-Same table as above. Key findings:
+| Folder | Files | Size | Contents |
+|---|---|---|---|
+| `graphic/` | 6,107 | 163 MB | Models, textures, animations |
+| `sound/` | 121 | 16 MB | Audio (AX/DSP) |
+| `menu/` | 222 | 3.8 MB | User interface |
+| `script/` | 292 | 1.5 MB | `.lsb` event scripts |
+| `message/` | 217 | 1.3 MB | Japanese text |
+| `message_e/` | 208 | 1.1 MB | English text |
+| `message_s/` | 179 | 1.0 MB | **Spanish text** |
+| `message_f/` `message_g/` `message_i/` | ~178 each | ~1 MB each | French, German, Italian |
+| `attribute/` | 32 | 432 KB | Game data tables |
+| `system/` | 8 | 304 KB | System data (`MGSUIEI.BIN`, ...) |
+| `route/` | 2 | 32 KB | NPC routes |
+| `opening*.bnr` | 4 | | Banners (JP, E, EU) |
+
+Key findings:
 
 - **The USA disc already ships all five European languages**, including a
   full Spanish text set in `message_s/`. Localisation is a matter of exposing
@@ -157,10 +194,28 @@ Same table as above. Key findings:
 ### Event scripts (`.lsb`)
 
 Bytecode for an in-house interpreter implemented in `lsrun.cpp` /
-`lsrun_bltin.cpp` (built-ins). Format not yet documented; it is the first
-reverse-engineering target because the Jamie mod lives there.
+`lsrun_bltin.cpp` (built-ins). Header seen:
+
+```
+ff ff ff ff  00 00 0c 9f  ff ff ff ff  00 00 1c 8b  00 00 00 00  01 ...
+```
+
+The format is not documented yet; it is the first reverse-engineering
+target of the Jamie mod.
+
+Script families: `Eve_A##` (note events), `Eve_love##`, `Eve_good##`,
+`Eve_marry##`, `Eve_child##`, `Eve_conce##`, `Eve_pm_##`, `eve_pw_##`,
+`Eve_EP##` (epilogue?), `Eve_rm##`, `Eve_title`, `Eve_Marry`, `talk`, `eat`,
+`tone`, `dolphin`.
 
 ### The Jamie wedding
+
+| Script | Size | Text (`message_e/event/`) |
+|---|---|---|
+| `Eve_marry00.lsb` … `Eve_marry21.lsb` | 1–2 KB | `eve_marry00_e.bin`, `eve_marry02_e.bin` (normal weddings) |
+| `Eve_rm00.lsb` | 2,639 B | `eve_rm00_e.bin` |
+| `Eve_rm01.lsb` / `_e` / `_eu` | 7,307 B | `eve_rm01_e.bin` — **Jamie wedding** |
+| `Eve_rm02.lsb` / `_e` / `_eu` | 7,271 B | (no `_e` text of its own; probably a variant) |
 
 `Eve_rm01.lsb` (plus `_e` / `_eu` variants, 7,307 bytes each) is the Jamie
 wedding. Its text file `eve_rm01_e.bin` contains the ceremony, the Goddess's

@@ -96,21 +96,16 @@ which runs it on PC (the runtime: video, audio, input, disc).
 
 ### Candidates
 
-The table in the Spanish section is the comparison. In short:
-
-- **DolRecomp + ModernGekko** (DolRecomp `02e27ac`, 2026-10-10; template
-  `c2553a9`, 2026-09-16): GPL-3.0. C11 CPU recompiler with C and LLVM
-  backends, 30+ test suites and CI on Linux/Windows/macOS. ModernGekko is a
-  Dolphin-derived runtime for video, audio and HLE. `--map` takes
-  "address size name" lines and uses every address as an entry and partition
-  point. Per-function C patches are verified with an FNV-64 hash of the
-  original code.
-- **NWiiRecomp** (`595f176`, 2026-08-07): its own runtime (rasterizer, HLE,
-  hardware interfaces) with GX still at "structure tracking". Custom license:
-  non-commercial only, derivatives must carry equally restrictive terms,
-  mandatory credit.
-- **Our own recompiler**, N64Recomp style: full control, but the CPU
-  translator and, above all, the GX renderer would have to be written.
+| | DolRecomp + ModernGekko | NWiiRecomp | Our own recompiler |
+|---|---|---|---|
+| Reviewed | DolRecomp `02e27ac` (2026-10-10), ModernGekko-Template `c2553a9` (2026-09-16) | `595f176` (2026-08-07) | — |
+| License | GPL-3.0 (ModernGekko: GPL-3.0-or-later, Dolphin-derived) | Custom: non-commercial only, derivatives must carry equally restrictive terms, mandatory credit | Whichever we choose |
+| CPU | C11, C and LLVM backends, ~44,000 lines | C++, ~22,000 lines (runtime included) | To be written |
+| Tests | 30+ suites (opcodes, FPSCR, paired singles, jump tables, cross-checks against Dolphin), CI on Linux/Windows/macOS | Its CMake defines no tests | To be written |
+| Runtime | ModernGekko: Dolphin-derived core for video, audio and HLE | Its own rasterizer, HLE and hardware interface; GX still at "structure tracking" | To be written (GX is the longest part) |
+| Fits our map | Yes: `--map` takes "address size name" lines and uses every address as an entry and partition point | Has its own analyzer | Yes, by design |
+| Mods and patches | Per-function C patches verified with an FNV-64 hash of the original code; native function replacements | Per-game HLE hooks in TOML | To be designed |
+| Public status | ModernGekko's README lists recomps of Super Mario Sunshine, Smash Bros. Brawl, Melee, Luigi's Mansion, Kirby Wii and 007 Agent Under Fire (how complete they are was not checked) | Games that reach their intros (Mario Party 7) | — |
 
 ### Recommendation: DolRecomp + ModernGekko
 
