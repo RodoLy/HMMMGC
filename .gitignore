@@ -6,8 +6,6 @@
 *.dol
 orig/*/*
 !orig/*/.gitkeep
-disc/
-extracted/
 build/
 
 # Python

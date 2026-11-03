@@ -55,6 +55,10 @@ entienda qué hace y por qué, sin tener que preguntarle a nadie.
   se saltan solas salvo que `HM_MM_DOL` apunte a tu `main.dol`.
 - Un script = una tarea, con un docstring que diga para qué sirve y cómo se
   usa.
+- Las rutas por defecto salen de `tools/project.py` (relativas a la raíz del
+  repo), así que las herramientas funcionan desde cualquier carpeta.
+- Lo que se pueda probar sin el juego se prueba con DOLs sintéticos
+  (`tests/synthetic.py`, cuyas codificaciones se comparan con capstone).
 
 ### C / C++ (recompilador y runtime, próximas fases)
 
@@ -143,6 +147,10 @@ it does and why, without having to ask anyone.
   `HM_MM_DOL` points to your `main.dol`.
 - One script = one task, with a docstring saying what it is for and how to
   use it.
+- Default paths come from `tools/project.py` (relative to the repository
+  root), so the tools work from any folder.
+- Whatever can be tested without the game is tested on synthetic DOLs
+  (`tests/synthetic.py`, whose encodings are checked against capstone).
 
 ### C / C++ (recompiler and runtime, later phases)
 

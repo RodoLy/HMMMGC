@@ -49,14 +49,14 @@ python3 -m pip install -r requirements-dev.txt   # capstone, pytest, ruff
 
 # 2. Extrae tu disco a orig/G4AEE9 y verifica que sea el binario correcto
 python3 tools/extract_disc.py ruta/a/tu/disco.rvz
-python3 tools/check_disc.py orig/G4AEE9
+python3 tools/check_disc.py
 
 # 3. Regenera y comprueba el mapa de funciones
-python3 tools/analyze.py orig/G4AEE9/sys/main.dol
+python3 tools/analyze.py
 HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 
 # 4. Lee cualquier función
-python3 tools/disasm.py orig/G4AEE9/sys/main.dol main
+python3 tools/disasm.py main
 ```
 
 Antes de contribuir lee [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -108,14 +108,14 @@ python3 -m pip install -r requirements-dev.txt   # capstone, pytest, ruff
 
 # 2. Extract your disc to orig/G4AEE9 and check it is the right binary
 python3 tools/extract_disc.py path/to/your/disc.rvz
-python3 tools/check_disc.py orig/G4AEE9
+python3 tools/check_disc.py
 
 # 3. Regenerate and check the function map
-python3 tools/analyze.py orig/G4AEE9/sys/main.dol
+python3 tools/analyze.py
 HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 
 # 4. Read any function
-python3 tools/disasm.py orig/G4AEE9/sys/main.dol main
+python3 tools/disasm.py main
 ```
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
