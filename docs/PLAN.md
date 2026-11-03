@@ -37,6 +37,14 @@ le sirve.
       intro; `fallback=0`, todo corre recompilado.
 - [ ] Hito: mover al personaje y jugar a velocidad completa en una PC con
       GPU.
+- [ ] Jugar con GPU en laptops Windows ARM (Snapdragon): WSL2 no puede usar
+      la GPU ahí ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)).
+      Ruta posible: compilar ModernGekko de forma nativa para Windows ARM64.
+      Su CMake y el Dolphin que trae ya contemplan ARM64 (`_M_ARM_64`,
+      FFmpeg ARM64, sin OpenGL en Windows ARM64, así que Vulkan o D3D12);
+      falta comprobar que compile: el README de DolRecomp dice que
+      ModernGekko no compila con MSVC por ahora, y el de ModernGekko-Template
+      fijado dice que sí.
 - [x] Nombres de funciones para mods: `tools/export_mod_symbols.py` genera
       el mismo header que DolRecomp con `--map` (idéntico byte por byte).
       Con el backend de C el mapa no cambia el código, así que
@@ -119,6 +127,14 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       `fallback=0`, everything runs recompiled.
 - [ ] Milestone: move the character and play at full speed on a PC with a
       GPU.
+- [ ] Play with a GPU on Windows ARM laptops (Snapdragon): WSL2 cannot use
+      the GPU there ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)).
+      Possible route: build ModernGekko natively for Windows ARM64. Its
+      CMake and the Dolphin it ships already account for ARM64
+      (`_M_ARM_64`, ARM64 FFmpeg, no OpenGL on Windows ARM64, so Vulkan or
+      D3D12); what is left is checking that it builds: DolRecomp's README
+      says ModernGekko does not build with MSVC for now, and the pinned
+      ModernGekko-Template's says it does.
 - [x] Function names for mods: `tools/export_mod_symbols.py` writes the
       same header DolRecomp writes with `--map` (byte-identical). With the C
       backend the map does not change the code, so `moderngekko-port` needs
