@@ -1,0 +1,9 @@
+# Game data is never committed. Bring your own disc.
+# Los datos del juego nunca se suben. Usa tu propio disco.
+*.rvz
+*.iso
+*.gcm
+*.dol
+disc/
+extracted/
+build/
