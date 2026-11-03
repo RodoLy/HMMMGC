@@ -45,6 +45,13 @@ le sirve.
       falta comprobar que compile: el README de DolRecomp dice que
       ModernGekko no compila con MSVC por ahora, y el de ModernGekko-Template
       fijado dice que sí.
+      Otra ruta, más barata de probar: `GALLIUM_DRIVER=d3d12` en WSL. Hay
+      usuarios de laptops x64 a los que Mesa les caía a software y con eso
+      vieron su GPU ([wslg#1394](https://github.com/microsoft/wslg/issues/1394)),
+      y otros que reportan congelamientos y pantallazos azules con algunas GPU
+      ([WSL#14033](https://github.com/microsoft/WSL/issues/14033)); no hay
+      reportes en Snapdragon. Se prueba primero con
+      `GALLIUM_DRIVER=d3d12 glxinfo -B`, que solo consulta.
 - [x] Nombres de funciones para mods: `tools/export_mod_symbols.py` genera
       el mismo header que DolRecomp con `--map` (idéntico byte por byte).
       Con el backend de C el mapa no cambia el código, así que
@@ -135,6 +142,13 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       D3D12); what is left is checking that it builds: DolRecomp's README
       says ModernGekko does not build with MSVC for now, and the pinned
       ModernGekko-Template's says it does.
+      Another route, cheaper to try: `GALLIUM_DRIVER=d3d12` in WSL. Some
+      users of x64 laptops whose Mesa fell back to software saw their GPU
+      with it ([wslg#1394](https://github.com/microsoft/wslg/issues/1394)),
+      and others report freezes and blue screens with some GPUs
+      ([WSL#14033](https://github.com/microsoft/WSL/issues/14033)); there are
+      no reports on Snapdragon. Try it first with
+      `GALLIUM_DRIVER=d3d12 glxinfo -B`, which only queries.
 - [x] Function names for mods: `tools/export_mod_symbols.py` writes the
       same header DolRecomp writes with `--map` (byte-identical). With the C
       backend the map does not change the code, so `moderngekko-port` needs
