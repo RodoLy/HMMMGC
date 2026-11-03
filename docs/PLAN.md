@@ -6,17 +6,22 @@
 
 ## Español
 
-Dos pistas en paralelo. La pista B da resultados visibles pronto y todo lo
-que descubre se reutiliza en la pista A.
+Prioridad: **la recompilación va primero** (pista A). La pista B (mods sobre
+los scripts del disco) queda para después; todo lo que la pista A descubre
+le sirve.
 
 ### Pista A – Recompilación (port nativo)
 
-**Fase 0 – Análisis del disco** ✅
+**Fase 0 – Análisis del disco y mapa de funciones** ✅
 - [x] Extraer disco, identificar binario objetivo y registrar hashes.
 - [x] Layout del DOL, versión del SDK, archivos fuente, sistema de archivos.
 - [x] Localizar el script de la boda con Jamie.
-- [ ] Split inicial con decomp-toolkit (`dtk dol split`) para obtener límites
-      de funciones y símbolos del SDK con nombre.
+- [x] Mapa de funciones (`config/G4AEE9/symbols.txt`): 4 486 funciones,
+      273 tablas de `switch`, validado contra `extabindex` (2 597/2 597).
+      Herramientas propias en vez de dtk; ver [FUNCTION_MAP.md](FUNCTION_MAP.md).
+- [x] Nombres con evidencia: arranque de CodeWarrior y los 13 `Init` del SDK.
+- [ ] Identificar el resto del SDK por firma (fronteras de lo que el runtime
+      reemplaza en la fase 2).
 
 **Fase 1 – Recompilación de CPU**
 - [ ] Probar DolRecomp y NWiiRecomp sobre `main.dol`; quedarse con el que
@@ -51,7 +56,7 @@ que descubre se reutiliza en la pista A.
 - [ ] Instalador que toma la ISO/RVZ del usuario, verifica hash y extrae.
 - [ ] Builds Windows/Linux. Sin assets del juego en el repo ni en el release.
 
-### Pista B – Mods en Dolphin (mientras tanto)
+### Pista B – Mods en Dolphin (después de la recomp)
 
 - [ ] Documentar el formato `.lsb` (desensamblar `lsrun.cpp` / `lsrun_bltin.cpp`).
 - [ ] Localizar la llamada de "fin de juego" en `Eve_rm01.lsb` o en código nativo.
@@ -61,27 +66,29 @@ que descubre se reutiliza en la pista A.
 
 ### Convenciones
 
-- Un commit por cambio, mensajes en inglés.
-- Documentación en español e inglés; nombres de archivo en inglés.
-- El código debe leerse como escrito por una persona y traer guía para
-  reproducir cada paso.
-- Nunca subir datos del juego.
+Ver [CONTRIBUTING.md](../CONTRIBUTING.md): nombres que se explican solos,
+comentarios que dicen el porqué, evidencia para cada nombre, un commit por
+cambio en inglés, documentación bilingüe y nunca datos del juego.
 
 ---
 
 ## English
 
-Two parallel tracks. Track B produces visible results early and everything it
-discovers feeds straight into track A.
+Priority: **the recompilation comes first** (track A). Track B (mods on the
+disc's scripts) comes later; everything track A discovers feeds into it.
 
 ### Track A – Recompilation (native port)
 
-**Phase 0 – Disc analysis** ✅
+**Phase 0 – Disc analysis and function map** ✅
 - [x] Extract disc, identify target binary, record hashes.
 - [x] DOL layout, SDK version, source file names, filesystem.
 - [x] Locate the Jamie wedding script.
-- [ ] Initial split with decomp-toolkit (`dtk dol split`) for function
-      boundaries and named SDK symbols.
+- [x] Function map (`config/G4AEE9/symbols.txt`): 4,486 functions,
+      273 `switch` tables, validated against `extabindex` (2,597/2,597).
+      In-repo tools instead of dtk; see [FUNCTION_MAP.md](FUNCTION_MAP.md).
+- [x] Names with evidence: CodeWarrior startup and the 13 SDK `Init`s.
+- [ ] Identify the rest of the SDK by signature (the boundary of what the
+      runtime replaces in phase 2).
 
 **Phase 1 – CPU recompilation**
 - [ ] Try DolRecomp and NWiiRecomp on `main.dol`; keep whichever yields
@@ -115,7 +122,7 @@ discovers feeds straight into track A.
 - [ ] Installer that takes the user's ISO/RVZ, verifies the hash and extracts.
 - [ ] Windows/Linux builds. No game assets in the repo or the release.
 
-### Track B – Dolphin mods (meanwhile)
+### Track B – Dolphin mods (after the recomp)
 
 - [ ] Document the `.lsb` format (disassemble `lsrun.cpp` / `lsrun_bltin.cpp`).
 - [ ] Locate the "end game" call in `Eve_rm01.lsb` or in native code.
@@ -125,8 +132,6 @@ discovers feeds straight into track A.
 
 ### Conventions
 
-- One commit per change, messages in English.
-- Documentation in Spanish and English; file names in English.
-- Code should read as if a person wrote it and come with a guide to
-  reproduce each step.
-- Never commit game data.
+See [CONTRIBUTING.md](../CONTRIBUTING.md): self-explaining names, comments
+that say why, evidence for every name, one English commit per change,
+bilingual docs and never any game data.
