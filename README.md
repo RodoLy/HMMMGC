@@ -40,7 +40,12 @@ Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 - Menú de cheats y mejoras de calidad de vida.
 - Soporte para mods (reemplazo de assets y hooks de código).
 
-### Empezar
+### Jugar
+
+Para compilar y abrir el juego recompilado en Ubuntu, o en Windows dentro de
+WSL2, sigue [docs/BUILDING.md](docs/BUILDING.md); un solo script hace todo.
+
+### Empezar (herramientas de análisis)
 
 Necesitas Python 3.11+, y Rust para instalar `nodtool`.
 
@@ -119,7 +124,12 @@ See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 - Cheat menu and quality-of-life improvements.
 - Mod support (asset replacement and code hooks).
 
-### Getting started
+### Playing
+
+To build and start the recompiled game on Ubuntu, or on Windows inside WSL2,
+follow [docs/BUILDING.md](docs/BUILDING.md); a single script does it all.
+
+### Getting started (analysis tools)
 
 You need Python 3.11+, and Rust to install `nodtool`.
 
