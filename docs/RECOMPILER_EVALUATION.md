@@ -49,16 +49,47 @@ CPU) y qué la ejecuta en PC (el runtime: video, audio, controles, disco).
 Riesgos:
 
 - Todas las opciones son de 2026. ModernGekko ya tiene una lista de juegos
-  recompilados con él, pero **falta probar que Magical Melody arranque con
-  este stack.**
+  recompilados con él, y Magical Melody ya arranca con este stack (ver
+  abajo), pero falta jugarlo a velocidad real en una PC con GPU.
 - El proyecto quedaría bajo GPL-3.0.
 - ModernGekko descarga varios cientos de MB de dependencias de Dolphin.
 - Los controles se configuran con un `.ini` de Dolphin a mano (no tiene UI).
 
-### Lo que falta
+### Resultado de la prueba de arranque (2026-11-03)
 
-En este entorno de trabajo no se puede compilar ni ejecutar código
-descargado, así que la prueba se hace en tu máquina:
+**Magical Melody arranca y dibuja con DolRecomp + ModernGekko.**
+
+| Paso | Resultado |
+|---|---|
+| Compilar DolRecomp | Bien; sus 20 suites de pruebas pasan. |
+| Recompilar `main.dol` | 448 834 de 448 840 instrucciones reconocidas, 0 desconocidas, 110 archivos de C. Con `--map` usó nuestras 4 486 funciones. |
+| Compilar el módulo nativo (gcc, 2 núcleos) | `gG4AEE9_recomp.so` en 21 minutos. |
+| Ejecutar en ModernGekko | Carga el módulo con el entry point `0x80003154`. |
+| 40 s | Pantalla "LICENSED BY NINTENDO". |
+| 80 s | Logo de Natsume. |
+| 140 s | Logo de Marvelous Interactive. |
+| Tras pulsar Start/A | Escena 3D de apertura: la granja con el perro, ovejas y vacas. |
+
+Más de 4 minutos corriendo, casi 500 frames y sin errores en el estado de
+automatización. Va a 1.5–4 fps porque la máquina de prueba no tiene GPU y
+todo el video se dibuja en la CPU (Vulkan por software, lavapipe); en una PC
+con GPU debería ir a velocidad normal, falta comprobarlo.
+
+Notas para repetir la prueba:
+
+- El módulo del pipeline de ModernGekko se recompiló sin `--map`
+  (`moderngekko-port` todavía no lo pasa), con la detección de funciones de
+  DolRecomp. Nuestro mapa se probó aparte con DolRecomp directamente.
+- La plantilla descarga GameTDB y `wit`, que solo sirven para Wii; si la red
+  no lo permite, basta con llamar a
+  `moderngekko-port build <juego extraído> --backend c --toolchain auto --output build/modules`.
+- El submódulo `bzip2` de Dolphin vive en gitlab.com; si no se puede
+  descargar, `libbz2-dev` del sistema lo reemplaza.
+- Sin GPU, OpenGL no inicializó bajo Xvfb; Vulkan con lavapipe sí.
+- La prueba se automatiza con `--automation-dir` (comandos de botones y
+  capturas en archivos de texto, estado en `status.txt`).
+
+### Cómo probarlo en tu PC
 
 La extracción de DolRecomp lee ISO y WBFS, no RVZ, así que primero extrae
 con la herramienta de este repo dentro de la carpeta que usa la plantilla:
@@ -80,10 +111,6 @@ ModernGekko-Template pide Visual Studio (MSVC), pero el de DolRecomp, más
 reciente, dice que ModernGekko no compila con MSVC por ahora. La ruta de
 Linux es la mejor documentada (lista exacta de paquetes `apt`) y WSL2 la da
 también en Windows ARM64, con ventanas gráficas vía WSLg.
-
-Resultado esperado de la prueba, de menos a más: compila el C generado →
-arranca y llega a `main` → muestra el logo de Natsume → título → jugable.
-Cualquier punto de ese camino sirve: dice dónde empezar.
 
 ---
 
@@ -125,22 +152,66 @@ which runs it on PC (the runtime: video, audio, input, disc).
 
 Risks: every option dates from 2026. ModernGekko's README lists recomps of
 Super Mario Sunshine, Smash Bros. Brawl, Melee, Luigi's Mansion, Kirby Wii
-and 007 Agent Under Fire (how complete they are was not checked), but
-**Magical Melody still has to be shown to boot on this stack**; the project
+and 007 Agent Under Fire (how complete they are was not checked), and
+Magical Melody now boots on this stack (see below); the project
 would be GPL-3.0; ModernGekko pulls several hundred MB of Dolphin
 dependencies; input is configured through a hand-written Dolphin `.ini`.
 
-### What is left
+### Boot test result (2026-11-03)
 
-Downloaded code cannot be built or run in the environment this analysis was
-done in, so the test happens on your machine with the commands in the
-Spanish section. DolRecomp's extractor reads ISO and WBFS but not RVZ, so
-the disc is first extracted with this repository's `tools/extract_disc.py`
-into the template's `extracted/<name>/` folder (or converted to ISO in
-Dolphin). On Windows, use WSL2 with Ubuntu: the template's README asks for
-MSVC, but DolRecomp's newer README says ModernGekko does not build under
-MSVC yet, and the Linux path is the best documented one (it also works on
-Windows ARM64, with GUI windows through WSLg). Expected milestones, from
-least to most: the generated C
-compiles → boots and reaches `main` → Natsume logo → title screen →
-playable. Wherever it stops tells us where to start.
+**Magical Melody boots and renders on DolRecomp + ModernGekko.**
+
+| Step | Result |
+|---|---|
+| Build DolRecomp | Fine; its 20 test suites pass. |
+| Recompile `main.dol` | 448,834 of 448,840 instructions known, 0 unknown, 110 C files. With `--map` it used our 4,486 functions. |
+| Build the native module (gcc, 2 cores) | `gG4AEE9_recomp.so` in 21 minutes. |
+| Run on ModernGekko | Loads the module with entry point `0x80003154`. |
+| 40 s | "LICENSED BY NINTENDO" screen. |
+| 80 s | Natsume logo. |
+| 140 s | Marvelous Interactive logo. |
+| After pressing Start/A | The 3D opening scene: the farm with the dog, sheep and cows. |
+
+Over 4 minutes running, almost 500 frames, no errors in the automation
+status. It runs at 1.5–4 fps because the test machine has no GPU and all
+video is drawn on the CPU (software Vulkan, lavapipe); on a PC with a GPU it
+should run at full speed, which is still to be confirmed.
+
+Notes for repeating the test:
+
+- The module from ModernGekko's pipeline was recompiled without `--map`
+  (`moderngekko-port` does not pass it yet), using DolRecomp's own function
+  discovery. Our map was tested separately with DolRecomp directly.
+- The template downloads GameTDB and `wit`, which only Wii games need; when
+  the network does not allow it, call
+  `moderngekko-port build <extracted game> --backend c --toolchain auto --output build/modules`
+  directly.
+- Dolphin's `bzip2` submodule lives on gitlab.com; if it cannot be fetched,
+  the system's `libbz2-dev` replaces it.
+- Without a GPU, OpenGL did not initialise under Xvfb; Vulkan with lavapipe
+  did.
+- The test is automated with `--automation-dir` (button and screenshot
+  commands as text files, state in `status.txt`).
+
+### Trying it on your PC
+
+DolRecomp's extractor reads ISO and WBFS but not RVZ, so extract the disc
+with this repository's tool into the template's folder first:
+
+```sh
+git clone --recurse-submodules https://github.com/ExpansionPak/ModernGekko-Template.git
+python3 hm-mm-recomp/tools/extract_disc.py Harvest_Moon_-_Magical_Melody__USA_.rvz \
+    ModernGekko-Template/extracted/Harvest-Moon-Magical-Melody
+cd ModernGekko-Template
+make check
+make run GAME=Harvest-Moon-Magical-Melody
+```
+
+(Or convert the RVZ to ISO in Dolphin, right click → *Convert File…* → ISO,
+and use `make run ISO=file.iso`.)
+
+**On Windows, use WSL2 with Ubuntu.** The template's README asks for Visual
+Studio (MSVC), but DolRecomp's newer README says ModernGekko does not build
+under MSVC yet. The Linux path is the best documented one (exact `apt`
+package list), and WSL2 provides it on Windows ARM64 too, with GUI windows
+through WSLg.
