@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+from export_dolrecomp_map import dolrecomp_map_lines  # noqa: E402
 from symbols import Symbol, SymbolTable  # noqa: E402
 
 
@@ -64,3 +65,12 @@ def test_conflicting_names_keep_the_human_one_and_warn():
     warnings = regenerated.keep_names_from(previous)
     assert regenerated.by_address[0x8016EF2C].name == "MyOSInit"
     assert len(warnings) == 1 and "OSInit" in warnings[0]
+
+
+def test_dolrecomp_map_lists_functions_only():
+    table = make_table()
+    table.add(Symbol("_rom_copy_info", ".init", 0x80005544, "object", 0x84))
+    assert dolrecomp_map_lines(table) == [
+        "80003100 00000040 fn_80003100",
+        "8016EF2C 000004E0 OSInit",
+    ]
