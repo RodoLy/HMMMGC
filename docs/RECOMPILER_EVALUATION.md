@@ -24,7 +24,7 @@ CPU) y qué la ejecuta en PC (el runtime: video, audio, controles, disco).
 | Runtime | ModernGekko: núcleo derivado de Dolphin para video, audio y HLE | Propio: rasterizador, HLE e interfaz de hardware; GX todavía en "seguimiento de estructuras" | Por escribir (GX es lo más largo) |
 | Encaja con nuestro mapa | Sí: `--map` acepta `dirección tamaño nombre` y usa cada dirección como entrada y partición | Tiene su propio analizador | Sí, por diseño |
 | Mods y parches | Parches por función en C con verificación FNV-64 del código original; reemplazo de funciones por código nativo | Hooks HLE por juego en TOML | Por diseñar |
-| Estado público | Herramienta usada como base de plantilla; no se encontró un juego completo terminado | Juegos que llegan a intros (Mario Party 7) | — |
+| Estado público | El README de ModernGekko lista recomps de Super Mario Sunshine, Smash Bros. Brawl, Melee, Luigi's Mansion, Kirby Wii y 007 Agent Under Fire (no verifiqué qué tan completos están) | Juegos que llegan a intros (Mario Party 7) | — |
 
 ### Recomendación: DolRecomp + ModernGekko
 
@@ -48,8 +48,9 @@ CPU) y qué la ejecuta en PC (el runtime: video, audio, controles, disco).
 
 Riesgos:
 
-- Todas las opciones son de 2026 y ninguna tiene todavía un juego completo
-  publicado. **Falta probar que Magical Melody arranque con este stack.**
+- Todas las opciones son de 2026. ModernGekko ya tiene una lista de juegos
+  recompilados con él, pero **falta probar que Magical Melody arranque con
+  este stack.**
 - El proyecto quedaría bajo GPL-3.0.
 - ModernGekko descarga varios cientos de MB de dependencias de Dolphin.
 - Los controles se configuran con un `.ini` de Dolphin a mano (no tiene UI).
@@ -127,7 +128,9 @@ The table in the Spanish section is the comparison. In short:
 5. It is well engineered (tests, CI, contribution guide), matching the
    standard this repository holds itself to.
 
-Risks: every option dates from 2026 and none has a finished game yet, so
+Risks: every option dates from 2026. ModernGekko's README lists recomps of
+Super Mario Sunshine, Smash Bros. Brawl, Melee, Luigi's Mansion, Kirby Wii
+and 007 Agent Under Fire (how complete they are was not checked), but
 **Magical Melody still has to be shown to boot on this stack**; the project
 would be GPL-3.0; ModernGekko pulls several hundred MB of Dolphin
 dependencies; input is configured through a hand-written Dolphin `.ini`.
