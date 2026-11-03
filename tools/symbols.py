@@ -153,7 +153,7 @@ class SymbolTable:
         table = cls()
         if not path.is_file():
             return table
-        for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             match = SYMBOL_LINE.match(line)
             if match is None:
                 if not COMMENT_LINE.match(line):
@@ -181,4 +181,10 @@ class SymbolTable:
         return table
 
     def write(self, path: Path) -> None:
-        path.write_text("".join(symbol.to_line() + "\n" for symbol in self))
+        # Explicit UTF-8 and LF: Python's defaults on Windows (the ANSI code page and CRLF)
+        # would make the same table come out as a different file there.
+        path.write_text(
+            "".join(symbol.to_line() + "\n" for symbol in self),
+            encoding="utf-8",
+            newline="\n",
+        )
