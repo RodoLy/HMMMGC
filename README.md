@@ -18,9 +18,13 @@ disco (ISO, GCM o RVZ).
 
 ### Estado
 
-Fase 0 (análisis del disco) terminada. Ver [docs/PLAN.md](docs/PLAN.md) para el
-plan completo y [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para lo que se
-sabe del binario y los archivos.
+- **Fase 0 terminada:** análisis del disco y mapa de funciones del ejecutable
+  (4 486 funciones, validado contra el índice de excepciones de CodeWarrior).
+- **Siguiente:** fase 1, recompilación de la CPU.
+
+Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
+[docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
+[docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) para el mapa de funciones.
 
 ### Metas
 
@@ -34,16 +38,26 @@ sabe del binario y los archivos.
 
 ### Empezar
 
+Necesitas Python 3.11+, y Rust para instalar `nodtool`.
+
 ```sh
-# 1. Instala nodtool (lee ISO/GCM/RVZ)
-cargo install nodtool
+# 1. Herramientas
+cargo install nodtool                    # lee ISO/GCM/RVZ
+python3 -m pip install -r requirements-dev.txt   # capstone, pytest, ruff
 
-# 2. Extrae tu disco
+# 2. Extrae tu disco a orig/G4AEE9 y verifica que sea el binario correcto
 python3 tools/extract_disc.py ruta/a/tu/disco.rvz
+python3 tools/check_disc.py orig/G4AEE9
 
-# 3. Verifica que sea el binario correcto
-python3 tools/check_disc.py disc/
+# 3. Regenera y comprueba el mapa de funciones
+python3 tools/analyze.py orig/G4AEE9/sys/main.dol
+HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
+
+# 4. Lee cualquier función
+python3 tools/disasm.py orig/G4AEE9/sys/main.dol main
 ```
+
+Antes de contribuir lee [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -61,9 +75,13 @@ This repository contains no game data. You need your own backup of the disc
 
 ### Status
 
-Phase 0 (disc analysis) done. See [docs/PLAN.md](docs/PLAN.md) for the full
-plan and [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for what is known about
-the binary and the files.
+- **Phase 0 done:** disc analysis and function map of the executable (4,486
+  functions, validated against CodeWarrior's exception index).
+- **Next:** phase 1, CPU recompilation.
+
+See [docs/PLAN.md](docs/PLAN.md) for the full plan,
+[docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and
+[docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) for the function map.
 
 ### Goals
 
@@ -77,13 +95,23 @@ the binary and the files.
 
 ### Getting started
 
+You need Python 3.11+, and Rust to install `nodtool`.
+
 ```sh
-# 1. Install nodtool (reads ISO/GCM/RVZ)
-cargo install nodtool
+# 1. Tools
+cargo install nodtool                    # reads ISO/GCM/RVZ
+python3 -m pip install -r requirements-dev.txt   # capstone, pytest, ruff
 
-# 2. Extract your disc
+# 2. Extract your disc to orig/G4AEE9 and check it is the right binary
 python3 tools/extract_disc.py path/to/your/disc.rvz
+python3 tools/check_disc.py orig/G4AEE9
 
-# 3. Verify it is the right binary
-python3 tools/check_disc.py disc/
+# 3. Regenerate and check the function map
+python3 tools/analyze.py orig/G4AEE9/sys/main.dol
+HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
+
+# 4. Read any function
+python3 tools/disasm.py orig/G4AEE9/sys/main.dol main
 ```
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
