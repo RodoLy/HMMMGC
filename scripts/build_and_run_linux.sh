@@ -18,6 +18,8 @@
 #   MODERNGEKKO_TEMPLATE  where ModernGekko-Template lives (default: ~/ModernGekko-Template)
 #   GRAPHICS_BACKEND      Vulkan or OGL, when the automatic choice is wrong
 #   EXTRA_RUN_ARGS        more arguments for moderngekko-run, e.g. "--mute"
+#   MODERNGEKKO_USER_DIR  ModernGekko's user folder: settings, saves and mods
+#                         (default: ~/.local/share/moderngekko)
 
 set -euo pipefail
 
@@ -40,6 +42,11 @@ readonly SUBMODULE_DOWNLOAD_ATTEMPTS=3
 # The template keeps each game under extracted/<slug>/.
 readonly GAME_SLUG="Harvest-Moon-Magical-Melody"
 readonly EXTRACTED_DIRECTORY="$TEMPLATE_DIRECTORY/extracted/$GAME_SLUG"
+
+# Where ModernGekko keeps settings (config.ini), saves and mods. This is the
+# folder it picks on its own; the script passes it explicitly so that
+# MODERNGEKKO_USER_DIR can move it.
+readonly USER_DIRECTORY="${MODERNGEKKO_USER_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/moderngekko}"
 
 # ModernGekko-Template's package list for Ubuntu (from its README), plus what
 # this script needs: git and curl to download, python3 for our disc tools,
@@ -93,6 +100,27 @@ install_missing_packages() {
     "${as_root[@]}" apt-get install -y "${missing[@]}"
 }
 
+# Without a GPU the processor draws every frame, and ModernGekko's default
+# internal resolution (1920x1080, nine times the pixels of the console's own
+# 640x528) makes that several times slower. On a first run, start at the
+# console's resolution. An existing config.ini is the user's choice, so it is
+# only mentioned.
+use_light_resolution_without_gpu() {
+    local config_file="$USER_DIRECTORY/config.ini"
+    if [[ ! -f "$config_file" ]]; then
+        mkdir -p "$USER_DIRECTORY"
+        # Only the resolution: ModernGekko fills every other setting with its
+        # default and rewrites the file in full the next time it saves.
+        printf '%s\n' \
+            '# Written by scripts/build_and_run_linux.sh because this PC has no GPU.' \
+            '[Video]' \
+            'resolution=640x528' > "$config_file"
+        note "without a GPU the game starts at 640x528; raise resolution= in $config_file once there is one"
+    elif ! grep -Eq '^resolution *= *640x528' "$config_file"; then
+        note "to make the game lighter, set resolution=640x528 in $config_file"
+    fi
+}
+
 # Pick the graphics backend that reaches the GPU. Sets GRAPHICS_BACKEND.
 choose_graphics_backend() {
     step "Looking for GPU acceleration"
@@ -127,10 +155,10 @@ choose_graphics_backend() {
             # /dev/dri/renderD128 never appears, so Mesa falls back to
             # software; updating drivers has not helped anyone so far.
             note "WSL2 on Windows-on-ARM laptops has not been able to use the GPU so far (microsoft/wslg issue 1470)"
-            note "to make the game lighter, set resolution=640x528 in ~/.local/share/moderngekko/config.ini"
         elif running_in_wsl && [[ ! -e /dev/dxg ]]; then
             note "WSL cannot see the GPU (/dev/dxg is missing): update Windows, the GPU driver and WSL"
         fi
+        use_light_resolution_without_gpu
     fi
     note "graphics backend: $GRAPHICS_BACKEND"
 }
@@ -233,7 +261,7 @@ run_game() {
     # disc never uses, and reconfigures CMake on every start.
     "$TEMPLATE_DIRECTORY/lib/ModernGekko/build/moderngekko-port" run "$EXTRACTED_DIRECTORY" \
         --backend c --toolchain auto --output "$TEMPLATE_DIRECTORY/build/modules" \
-        -- --graphics "$GRAPHICS_BACKEND" "${extra_arguments[@]}"
+        -- --graphics "$GRAPHICS_BACKEND" --user-dir "$USER_DIRECTORY" "${extra_arguments[@]}"
 }
 
 main() {
@@ -248,4 +276,7 @@ main() {
     run_game
 }
 
-main "$@"
+# Run only when executed, so a test can source this file and call one function.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
