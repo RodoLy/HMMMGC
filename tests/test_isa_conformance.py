@@ -736,6 +736,11 @@ WORDS_WITH_A_RESERVED_BIT_SET = [
     (0x7CA006AC, 0x7C0006AC),  # mbar 5: the barrier to wait for (eieio is the one with none)
     (0x7C2004AC, 0x7C0004AC),  # lwsync: sync with its L bit
     (0xFC8D058E, 0xFC8C058E),  # mtfsf 0x46,f0,0,1: the W bit
+    (0xFC81010C, 0xFC80010C),  # mtfsfi cr1,0,1: the W bit
+    (0x7D3E0026, 0x7D200026),  # mfocrf r9,0x20: bit 11 makes mfcr read a single field of the CR
+    (0x7C170120, 0x7C070120),  # mtocrf: the same bit in mtcrf
+    (0xFCB8048E, 0xFCA0048E),  # mffsl f5: a field of rA that is not zero makes mffs a later variant
+    (0xFCB42C8E, 0xFCA0048E),  # mffscdrn f5,f5: another variant, which also reads a register from rB
     (0x7C002CA6, 0x7C0004A6),  # mfsr r0,0 with a bit set in the field after the segment number
     (0x7C0004A7, 0x7C0004A6),  # mfsr r0,0 with bit 0 set
     (0x7C002029, 0x7C002028),  # lwarx r0,0,r4 with the hint in bit 0
