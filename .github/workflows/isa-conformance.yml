@@ -3,7 +3,8 @@ name: Instruction conformance
 # Runs the instruction-level test of docs/VALIDATION.md without the game (--synthetic): the
 # recompiled C code and Dolphin's interpreter execute made-up instruction words side by side on
 # the same processor, and the lockstep verifier reports every result that differs. It runs on
-# x86-64 and on ARM64, the processor of the laptops this project is meant for. No game data is
+# x86-64 and on ARM64 with Linux and GCC, and on Windows ARM64 with MSVC, the system, the
+# processor and the compiler of the laptops this project is meant for. No game data is
 # involved.
 #
 # It builds ModernGekko first (20 to 40 minutes), so it only runs when asked for:
@@ -28,6 +29,7 @@ concurrency:
 
 jobs:
   synthetic:
+    if: false  # SCRATCH ONLY: remove before merging
     name: ${{ matrix.architecture }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 240
@@ -110,4 +112,119 @@ jobs:
           path: |
             ${{ runner.temp }}/isa_conformance/seed_*/report.txt
             ${{ runner.temp }}/isa_conformance/seed_*/cases.tsv
+          if-no-files-found: warn
+
+  windows-arm64:
+    name: Windows ARM64
+    runs-on: windows-11-arm
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEMPLATE_URL: https://github.com/ExpansionPak/ModernGekko-Template.git
+      # Short paths on purpose: the files of the recompiled module sit in a folder named after the
+      # hash of the program, and Windows programs stop at 260 characters by default.
+      TEMPLATE_DIRECTORY: C:/mg
+      WORK_DIRECTORY: C:/w
+      PYTHONUTF8: "1"
+      # Through the environment and not spliced into the commands, so that the text typed into
+      # the form cannot become part of a command.
+      SEEDS: ${{ inputs.seeds }}
+      WORDS_PER_FORM: ${{ inputs.words_per_form }}
+    steps:
+      # Git for Windows turns line endings into CRLF by default, and the lockstep patch only applies
+      # to files that end their lines with LF. Before the first checkout, so that all of them agree.
+      - name: Keep the line endings of the repositories, and allow long paths
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+          New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' `
+            -Name LongPathsEnabled -PropertyType DWord -Value 1 -Force | Out-Null
+
+      - uses: actions/checkout@v4
+
+      # The MSVC environment first: pip builds Capstone from source here (it has no wheel for
+      # Windows on ARM), and ModernGekko builds with the same compiler.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: arm64
+
+      - name: Install the Python dependencies
+        run: |
+          python -c "import platform, sys; print('Python', sys.version.split()[0], 'on', platform.machine())"
+          python -m pip install -r requirements.txt
+          python -c "import capstone; print('Capstone', capstone.__version__)"
+
+      - name: Download ModernGekko-Template at the commit the project is pinned to
+        run: |
+          # The same commit as scripts/build_and_run_linux.sh, so every platform builds the same code.
+          template_commit=$(sed -n 's/^readonly TEMPLATE_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_and_run_linux.sh)
+          [[ -n "$template_commit" ]] || { echo "TEMPLATE_COMMIT not found in the Linux script" >&2; exit 1; }
+          echo "ModernGekko-Template commit: $template_commit"
+          git clone --no-checkout "$TEMPLATE_URL" "$TEMPLATE_DIRECTORY"
+          git -C "$TEMPLATE_DIRECTORY" checkout --quiet "$template_commit"
+          git -C "$TEMPLATE_DIRECTORY" submodule sync --recursive --quiet
+          # Qt is not used (ModernGekko turns it off) and libadrenotools is for Android.
+          # HTTP/1.1 because HTTP/2 often cuts big fetches ("curl 92").
+          for attempt in 1 2 3; do
+            git -C "$TEMPLATE_DIRECTORY" -c http.version=HTTP/1.1 \
+              -c submodule.Externals/Qt.update=none \
+              -c submodule.Externals/libadrenotools.update=none \
+              submodule update --init --recursive --force --depth 1 --jobs 4 && break
+            echo "download attempt $attempt failed" >&2
+            [[ "$attempt" -lt 3 ]] || exit 1
+          done
+
+      - name: Apply the lockstep verifier patch
+        run: |
+          git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" \
+            apply "$GITHUB_WORKSPACE/patches/moderngekko/lockstep-verifier.patch"
+
+      - name: Look at the build tools
+        run: |
+          for tool in cmake ninja python cl; do echo "$tool: $(command -v "$tool")"; done
+          cmake --version | head -n 1
+          cl 2>&1 | head -n 1
+
+      - name: Configure ModernGekko
+        run: |
+          cmake -S "$TEMPLATE_DIRECTORY/lib/ModernGekko" -B "$TEMPLATE_DIRECTORY/lib/ModernGekko/build" \
+            -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DDOLRECOMP_ENABLE_LLVM=OFF
+
+      - name: Build moderngekko-port, moderngekko-run and dolrecomp
+        run: cmake --build "$TEMPLATE_DIRECTORY/lib/ModernGekko/build" --target moderngekko-port
+
+      # --headless: the runner opens no window, so it does not matter whether this machine has a
+      # desktop session.
+      - name: Run the instruction-level test
+        run: |
+          read -ra seeds <<< "$SEEDS"
+          python tools/run_isa_conformance.py --synthetic --headless \
+            --template "$TEMPLATE_DIRECTORY" \
+            --work-directory "$WORK_DIRECTORY" \
+            --toolchain msvc \
+            --seeds "${seeds[@]}" \
+            --words-per-form "$WORDS_PER_FORM"
+
+      # The reports are also kept as artifacts, but the logs of a failure are worth reading at once.
+      - name: Show the end of the logs if the test failed
+        if: failure()
+        run: |
+          for log in "$WORK_DIRECTORY"/seed_*/module.log "$WORK_DIRECTORY"/seed_*/run/game.log; do
+            [[ -f "$log" ]] || continue
+            echo "::group::$log"
+            tail -n 150 "$log"
+            echo "::endgroup::"
+          done
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-Windows-ARM64
+          path: |
+            C:/w/seed_*/report.txt
+            C:/w/seed_*/cases.tsv
           if-no-files-found: warn
