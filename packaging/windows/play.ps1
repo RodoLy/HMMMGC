@@ -157,7 +157,7 @@ function Open-Log {
     $script:LogWriter.AutoFlush = $true
 }
 
-function Write-Log {
+function Add-LogLine {
     param([string] $Text)
     if ($script:LogWriter) { $script:LogWriter.WriteLine($Text) }
 }
@@ -175,7 +175,7 @@ function Close-Log {
 # like "[12/345] Building ..." become a progress bar, because there are thousands of them.
 function Write-ProgramLine {
     param([string] $Line)
-    Write-Log $Line
+    Add-LogLine $Line
     if ($Line -match '^\[(\d+)/(\d+)\] ') {
         $percent = [int] (100 * [int] $Matches[1] / [int] $Matches[2])
         $status = $Line.Substring(0, [Math]::Min($Line.Length, 90))
@@ -193,7 +193,7 @@ function Invoke-Program {
         [Parameter(Mandatory)] [string] $FilePath,
         [string[]] $Arguments = @()
     )
-    Write-Log ('> ' + $FilePath + ' ' + ($Arguments -join ' '))
+    Add-LogLine ('> ' + $FilePath + ' ' + ($Arguments -join ' '))
     $previousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
@@ -272,9 +272,10 @@ function Select-DiscImage {
 
 # The disc image to read, or $null when the game was already extracted and no image was given.
 function Get-DiscToExtract {
-    if ($Disc) {
-        $resolved = Resolve-Path -LiteralPath $Disc -ErrorAction SilentlyContinue
-        if (-not $resolved) { throw (Get-Message 'DiscNotFound' $Disc) }
+    param([string] $RequestedDisc)
+    if ($RequestedDisc) {
+        $resolved = Resolve-Path -LiteralPath $RequestedDisc -ErrorAction SilentlyContinue
+        if (-not $resolved) { throw (Get-Message 'DiscNotFound' $RequestedDisc) }
         return $resolved.ProviderPath
     }
     if (Test-Path -LiteralPath $ExtractedGameProgram -PathType Leaf) { return $null }
@@ -347,18 +348,18 @@ try {
     Open-Log
     Set-ToolchainEnvironment
 
-    $discToExtract = Get-DiscToExtract
+    $discToExtract = Get-DiscToExtract -RequestedDisc $Disc
     if ($discToExtract) { Export-Disc -DiscPath $discToExtract }
 
     $builtModule = New-GameModule
     $installedModule = Install-GameModule -ModulePath $builtModule
-    Write-Log ('Module: ' + $installedModule)
+    Add-LogLine ('Module: ' + $installedModule)
     Write-Host (Get-Message 'GamePrepared')
 
     if (-not $PrepareOnly) { Start-Launcher }
 }
 catch {
-    Write-Log ($_ | Out-String)
+    Add-LogLine ($_ | Out-String)
     Write-Host ''
     Write-Host (Get-Message 'Failed' $_.Exception.Message) -ForegroundColor Red
     exit 1
