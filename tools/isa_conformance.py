@@ -510,6 +510,7 @@ FORMS_CAPSTONE_DOES_NOT_DECODE = ("fcmpo", "mcrxr")
 COMPARE_RESERVED_BITS = 0x0060_0000  # the "L" that makes a compare 64 bits wide, and the bit before it
 CACHE_RESERVED_BITS = 0x03E0_0000  # the hint of dcbt and dcbtst, the flush level of dcbf, ...
 NO_OPERAND_BITS = 0x03FF_F800  # everything between the opcode and the extended opcode
+AFTER_DESTINATION_BITS = 0x001F_F800  # the ten bits between rD (or frD) and the extended opcode
 SEGMENT_REGISTER_RESERVED_BITS = 0x0010_F800  # the bit before the number and the field after it
 SEGMENT_REGISTER_INDEXED_RESERVED_BITS = 0x001F_0000  # where the other forms keep rA
 RESERVED_BITS_OF_FORMS = {
@@ -521,6 +522,10 @@ RESERVED_BITS_OF_FORMS = {
     "icbi": CACHE_RESERVED_BITS,
     "eieio": NO_OPERAND_BITS, "sync": NO_OPERAND_BITS, "isync": NO_OPERAND_BITS,
     "mtfsf": 0x0201_0000,  # the "L" and "W" bits that a later version added around the mask
+    "mtfsfi": 0x007F_0800,  # the "W" bit that a later version added before the immediate, and the rest
+    "mfcr": AFTER_DESTINATION_BITS,  # a later version reads a set bit 11 as mfocrf, which reads one field
+    "mtcrf": 0x0010_0800,  # the bit before the mask (mtocrf, in a later version) and the one after it
+    "mffs": AFTER_DESTINATION_BITS,  # a later version tells mffsl, mffscdrn, ... apart by these bits
     "mfsr": SEGMENT_REGISTER_RESERVED_BITS, "mtsr": SEGMENT_REGISTER_RESERVED_BITS,
     "mfsrin": SEGMENT_REGISTER_INDEXED_RESERVED_BITS, "mtsrin": SEGMENT_REGISTER_INDEXED_RESERVED_BITS,
 }
