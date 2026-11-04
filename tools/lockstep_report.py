@@ -34,6 +34,14 @@ is a heuristic: `end_inside_loop` says the divergence can be an iteration
 artefact, not that it is one, so the report lists each distinct end address
 once for a person to confirm.
 
+A verifier built with patches/moderngekko/lockstep-any-arrival.patch does not
+produce the last two artefacts to begin with: it lets the interpreter run on
+past the end address and passes the block when the recompiled end state
+equals the interpreter's state at any later visit. Each block that passed on
+a later visit is printed as a "[lockstep] LATE-MATCH" line, and this tool
+lists them apart from the divergences: they are the positive evidence that
+a loop or recursion level was the only difference.
+
 El ModernGekko puede comparar el juego recompilado con el intérprete de CPU
 del propio Dolphin mientras se juega. Con STATICRECOMP_LOCKSTEP=1 en el
 entorno, la primera vez que corre cada bloque recompilado el verificador
@@ -67,6 +75,15 @@ pero es una heurística: `end_inside_loop` dice que la diferencia puede ser un
 artefacto de iteración, no que lo sea, así que el reporte lista cada
 dirección final distinta una sola vez para que una persona la confirme.
 
+Un verificador compilado con patches/moderngekko/lockstep-any-arrival.patch
+no produce esos dos últimos artefactos: deja que el intérprete siga más allá
+de la dirección final y da el bloque por bueno si el estado final recompilado
+es igual al del intérprete en cualquier visita posterior. Cada bloque que
+pasó en una visita posterior sale como una línea "[lockstep] LATE-MATCH", y
+esta herramienta las lista aparte de las divergencias: son la prueba
+positiva de que lo único distinto era una iteración de bucle o un nivel de
+recursión.
+
 Usage / Uso:
     python3 tools/lockstep_report.py game.log
     python3 tools/lockstep_report.py game.log --show end_inside_loop --limit 100
@@ -84,7 +101,7 @@ import argparse
 import re
 import sys
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
@@ -105,6 +122,11 @@ from symbols import SymbolTable  # noqa: E402
 DIVERGENCE_LINE = re.compile(
     r"\[lockstep\] DIVERGE #(?P<number>\d+) entry=0x(?P<entry>[0-9A-Fa-f]+) "
     r"end=0x(?P<end>[0-9A-Fa-f]+):(?P<fields>.*)"
+)
+# [lockstep] LATE-MATCH #2 entry=0x800CED10 end=0x800CEA6C arrival=3 steps=412
+LATE_MATCH_LINE = re.compile(
+    r"\[lockstep\] LATE-MATCH #(?P<number>\d+) entry=0x(?P<entry>[0-9A-Fa-f]+) "
+    r"end=0x(?P<end>[0-9A-Fa-f]+) arrival=(?P<arrival>\d+) steps=(?P<steps>\d+)"
 )
 # [lockstep] summary: checks=7593 reports=136 skipped_fallback=9 ...
 SUMMARY_LINE = re.compile(r"\[lockstep\] summary:(?P<counters>.*)")
@@ -137,6 +159,7 @@ SUMMARY_COUNTER_LABELS = (
     ("cap_hits", "blocks the interpreter could not finish within the step cap"),
     ("filtered", "divergences hidden by STATICRECOMP_LOCKSTEP_FILTER"),
     ("undercharges", "blocks that charged fewer cycles than the interpreter used"),
+    ("late_matches", "blocks that matched the interpreter only at a later visit to their end address"),
 )
 
 DEFAULT_LINES_PER_CAUSE = 40
@@ -165,6 +188,23 @@ class Divergence:
     fields_text: str  # the same, exactly as printed
 
 
+@dataclass(frozen=True)
+class LateMatch:
+    """A block that passed, but only on a later visit of the interpreter to its end address.
+
+    The recompiled block handed control back to the dispatcher at
+    `end_address` after some number of loop iterations or recursion levels.
+    The interpreter reached the same address once per iteration or level, and
+    the recompiled end state equalled its state at the `arrival`-th visit.
+    Visit 1 would be an ordinary pass and is not printed."""
+
+    number: int  # the "#n" of the log line
+    entry_address: int  # where the recompiled block starts
+    end_address: int  # where it handed control back to the dispatcher
+    arrival: int  # which visit of the interpreter to end_address matched (2 or more)
+    steps: int  # instructions the interpreter ran to get there
+
+
 @dataclass
 class VerifierRun:
     """Everything a log says about one run of the verifier."""
@@ -174,6 +214,7 @@ class VerifierRun:
     # means the game did not shut down cleanly and its counters are lost.
     summary: dict[str, int] | None
     verifier_was_enabled: bool
+    late_matches: list[LateMatch] = field(default_factory=list)
 
     @property
     def log_is_complete(self) -> bool:
@@ -182,7 +223,12 @@ class VerifierRun:
 
     @property
     def has_verifier_output(self) -> bool:
-        return self.verifier_was_enabled or self.summary is not None or bool(self.divergences)
+        return (
+            self.verifier_was_enabled
+            or self.summary is not None
+            or bool(self.divergences)
+            or bool(self.late_matches)
+        )
 
 
 def parse_fields(fields_text: str) -> dict[str, str]:
@@ -206,6 +252,7 @@ def parse_fields(fields_text: str) -> dict[str, str]:
 
 def parse_log(text: str) -> VerifierRun:
     divergences = []
+    late_matches = []
     summary = None
     for line in text.splitlines():
         divergence_match = DIVERGENCE_LINE.search(line)
@@ -221,10 +268,22 @@ def parse_log(text: str) -> VerifierRun:
                 )
             )
             continue
+        late_match = LATE_MATCH_LINE.search(line)
+        if late_match:
+            late_matches.append(
+                LateMatch(
+                    number=int(late_match["number"]),
+                    entry_address=int(late_match["entry"], 16),
+                    end_address=int(late_match["end"], 16),
+                    arrival=int(late_match["arrival"]),
+                    steps=int(late_match["steps"]),
+                )
+            )
+            continue
         summary_match = SUMMARY_LINE.search(line)
         if summary_match:
             summary = {m["name"]: int(m["value"]) for m in COUNTER.finditer(summary_match["counters"])}
-    return VerifierRun(divergences, summary, verifier_was_enabled=ENABLED_MARKER in text)
+    return VerifierRun(divergences, summary, ENABLED_MARKER in text, late_matches)
 
 
 def only_result_flags_of_fpscr_differ(divergence: Divergence) -> bool:
@@ -314,6 +373,22 @@ def format_distinct_ends(divergences: list[Divergence], symbols: SymbolTable, li
     return lines
 
 
+def format_late_matches(late_matches: list[LateMatch], symbols: SymbolTable, limit: int) -> list[str]:
+    """One line per distinct end address: how many blocks matched there and at which visits."""
+    matches_by_end: dict[int, list[LateMatch]] = {}
+    for late_match in late_matches:
+        matches_by_end.setdefault(late_match.end_address, []).append(late_match)
+    lines = []
+    for address, matches in sorted(matches_by_end.items()):
+        first_visit = min(match.arrival for match in matches)
+        last_visit = max(match.arrival for match in matches)
+        visits = f"{first_visit}" if first_visit == last_visit else f"{first_visit} to {last_visit}"
+        lines.append(f"  {len(matches):>4} x end={where(symbols, address)} (matched at visit {visits})")
+    if len(lines) > limit:
+        lines = [*lines[:limit], f"  ... and {len(lines) - limit} more end addresses"]
+    return lines
+
+
 def format_report(
     log_name: str,
     run: VerifierRun,
@@ -333,6 +408,11 @@ def format_report(
         distinct_ends = len({d.end_address for d in by_cause[cause]})
         lines.append(f"  {cause.value:<20} {len(by_cause[cause]):>11} {distinct_ends:>24}")
     lines.append("")
+
+    if run.late_matches:
+        lines.append("Blocks that passed only at a later visit to their end address (not divergences):")
+        lines += format_late_matches(run.late_matches, symbols, lines_per_cause)
+        lines.append("")
 
     if by_cause[Cause.END_INSIDE_LOOP]:
         lines.append("Blocks that end inside a loop (confirm each end address once by hand):")
