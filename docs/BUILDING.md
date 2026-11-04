@@ -63,20 +63,23 @@ Si se corta a la mitad, vuelve a correrlo: sigue donde se quedó.
 ### Controles
 
 Sin control configurado, ModernGekko usa el teclado con la asignación por
-defecto de Dolphin:
+defecto de Dolphin (función `LoadDefaults` de `GCPadEmu.cpp`). Las flechas y
+la tecla X se comprobaron jugando, con pulsaciones reales de teclado; el resto
+de la tabla sale de ese código.
 
 | GameCube | Teclado |
 |---|---|
-| Stick | Flechas (Shift para caminar) |
+| Stick | Flechas (con Shift se queda a media inclinación) |
 | A / B | X / Z |
 | X / Y | C / S |
 | Z | D |
 | Start | Enter |
 | L / R | Q / W |
-| Cruceta | T, F, G, H |
-| C-stick | I, J, K, L |
+| Cruceta | T (arriba), F (izquierda), G (abajo), H (derecha) |
+| C-stick | I (arriba), J (izquierda), K (abajo), L (derecha) |
 
-Los menús del juego se mueven con el stick, no con la cruceta. Un control
+Los menús del juego se mueven con el stick, no con la cruceta (comprobado en
+el menú del título). Un control
 USB o Bluetooth no llega a WSL por sí solo (hace falta
 [usbipd-win](https://github.com/dorssel/usbipd-win)); en Linux nativo,
 ModernGekko genera su configuración cuando lo pones en `config.ini`
@@ -188,20 +191,23 @@ If it stops halfway, run it again: it continues where it was.
 ### Controls
 
 With no controller configured, ModernGekko uses the keyboard with Dolphin's
-default mapping:
+default mapping (the `LoadDefaults` function of `GCPadEmu.cpp`). The arrow
+keys and the X key were checked while playing, with real key presses; the rest
+of the table comes from that code.
 
 | GameCube | Keyboard |
 |---|---|
-| Stick | Arrow keys (Shift to walk) |
+| Stick | Arrow keys (Shift keeps it at half tilt) |
 | A / B | X / Z |
 | X / Y | C / S |
 | Z | D |
 | Start | Enter |
 | L / R | Q / W |
-| D-pad | T, F, G, H |
-| C-stick | I, J, K, L |
+| D-pad | T (up), F (left), G (down), H (right) |
+| C-stick | I (up), J (left), K (down), L (right) |
 
-The game's menus move with the stick, not the D-pad. A USB or Bluetooth
+The game's menus move with the stick, not the D-pad (checked on the title
+menu). A USB or Bluetooth
 gamepad does not reach WSL by itself (it needs
 [usbipd-win](https://github.com/dorssel/usbipd-win)); on native Linux,
 ModernGekko generates its mapping once you name it in `config.ini`
