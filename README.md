@@ -26,9 +26,13 @@ disco (ISO, GCM o RVZ).
   Ya se pueden compilar mods que enganchan funciones del juego por su nombre
   (`scripts/build_mods.sh`; guía en [mods/README.md](mods/README.md)). El
   código recompilado se compara con el intérprete de Dolphin mientras se juega
-  y, instrucción por instrucción con operandos aleatorios (26 450 casos); no se
-  ha encontrado ningún error de cálculo, con los límites que explica
-  [docs/VALIDATION.md](docs/VALIDATION.md).
+  y, instrucción por instrucción con operandos aleatorios (26 450 casos con las
+  palabras del juego y 41 045 con palabras inventadas de 316 formas, sin
+  necesitar el juego; esta última también corrió en ARM64 con las mismas
+  cifras). No ha aparecido ninguna diferencia que afecte al juego; la prueba con
+  palabras inventadas sí encontró una laguna de DolRecomp (`mtfsb1`) y un error
+  del intérprete de Dolphin (`addme` y `subfme`), que el juego no usa. Los
+  límites de todo esto, en [docs/VALIDATION.md](docs/VALIDATION.md).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -125,9 +129,13 @@ This repository contains no game data. You need your own backup of the disc
   attach to the game's functions by name can now be built
   (`scripts/build_mods.sh`; guide in [mods/README.md](mods/README.md)). The
   recompiled code is compared with Dolphin's interpreter while the game plays
-  and, instruction by instruction on random operands (26,450 cases); no
-  calculation error has been found, within the limits that
-  [docs/VALIDATION.md](docs/VALIDATION.md) explains.
+  and, instruction by instruction on random operands (26,450 cases with the
+  game's words and 41,045 with made-up words of 316 forms, with no need for
+  the game; the latter also ran on ARM64 with the same figures). No difference
+  that affects the game has appeared; the test with made-up words did find a
+  gap in DolRecomp (`mtfsb1`) and a bug in Dolphin's interpreter (`addme` and
+  `subfme`), which the game does not use. The limits of all this are in
+  [docs/VALIDATION.md](docs/VALIDATION.md).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and

@@ -11,7 +11,9 @@ documento explica cómo se comprueba que ese C hace lo mismo que el
 procesador, qué se comprobó hasta ahora y, con la misma importancia, qué no.
 Hay dos comprobaciones que se complementan: el verificador lockstep, que compara
 el código recompilado con el intérprete de Dolphin mientras se juega, y una
-prueba de cada instrucción del juego con operandos aleatorios.
+prueba de cada instrucción con operandos aleatorios, que tiene dos variantes:
+con las palabras que usa el juego y con palabras inventadas, que llegan a casi
+todo el procesador y no necesitan el juego.
 
 ### Cómo se comprueba
 
@@ -248,6 +250,209 @@ corrida de juego. Y cada semilla da un solo estado aleatorio a cada grupo de
 casos: un error que solo aparezca con una combinación de valores muy rara
 podría necesitar más semillas.
 
+### Prueba por instrucción sin el juego
+
+La prueba de arriba solo ejercita las 171 formas de instrucción que usa el
+juego. Las tablas de códigos de operación del proyecto nombran 349. Con
+`--synthetic`, el programa de prueba se arma con palabras **inventadas** que
+alcanzan 345 de ellas (las otras cuatro, `eciwx`, `ecowx`, `lswx` y `stswx`, no
+las lee Capstone, que hace de juez, y quedan sin probar). Se pueden ejecutar
+316; las otras 29 son saltos, llamadas al sistema y trampas, las instrucciones
+que cambian el mapa de memoria o leen el reloj, y unas pocas que el juego no usa
+y el generador no ejecuta (las de cadenas de bytes `lswi` y `stswi`, la pareja
+de reserva `lwarx` y `stwcx.`, y `dcba` y `dcbz_l`). Los tres archivos de `sys/`
+también son inventados (`tools/synthetic_disc.py`: `boot.bin`, `bi2.bin` y un
+`apploader.img` mínimo que copia el programa a memoria), así que **no hace falta
+el juego ni el disco**: la puede correr cualquier máquina que tenga ModernGekko
+compilado con el parche.
+
+**Cómo se inventan las palabras.** Por cada instrucción que nombran las tablas
+se arman palabras con todas las combinaciones de cuatro registros (`r0`, `r3`,
+`r4` y `r5`) en los tres campos de operando, para que un mismo registro aparezca
+dos veces o aparezca `r0`, y otras con operandos al azar: 127 867 palabras en la
+semilla 1. Una palabra solo cuenta si es una instrucción definida. El juez es
+Capstone, que no es perfecto y necesita cuatro ayudas:
+
+- No conoce el bit de habilitación de desbordamiento de la familia `addo` ni el
+  bit de registro de `mtfsb0.` y `mtfsb1.`; se le muestra la palabra sin ellos.
+- No decodifica `fcmpo` ni `mcrxr`; sus bits reservados se revisan aparte.
+- Sigue versiones de la arquitectura más nuevas que el manual del 750CL, y en
+  ellas algunos bits que el manual deja reservados significan algo: el que vuelve
+  de 64 bits una comparación (`cmpd`), la pista de `dcbt`, el nivel de `dcbf`, el
+  tipo de barrera de `mbar`, los bits L y W de `mtfsf`, el W de `mtfsfi`, el bit
+  11 que convierte `mfcr` y `mtcrf` en `mfocrf` y `mtocrf`, y los campos de
+  `mffs` que lo vuelven `mffsl`, `mffscdrn` u otra variante. Una palabra que
+  active uno no es una instrucción del Gekko: el recompilador se la deja al
+  intérprete y el caso no compararía nada. `RESERVED_BITS_OF_FORMS`, en
+  `tools/isa_conformance.py`, los enumera por forma; y el bit 0 es reservado en
+  toda forma con código extendido que no lo usa (como bit de registro, de
+  enlace, o parte del nombre).
+- El código de operación de los pares de simples (4) es también el de AltiVec, y
+  una palabra de par de simples con un bit reservado activo se lee a menudo como
+  una instrucción AltiVec, que el Gekko no tiene. Capstone dice cuál leyó, y el
+  nombre tiene que ser el de la forma.
+
+Las formas con actualización (`lwzux`, `stwu`, ...) se ejecutan solo si son
+válidas: con `rA` igual a `r0` la dirección sería `r0 + rB`, en cualquier lugar
+de la memoria, y las cargas con actualización cuyo destino es el registro base
+tampoco lo son.
+
+**Resultado.** Seis semillas con 24 palabras por forma (cada una inventa sus
+propias palabras y sus propios estados aleatorios):
+
+| Semilla | Casos | Formas | Iguales | Distintos | Sin comparar |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 6 837 | 316 | 6 752 | **0** | 85 |
+| 2 | 6 850 | 316 | 6 774 | **0** | 76 |
+| 3 | 6 843 | 316 | 6 760 | **0** | 83 |
+| 4 | 6 854 | 316 | 6 770 | **0** | 84 |
+| 5 | 6 823 | 316 | 6 744 | **0** | 79 |
+| 6 | 6 838 | 316 | 6 760 | **0** | 78 |
+| Total | 41 045 | 316 | 40 560 | **0** | 485 |
+
+Los «sin comparar» (485) son todos de instrucciones que el módulo ejecuta
+llamando al intérprete de Dolphin (`ppc_fallback_instruction`), así que no hay
+código recompilado que comparar: `dcbf` (96), `dcbi` (95), `dcbst` (88) e `icbi`
+(98), y `mfspr` (33) y `mtspr` (75) sobre SPRG0 a SPRG3 (registros 272 a 275) y,
+solo `mfspr`, PVR (287). Son exactamente esos casos, ni uno más: los demás
+registros especiales que el generador lee o escribe (XER, LR, CTR, SRR0, SRR1 y
+GQR0 a GQR7) sí se comparan. En las seis corridas el verificador terminó con
+`reports=0`, `skipped_zero=0`, `cap_hits=0`, `undercharges=0` y
+`late_matches=0`.
+
+**En otros procesadores.** Las semillas 1 y 2 se repitieron en los corredores de
+GitHub con el flujo `.github/workflows/isa-conformance.yml` (el mismo código, con
+ModernGekko compilado allí con GCC). En x86-64 y en ARM64 (Linux, aarch64) dieron
+exactamente las cifras de la corrida local para esas dos semillas: 13 687 casos,
+13 526 iguales, **0** distintos y 161 sin comparar. Que ARM64 coincida importa
+porque los procesadores ARM y x86 difieren justo en los casos límite del punto
+flotante (NaN, conversiones que desbordan, denormales), y esta prueba ejercita
+valores de borde en cada instrucción. Falta Windows ARM64 compilado con MSVC, que
+es lo que usará la laptop.
+
+**Lo que apareció por el camino.** La prueba no salió limpia a la primera, y cada
+tropiezo enseñó algo:
+
+1. **Un programa que se colgó (error del generador, no del recompilador).** La
+   primera corrida completa no terminó. Tras el último caso comparado venía
+   `lbzux r0, 0, r0`, una forma con actualización cuyo registro base es `r0`: el
+   manual la llama inválida, y la dirección que calcula el procesador es `r0 +
+   rB`, que puede ser cualquiera (aquí no estaba mapeada). La carga produce una
+   excepción, el procesador salta al vector de excepciones, donde el programa de
+   prueba no tiene código, y se queda ahí. El generador ya no da esas formas, y el
+   ejecutor detecta el cuelgue: `main` anota en la memoria el número del grupo de
+   casos que va a correr, y si el programa pasa `--stall-timeout` segundos (300
+   por defecto) en un mismo grupo, la corrida se detiene y lista los casos de ese
+   grupo.
+
+2. **Un error del intérprete de Dolphin: el acarreo de `addme` y `subfme`.**
+   «Sumar a menos uno» calcula `rA + CA - 1`, es decir, `rA + 0xFFFFFFFF + CA`.
+   Con `CA = 1` la suma es `rA + 2^32` y siempre acarrea. El intérprete
+   (`Interpreter_Integer.cpp`, `addmex` y `subfmex`) calcula el acarreo de salida
+   como `Helper_Carry(a, carry - 1)`, y `Helper_Carry(a, b)` es `b > ~a`: con
+   `CA = 0` eso es `0xFFFFFFFF > ~a`, que es cierto si y solo si `a > 0` (bien),
+   pero con `CA = 1` es `0 > ~a`, que nunca lo es. El código C recompilado hace
+   `(u64)rA + 0xFFFFFFFF + carry` y toma el acarreo del bit 32, que está bien en
+   los dos casos:
+
+   | `rA` | `CA` antes | Resultado | `CA` después según el manual | Intérprete de Dolphin |
+   |---|---|---|---|---|
+   | `0` | 0 | `0xFFFFFFFF` | 0 | 0 |
+   | `5` | 0 | `4` | 1 | 1 |
+   | `5` | 1 | `5` | 1 | **0** |
+   | `0` | 1 | `0` | 1 | **0** |
+
+   Las mismas líneas están hoy en la rama `master` de Dolphin. El juego no usa
+   ninguna de las dos instrucciones, así que no le afecta. El generador las
+   ejecuta con el acarreo en cero (un `addic` de cero a `r0` lo borra sin
+   cambiar nada más), que es donde coinciden.
+
+3. **Accesos desalineados (49 de las 53 diferencias de la segunda corrida).** El
+   intérprete (`Interpreter_LoadStore.cpp`) levanta una excepción de alineación
+   cuando la dirección de `lfs`, `lfsu`, `lfd`, `lfdu`, `stfs`, `stfsu`, `stfd`,
+   `stfdu`, `lmw` o `stmw` no es múltiplo de 4 (`lmw` y `stmw` también con el
+   procesador en modo little-endian). El código recompilado hace el acceso.
+   Ningún programa que funcione en la consola hace eso, así que al juego no le
+   afecta, pero los dos no se pueden comparar; el generador ahora baja el registro
+   base el resto del desplazamiento para que la dirección sea múltiplo de 4. Los
+   accesos de enteros no cambian: el procesador resuelve solo los desalineados.
+
+4. **Una laguna del recompilador: `mtfsb1` y el bit FX (las otras 4).** En el
+   intérprete, `mtfsb1` sobre un bit de excepción del FPSCR (OX, UX, ZX, XX y los
+   de operación inválida: bits 3 a 12 y 21 a 23) llama a `SetFPException`, que
+   enciende también FX (si el bit no estaba ya encendido) y recalcula VX y FEX; el
+   código fuente lo avisa con «This instruction can affect FX». El C que genera
+   DolRecomp solo enciende el bit:
+
+   ```c
+   u32 mask = 0x80000000u >> 18;
+   if (18 != 1 && 18 != 2) ctx->fpscr |= mask;
+   ```
+
+   Es una laguna del recompilador, no un comportamiento indefinido. El juego solo
+   ejecuta `mtfsb1 29` (el bit NI), que no es de esos, así que no le afecta, y el
+   generador no da `mtfsb1` sobre esos 13 bits hasta que se corrija en DolRecomp
+   (todavía no se avisó a sus autores). `mtfsb1` sobre cualquier otro bit y
+   `mtfsb0` sobre todos coinciden.
+
+5. **Un error de disposición de la memoria en el generador (la campaña grande).**
+   La primera campaña de seis semillas con 24 palabras por forma dio unas 370
+   diferencias por semilla, todas en las formas que quedan al final del programa
+   (en la semilla 2, de `lfdu` a `stfsu`) y todas en el XER y el FPSCR: el código
+   recompilado conservaba bits que el intérprete borra o recalcula (los reservados
+   del XER, el bit 20 del FPSCR y algún bit derivado como FEX o VX), igual que con
+   el `mtxer` y el `mtfsf` de la sección anterior. Pero esta vez los casos no
+   habían recibido el estado que el generador escribió. La tabla de estados, con
+   una fila de 656 bytes por grupo de cuatro casos, llegaba a 1,1 MB, y solo había
+   1 MB entre ella y la memoria de trabajo de las cargas y escrituras; el cargador
+   copió esa memoria, de bytes aleatorios, sobre un centenar de filas del final de
+   la tabla, y los casos que las usaban arrancaron con un estado cualquiera. No era
+   un error del recompilador, sino mío, y la corrida corta (463 filas, 0,3 MB) no
+   podía verlo. Ahora la memoria de trabajo queda 3 MB más lejos (caben unos 25 000
+   casos) y `build_program` comprueba que ninguna de las secciones del programa (el
+   código, la tabla, la memoria de trabajo y las palabras de control) invada a la
+   siguiente; si no caben, se detiene con un mensaje que dice qué cambiar
+   (`--words-per-form` o `--group-size`). Las cifras de arriba son de después de
+   la corrección.
+
+6. **Un juez que dejaba pasar palabras que no son del Gekko.** Con la
+   disposición corregida, el decodificador de DolRecomp no conocía unas cuatro
+   palabras de cada semilla: son palabras con un bit reservado que Capstone, que
+   sigue arquitecturas más nuevas, lee como otra instrucción (`mfocrf`,
+   `mtocrf`, `mffscdrn`, ...). DolRecomp las deja como un comentario `.long` sin
+   traducir, así que esos casos no comparaban nada. Para encontrarlas todas se
+   dieron al decodificador las palabras de 60 semillas (más de 400 000 casos) y
+   2,1 millones más con operandos al azar, y se miraron las que Capstone aceptaba
+   y DolRecomp no: eran todas de `mfcr`, `mtcrf`, `mffs` y `mtfsfi`. Ya están en
+   `RESERVED_BITS_OF_FORMS`, y la misma búsqueda no encuentra ninguna más. Por eso
+   las cifras de arriba son de después de este arreglo también.
+
+**Controles.** La autoprueba del fallo inyectado funciona también aquí:
+`run_isa_conformance.py --synthetic --seeds 1 --words-per-form 6 --inject-fault lwz`
+hizo que el verificador cambiara un bit de `r3` al final del primer caso `lwz`
+(`lwz r8, 0x2d23(r5)`), y la corrida reportó ese caso y ningún otro:
+
+```
+seed 1: entry=0x80015E74  lwz: lwz r8, 0x2d23(r5)  [r3:N=0x80,I=0x90]
+self-check passed: the verifier reported the injected case and nothing else
+```
+
+**Lo que esta variante no cubre, además de lo de la prueba anterior.**
+
+- El juez de «¿esto es una instrucción?» es imperfecto. Si deja pasar una palabra
+  que el Gekko no tiene, el recompilador la deja al intérprete y el caso sale «sin
+  comparar» (por eso importa ese número); si rechaza una que sí es válida, esa
+  palabra no se prueba, y nada lo avisa.
+- Las exclusiones de arriba (el acarreo de `addme` y `subfme`, los accesos
+  desalineados, `mtfsb1` y las formas inválidas) son diferencias conocidas, no una
+  garantía de que no haya otras que el generador esquiva sin querer.
+- Cada caso es una sola instrucción con un estado aleatorio: no prueba secuencias
+  de instrucciones ni cómo se encadenan los bloques.
+- Corrió en x86-64 (en local y en GitHub) y en ARM64 con Linux y GCC (en
+  GitHub). Falta Windows ARM64 compilado con MSVC, que es lo que usará la
+  laptop: otro sistema, otro compilador y otro modo de punto flotante
+  (`/fp:strict`). Ningún flujo de trabajo de GitHub la ejecuta ahí todavía.
+
 ### Cómo repetirlo
 
 Una vez, aplicar el parche y recompilar el ejecutable
@@ -300,6 +505,26 @@ código de salida es 0 si ningún caso difirió, 1 si alguno difirió y 2 si fal
 la preparación (falta una herramienta, el compilador o la pantalla); las
 opciones están en `--help`.
 
+**La variante sin el juego** pide lo mismo menos el disco y los símbolos:
+
+```bash
+python3 tools/run_isa_conformance.py --synthetic --template ~/ModernGekko-Template --seeds 1 2 3
+python3 tools/run_isa_conformance.py --synthetic --template ~/ModernGekko-Template --seeds 7 --inject-fault lwz  # autoprueba
+```
+
+Con las 24 palabras por forma de siempre cada semilla tarda unos 5 minutos con dos
+núcleos; con `--words-per-form 6`, unos dos. Si el programa se cuelga, el ejecutor lo
+nota cuando pasa `--stall-timeout` segundos (300 por defecto) en un mismo grupo de
+casos: se detiene y lista los casos de ese grupo. Y si las palabras no caben en la
+memoria del programa, no lo arma y dice qué cambiar (`--words-per-form` o
+`--group-size`).
+
+También se puede lanzar en GitHub, sin instalar nada: pestaña **Actions** →
+**Instruction conformance** → **Run workflow**. El flujo
+(`.github/workflows/isa-conformance.yml`) compila ModernGekko (de 20 a 40
+minutos) y corre la prueba en x86-64 y en ARM64 (Linux); los informes quedan
+como archivos adjuntos de la ejecución.
+
 ### Qué NO demuestra
 
 - **Solo comprueba el código al que llegó la corrida.** «Cero divergencias»
@@ -312,7 +537,8 @@ opciones están en `--help`.
   de esas ramas).
 - **La referencia es el intérprete de Dolphin.** Si el intérprete se
   equivocara de la misma manera, los dos coincidirían. Es una referencia muy
-  probada, pero es una referencia, no una especificación.
+  probada, pero es una referencia, no una especificación, y no es perfecta: la
+  prueba sin el juego le encontró un error de acarreo (`addme` y `subfme`, arriba).
 - **La aceptación en «cualquier llegada» no distingue cuántas iteraciones**
   hace un bucle que sale por presupuesto de ciclos. Eso lo decide un
   convenio de tiempo y no la lógica del juego, y lo que sí se exige es que el
@@ -345,14 +571,20 @@ opciones están en `--help`.
   minijuegos y los festivales, y también el comienzo de un día nuevo y el final
   de un evento, donde corre la revisión del campo (`fn_80166888`, la función más
   grande que ninguna corrida ejecutó).
-- **Todas las corridas fueron en x86-64.** El C generado es el mismo en ARM64,
-  pero lo compila otro compilador, y los procesadores ARM difieren de los x86
-  justo en los casos límite del punto flotante (NaN, conversiones que
-  desbordan, denormales). Además, algunos compiladores fusionan una
+- **Las corridas que usan el juego fueron todas en x86-64.** La prueba por
+  instrucción sin el juego sí se repitió en ARM64 (Linux, GCC) con las mismas
+  cifras; falta Windows ARM64 con MSVC, que es lo que usará la laptop. El C
+  generado es el mismo en ARM64, pero lo compila otro compilador, y los
+  procesadores ARM difieren de los x86 justo en los casos límite del punto
+  flotante (NaN, conversiones que desbordan, denormales). Además, algunos
+  compiladores fusionan una
   multiplicación y una suma en una sola operación, que redondea distinto de la
-  de PowerPC: el módulo se compila con `-ffp-contract=off` en GCC y Clang, y
-  falta ver qué equivale en MSVC. Repetir la prueba por instrucción en la
-  laptop es la comprobación más útil que queda.
+  de PowerPC: el módulo se compila con `-ffp-contract=off` en GCC y Clang y con
+  `/fp:strict` en MSVC, que desde Visual Studio 2022 17.0 [no genera
+  contracciones](https://devblogs.microsoft.com/cppblog/the-fpcontract-flag-and-changes-to-fp-modes-in-vs2022/)
+  (así lo fija `moderngekko_port.cpp`; falta comprobarlo con una compilación real
+  en ARM64). Repetir la prueba por instrucción en la laptop sigue siendo la
+  comprobación más útil que queda.
 
 ---
 
@@ -363,7 +595,9 @@ document explains how to check that the C does what the processor does, what
 has been checked so far and, just as important, what has not. There are two
 checks that complement each other: the lockstep verifier, which compares the
 recompiled code with Dolphin's interpreter while the game is played, and a test
-of every instruction of the game on random operands.
+of every instruction on random operands, in two variants: with the words the game
+uses and with made-up words, which reach almost the whole processor and do not
+need the game.
 
 ### How it is checked
 
@@ -591,6 +825,203 @@ does not test the 14 control-flow, trap and system forms either (`b`, `bc`,
 either. And each seed gives one random state to each group of cases: a bug that
 only appears with a very rare combination of values might need more seeds.
 
+### Instruction-level test without the game
+
+The test above only exercises the 171 instruction forms that the game uses. The
+project's opcode tables name 349. With `--synthetic`, the test program is built
+from **made-up** words that reach 345 of them (the other four, `eciwx`, `ecowx`,
+`lswx` and `stswx`, are not read by Capstone, which acts as the judge, and stay
+untested). 316 can be run; the other 29 are jumps, system calls and traps, the
+instructions that change the memory map or read the clock, and a few that the
+game does not use and the generator does not run (the byte-string ones `lswi`
+and `stswi`, the reservation pair `lwarx` and `stwcx.`, and `dcba` and
+`dcbz_l`). The three files in `sys/` are made up as well
+(`tools/synthetic_disc.py`: `boot.bin`, `bi2.bin` and a minimal `apploader.img`
+that copies the program into memory), so **neither the game nor the disc is
+needed**: any machine with ModernGekko built with the patch can run it.
+
+**How the words are made up.** For every instruction the tables name, it builds
+words with every combination of four registers (`r0`, `r3`, `r4` and `r5`) in
+the three operand fields, so that one register shows up twice or `r0` shows up,
+and others with random operands: 127,867 words in seed 1. A word counts only if
+it is a defined instruction. The judge is Capstone, which is not perfect and
+needs four helps:
+
+- It does not know the overflow-enable bit of the `addo` family nor the record
+  bit of `mtfsb0.` and `mtfsb1.`; it is shown the word without them.
+- It does not decode `fcmpo` or `mcrxr`; their reserved bits are checked
+  separately.
+- It follows later versions of the architecture than the 750CL manual, and in
+  them some bits that the manual keeps reserved mean something: the one that makes
+  a compare 64 bits wide (`cmpd`), the hint of `dcbt`, the level of `dcbf`, the
+  kind of barrier of `mbar`, the L and W bits of `mtfsf`, the W bit of `mtfsfi`,
+  the bit 11 that turns `mfcr` and `mtcrf` into `mfocrf` and `mtocrf`, and the
+  fields of `mffs` that make it `mffsl`, `mffscdrn` or another variant. A word
+  that sets one is not a Gekko instruction: the recompiler leaves it to the
+  interpreter and the case would compare nothing. `RESERVED_BITS_OF_FORMS`, in
+  `tools/isa_conformance.py`, lists them by form; and bit 0 is reserved in every
+  form that has an extended opcode and no use for it (as a record bit, a link bit,
+  or part of the name).
+- The paired-single opcode (4) is also AltiVec's, and a paired-single word with a
+  reserved bit set is often read as an AltiVec instruction, which the Gekko does
+  not have. Capstone says which one it read, and the name has to be the form's own.
+
+The update forms (`lwzux`, `stwu`, ...) are run only if they are valid: with `rA`
+equal to `r0` the address would be `r0 + rB`, anywhere in memory, and the update
+loads whose destination is the base register are invalid too.
+
+**Result.** Six seeds with 24 words per form (each one makes up its own words and
+its own random states):
+
+| Seed | Cases | Forms | Equal | Different | Not compared |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 6,837 | 316 | 6,752 | **0** | 85 |
+| 2 | 6,850 | 316 | 6,774 | **0** | 76 |
+| 3 | 6,843 | 316 | 6,760 | **0** | 83 |
+| 4 | 6,854 | 316 | 6,770 | **0** | 84 |
+| 5 | 6,823 | 316 | 6,744 | **0** | 79 |
+| 6 | 6,838 | 316 | 6,760 | **0** | 78 |
+| Total | 41,045 | 316 | 40,560 | **0** | 485 |
+
+The "not compared" (485) are all instructions that the module runs by calling
+Dolphin's interpreter (`ppc_fallback_instruction`), so there is no recompiled
+code to compare: `dcbf` (96), `dcbi` (95), `dcbst` (88) and `icbi` (98), and
+`mfspr` (33) and `mtspr` (75) on SPRG0 to SPRG3 (registers 272 to 275) and,
+`mfspr` only, PVR (287). They are exactly those cases and no others: the other
+special registers that the generator reads or writes (XER, LR, CTR, SRR0, SRR1
+and GQR0 to GQR7) are compared. In all six runs the verifier ended with
+`reports=0`, `skipped_zero=0`, `cap_hits=0`, `undercharges=0` and
+`late_matches=0`.
+
+**On other processors.** Seeds 1 and 2 were repeated on GitHub's runners with the
+workflow `.github/workflows/isa-conformance.yml` (the same code, with ModernGekko
+built there with GCC). On x86-64 and on ARM64 (Linux, aarch64) they gave exactly
+the figures of the local run for those two seeds: 13,687 cases, 13,526 equal,
+**0** different and 161 not compared. That ARM64 agrees matters because ARM and
+x86 processors differ exactly in floating-point corner cases (NaN, overflowing
+conversions, denormals), and this test exercises edge values on every
+instruction. Windows ARM64 built with MSVC, which is what the laptop will use, is
+still to do.
+
+**What turned up on the way.** The test did not come out clean the first time, and
+each stumble taught something:
+
+1. **A program that hung (a generator error, not a recompiler one).** The first
+   full run did not finish. After the last case that was compared came `lbzux r0,
+   0, r0`, an update form whose base register is `r0`: the manual calls it
+   invalid, and the address the processor computes is `r0 + rB`, which can be
+   anything (here it was unmapped). The load raises an exception, the processor
+   jumps to the exception vector, where the test program has no code, and stays
+   there. The generator no longer gives those forms, and the runner detects the
+   hang: `main` writes to memory the number of the group of cases it is about to
+   run, and if the program spends `--stall-timeout` seconds (300 by default) in one
+   group, the run stops and lists the cases of that group.
+
+2. **A bug in Dolphin's interpreter: the carry of `addme` and `subfme`.** "Add to
+   minus one" computes `rA + CA - 1`, that is, `rA + 0xFFFFFFFF + CA`. With `CA =
+   1` the sum is `rA + 2^32` and it always carries out. The interpreter
+   (`Interpreter_Integer.cpp`, `addmex` and `subfmex`) works the carry out as
+   `Helper_Carry(a, carry - 1)`, and `Helper_Carry(a, b)` is `b > ~a`: with `CA =
+   0` that is `0xFFFFFFFF > ~a`, true exactly when `a > 0` (right), but with `CA =
+   1` it is `0 > ~a`, which never is. The recompiled C does `(u64)rA + 0xFFFFFFFF +
+   carry` and takes the carry from bit 32, which is right in both cases:
+
+   | `rA` | `CA` before | Result | `CA` after, per the manual | Dolphin's interpreter |
+   |---|---|---|---|---|
+   | `0` | 0 | `0xFFFFFFFF` | 0 | 0 |
+   | `5` | 0 | `4` | 1 | 1 |
+   | `5` | 1 | `5` | 1 | **0** |
+   | `0` | 1 | `0` | 1 | **0** |
+
+   The same lines are in Dolphin's `master` branch today. The game uses neither
+   instruction, so it is not affected. The generator runs them with the carry
+   clear (an `addic` of zero to `r0` clears it and changes nothing else), which is
+   where the two agree.
+
+3. **Misaligned accesses (49 of the 53 differences of the second run).** The
+   interpreter (`Interpreter_LoadStore.cpp`) raises an alignment exception when
+   the address of `lfs`, `lfsu`, `lfd`, `lfdu`, `stfs`, `stfsu`, `stfd`, `stfdu`,
+   `lmw` or `stmw` is not a multiple of 4 (`lmw` and `stmw` also with the
+   processor in little-endian mode). The recompiled code makes the access. No
+   program that works on the console does that, so the game is not affected, but
+   the two cannot be compared; the generator now lowers the base register by the
+   remainder of the displacement so that the address is a multiple of 4. Integer
+   accesses are unchanged: the processor handles the misaligned ones itself.
+
+4. **A gap in the recompiler: `mtfsb1` and the FX bit (the other 4).** In the
+   interpreter, `mtfsb1` on an exception bit of the FPSCR (OX, UX, ZX, XX and the
+   invalid-operation ones: bits 3 to 12 and 21 to 23) calls `SetFPException`,
+   which also sets FX (if the bit was not already set) and recomputes VX and FEX;
+   the source warns about it with "This instruction can affect FX". The C that
+   DolRecomp generates only sets the bit:
+
+   ```c
+   u32 mask = 0x80000000u >> 18;
+   if (18 != 1 && 18 != 2) ctx->fpscr |= mask;
+   ```
+
+   It is a gap of the recompiler, not undefined behavior. The game only runs
+   `mtfsb1 29` (the NI bit), which is not one of those, so it is not affected, and
+   the generator does not give `mtfsb1` on those 13 bits until DolRecomp is
+   fixed (its authors have not been told yet). `mtfsb1` on any other bit and
+   `mtfsb0` on all of them agree.
+
+5. **A memory-layout error in the generator (the large campaign).** The first
+   campaign of six seeds with 24 words per form gave about 370 differences per
+   seed, all in the forms that sort last in the program (in seed 2, from `lfdu` to
+   `stfsu`) and all in XER and FPSCR: the recompiled code kept bits that the
+   interpreter clears or recomputes (the reserved ones of XER, bit 20 of FPSCR and
+   an odd derived bit such as FEX or VX), like the `mtxer` and `mtfsf` of the
+   previous section. But this time the cases had not received the state the
+   generator wrote. The state table, with a row of 656 bytes per group of four
+   cases, came to 1.1 MB, and there was only 1 MB between it and the scratch memory
+   that loads and stores work on; the loader copied that memory, random bytes, over
+   about a hundred rows at the end of the table, and the cases that used them
+   started from an arbitrary state. It was not a recompiler error but my own, and
+   the short run (463 rows, 0.3 MB) could not see it. The scratch memory now sits
+   3 MB further on (room for about 25,000 cases) and `build_program` checks that
+   none of the sections of the program (the code, the table, the scratch memory and
+   the control words) runs into the next one; if they do not fit, it stops with a
+   message that says what to change (`--words-per-form` or `--group-size`). The
+   figures above are from after the fix.
+
+6. **A judge that let through words the Gekko does not have.** With the layout
+   fixed, DolRecomp's decoder did not know about four words per seed: they have a
+   reserved bit that Capstone, which follows newer architectures, reads as another
+   instruction (`mfocrf`, `mtocrf`, `mffscdrn`, ...). DolRecomp leaves them as a
+   `.long` comment with no translation, so those cases compared nothing. To find
+   them all, the decoder was given the words of 60 seeds (over 400,000 cases) and
+   2.1 million more with random operands, and the ones that Capstone accepted and
+   DolRecomp did not were looked at: all of them were `mfcr`, `mtcrf`, `mffs` and
+   `mtfsfi`. They are now in `RESERVED_BITS_OF_FORMS`, and the same search finds no
+   more. So the figures above are from after this fix too.
+
+**Controls.** The injected-fault self-check works here too:
+`run_isa_conformance.py --synthetic --seeds 1 --words-per-form 6 --inject-fault lwz`
+made the verifier flip a bit of `r3` at the end of the first `lwz` case
+(`lwz r8, 0x2d23(r5)`), and the run reported that case and no other:
+
+```
+seed 1: entry=0x80015E74  lwz: lwz r8, 0x2d23(r5)  [r3:N=0x80,I=0x90]
+self-check passed: the verifier reported the injected case and nothing else
+```
+
+**What this variant does not cover, besides what the previous test does not.**
+
+- The judge of "is this an instruction?" is imperfect. If it lets through a word
+  that the Gekko does not have, the recompiler leaves it to the interpreter and
+  the case comes out "not compared" (which is why that number matters); if it
+  rejects a valid one, that word is not tested, and nothing says so.
+- The exclusions above (the carry of `addme` and `subfme`, misaligned accesses,
+  `mtfsb1` and the invalid forms) are known differences, not a guarantee that
+  there are no others that the generator avoids by accident.
+- Each case is a single instruction with a random state: it does not test
+  sequences of instructions or how blocks are chained.
+- It ran on x86-64 (locally and on GitHub) and on ARM64 with Linux and GCC (on
+  GitHub). Windows ARM64 built with MSVC is still to do, and that is what the
+  laptop will use: another system, another compiler and another floating-point
+  mode (`/fp:strict`). No GitHub workflow runs it there yet.
+
 ### How to repeat it
 
 Once, apply the patch and rebuild the runner
@@ -642,6 +1073,26 @@ list of cases (`cases.tsv`), the report (`report.txt`) and the verifier's log in
 any did and 2 if the set-up failed (a tool, the compiler or the screen is
 missing); the options are in `--help`.
 
+**The variant without the game** asks for the same minus the disc and the symbols:
+
+```bash
+python3 tools/run_isa_conformance.py --synthetic --template ~/ModernGekko-Template --seeds 1 2 3
+python3 tools/run_isa_conformance.py --synthetic --template ~/ModernGekko-Template --seeds 7 --inject-fault lwz  # self-check
+```
+
+With the usual 24 words per form each seed takes about 5 minutes on two cores; with
+`--words-per-form 6`, about two. If the program hangs, the runner notices when it
+spends `--stall-timeout` seconds (300 by default) in one group of cases: it stops
+and lists the cases of that group. And if the words do not fit in the program's
+memory, it refuses to build it and says what to change (`--words-per-form` or
+`--group-size`).
+
+It can also be started on GitHub, with nothing to install: the **Actions** tab →
+**Instruction conformance** → **Run workflow**. The workflow
+(`.github/workflows/isa-conformance.yml`) builds ModernGekko (20 to 40
+minutes) and runs the test on x86-64 and on ARM64 (Linux); the reports stay as
+attachments of the run.
+
 ### What it does NOT prove
 
 - **It only checks the code the run reached.** "Zero divergences" is worth
@@ -654,7 +1105,8 @@ missing); the options are in `--help`.
   branches).
 - **The reference is Dolphin's interpreter.** If the interpreter were wrong in
   the same way, the two would agree. It is a very well tested reference, but
-  it is a reference, not a specification.
+  it is a reference, not a specification, and it is not perfect: the test
+  without the game found a carry bug in it (`addme` and `subfme`, above).
 - **Accepting "any arrival" cannot tell how many iterations** a loop that
   leaves on the cycle budget makes. That is decided by a timing convention,
   not by the game's logic, and what is demanded is that the state is
@@ -684,12 +1136,18 @@ missing); the options are in `--help`.
 - **Whole areas of the game are unvisited:** shops, the village, minigames and
   festivals, and also the start of a new day and the end of an event, where the
   field check runs (`fn_80166888`, the biggest function no run executed).
-- **Every run was on x86-64.** The generated C is the same on ARM64, but a
-  different compiler builds it, and ARM processors differ from x86 ones
-  exactly in floating-point corner cases (NaN, overflowing conversions,
-  denormals). Also, some compilers fuse a multiplication and an addition into
+- **The runs that use the game were all on x86-64.** The instruction-level
+  test without the game was repeated on ARM64 (Linux, GCC) with the same
+  figures; Windows ARM64 with MSVC, which is what the laptop will use, is
+  still to do. The generated C is the same on ARM64, but a different compiler
+  builds it, and ARM processors differ from x86 ones exactly in floating-point
+  corner cases (NaN, overflowing conversions, denormals). Also, some compilers
+  fuse a multiplication and an addition into
   one operation, which rounds differently from PowerPC's: the module is built
-  with `-ffp-contract=off` on GCC and Clang, and what the equivalent is on MSVC
-  is still to be seen. Repeating the instruction-level test on the laptop is
-  the most useful check left.
+  with `-ffp-contract=off` on GCC and Clang and with `/fp:strict` on MSVC, which
+  [generates no
+  contractions](https://devblogs.microsoft.com/cppblog/the-fpcontract-flag-and-changes-to-fp-modes-in-vs2022/)
+  since Visual Studio 2022 17.0 (that is what `moderngekko_port.cpp` sets; a real
+  build on ARM64 has yet to confirm it). Repeating the instruction-level test on
+  the laptop is still the most useful check left.
 

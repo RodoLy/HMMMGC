@@ -48,9 +48,18 @@ le sirve.
       semillas, 26 450 casos, 0 diferencias; 269 sin comparar (instrucciones de
       caché y SPRG/PVR, que el módulo ejecuta con el intérprete).
       `tools/run_isa_conformance.py`; detalles en [VALIDATION.md](VALIDATION.md).
+- [x] Prueba por instrucción sin el juego: palabras inventadas de 316 formas (casi
+      todo el procesador, no solo lo que usa el juego) en un disco inventado, así
+      que cualquier máquina con ModernGekko puede repetirla. 6 semillas,
+      41 045 casos, 0 diferencias; 485 sin comparar. Las semillas 1 y 2
+      también corrieron en ARM64 (Linux, en GitHub) con las mismas cifras.
+      Encontró un error del intérprete de Dolphin (el acarreo de `addme` y
+      `subfme`) y una laguna de DolRecomp (`mtfsb1` y el bit FX); el juego no usa
+      ninguna de las dos instrucciones. `run_isa_conformance.py --synthetic`;
+      detalles en [VALIDATION.md](VALIDATION.md).
 - [ ] Ampliar la validación con partida (tiendas, pueblo, minijuegos,
-      festivales, un día nuevo y el fin de un evento) y repetir las dos
-      comprobaciones en ARM64.
+      festivales, un día nuevo y el fin de un evento), repetir en ARM64 las dos
+      comprobaciones que usan el juego, y las tres en Windows ARM64 con MSVC.
 - [ ] Hito: mover al personaje y jugar a velocidad completa en una PC con
       GPU.
 - [ ] Jugar con GPU en laptops Windows ARM (Snapdragon): WSL2 no puede usar
@@ -184,8 +193,18 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       differences; 269 not compared (cache instructions and SPRG/PVR, which
       the module runs through the interpreter).
       `tools/run_isa_conformance.py`; details in [VALIDATION.md](VALIDATION.md).
+- [x] Instruction-level test without the game: made-up words of 316 forms (almost
+      the whole processor, not only what the game uses) on a made-up disc, so any
+      machine with ModernGekko can repeat it. 6 seeds,
+      41,045 cases, 0 differences; 485 not compared. Seeds 1 and 2 also
+      ran on ARM64 (Linux, on GitHub) with the same figures. It found a bug in
+      Dolphin's interpreter (the carry of `addme` and `subfme`) and a gap in
+      DolRecomp (`mtfsb1` and the FX bit); the game uses neither instruction.
+      `run_isa_conformance.py --synthetic`; details in
+      [VALIDATION.md](VALIDATION.md).
 - [ ] Widen the validation with play (shops, village, minigames, festivals, a
-      new day and the end of an event) and repeat both checks on ARM64.
+      new day and the end of an event), repeat the two checks that use the game
+      on ARM64, and all three on Windows ARM64 with MSVC.
 - [ ] Milestone: move the character and play at full speed on a PC with a
       GPU.
 - [ ] Play with a GPU on Windows ARM laptops (Snapdragon): WSL2 cannot use
