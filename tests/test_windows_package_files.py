@@ -137,6 +137,18 @@ def test_the_script_names_the_files_it_expects_to_find_in_the_package():
         assert name in script
 
 
+def test_what_a_program_writes_on_its_error_output_is_shown_as_its_lines_and_not_as_class_names():
+    # Windows PowerShell 5.1 turns an empty line of the error output into the name of its class
+    # ("System.Management.Automation.RemoteException") when the record is made a string.
+    script = read_packaging_file("play.ps1")
+    conversion = body_of_function(script, "ConvertTo-ProgramText")
+    assert "[System.Management.Automation.ErrorRecord]" in conversion
+    assert "$Output.Exception.Message" in conversion
+    invoking = body_of_function(script, "Invoke-Program")
+    assert "ConvertTo-ProgramText $_" in invoking
+    assert "[string] $_" not in invoking
+
+
 def test_the_script_has_no_tabs_and_no_trailing_spaces():
     for number, line in enumerate(read_packaging_file("play.ps1").splitlines(), start=1):
         assert "\t" not in line, f"play.ps1 line {number} has a tab"

@@ -219,6 +219,16 @@ function Write-ProgramLine {
     }
 }
 
+# What a program writes on its error output reaches the pipeline as an error record, not as text.
+# The text of such a record is the line the program wrote, except for an empty line: PowerShell
+# then gives the name of the record's own class ("System.Management.Automation.RemoteException").
+# Taking the message of the record gives the line, empty or not.
+function ConvertTo-ProgramText {
+    param($Output)
+    if ($Output -is [System.Management.Automation.ErrorRecord]) { return $Output.Exception.Message }
+    return [string] $Output
+}
+
 # Runs a program, shows what it says, and returns its exit code. What a program writes as
 # warnings on its error output is not an error of this script, so errors do not stop it here.
 function Invoke-Program {
@@ -230,7 +240,7 @@ function Invoke-Program {
     $previousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-ProgramLine ([string] $_) }
+        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-ProgramLine (ConvertTo-ProgramText $_) }
         return $LASTEXITCODE
     }
     finally {
