@@ -208,11 +208,53 @@ jobs:
             --seeds "${seeds[@]}" \
             --words-per-form "$WORDS_PER_FORM"
 
+      # The player's laptop will not have Visual Studio: the module of the game is compiled there from
+      # the player's own disc, so the project will ship a portable compiler (llvm-mingw, which has a
+      # build that runs on Windows ARM64) and the same test has to pass with it.
+      - name: Download the portable compiler (llvm-mingw)
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LLVM_MINGW_RELEASE: "20261020"
+        run: |
+          New-Item -ItemType Directory -Force C:\compiler | Out-Null
+          Set-Location C:\compiler
+          gh release download $env:LLVM_MINGW_RELEASE --repo mstorsjo/llvm-mingw --pattern '*-ucrt-aarch64.zip'
+          Get-FileHash -Algorithm SHA256 *.zip | Format-List Hash, Path
+          Expand-Archive -Path (Get-Item *.zip).FullName -DestinationPath C:\compiler -Force
+          $clang = Join-Path (Get-ChildItem C:\compiler -Directory -Filter 'llvm-mingw-*').FullName 'bin\clang.exe'
+          & $clang --version
+
+      # A PATH with the portable compiler, CMake, Ninja and Python only, and none of the variables
+      # of the Visual Studio environment. LDFLAGS makes the linker export every symbol of the module:
+      # the verifier looks up ppc_set_mem_write_journal, which the runtime marks `dllexport` only
+      # when the compiler is MSVC.
+      - name: Run the instruction-level test with the portable compiler
+        if: always()
+        shell: pwsh
+        run: |
+          $compiler = Join-Path (Get-ChildItem C:\compiler -Directory -Filter 'llvm-mingw-*').FullName 'bin'
+          $python = Split-Path (Get-Command python).Source
+          $env:PATH = "$compiler;C:\Program Files\CMake\bin;C:\Tools\Ninja;$python;C:\Windows\System32;C:\Windows"
+          Remove-Item Env:INCLUDE, Env:LIB, Env:LIBPATH -ErrorAction SilentlyContinue
+          $env:LDFLAGS = '-Wl,--export-all-symbols'
+          clang --version | Select-Object -First 1
+          $seeds = $env:SEEDS -split ' '
+          python tools/run_isa_conformance.py --synthetic --headless `
+            --template $env:TEMPLATE_DIRECTORY `
+            --work-directory C:\w-clang `
+            --toolchain clang `
+            --seeds $seeds `
+            --words-per-form $env:WORDS_PER_FORM
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       # The reports are also kept as artifacts, but the logs of a failure are worth reading at once.
       - name: Show the end of the logs if the test failed
         if: failure()
         run: |
-          for log in "$WORK_DIRECTORY"/seed_*/module.log "$WORK_DIRECTORY"/seed_*/run/game.log; do
+          for log in "$WORK_DIRECTORY"/seed_*/module.log "$WORK_DIRECTORY"/seed_*/run/game.log \
+                     C:/w-clang/seed_*/module.log C:/w-clang/seed_*/run/game.log; do
             [[ -f "$log" ]] || continue
             echo "::group::$log"
             tail -n 150 "$log"
@@ -227,4 +269,6 @@ jobs:
           path: |
             C:/w/seed_*/report.txt
             C:/w/seed_*/cases.tsv
+            C:/w-clang/seed_*/report.txt
+            C:/w-clang/seed_*/cases.tsv
           if-no-files-found: warn
