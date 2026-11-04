@@ -24,6 +24,7 @@ from isa_conformance import (  # noqa: E402
     DISPLACEMENT_OPERATIONS,
     DONE_ADDRESS,
     DONE_VALUE,
+    FPSCR_EXCEPTION_BITS,
     INDEXED_OPERATIONS,
     INDEXED_OPERATIONS_WITH_UPDATE,
     NO_GAME_ADDRESS,
@@ -490,6 +491,41 @@ def test_paired_single_accesses_keep_their_misaligned_addresses_as_dolphin_raise
 def test_the_operations_that_need_an_aligned_address_are_accesses_with_a_displacement():
     assert ALIGNMENT_CHECKED_OPERATIONS <= DISPLACEMENT_OPERATIONS
     assert set(D_FORM_OPCODES) >= ALIGNMENT_CHECKED_OPERATIONS
+
+
+FPSCR_BIT_COUNT = 32
+EXTENDED_OPCODES_OF_MTFSB = {"mtfsb0": 70, "mtfsb1": 38}
+
+
+def mtfsb_word(operation: str, bit: int, *, record: bool = False) -> int:
+    """mtfsb0 or mtfsb1 on FPSCR bit `bit`, which counts from the most significant bit."""
+    return (63 << 26) | (bit << 21) | (EXTENDED_OPCODES_OF_MTFSB[operation] << 1) | int(record)
+
+
+@pytest.mark.parametrize("record", [False, True], ids=["no dot", "dot"])
+@pytest.mark.parametrize("bit", sorted(FPSCR_EXCEPTION_BITS))
+def test_mtfsb1_is_not_run_on_a_bit_that_records_an_exception(bit, record):
+    # The interpreter sets FX along with such a bit, and the recompiled code does not.
+    word = mtfsb_word("mtfsb1", bit, record=record)
+    assert operation_of(word)[0] == "mtfsb1"
+    assert setup_before(word, random.Random(0)) is None
+
+
+@pytest.mark.parametrize("bit", [bit for bit in range(FPSCR_BIT_COUNT) if bit not in FPSCR_EXCEPTION_BITS])
+def test_mtfsb1_is_run_on_every_other_bit(bit):
+    # FX, FEX and VX themselves, the exception enables, NI and the rounding mode, among others.
+    assert setup_before(mtfsb_word("mtfsb1", bit), random.Random(0)) == []
+
+
+@pytest.mark.parametrize("bit", range(FPSCR_BIT_COUNT))
+def test_mtfsb0_is_run_on_every_bit_because_clearing_a_bit_sets_nothing_else(bit):
+    assert operation_of(mtfsb_word("mtfsb0", bit))[0] == "mtfsb0"
+    assert setup_before(mtfsb_word("mtfsb0", bit), random.Random(0)) == []
+
+
+def test_the_exception_bits_are_the_status_bits_and_not_the_summaries_enables_or_modes():
+    summaries_enables_and_modes = {0, 1, 2, 13, 14, *range(15, 20), 20, *range(24, 29), 29, 30, 31}
+    assert not FPSCR_EXCEPTION_BITS & summaries_enables_and_modes
 
 
 def test_jumps_and_traps_are_never_made_safe():

@@ -249,6 +249,12 @@ REQUIRED_ALIGNMENT = 4  # bytes
 # Interpreter_Integer.cpp), so it disagrees with the manual, and with the recompiled code, on
 # XER[CA] whenever CA is set before the instruction. The game uses neither instruction.
 ADD_MINUS_ONE_OPERATIONS = frozenset({"addme", "subfme"})
+# The FPSCR bits that record an exception, numbered from the most significant as the manual does:
+# overflow, underflow, zero divide, inexact, the invalid-operation bits and the three "software"
+# ones. Setting one of them with mtfsb1 also sets FX, the exception summary, in Dolphin's
+# interpreter (its source says "This instruction can affect FX"); the recompiled code does not.
+# This is a gap of the recompiler, not undefined behavior. The game only sets the NI bit (29).
+FPSCR_EXCEPTION_BITS = frozenset({3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 21, 22, 23})
 # Control flow, traps, and what changes the memory map or reads the clock. Strings and the
 # reservation pair are left out because the game does not use them.
 SKIPPED_OPERATIONS = frozenset({
@@ -383,6 +389,8 @@ def setup_before(word: int, rng: random.Random) -> list[int] | None:
             # carry the reserved bit, which the recompiled code keeps and Dolphin's
             # interpreter clears. The game only writes back what it read with mffs.
             return clear_reserved_fpscr_bit(field_rb(word))
+        if operation == "mtfsb1" and field_rd(word) in FPSCR_EXCEPTION_BITS:
+            return None  # see FPSCR_EXCEPTION_BITS
         if operation in ADD_MINUS_ONE_OPERATIONS:
             # The reference gets XER[CA] wrong when the carry is set going in, so these words
             # only run with it clear. See ADD_MINUS_ONE_OPERATIONS.
