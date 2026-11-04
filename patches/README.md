@@ -70,6 +70,40 @@ git -C "$TEMPLATE/lib/ModernGekko/vendor/dolphin" apply "$PWD/patches/moderngekk
 
 **Quitar:** el mismo `git apply` con `-R`.
 
+### `moderngekko/relocatable-port.patch`
+
+`moderngekko-port`, la herramienta que compila el módulo de un juego, lee la
+plantilla del módulo, el código de GXRuntime y los ajustes del juego desde la
+carpeta de fuentes donde se compiló, y esa ruta queda escrita dentro del
+ejecutable. Si el ejecutable se copia a otro equipo, por ejemplo dentro de un
+paquete, esas carpetas ya no existen y no puede compilar nada. El parche hace
+que las busque, en este orden: en la carpeta de la variable de entorno
+`MODERNGEKKO_SOURCE_DIR`; en una carpeta `source/` junto al ejecutable (si
+contiene `vendor/dolphin/module-template`); y, si no, en la ruta con la que se
+compiló, como hasta ahora. Quien compila ModernGekko en su máquina no nota
+ningún cambio.
+
+`source/` tiene la misma distribución que el código fuente. Lo que usa la
+herramienta es `vendor/dolphin/module-template`, `vendor/dolphin/GXRuntime`,
+`vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp` y, para los ajustes del
+juego, `vendor/dolphin/Data/Sys/GameSettings`.
+
+**Versiones a las que se aplica:** ModernGekko `edd460a`, la que fija
+`scripts/build_and_run_linux.sh` con ModernGekko-Template `c2553a9`. Se aplica
+a `lib/ModernGekko`, no a `vendor/dolphin`.
+
+**Licencia:** GPL-3.0-or-later, como ModernGekko.
+
+**Aplicar** (hay que recompilar `moderngekko-port`):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # o tu MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/relocatable-port.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-port
+```
+
+**Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
+
 ---
 
 ## English
@@ -137,3 +171,37 @@ git -C "$TEMPLATE/lib/ModernGekko/vendor/dolphin" apply "$PWD/patches/moderngekk
 ```
 
 **Remove:** the same `git apply` with `-R`.
+
+### `moderngekko/relocatable-port.patch`
+
+`moderngekko-port`, the tool that builds a game's module, reads the module
+template, the GXRuntime code and the game settings from the source folder it
+was built in, and that path is written inside the executable. If the
+executable is copied to another machine, in a package for example, those
+folders no longer exist and it cannot build anything. The patch makes it look
+for them in this order: in the folder named by the `MODERNGEKKO_SOURCE_DIR`
+environment variable; in a `source/` folder beside the executable (if it holds
+`vendor/dolphin/module-template`); and otherwise in the path it was built
+with, as before. Whoever builds ModernGekko on their own machine sees no
+change.
+
+`source/` is laid out like the source tree. What the tool uses is
+`vendor/dolphin/module-template`, `vendor/dolphin/GXRuntime`,
+`vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp` and, for the game
+settings, `vendor/dolphin/Data/Sys/GameSettings`.
+
+**Applies to:** ModernGekko `edd460a`, the version `scripts/build_and_run_linux.sh`
+pins through ModernGekko-Template `c2553a9`. It applies to `lib/ModernGekko`,
+not to `vendor/dolphin`.
+
+**License:** GPL-3.0-or-later, like ModernGekko.
+
+**Apply** (`moderngekko-port` has to be rebuilt):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/relocatable-port.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-port
+```
+
+**Remove:** the same `git apply` with `-R`, then `ninja` again.

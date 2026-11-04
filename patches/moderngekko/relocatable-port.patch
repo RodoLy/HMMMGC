@@ -1,0 +1,54 @@
+Let moderngekko-port find the module sources beside its executable
+Deja que moderngekko-port encuentre las fuentes del módulo junto a su ejecutable
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, the version that scripts/build_and_run_linux.sh pins
+  through ModernGekko-Template c2553a9. Applies to lib/ModernGekko, not to
+  vendor/dolphin.
+  ModernGekko edd460a, la versión que scripts/build_and_run_linux.sh fija con
+  ModernGekko-Template c2553a9. Se aplica a lib/ModernGekko, no a vendor/dolphin.
+
+License / Licencia:
+  GPL-3.0-or-later, like ModernGekko.
+  GPL-3.0-or-later, igual que ModernGekko.
+
+Read patches/README.md for what it adds and how to apply it.
+Lee patches/README.md para ver qué agrega y cómo aplicarlo.
+
+diff --git a/tools/moderngekko_port.cpp b/tools/moderngekko_port.cpp
+index af1c2a5..173c297 100644
+--- a/tools/moderngekko_port.cpp
++++ b/tools/moderngekko_port.cpp
+@@ -564,6 +564,23 @@ int Inspect(const fs::path& root, const fs::path& output)
+   return 0;
+ }
+ 
++// The folder with the files that building a module needs: the module template, the runtime's
++// sources and the game settings. It is the source tree this tool was built from, unless the tool
++// was moved to another machine, which happens when it is shipped in a package. Then the folders
++// copied to `source/` beside the executable, laid out the same, or $MODERNGEKKO_SOURCE_DIR
++// (which wins over both), take its place.
++fs::path ModuleSourceRoot(const char* argv0)
++{
++  if (const char* from_environment = std::getenv("MODERNGEKKO_SOURCE_DIR");
++      from_environment && *from_environment)
++    return from_environment;
++  std::error_code ec;
++  const fs::path beside_executable = fs::weakly_canonical(argv0, ec).parent_path() / "source";
++  if (fs::is_directory(beside_executable / "vendor/dolphin/module-template", ec))
++    return beside_executable;
++  return fs::path(MODERNGEKKO_SOURCE_DIR);
++}
++
+ std::optional<fs::path> Build(const char* argv0, const fs::path& root,
+                               BuildOptions options)
+ {
+@@ -576,7 +593,7 @@ std::optional<fs::path> Build(const char* argv0, const fs::path& root,
+   const auto& game = *inspected.metadata;
+   if (options.output.empty())
+     options.output = DefaultOutput();
+-  const fs::path source_root = fs::path(MODERNGEKKO_SOURCE_DIR);
++  const fs::path source_root = ModuleSourceRoot(argv0);
+   const DolPatchSet patches = LoadDefaultDolPatches(
+       source_root / "vendor/dolphin/Data/Sys/GameSettings" / (game.disc_id + ".ini"));
+   if (!patches)
