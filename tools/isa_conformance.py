@@ -37,6 +37,15 @@ How a case is built:
 Jumps, system calls, traps and the instructions that change the memory map are
 left out: they would take the program somewhere else.
 
+The words do not have to come from the game. With `generate --synthetic` the tool
+makes them up: for every instruction that the opcode tables name it builds words
+with every combination of a few registers (so that the same register often shows
+up twice, or r0) and some with random operands, and keeps the ones that are
+defined instructions (Capstone is the judge: a word with a reserved bit set is
+not one). That reaches forms that no game uses, and it needs no game at all, so
+the check can run on a machine that has no disc. A seed gives the same words and
+the same machine states every time.
+
 Jugar solo ejercita el código al que llega el jugador, así que «sin divergencias»
 del verificador lockstep (docs/VALIDATION.md) dice poco de las formas de
 instrucción que ninguna partida ejecutó. Esta herramienta arma un programa con
@@ -71,17 +80,30 @@ Cómo se arma un caso:
 Se dejan fuera los saltos, las llamadas al sistema, las trampas y las
 instrucciones que cambian el mapa de memoria: llevarían el programa a otro lado.
 
+Las palabras no tienen que venir del juego. Con `generate --synthetic` la
+herramienta las inventa: por cada instrucción que nombran las tablas de códigos
+de operación arma palabras con todas las combinaciones de unos pocos registros
+(para que el mismo registro aparezca seguido dos veces, o r0) y otras con
+operandos aleatorios, y se queda con las que son instrucciones definidas
+(Capstone es el juez: una palabra con un bit reservado activo no lo es). Así
+llega a formas que ningún juego usa, y no necesita juego alguno, así que la
+comprobación puede correr en una máquina sin disco. Una semilla da siempre las
+mismas palabras y los mismos estados de máquina.
+
 Usage / Uso:
     python3 tools/isa_conformance.py generate --output root/sys/main.dol --cases cases.tsv
+    python3 tools/isa_conformance.py generate --synthetic --output root/sys/main.dol --cases cases.tsv
     python3 tools/isa_conformance.py report cases.tsv lockstep.log --coverage coverage.txt
 """
 
 import argparse
+import itertools
 import random
 import re
 import struct
 import sys
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from pathlib import Path
@@ -113,7 +135,16 @@ from ppc_encode import (  # noqa: E402
     stfd,
     stw,
 )
-from ppc_mnemonics import ILLEGAL_FORM, form_name, operation_of  # noqa: E402
+from ppc_mnemonics import (  # noqa: E402
+    ILLEGAL_FORM,
+    LINK_BIT_FORMS,
+    OPCODE_PAIRED_SINGLE,
+    OVERFLOW_ENABLE_BIT,
+    RECORD_BIT_FORMS,
+    RECORD_OR_LINK_BIT,
+    form_name,
+    operation_of,
+)
 from project import MAIN_DOL_PATH, SYMBOLS_PATH  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
 
@@ -191,7 +222,16 @@ INDEXED_OPERATIONS = frozenset({
 # The loads that also update their base register. The manual calls them an invalid form when
 # the destination is the base register; for the stores and the floating-point loads the same
 # register number names a different register, or the value stored before the update.
-INTEGER_LOADS_WITH_UPDATE = frozenset({"lbzux", "lhaux", "lhzux", "lwzux"})
+INTEGER_LOADS_WITH_UPDATE = frozenset({
+    "lbzu", "lhau", "lhzu", "lwzu", "lbzux", "lhaux", "lhzux", "lwzux",
+})
+# Every indexed access that also updates its base register. The manual calls them an invalid
+# form when rA is r0, since there is no register to update, and the address is then r0 + rB with
+# r0 read as the register, which can be anywhere in memory and raise an exception.
+INDEXED_OPERATIONS_WITH_UPDATE = frozenset({
+    "lbzux", "lhaux", "lhzux", "lwzux", "stbux", "sthux", "stwux",
+    "lfsux", "lfdux", "stfsux", "stfdux", "psq_lux", "psq_stux",
+})
 # Control flow, traps, and what changes the memory map or reads the clock. Strings and the
 # reservation pair are left out because the game does not use them.
 SKIPPED_OPERATIONS = frozenset({
@@ -318,12 +358,16 @@ def setup_before(word: int, rng: random.Random) -> list[int] | None:
     if treatment is Treatment.DISPLACEMENT:
         if base == 0:  # rA = r0 would mean "no base register" and address the bottom of memory
             return None
+        if operation in INTEGER_LOADS_WITH_UPDATE and base == field_rd(word):
+            return None  # an invalid form: the loaded value and the new address want the same register
         if operation == "lmw" and base >= field_rd(word):  # the base register would be overwritten
             return None
         return load_constant(base, SCRATCH_CENTER)
     if treatment is Treatment.INDEXED:
-        if base == 0:  # the address is rB alone
-            return load_constant(index, SCRATCH_CENTER)
+        if base == 0:
+            if operation in INDEXED_OPERATIONS_WITH_UPDATE:
+                return None  # an invalid form, whose address would be r0 + rB
+            return load_constant(index, SCRATCH_CENTER)  # the address is rB alone
         if base == index or (operation in INTEGER_LOADS_WITH_UPDATE and base == field_rd(word)):
             return None
         # A multiple of 8 keeps doubles and cache blocks aligned.
@@ -332,6 +376,9 @@ def setup_before(word: int, rng: random.Random) -> list[int] | None:
 
 
 # -- The words the game has ------------------------------------------------------------------
+
+
+NO_GAME_ADDRESS = 0  # the game address of a word that was not taken from the game
 
 
 @dataclass(frozen=True)
@@ -357,6 +404,187 @@ def collect_candidates(dol: Dol, symbols: SymbolTable) -> dict[str, list[Candida
     }
 
 
+# -- Words that need no game -------------------------------------------------------------------
+
+# The primary opcodes that carry a 10-bit extended opcode (bits 10 to 1 counting from the least
+# significant bit). Opcodes 59 and 63 use only the low five bits of it for the opcode and the
+# rest for a register operand, and paired singles (opcode 4) mix several widths, so enumerating
+# the whole field reaches every form of the five.
+OPCODES_WITH_EXTENDED_FIELD = (4, 19, 31, 59, 63)
+PRIMARY_OPCODE_COUNT = 64
+PRIMARY_OPCODE_SHIFT = 26
+EXTENDED_FIELD_SHIFT = 1
+EXTENDED_FIELD_VALUES = 1 << 10
+# The bits a word can vary in apart from its opcode: all 26 below the primary opcode, or, when
+# there is an extended opcode, the operands (bits 25 to 11) and the record or link bit (bit 0).
+FREE_BITS_WITHOUT_EXTENDED_FIELD = 0x03FF_FFFF
+FREE_BITS_WITH_EXTENDED_FIELD = 0x03FF_F801
+OPERAND_FIELD_SHIFTS = (21, 16, 11)  # rD or rS, rA, rB
+REGISTER_FIELD_MASK = 0x1F
+# The registers that synthetic words draw their operands from. There are few, r0 among them, so
+# the operands often name the same register or r0, which is where a translation goes wrong.
+SYNTHETIC_REGISTERS = (0, 3, 4, 5)
+CHANCE_OF_CHOSEN_REGISTER = 0.7  # the rest of the time the field keeps its random bits
+RANDOM_FILLS_PER_ENCODING = 48
+SPR_FIELD_MASK = 0x3FF << 11
+
+
+def encode_spr(word: int, spr: int) -> int:
+    """`word` with its SPR field set to `spr`, stored with the two halves swapped (see spr_number)."""
+    return (word & ~SPR_FIELD_MASK) | ((spr & 0x1F) << 16) | ((spr >> 5) << 11)
+
+
+# Capstone prints the instructions and rejects most of the words whose reserved bits are set, which
+# makes it the judge of whether a made-up word is an instruction. It is not a perfect judge, and
+# these tables say where it needs help.
+OVERFLOW_ENABLE_WORD_BIT = OVERFLOW_ENABLE_BIT << EXTENDED_FIELD_SHIFT  # the "o" of addo, subfo, ...
+FORMS_WHOSE_RECORD_BIT_CAPSTONE_REJECTS = ("mtfsb0", "mtfsb1")
+FORMS_CAPSTONE_DOES_NOT_DECODE = ("fcmpo", "mcrxr")
+# The bits that the manual requires to be zero in a form, by form, and that Capstone does not
+# check. For the two forms it does not decode at all that is every reserved bit: fcmpo has two
+# after the field of the condition register, and mcrxr has nothing but that field. For the rest,
+# Capstone follows later versions of the architecture than the 750CL manual, in which these bits
+# mean something, and reads such a word as an instruction that the Gekko does not have; the
+# recompiler leaves the word to the interpreter, so a case made of it compares nothing.
+# fmt: off
+COMPARE_RESERVED_BITS = 0x0060_0000  # the "L" that makes a compare 64 bits wide, and the bit before it
+CACHE_RESERVED_BITS = 0x03E0_0000  # the hint of dcbt and dcbtst, the flush level of dcbf, ...
+NO_OPERAND_BITS = 0x03FF_F800  # everything between the opcode and the extended opcode
+SEGMENT_REGISTER_RESERVED_BITS = 0x0010_F800  # the bit before the number and the field after it
+SEGMENT_REGISTER_INDEXED_RESERVED_BITS = 0x001F_0000  # where the other forms keep rA
+RESERVED_BITS_OF_FORMS = {
+    "fcmpo": 0x0060_0001, "mcrxr": 0x007F_F801,
+    "cmp": COMPARE_RESERVED_BITS, "cmpl": COMPARE_RESERVED_BITS,
+    "cmpi": COMPARE_RESERVED_BITS, "cmpli": COMPARE_RESERVED_BITS,
+    "dcbf": CACHE_RESERVED_BITS, "dcbi": CACHE_RESERVED_BITS, "dcbst": CACHE_RESERVED_BITS,
+    "dcbt": CACHE_RESERVED_BITS, "dcbtst": CACHE_RESERVED_BITS, "dcbz": CACHE_RESERVED_BITS,
+    "icbi": CACHE_RESERVED_BITS,
+    "eieio": NO_OPERAND_BITS, "sync": NO_OPERAND_BITS, "isync": NO_OPERAND_BITS,
+    "mtfsf": 0x0201_0000,  # the "L" and "W" bits that a later version added around the mask
+    "mfsr": SEGMENT_REGISTER_RESERVED_BITS, "mtsr": SEGMENT_REGISTER_RESERVED_BITS,
+    "mfsrin": SEGMENT_REGISTER_INDEXED_RESERVED_BITS, "mtsrin": SEGMENT_REGISTER_INDEXED_RESERVED_BITS,
+}
+# fmt: on
+
+
+def capstone_view(word: int) -> int:
+    """The word with the bits that Capstone does not model cleared, so that it can read the rest.
+
+    That is the overflow-enable bit of the `addo` family, and the record bit of `mtfsb0.` and
+    `mtfsb1.`. Capstone prints `.word` for a word that has them.
+    """
+    operation, overflow_enabled = operation_of(word)
+    if overflow_enabled:
+        word &= ~OVERFLOW_ENABLE_WORD_BIT
+    if operation in FORMS_WHOSE_RECORD_BIT_CAPSTONE_REJECTS:
+        word &= ~RECORD_OR_LINK_BIT
+    return word
+
+
+def reserved_bits(word: int, operation: str) -> int:
+    """The bits that must be zero for `word` to be a defined `operation`, and that Capstone leaves alone.
+
+    Bit 0 is one of them in the forms that have an extended opcode and no use for it: where it is
+    not the record bit (`add.`), the link bit (`bl`) or part of the name (`stwcx.`) it is reserved.
+    """
+    bits = RESERVED_BITS_OF_FORMS.get(operation, 0)
+    uses_bit_0 = operation in RECORD_BIT_FORMS or operation in LINK_BIT_FORMS or operation.endswith(".")
+    if word >> PRIMARY_OPCODE_SHIFT in OPCODES_WITH_EXTENDED_FIELD and not uses_bit_0:
+        bits |= RECORD_OR_LINK_BIT
+    return bits
+
+
+def is_instruction(word: int) -> bool:
+    """Whether the word is a defined instruction: a form of the tables, with its reserved bits clear."""
+    operation, _ = operation_of(word)
+    if operation == ILLEGAL_FORM or word & reserved_bits(word, operation):
+        return False
+    if operation in FORMS_CAPSTONE_DOES_NOT_DECODE:
+        return True
+    listing = format_instruction(Instruction(0, capstone_view(word)))
+    if listing.startswith(".word"):
+        return False
+    # The paired singles share their opcode with AltiVec, and a paired-single word with a reserved
+    # bit set is often an AltiVec instruction, which the Gekko does not have. Capstone says which
+    # one it read, and the name must be the form's own (these instructions have no aliases).
+    return word >> PRIMARY_OPCODE_SHIFT != OPCODE_PAIRED_SINGLE or listing.startswith(operation)
+
+
+def named_encodings() -> Iterator[tuple[int, int]]:
+    """The opcode bits of every instruction the tables name, with the bits left free for the operands.
+
+    An opcode that is a whole instruction (`lwz`) gives one encoding. One that has an extended
+    opcode (`add`, `fmadds`) gives one for each value of the extended field that names a form.
+    """
+    for primary in range(PRIMARY_OPCODE_COUNT):
+        if primary in OPCODES_WITH_EXTENDED_FIELD:
+            for extended in range(EXTENDED_FIELD_VALUES):
+                encoding = (primary << PRIMARY_OPCODE_SHIFT) | (extended << EXTENDED_FIELD_SHIFT)
+                if operation_of(encoding)[0] != ILLEGAL_FORM:
+                    yield encoding, FREE_BITS_WITH_EXTENDED_FIELD
+        elif operation_of(primary << PRIMARY_OPCODE_SHIFT)[0] != ILLEGAL_FORM:
+            yield primary << PRIMARY_OPCODE_SHIFT, FREE_BITS_WITHOUT_EXTENDED_FIELD
+
+
+def register_combinations(encoding: int, free_bits: int) -> Iterator[int]:
+    """`encoding` with every way of filling its three operand fields from SYNTHETIC_REGISTERS.
+
+    All the other bits stay zero, which is the value that the reserved bits of most forms must
+    have (`sync`, `mcrxr`, `fcmpo` are valid only when they are). Each combination comes once
+    for every value of the two lowest bits that the encoding leaves free: bit 0 is the record or
+    link bit, and bit 1 is the absolute-address bit of the branches.
+    """
+    low_bit_values = [value for value in range(4) if value & ~free_bits == 0]
+    for registers in itertools.product(SYNTHETIC_REGISTERS, repeat=len(OPERAND_FIELD_SHIFTS)):
+        word = encoding
+        for shift, register in zip(OPERAND_FIELD_SHIFTS, registers, strict=True):
+            word |= register << shift
+        for low_bits in low_bit_values:
+            yield word | low_bits
+
+
+def synthetic_word(encoding: int, free_bits: int, rng: random.Random) -> int:
+    """A word with the opcode bits of `encoding` and random operands."""
+    word = encoding | (rng.getrandbits(32) & free_bits)
+    for shift in OPERAND_FIELD_SHIFTS:
+        if rng.random() < CHANCE_OF_CHOSEN_REGISTER:
+            word = (word & ~(REGISTER_FIELD_MASK << shift)) | (rng.choice(SYNTHETIC_REGISTERS) << shift)
+    operation, _ = operation_of(word)
+    if operation in ("mfspr", "mtspr"):
+        # A random register number is almost never one that is safe to read or write.
+        allowed = READABLE_SPRS if operation == "mfspr" else WRITABLE_SPRS
+        word = encode_spr(word, rng.choice(sorted(allowed)))
+    return word
+
+
+def synthetic_candidates(
+    rng: random.Random, random_fills_per_encoding: int = RANDOM_FILLS_PER_ENCODING
+) -> dict[str, list[Candidate]]:
+    """Words of every form the opcode tables name, built without the game, grouped by form name.
+
+    Each encoding gets every combination of a few registers, which puts the same register in
+    several operands, and a number of fills with random operands. A word counts only if it is
+    an instruction (see is_instruction): that rejects the words with a reserved bit set, which
+    no compiler emits and the manual does not define.
+    """
+    by_form: dict[str, set[int]] = defaultdict(set)
+    for encoding, free_bits in named_encodings():
+        words = list(register_combinations(encoding, free_bits))
+        words += [synthetic_word(encoding, free_bits, rng) for _ in range(random_fills_per_encoding)]
+        for word in words:
+            form = form_name(word)
+            if form != ILLEGAL_FORM and is_instruction(word):
+                by_form[form].add(word)
+    return {
+        form: [Candidate(word, NO_GAME_ADDRESS) for word in sorted(words)] for form, words in by_form.items()
+    }
+
+
+def synthetic_candidates_for_seed(seed: int) -> dict[str, list[Candidate]]:
+    """The made-up words of one run: the same words every time for the same seed."""
+    return synthetic_candidates(random.Random(f"synthetic-words-{seed}"))
+
+
 # The register operands of a disassembled instruction: r3, f31. An r0 that stands for "zero"
 # (the base of a load, the source of `addi`) is printed as a plain 0 and does not match.
 REGISTER_OPERAND = re.compile(r"\b[rf]\d+\b")
@@ -372,7 +600,8 @@ def register_pattern(word: int) -> tuple[int, ...]:
     """
     first_position: dict[str, int] = {}
     pattern = []
-    for position, register in enumerate(REGISTER_OPERAND.findall(format_instruction(Instruction(0, word)))):
+    listing = format_instruction(Instruction(0, capstone_view(word)))
+    for position, register in enumerate(REGISTER_OPERAND.findall(listing)):
         pattern.append(R0_OPERAND if register == "r0" else first_position.setdefault(register, position))
     return tuple(pattern)
 
@@ -738,8 +967,10 @@ def format_report(
 
 
 def command_generate(arguments: argparse.Namespace) -> int:
-    dol = Dol(arguments.dol)
-    candidates = collect_candidates(dol, SymbolTable.read(arguments.symbols))
+    if arguments.synthetic:
+        candidates = synthetic_candidates_for_seed(arguments.seed)
+    else:
+        candidates = collect_candidates(Dol(arguments.dol), SymbolTable.read(arguments.symbols))
     program = build_program(candidates, arguments.seed, arguments.words_per_form, arguments.group_size)
     program.write(arguments.output)
     arguments.cases.write_text(format_cases(program.cases))
@@ -807,6 +1038,11 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
 
     generate = commands.add_parser("generate", help="write the test program")
+    generate.add_argument(
+        "--synthetic",
+        action="store_true",
+        help="use made-up words of every form, not the game's; needs no game (--dol, --symbols unused)",
+    )
     generate.add_argument(
         "--dol", type=existing_file, default=MAIN_DOL_PATH, help=f"the game's DOL (default: {MAIN_DOL_PATH})"
     )
