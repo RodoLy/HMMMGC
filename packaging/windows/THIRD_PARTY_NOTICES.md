@@ -34,7 +34,7 @@ an issue in that repository.
 
 | Component / Componente | In the package / En el paquete | License / Licencia | Source / Fuente |
 | --- | --- | --- | --- |
-| This project: scripts and tools / Este proyecto: scripts y herramientas | `Play.bat`, `play.ps1`, `game.psd1` | GPL-3.0-or-later | <https://github.com/RodoLy/HMMMGC> |
+| This project: scripts and tools / Este proyecto: scripts y herramientas | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | GPL-3.0-or-later | <https://github.com/RodoLy/HMMMGC> |
 | ModernGekko: launcher, runner, `moderngekko-port` | `bin\` | GPL-3.0 | <https://github.com/ExpansionPak/ModernGekko> |
 | DolRecomp: the recompiler / el recompilador | `bin\dolrecomp.exe` | GPL-3.0 | <https://github.com/ExpansionPak/DolRecomp> |
 | Dolphin: core, disc reader and video, inside ModernGekko / núcleo, lector de discos y video, dentro de ModernGekko | `bin\` | GPL-2.0-or-later, and the libraries it bundles under their own licenses (`licenses\Dolphin-externals-licenses.md`) | <https://github.com/dolphin-emu/dolphin> |

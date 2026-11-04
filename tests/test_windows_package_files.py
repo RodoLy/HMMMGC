@@ -38,11 +38,21 @@ def branding() -> dict[str, str]:
     )
 
 
+def body_of_function(script: str, name: str) -> str:
+    """What is between the braces of `function <name> { ... }`, whose closing brace is at the margin."""
+    return re.search(rf"function {name} \{{(.*?)^\}}", script, re.MULTILINE | re.DOTALL).group(1)
+
+
 def messages_by_language() -> dict[str, set[str]]:
-    """The keys of the messages of play.ps1, for each language."""
+    """The keys of the messages of play.ps1, for each language.
+
+    A message is `Key = 'text'`, or `Key = @'` and the lines of the text up to `'@` when it has several.
+    """
     script = read_packaging_file("play.ps1")
     blocks = re.findall(r"^    (\w\w) = @\{\n(.*?)^    \}", script, re.MULTILINE | re.DOTALL)
-    return {language: set(re.findall(r"^\s+(\w+)\s+= '", block, re.MULTILINE)) for language, block in blocks}
+    return {
+        language: set(re.findall(r"^\s+(\w+)\s+= @?'", block, re.MULTILINE)) for language, block in blocks
+    }
 
 
 # -- The files of the package folder -----------------------------------------------------------------
@@ -51,6 +61,12 @@ def messages_by_language() -> dict[str, set[str]]:
 @pytest.mark.parametrize("name", package_windows.PACKAGE_FILES)
 def test_every_file_the_assembler_expects_is_in_the_packaging_folder(name):
     assert (PACKAGING_DIRECTORY / name).is_file()
+
+
+def test_no_file_of_the_packaging_folder_is_forgotten_by_the_assembler():
+    build_time_only = {"branding.cmake"}  # the programs are built with it; the player never needs it
+    found = {path.name for path in PACKAGING_DIRECTORY.iterdir() if path.is_file()}
+    assert found == set(package_windows.PACKAGE_FILES) | build_time_only
 
 
 def test_the_licence_the_assembler_adds_is_in_the_repository():
@@ -141,27 +157,50 @@ def test_the_modules_directory_limit_matches_the_length_the_build_needs():
     assert limit + 201 <= 260
 
 
-# -- Play.bat -----------------------------------------------------------------------------------------
+# -- The batch files: Play.bat and Play-Keyboard.bat -------------------------------------------------
 
 
-def test_the_batch_file_is_plain_ascii_because_cmd_reads_it_in_the_oem_code_page():
-    assert all(byte < 128 for byte in (PACKAGING_DIRECTORY / "Play.bat").read_bytes())
-
-
-def test_the_batch_file_runs_the_script_that_sits_next_to_it_with_what_it_was_given():
+def script_command_of(batch_file: str) -> str:
+    """The line of a batch file that runs play.ps1 (the lines that start with `rem` are comments)."""
     command = [
         line
-        for line in read_packaging_file("Play.bat").splitlines()
-        if "play.ps1" in line and "rem" not in line
+        for line in read_packaging_file(batch_file).splitlines()
+        if "play.ps1" in line and not line.lstrip().startswith("rem")
     ]
     assert len(command) == 1
-    assert '"%~dp0play.ps1"' in command[0]  # the folder of the batch file, whatever the current folder
-    assert command[0].rstrip().endswith("%*")  # a disc image dropped on the batch file
-    assert "-ExecutionPolicy Bypass" in command[0]
-    assert "-STA" in command[0]  # the file dialog needs a single-threaded apartment
+    return command[0]
 
 
-def test_the_batch_file_waits_for_a_key_only_when_the_script_failed():
-    lines = [line.strip() for line in read_packaging_file("Play.bat").splitlines()]
+@pytest.mark.parametrize("batch_file", package_windows.BATCH_FILES)
+def test_a_batch_file_is_plain_ascii_because_cmd_reads_it_in_the_oem_code_page(batch_file):
+    assert all(byte < 128 for byte in (PACKAGING_DIRECTORY / batch_file).read_bytes())
+
+
+@pytest.mark.parametrize("batch_file", package_windows.BATCH_FILES)
+def test_a_batch_file_runs_the_script_that_sits_next_to_it_with_what_it_was_given(batch_file):
+    command = script_command_of(batch_file)
+    assert '"%~dp0play.ps1"' in command  # the folder of the batch file, whatever the current folder
+    assert command.rstrip().endswith("%*")  # a disc image dropped on the batch file
+    assert "-ExecutionPolicy Bypass" in command
+    assert "-STA" in command  # the file dialog needs a single-threaded apartment
+
+
+@pytest.mark.parametrize("batch_file", package_windows.BATCH_FILES)
+def test_a_batch_file_waits_for_a_key_only_when_the_script_failed(batch_file):
+    lines = [line.strip() for line in read_packaging_file(batch_file).splitlines()]
     assert "if errorlevel 1 (" in lines
     assert lines.index("pause") > lines.index("if errorlevel 1 (")
+
+
+def test_only_the_keyboard_batch_file_asks_for_the_keyboard():
+    assert "-Keyboard" in script_command_of("Play-Keyboard.bat")
+    assert "-Keyboard" not in script_command_of("Play.bat")
+
+
+def test_the_keyboard_switch_is_declared_and_opens_the_runner_with_the_game_and_the_players_folder():
+    script = read_packaging_file("play.ps1")
+    assert re.search(r"\[switch\] \$Keyboard\b", script)
+    start = body_of_function(script, "Start-GameWithKeyboard")
+    assert "$RunnerPath" in start
+    assert "'--game', $ExtractedGameDirectory" in start  # what the launcher gives the runner, too
+    assert "'--user-dir', $UserDirectory" in start

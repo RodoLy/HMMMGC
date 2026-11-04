@@ -12,7 +12,8 @@
       1. Reads the disc image and extracts the game's files (the launcher does it).
       2. Recompiles the game's program into a native module: DolRecomp translates it to C and
          the compiler in toolchain\ builds it. This takes several minutes.
-      3. Puts the module where the launcher and the runner look for it, and opens the launcher.
+      3. Puts the module where the launcher and the runner look for it, and opens the launcher
+         (or, with -Keyboard, the game itself).
 
     Nothing is installed and no setting of the computer is changed. Everything this script makes
     is in the folder %LOCALAPPDATA%\<UserDirectoryName> (see game.psd1), and a log of the last
@@ -25,7 +26,8 @@
       1. Lee la imagen del disco y extrae los archivos del juego (lo hace el launcher).
       2. Recompila el programa del juego en un módulo nativo: DolRecomp lo traduce a C y el
          compilador de toolchain\ lo construye. Esto tarda varios minutos.
-      3. Pone el módulo donde lo buscan el launcher y el runner, y abre el launcher.
+      3. Pone el módulo donde lo buscan el launcher y el runner, y abre el launcher (o, con
+         -Keyboard, el juego mismo).
 
     No se instala nada ni se cambia ninguna configuración de la computadora. Todo lo que hace este
     script queda en la carpeta %LOCALAPPDATA%\<UserDirectoryName> (ver game.psd1), y el registro
@@ -40,6 +42,14 @@
 .PARAMETER PrepareOnly
     Prepare the game but do not open the launcher. The tests of the package use it.
     Prepara el juego pero no abre el launcher. Lo usan las pruebas del paquete.
+
+.PARAMETER Keyboard
+    Open the game itself, without the launcher, to play with the keyboard. The launcher does not
+    let the game start until a controller is connected, and the game does not need one: with no
+    controller set up it reads Dolphin's default keyboard layout.
+    Abre el juego mismo, sin el launcher, para jugar con el teclado. El launcher no deja empezar
+    el juego mientras no haya un control conectado, y el juego no lo necesita: sin ningún control
+    configurado lee la asignación de teclado que trae Dolphin.
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
@@ -53,7 +63,9 @@ param(
     [Parameter(Position = 0)]
     [string] $Disc,
 
-    [switch] $PrepareOnly
+    [switch] $PrepareOnly,
+
+    [switch] $Keyboard
 )
 
 Set-StrictMode -Version Latest
@@ -67,6 +79,7 @@ $ToolchainDirectory = Join-Path $PackageDirectory 'toolchain'
 $Game = Import-PowerShellDataFile -LiteralPath (Join-Path $PackageDirectory 'game.psd1')
 
 $LauncherPath = Join-Path $ProgramsDirectory ($Game.LauncherName + '.exe')
+$RunnerPath = Join-Path $ProgramsDirectory 'moderngekko-run.exe'
 $PortToolPath = Join-Path $ProgramsDirectory 'moderngekko-port.exe'
 
 # The same folders that the launcher and the runner use (the launcher picks %LOCALAPPDATA%\<name>).
@@ -80,7 +93,7 @@ $LogPath = Join-Path $UserDirectory 'Logs\play.log'
 $RequiredFiles = @(
     $LauncherPath,
     $PortToolPath,
-    (Join-Path $ProgramsDirectory 'moderngekko-run.exe'),
+    $RunnerPath,
     (Join-Path $ProgramsDirectory 'dolrecomp.exe'),
     (Join-Path $ToolchainDirectory 'llvm-mingw\bin\clang.exe'),
     (Join-Path $ToolchainDirectory 'cmake\bin\cmake.exe'),
@@ -116,6 +129,16 @@ $Messages = @{
         GamePrepared        = 'The game is ready.'
         OpeningLauncher     = 'Opening the launcher. Press Play in it to start the game.'
         LauncherFailed      = 'The launcher closed with an error (code {0}). The details are in {1}'
+        OpeningGame         = 'Opening the game with the keyboard.'
+        KeyboardControls    = @'
+Keyboard (the default layout of Dolphin, which this game runs on):
+  Arrow keys   stick (hold Shift for half tilt)
+  X, Z         A and B buttons          C, S    X and Y buttons          D      Z button
+  Q, W         L and R triggers         Enter   Start
+  T, F, G, H   D-pad up, left, down, right
+  I, J, K, L   C-stick up, left, down, right (hold Ctrl for half tilt)
+'@
+        GameFailed          = 'The game closed with an error (code {0}). The details are in {1}'
         Failed              = 'Something went wrong: {0}'
     }
     es = @{
@@ -135,6 +158,16 @@ $Messages = @{
         GamePrepared        = 'El juego está listo.'
         OpeningLauncher     = 'Abriendo el launcher. Pulsa Play en él para empezar el juego.'
         LauncherFailed      = 'El launcher se cerró con un error (código {0}). Los detalles están en {1}'
+        OpeningGame         = 'Abriendo el juego con el teclado.'
+        KeyboardControls    = @'
+Teclado (la asignación de Dolphin, sobre el que corre este juego):
+  Flechas      palanca (con Shift, a media inclinación)
+  X, Z         botones A y B            C, S    botones X y Y            D      botón Z
+  Q, W         gatillos L y R           Enter   Start
+  T, F, G, H   cruceta arriba, izquierda, abajo, derecha
+  I, J, K, L   palanca C arriba, izquierda, abajo, derecha (con Ctrl, a media inclinación)
+'@
+        GameFailed          = 'El juego se cerró con un error (código {0}). Los detalles están en {1}'
         Failed              = 'Algo salió mal: {0}'
     }
 }
@@ -347,6 +380,20 @@ function Start-Launcher {
     if ($LASTEXITCODE -ne 0) { throw (Get-Message 'LauncherFailed' @($LASTEXITCODE, $LogPath)) }
 }
 
+# Opens the game without the launcher, which is what the launcher itself does when Play is pressed:
+# it starts the runner with the game and the player's folder. The launcher does not let Play work
+# until a controller is connected, but the runner does not need one, so this is the way to play
+# with the keyboard. What the runner says is shown and kept in the log, like what the tools say.
+function Start-GameWithKeyboard {
+    Write-Host (Get-Message 'KeyboardControls')
+    Write-Host (Get-Message 'OpeningGame')
+    $exitCode = Invoke-Program -FilePath $RunnerPath -Arguments @(
+        '--game', $ExtractedGameDirectory,
+        '--user-dir', $UserDirectory
+    )
+    if ($exitCode -ne 0) { throw (Get-Message 'GameFailed' @($exitCode, $LogPath)) }
+}
+
 # -- The run -----------------------------------------------------------------------------------------
 
 $previousOutputEncoding = Set-ConsoleUtf8
@@ -368,7 +415,9 @@ try {
     Add-LogLine ('Module: ' + $installedModule)
     Write-Host (Get-Message 'GamePrepared')
 
-    if (-not $PrepareOnly) { Start-Launcher }
+    if (-not $PrepareOnly) {
+        if ($Keyboard) { Start-GameWithKeyboard } else { Start-Launcher }
+    }
 }
 catch {
     Add-LogLine ($_ | Out-String)
