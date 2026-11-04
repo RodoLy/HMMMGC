@@ -66,12 +66,16 @@ le sirve.
       GPU.
 - [ ] Jugar con GPU en laptops Windows ARM (Snapdragon): WSL2 no puede usar
       la GPU ahí ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)).
-      Ruta posible: compilar ModernGekko de forma nativa para Windows ARM64.
-      Su CMake y el Dolphin que trae ya contemplan ARM64 (`_M_ARM_64`,
-      FFmpeg ARM64, sin OpenGL en Windows ARM64, así que Vulkan o D3D12);
-      falta comprobar que compile: el README de DolRecomp dice que
-      ModernGekko no compila con MSVC por ahora, y el de ModernGekko-Template
-      fijado dice que sí.
+      Ruta: ModernGekko nativo para Windows ARM64, sin WSL. Ya compila ahí con
+      MSVC, con los parches de `patches/`. Con el compilador portátil
+      llvm-mingw recompila un juego inventado y pasa la prueba por
+      instrucción. Un workflow de GitHub arma el paquete (`packaging/windows`:
+      un zip con `Play.bat`, donde el jugador elige su disco y el juego se
+      recompila en su computadora; `Play-Keyboard.bat` para jugar con teclado)
+      y lo prueba como lo haría un jugador, con un disco inventado. Falta
+      probarlo con el juego real y con una GPU de verdad (Vulkan u OpenGL
+      sobre el controlador de Snapdragon, y el control y el teclado en
+      Windows).
       Otra ruta, más barata de probar: `GALLIUM_DRIVER=d3d12` en WSL. Hay
       usuarios de laptops x64 a los que Mesa les caía a software y con eso
       vieron su GPU ([wslg#1394](https://github.com/microsoft/wslg/issues/1394)),
@@ -213,12 +217,16 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       GPU.
 - [ ] Play with a GPU on Windows ARM laptops (Snapdragon): WSL2 cannot use
       the GPU there ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)).
-      Possible route: build ModernGekko natively for Windows ARM64. Its
-      CMake and the Dolphin it ships already account for ARM64
-      (`_M_ARM_64`, ARM64 FFmpeg, no OpenGL on Windows ARM64, so Vulkan or
-      D3D12); what is left is checking that it builds: DolRecomp's README
-      says ModernGekko does not build with MSVC for now, and the pinned
-      ModernGekko-Template's says it does.
+      Route: ModernGekko built natively for Windows ARM64, with no WSL. It
+      already builds there with MSVC, with the patches in `patches/`. With the
+      portable compiler llvm-mingw it recompiles a made-up game and passes the
+      instruction-level test. A GitHub workflow assembles the package
+      (`packaging/windows`: a zip with `Play.bat`, where the player chooses
+      their disc and the game is recompiled on their computer;
+      `Play-Keyboard.bat` to play with the keyboard) and tests it the way a
+      player would, with a made-up disc. What is left is trying it with the
+      real game and a real GPU (Vulkan or OpenGL on the Snapdragon driver, and
+      the controller and keyboard on Windows).
       Another route, cheaper to try: `GALLIUM_DRIVER=d3d12` in WSL. Some
       users of x64 laptops whose Mesa fell back to software saw their GPU
       with it ([wslg#1394](https://github.com/microsoft/wslg/issues/1394)),
