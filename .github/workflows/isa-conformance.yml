@@ -266,14 +266,27 @@ jobs:
             echo "::endgroup::"
           done
 
+      # The upload step cannot take files from two folders that are outside the workspace, so the
+      # reports of the two passes are copied into one folder, each pass in its own subfolder.
+      - name: Gather the reports in one folder
+        if: always()
+        run: |
+          gather() {
+            local compiler="$1" work_directory="$2" report seed_directory
+            for report in "$work_directory"/seed_*/report.txt "$work_directory"/seed_*/cases.tsv; do
+              [ -f "$report" ] || continue
+              seed_directory="$(basename "$(dirname "$report")")"
+              mkdir -p "C:/reports/$compiler/$seed_directory"
+              cp "$report" "C:/reports/$compiler/$seed_directory/"
+            done
+          }
+          gather msvc "$WORK_DIRECTORY"
+          gather clang "$PORTABLE_WORK_DIRECTORY"
+
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reports-Windows-ARM64
-          path: |
-            C:/w/seed_*/report.txt
-            C:/w/seed_*/cases.tsv
-            C:/w-clang/seed_*/report.txt
-            C:/w-clang/seed_*/cases.tsv
+          path: C:/reports
           if-no-files-found: warn
