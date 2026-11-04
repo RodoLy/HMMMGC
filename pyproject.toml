@@ -10,7 +10,7 @@ target-version = "py311"
 select = ["E", "W", "F", "I", "N", "B", "SIM", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["codewarrior", "dol", "export_dolrecomp_map", "export_mod_symbols", "function_finder", "isa_conformance", "lockstep_coverage", "lockstep_report", "lsb", "moderngekko_automation", "ppc", "ppc_encode", "ppc_mnemonics", "project", "run_isa_conformance", "sdk_names", "symbols", "synthetic", "synthetic_disc"]
+known-first-party = ["codewarrior", "dol", "export_dolrecomp_map", "export_mod_symbols", "function_finder", "isa_conformance", "lockstep_coverage", "lockstep_report", "lsb", "moderngekko_automation", "ppc", "ppc_encode", "ppc_mnemonics", "project", "run_isa_conformance", "sdk_names", "symbols", "synthetic", "synthetic_disc", "textfiles"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -148,6 +148,7 @@ from ppc_mnemonics import (  # noqa: E402
 )
 from project import MAIN_DOL_PATH, SYMBOLS_PATH  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
+from textfiles import read_program_output, read_text, write_text  # noqa: E402
 
 # -- Where things go in the test program ------------------------------------------------
 
@@ -1121,7 +1122,7 @@ def command_generate(arguments: argparse.Namespace) -> int:
         print(f"error: {overlap}", file=sys.stderr)
         return 1
     program.write(arguments.output)
-    arguments.cases.write_text(format_cases(program.cases))
+    write_text(arguments.cases, format_cases(program.cases))
     forms = {case.form for case in program.cases}
     print(
         f"{len(program.cases):,} cases of {len(forms)} forms; "
@@ -1165,9 +1166,9 @@ def evaluate(cases: list[Case], log_text: str, coverage_text: str = "") -> Evalu
 
 
 def command_report(arguments: argparse.Namespace) -> int:
-    coverage_text = arguments.coverage.read_text() if arguments.coverage else ""
+    coverage_text = read_program_output(arguments.coverage) if arguments.coverage else ""
     evaluation = evaluate(
-        parse_cases(arguments.cases.read_text()), arguments.log.read_text(errors="replace"), coverage_text
+        parse_cases(read_text(arguments.cases)), read_program_output(arguments.log), coverage_text
     )
     print(evaluation.report, end="")
     return 1 if evaluation.diverged_entries else 0
