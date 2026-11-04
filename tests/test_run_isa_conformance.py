@@ -72,6 +72,10 @@ FAKE_PORT = """
 # status.txt, answers `read_memory` with the guest's memory (here, the two control words: the
 # marker and the number of the group the program is running, which advances at every read when
 # FAKE_GROUP_ADVANCES is set), and on `stop` writes the files the verifier writes on exit and quits.
+# The verifier says "ENABLED" when it starts and lists, in its coverage file, the instructions it
+# compared: here those of the cases in the `cases.tsv` that sits beside the game folder, or one
+# address when there is none. With FAKE_VERIFIER_DISABLED it does what the real one does when the
+# module lacks the export it needs: says so, and compares nothing.
 FAKE_RUNNER = """
     import os
     import sys
@@ -83,6 +87,11 @@ FAKE_RUNNER = """
     print("arguments:", " ".join(arguments), flush=True)
     for name in ("LOCKSTEP", "LOCKSTEP_ANY_ARRIVAL", "LOCKSTEP_INJECT_FAULT"):
         print(f"STATICRECOMP_{name}={os.environ.get('STATICRECOMP_' + name)}", flush=True)
+    disabled = bool(os.environ.get("FAKE_VERIFIER_DISABLED"))
+    if disabled:
+        print("[lockstep] module lacks ppc_set_mem_write_journal export; lockstep DISABLED.", flush=True)
+    else:
+        print("[lockstep] ENABLED: start=0 limit=0 maxreport=0 stepcap=0 whitelist=0", flush=True)
     (automation / "status.txt").write_text("state=running\\nframe_count=1\\n")
     control_words = bytes.fromhex("%(control_words)s")
     reads = 0
@@ -98,8 +107,15 @@ FAKE_RUNNER = """
                 Path(fields["path"]).write_bytes(answer)
             path.rename(automation / "processed" / path.name)
             if fields["command"] == "stop":
-                Path(os.environ["STATICRECOMP_LOCKSTEP_COVERAGE_FILE"]).write_text("0x80000000\\n")
-                print("[lockstep] summary: checks=1 reports=0", flush=True)
+                if not disabled:
+                    cases_file = Path(arguments[arguments.index("--game") + 1]).parent / "cases.tsv"
+                    verified = ["0x80000000"]
+                    if cases_file.is_file():
+                        lines = cases_file.read_text().splitlines()
+                        verified = [line.split("\\t")[1] for line in lines if line and line[0] != "#"]
+                    coverage = Path(os.environ["STATICRECOMP_LOCKSTEP_COVERAGE_FILE"])
+                    coverage.write_text("\\n".join(verified) + "\\n")
+                    print("[lockstep] summary: checks=1 reports=0", flush=True)
                 sys.exit(0)
         time.sleep(0.005)
 """
@@ -338,6 +354,40 @@ def test_windows_and_macos_need_no_virtual_screen(platform, tools, tmp_path, mon
     log = run(tools, tmp_path).log.read_text()
     assert "--graphics Null" in log
     assert "--headless" not in log  # the window is opened, on the system's own window system
+
+
+# -- A verifier that compares nothing ----------------------------------------------------------
+
+
+def test_a_run_in_which_the_verifier_switched_itself_off_is_an_error_and_not_a_pass(
+    tools, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    monkeypatch.setenv("FAKE_VERIFIER_DISABLED", "1")
+    assert main(synthetic_arguments(tmp_path)) == 2
+    error = capsys.readouterr().err
+    assert "seed 1: the verifier compared no case, so the run proves nothing" in error
+    assert "module lacks ppc_set_mem_write_journal export" in error  # what the verifier said about itself
+    assert "game.log" in error
+
+
+def test_a_log_without_any_lockstep_line_is_said_so(tmp_path):
+    evaluation = Evaluation({"add": FormResult(cases=2, not_compared=2)}, [], None, set())
+    with pytest.raises(SetupError, match=r"the log has no \[lockstep\] line at all"):
+        run_isa_conformance.require_that_cases_were_compared(
+            1, evaluation, "nothing here\n", tmp_path / "game.log"
+        )
+
+
+def test_a_run_in_which_at_least_one_case_was_compared_is_accepted(tmp_path):
+    evaluation = Evaluation({"add": FormResult(cases=2, compared=1, not_compared=1)}, [], None, set())
+    run_isa_conformance.require_that_cases_were_compared(1, evaluation, "", tmp_path / "game.log")
+
+
+def test_a_run_whose_every_case_diverged_is_not_taken_for_a_run_that_compared_nothing(tmp_path):
+    # Divergences are the verifier's loudest answer; they are reported as such, not as a setup error.
+    evaluation = Evaluation({"add": FormResult(cases=2, diverged=2)}, ["entry=0x80010000  add"], None, {1, 2})
+    run_isa_conformance.require_that_cases_were_compared(1, evaluation, "", tmp_path / "game.log")
 
 
 # -- A program that hangs ----------------------------------------------------------------------

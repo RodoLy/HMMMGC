@@ -363,6 +363,23 @@ def where_the_program_stopped(program: Program, group_number: int) -> str:
     return "\n".join(lines)
 
 
+def require_that_cases_were_compared(seed: int, evaluation: Evaluation, log_text: str, log: Path) -> None:
+    """Stop if the verifier compared nothing: such a run proves nothing and must not look like a pass.
+
+    The verifier switches itself off, without failing the run, when the runner was built without
+    patches/moderngekko/lockstep-verifier.patch or when the module does not export
+    `ppc_set_mem_write_journal` (on Windows a function that is not marked `dllexport` is not
+    exported). Every case would then be counted as "not compared" and the exit code would be 0.
+    """
+    if any(result.compared or result.diverged for result in evaluation.results.values()):
+        return
+    lockstep_lines = [line.strip() for line in log_text.splitlines() if "[lockstep]" in line]
+    said = lockstep_lines[0] if lockstep_lines else "the log has no [lockstep] line at all"
+    raise SetupError(
+        f"seed {seed}: the verifier compared no case, so the run proves nothing ({said}); see {log}"
+    )
+
+
 def run_seed(
     seed: int,
     arguments: argparse.Namespace,
@@ -412,11 +429,13 @@ def run_seed(
     except ProgramNotFinishedError as hang:
         where = where_the_program_stopped(program, hang.group_number)
         raise SetupError(f"seed {seed}: {hang}\n{where}") from hang
+    log_text = read_program_output(files.log)
     evaluation = evaluate(
         program.cases,
-        read_program_output(files.log),
+        log_text,
         read_program_output(files.coverage) if files.coverage.is_file() else "",
     )
+    require_that_cases_were_compared(seed, evaluation, log_text, files.log)
     write_text(seed_directory / "report.txt", evaluation.report)
     return SeedOutcome(seed, program.cases, evaluation)
 
