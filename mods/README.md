@@ -98,6 +98,7 @@ compilar.
 | Mod | Estado | Qué hace |
 |---|---|---|
 | [`boot_logger`](boot_logger/mod.c) | Listo | Prueba de humo: imprime una línea cada vez que el juego entra a `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` y `main`. No cambia nada. |
+| [`state_logger`](state_logger/mod.c) | Listo | Imprime cada cambio de estado de la máquina de estados del juego (título, día nuevo, eventos, juego libre), cada estado que otro código pide y cada vez que entra la revisión del campo. Sirve para saber cuándo corre un gancho. No cambia nada. |
 | `jamie_marriage` | Planeado | Casarse con Jamie ya no termina el juego (ver [PLAN.md](../docs/PLAN.md)). |
 | `movement` | Planeado | Personaje más rápido y sin resbalar. |
 | `cheats` | Planeado | Trucos activables. |
@@ -196,6 +197,7 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
 | Mod | Status | What it does |
 |---|---|---|
 | [`boot_logger`](boot_logger/mod.c) | Done | Smoke test: prints a line each time the game enters `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` and `main`. Changes nothing. |
+| [`state_logger`](state_logger/mod.c) | Done | Prints every change of the game's state machine (title, new day, events, free play), every state other code asks for, and each time the field check is entered. Useful to learn when a hook will run. Changes nothing. |
 | `jamie_marriage` | Planned | Marrying Jamie no longer ends the game (see [PLAN.md](../docs/PLAN.md)). |
 | `movement` | Planned | A faster character that does not slide. |
 | `cheats` | Planned | Switchable cheats. |

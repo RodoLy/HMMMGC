@@ -52,3 +52,4 @@ function(add_game_mod mod_id)
 endfunction()
 
 add_game_mod(boot_logger boot_logger/mod.c)
+add_game_mod(state_logger state_logger/mod.c)
