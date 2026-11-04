@@ -34,6 +34,7 @@ Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 
 - Ejecutable nativo, sin emulador.
 - Widescreen y ultra-panorámico, resolución hasta 4K.
+- 120 fps.
 - Cargas instantáneas.
 - Personaje más rápido y sin el deslizamiento al caminar (configurable).
 - Mod de Jamie: casarse con Jamie ya no termina el juego.
@@ -119,6 +120,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 
 - Native executable, no emulator.
 - Widescreen and ultrawide, up to 4K.
+- 120 fps.
 - Instant loading.
 - Faster character movement without the sliding feel (configurable).
 - Jamie mod: marrying Jamie no longer ends the game.
