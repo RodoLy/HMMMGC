@@ -55,7 +55,7 @@ juego recompilado.
 ### Cómo corre un script
 
 ```
-fn_80166888  revisión del campo (estado 0x28), una vez por cuadro según el área
+fn_80166888  revisión del campo (estado 0x28), una vez por visita a ese estado, según el área
   └─ fn_800FC2B4  StartEvent(gestor, id): valida, marca el evento como consumido,
        │           guarda el nombre del script (tabla 0x8026BBA0) y el archivo
        │           de mensajes (0x8026B740)
@@ -280,7 +280,7 @@ estado se saca de la cola en `0x800348B0` y se guarda en `0x80321D18`):
 | 4 | Espera a que el gestor de eventos llegue a estado 4 y empuja `mgr+0x84` | `0x80034EE8`-`0x80034F6C` |
 | 9 | Día nuevo: tras una espera llama a `fn_800338A0` y empuja el estado `0x26` | `0x800361B0` |
 | `0x26` | Fundido del cambio de día (`fn_80097FDC` con `0, -127, 3000`) y empuja el `0x25` | `0x80036278` |
-| `0x28` | Campo: en el camino normal (`0x80321D2C != 5`) llama a `fn_80166888` una vez por cuadro (es su único llamador); si devuelve 1 (arrancó un evento) empuja el estado 4 | `0x800363C4`, llamada en `0x80036498`, empuje en `0x80036628` |
+| `0x28` | Campo: en el camino normal (`0x80321D2C != 5`) llama a `fn_80166888` (es su único llamador); si devuelve 1 (arrancó un evento) empuja el estado 4 y si no el 6, así que dura un cuadro por visita. Se entra desde el estado `0x25` (día nuevo: 9 → `0x26` → `0x25` → `0x28`), desde `0x21` y `fn_800342A8`, y al terminar un evento (el estado 4 empuja `mgr+0x84`, que `fn_800FC858` deja en `0x28`) | `0x800363C4`, llamada en `0x80036498`, empuje en `0x80036628` (4) y `0x80036514` (6) |
 | `0x2A` | Reposo: no hace nada | `0x80036660` |
 
 Por qué es nativo y no un script:
@@ -333,9 +333,9 @@ es el byte `save + 0x20`, máscara `0x40`, y los bits consumidos de la boda
 **Opción A (recomendada): guardia en la revisión del campo.**
 
 - `RECOMP_HOOK(0x80166888, ...)`. `fn_80166888(campo)` solo la llama el
-  estado `0x28` (`0x80036498`), una vez por cuadro, y es el único código que
-  prueba el flag 230. Un gancho corre antes que el original, así que basta con
-  apagar el flag antes de que lo pruebe.
+  estado `0x28` (`0x80036498`), una vez cada vez que entra en él, y es el único
+  código que prueba el flag 230. Un gancho corre antes que el original, así que
+  basta con apagar el flag antes de que lo pruebe.
 - Regla: si el evento `0x10D` o el `0x10E` ya está consumido, apagar el flag.
   `StartEvent` marca el evento al **arrancar**, no al terminar, así que la
   regla se cumple desde la primera pasada del campo después de la boda.
@@ -346,12 +346,12 @@ es el byte `save + 0x20`, máscara `0x40`, y los bits consumidos de la boda
   lo vuelve a encender después (proponerle otra vez a Jamie) se apaga en la
   pasada siguiente, de modo que tampoco se repiten las escrituras de
   contadores que hace la cadena antes de `Eve_EP08`. Es idempotente y cuesta
-  dos lecturas de un byte por cuadro.
+  dos lecturas de un byte por revisión.
 
 Pseudocódigo (adaptar los accesos a memoria al API real de mods):
 
 ```
-hook(0x80166888):                          # fn_80166888(field), once per frame in state 0x28
+hook(0x80166888):                          # fn_80166888(field), once per visit to state 0x28
     save = read_u32(0x80321F48)
     if read_u8(save + 0x8D) & 0x60:        # event 0x10D or 0x10E already consumed
         write_u8(save + 0x20, read_u8(save + 0x20) & ~0x40)   # main flag 230 off
@@ -394,7 +394,7 @@ tarjeta.
 
 | | A: guardia en el campo | B: gancho al cerrar el evento | C: parche de script |
 |---|---|---|---|
-| Dónde | `0x80166888`, cada cuadro | `0x800FC528`, cada fin de evento | bytes de `Eve_rm01` y `Eve_rm02` |
+| Dónde | `0x80166888`, cada revisión del campo | `0x800FC528`, cada fin de evento | bytes de `Eve_rm01` y `Eve_rm02` |
 | Cubre ambos sexos y el salto del evento | Sí, un solo punto | Sí, un solo punto | Hay que parchear los dos archivos; no corre si el evento se salta |
 | Si `talk.lsb` vuelve a encender el flag | Se apaga en la pasada siguiente | No: la cadena reaparece | No: ídem |
 | Puede fijar el estado siguiente (9) | Con la A+ | Sí | No |
@@ -500,7 +500,7 @@ evidencia en `docs/FUNCTION_MAP.md`.
 ### How a script runs
 
 ```
-fn_80166888  field check (state 0x28), once per frame, depends on the area
+fn_80166888  field check (state 0x28), once per visit to that state, depends on the area
   └─ fn_800FC2B4  StartEvent(manager, id): validates, marks the event consumed,
        │           stores the script name (table 0x8026BBA0) and the message
        │           file (0x8026B740)
@@ -724,7 +724,7 @@ is popped from the queue at `0x800348B0` and stored at `0x80321D18`):
 | 4 | Waits for the event manager to reach status 4 and pushes `mgr+0x84` | `0x80034EE8`-`0x80034F6C` |
 | 9 | New day: after a wait it calls `fn_800338A0` and pushes state `0x26` | `0x800361B0` |
 | `0x26` | New-day fade (`fn_80097FDC` with `0, -127, 3000`) and pushes `0x25` | `0x80036278` |
-| `0x28` | Field: on the normal path (`0x80321D2C != 5`) it calls `fn_80166888` once per frame (its only caller); if it returns 1 (an event started) it pushes state 4 | `0x800363C4`, call at `0x80036498`, push at `0x80036628` |
+| `0x28` | Field: on the normal path (`0x80321D2C != 5`) it calls `fn_80166888` (its only caller); if it returns 1 (an event started) it pushes state 4, otherwise state 6, so it lasts one frame per visit. It is entered from state `0x25` (new day: 9 → `0x26` → `0x25` → `0x28`), from `0x21` and `fn_800342A8`, and when an event ends (state 4 pushes `mgr+0x84`, which `fn_800FC858` leaves at `0x28`) | `0x800363C4`, call at `0x80036498`, push at `0x80036628` (4) and `0x80036514` (6) |
 | `0x2A` | Idle: does nothing | `0x80036660` |
 
 Why it is native and not a script:
@@ -776,9 +776,9 @@ bits (`0x10D`, `0x10E`) are the byte `save + 0x8D`, mask `0x60`.
 **Option A (recommended): guard in the field check.**
 
 - `RECOMP_HOOK(0x80166888, ...)`. `fn_80166888(field)` is called only by state
-  `0x28` (`0x80036498`), once per frame, and is the only code that tests flag
-  230. A hook runs before the original, so clearing the flag before it tests
-  it is enough.
+  `0x28` (`0x80036498`), once each time it enters that state, and is the only
+  code that tests flag 230. A hook runs before the original, so clearing the
+  flag before it tests it is enough.
 - Rule: if event `0x10D` or `0x10E` is already consumed, clear the flag.
   `StartEvent` marks the event when it **starts**, not when it ends, so the
   rule holds from the first pass over the field after the wedding.
@@ -789,12 +789,12 @@ bits (`0x10D`, `0x10E`) are the byte `save + 0x8D`, mask `0x60`.
   and if `talk.lsb` sets it again later (proposing to Jamie again) it is
   cleared on the next pass, so the counter writes that the chain makes before
   `Eve_EP08` are not repeated either. It is idempotent and costs two byte
-  reads per frame.
+  reads per check.
 
 Pseudo-code (adapt the memory accesses to the real mod API):
 
 ```
-hook(0x80166888):                          # fn_80166888(field), once per frame in state 0x28
+hook(0x80166888):                          # fn_80166888(field), once per visit to state 0x28
     save = read_u32(0x80321F48)
     if read_u8(save + 0x8D) & 0x60:        # event 0x10D or 0x10E already consumed
         write_u8(save + 0x20, read_u8(save + 0x20) & ~0x40)   # main flag 230 off
@@ -837,7 +837,7 @@ card as well.
 
 | | A: guard in the field | B: hook on event teardown | C: script patch |
 |---|---|---|---|
-| Where | `0x80166888`, every frame | `0x800FC528`, every event end | bytes of `Eve_rm01` and `Eve_rm02` |
+| Where | `0x80166888`, every field check | `0x800FC528`, every event end | bytes of `Eve_rm01` and `Eve_rm02` |
 | Covers both genders and a skipped event | Yes, one single point | Yes, one single point | Both files need the patch; it does not run if the event is skipped |
 | If `talk.lsb` sets the flag again | Cleared on the next pass | No: the chain comes back | No: same |
 | Can set the next state (9) | With A+ | Yes | No |
