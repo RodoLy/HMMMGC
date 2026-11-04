@@ -24,6 +24,7 @@ def test_encoders_match_capstone():
         ppc_encode.lis(4, 0x8020): "lis r4, -0x7fe0",
         ppc_encode.li(3, 10): "li r3, 0xa",
         ppc_encode.addi(4, 4, -0x5DBC): "addi r4, r4, -0x5dbc",
+        ppc_encode.addic(0, 0, 0): "addic r0, r0, 0",
         ppc_encode.ori(2, 2, 0xA780): "ori r2, r2, 0xa780",
         ppc_encode.lwz(3, -0x6FE4, 13): "lwz r3, -0x6fe4(r13)",
         ppc_encode.stw(3, -4, 1): "stw r3, -4(r1)",
