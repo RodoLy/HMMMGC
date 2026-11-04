@@ -1,8 +1,8 @@
 name: Tests
 
-# Lint and unit tests of the Python tools, and a shellcheck of the scripts.
-# None of it needs the game: the tests that read the game's executable are
-# skipped when HM_MM_DOL is not set.
+# Lint and unit tests of the Python tools, a shellcheck of the shell scripts and a
+# check of the PowerShell scripts of the Windows package. None of it needs the game:
+# the tests that read the game's executable are skipped when HM_MM_DOL is not set.
 
 on:
   push:
@@ -58,3 +58,47 @@ jobs:
 
       - name: ShellCheck
         run: shellcheck scripts/*.sh
+
+  powershell-scripts:
+    name: PowerShell scripts
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      # The parser of PowerShell finds syntax errors without running the script, which could
+      # only be done on Windows ARM64 (see package-windows-arm64.yml).
+      - name: Parse the scripts
+        run: |
+          $files = Get-ChildItem packaging/windows/* -Include *.ps1, *.psd1
+          $problems = 0
+          foreach ($file in $files) {
+              $parseErrors = $null
+              $null = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref] $null, [ref] $parseErrors)
+              foreach ($parseError in $parseErrors) {
+                  Write-Host "::error file=$($file.FullName),line=$($parseError.Extent.StartLineNumber)::$($parseError.Message)"
+                  $problems++
+              }
+              Write-Host "$($file.Name): $($parseErrors.Count) syntax errors"
+          }
+          if ($problems -gt 0) { exit 1 }
+
+      - name: Read the game's data
+        run: |
+          $game = Import-PowerShellDataFile packaging/windows/game.psd1
+          $game.GetEnumerator() | Sort-Object Name | Format-Table -AutoSize
+          foreach ($key in 'GameId', 'GameName', 'LauncherName', 'UserDirectoryName', 'DiscExtensions') {
+              if (-not $game.ContainsKey($key)) { throw "game.psd1 has no $key" }
+          }
+
+      # The package assembler adds the byte-order mark that Windows PowerShell 5.1 needs for the
+      # accented letters, so the rule that asks for it in the repository's files is left out.
+      - name: PSScriptAnalyzer
+        run: |
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $findings = Invoke-ScriptAnalyzer -Path packaging/windows -Recurse -ExcludeRule PSUseBOMForUnicodeEncodedFile
+          $findings | Format-Table -AutoSize -Wrap RuleName, Severity, ScriptName, Line, Message
+          Write-Host "$($findings.Count) findings"
+          if ($findings.Count -gt 0) { exit 1 }
