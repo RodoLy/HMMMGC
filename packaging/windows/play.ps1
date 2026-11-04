@@ -116,6 +116,7 @@ $Messages = @{
         WrongComputer       = 'This package is for computers with Windows on ARM (for example with a Snapdragon X processor). This computer is {0}.'
         IncompletePackage   = 'The package is incomplete: {0} is missing. Extract the whole zip file again (all of it, not only some files) and try again.'
         PackagePathIsLong   = 'This package is in a folder with a very long path. If the preparation fails, move the whole folder to a short place such as C:\HarvestMoonMM and try again.'
+        AlreadyOpen         = 'Play is already open in another window, or the launcher it opened is still running: it keeps {0} in use. Close that window, or end HarvestMoonMM.exe and moderngekko-run.exe in the Task Manager (Details tab), and try again.'
         ShortFolderUsed     = 'The recompiled game will be built in {0}, because the usual folder has a long path or special characters.'
         ChooseDiscTitle     = 'Choose the disc image of {0}'
         DiscImagesFilter    = 'Disc images'
@@ -145,6 +146,7 @@ Keyboard (the default layout of Dolphin, which this game runs on):
         WrongComputer       = 'Este paquete es para computadoras con Windows en ARM (por ejemplo con un procesador Snapdragon X). Esta computadora es {0}.'
         IncompletePackage   = 'El paquete está incompleto: falta {0}. Extrae otra vez todo el archivo zip (completo, no solo algunos archivos) e inténtalo de nuevo.'
         PackagePathIsLong   = 'Este paquete está en una carpeta con una ruta muy larga. Si la preparación falla, mueve la carpeta completa a un lugar corto como C:\HarvestMoonMM e inténtalo de nuevo.'
+        AlreadyOpen         = 'Play ya está abierto en otra ventana, o el launcher que abrió sigue funcionando: mantiene en uso {0}. Cierra esa ventana, o finaliza HarvestMoonMM.exe y moderngekko-run.exe en el Administrador de tareas (pestaña Detalles), e inténtalo de nuevo.'
         ShortFolderUsed     = 'El juego recompilado se construirá en {0}, porque la carpeta habitual tiene una ruta larga o caracteres especiales.'
         ChooseDiscTitle     = 'Elige la imagen del disco de {0}'
         DiscImagesFilter    = 'Imágenes de disco'
@@ -186,7 +188,16 @@ function Get-Message {
 function Open-Log {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $LogPath) | Out-Null
     $withoutByteOrderMark = New-Object System.Text.UTF8Encoding($false)
-    $script:LogWriter = New-Object System.IO.StreamWriter($LogPath, $false, $withoutByteOrderMark)
+    try {
+        $script:LogWriter = New-Object System.IO.StreamWriter($LogPath, $false, $withoutByteOrderMark)
+    }
+    catch {
+        # Another copy of this script keeps the log open for as long as it runs, and it runs for as
+        # long as the launcher it started is open. PowerShell wraps the error of the constructor in
+        # an exception of its own; the sharing violation is the one inside it.
+        if ($_.Exception.InnerException -is [System.IO.IOException]) { throw (Get-Message 'AlreadyOpen' $LogPath) }
+        throw
+    }
     $script:LogWriter.AutoFlush = $true
 }
 
