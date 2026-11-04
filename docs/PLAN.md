@@ -72,6 +72,18 @@ le sirve.
 **Fase 3 – Mejoras**
 - [ ] Resolución interna arbitraria (4K).
 - [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado.
+- [ ] 120 fps. El juego calcula todo por cuadro, a 60 o a 30 por segundo (falta
+      medir cuántas retrazas de video espera por cuadro), así que subir la
+      cadencia no es un ajuste: hay dos caminos. (a) Interpolar en el
+      renderizador: se dibuja entre el estado anterior y el actual (posición
+      de los objetos y de la cámara) sin tocar la lógica ni la velocidad del
+      juego. Es la idea que permite tasas de cuadros altas en otros recomps
+      ([Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp), con
+      RT64) y necesita el renderizador propio de la fase 2. (b) Correr la
+      lógica a 120 Hz: obliga a escalar todo lo que el juego cuenta por cuadro
+      (movimiento, temporizadores, animaciones, audio) y es fácil romper algo.
+      Primer paso, cuando el juego corra bien: medir la cadencia real y
+      separar lo que cuenta cuadros de lo que lee el reloj.
 - [ ] Saltar timers de pantallas de carga.
 - [ ] Velocidad, aceleración y fricción del jugador en archivo de config.
 - [ ] Selector de idioma (el disco ya trae ES/FR/DE/IT).
@@ -178,6 +190,18 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 **Phase 3 – Enhancements**
 - [ ] Arbitrary internal resolution (4K).
 - [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD.
+- [ ] 120 fps. The game computes everything per frame, at 60 or 30 a second
+      (still to measure: how many video retraces it waits for per frame), so
+      raising the rate is not a setting: there are two routes. (a) Interpolate
+      in the renderer: draw between the previous and the current state
+      (object and camera positions) without touching the game's logic or
+      speed. It is the idea behind high frame rates in other recomps
+      ([Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp), with
+      RT64) and needs the own renderer of phase 2. (b) Run the logic at
+      120 Hz: it forces scaling everything the game counts per frame
+      (movement, timers, animations, audio) and it is easy to break
+      something. First step, once the game runs well: measure the real
+      cadence and tell what counts frames from what reads the clock.
 - [ ] Skip loading-screen timers.
 - [ ] Player speed, acceleration and friction in a config file.
 - [ ] Language selector (disc already ships ES/FR/DE/IT).
