@@ -252,8 +252,8 @@ verify_disc() {
 run_game() {
     step "Starting the game"
     note "The first start also compiles the game module (a few minutes); later starts are immediate."
-    note "Keyboard: arrows = stick (hold Shift to walk), X = A, Z = B, Enter = Start,"
-    note "          C = X, S = Y, D = Z, Q / W = L / R, T F G H = D-pad"
+    note "Keyboard: arrows = stick (Shift = half tilt), X = A, Z = B, Enter = Start,"
+    note "          C = X, S = Y, D = Z, Q / W = L / R, T/F/G/H = D-pad up/left/down/right"
     local extra_arguments=()
     read -r -a extra_arguments <<< "${EXTRA_RUN_ARGS:-}"
     # moderngekko-port directly rather than the template's 'make run': that
