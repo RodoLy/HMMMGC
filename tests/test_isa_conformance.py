@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 from dol import Dol, write_dol  # noqa: E402
 from isa_conformance import (  # noqa: E402
     ADD_MINUS_ONE_OPERATIONS,
+    ALIGNMENT_CHECKED_OPERATIONS,
     CODE_ADDRESS,
     DISPLACEMENT_OPERATIONS,
     DONE_ADDRESS,
@@ -29,6 +30,7 @@ from isa_conformance import (  # noqa: E402
     OPERAND_FIELD_SHIFTS,
     R0_OPERAND,
     READABLE_SPRS,
+    REQUIRED_ALIGNMENT,
     SCRATCH_ADDRESS,
     SCRATCH_CENTER,
     SCRATCH_SIZE,
@@ -76,7 +78,7 @@ from isa_conformance import (  # noqa: E402
     treatment_of,
 )
 from ppc import Instruction, format_instruction, sign_extend  # noqa: E402
-from ppc_encode import BLR, b, lfd, lis, lmw, lwz, lwzx, mtfsf, mtspr, stw  # noqa: E402
+from ppc_encode import BLR, b, lfd, lis, lmw, lwz, lwzx, mtfsf, mtspr, psq_l, stw  # noqa: E402
 from ppc_mnemonics import (  # noqa: E402
     ILLEGAL_FORM,
     OPCODE_4_FIVE_BIT_NAMES,
@@ -429,6 +431,65 @@ def test_the_instruction_that_clears_the_carry_changes_no_register_and_cannot_ca
 def test_the_operations_whose_carry_out_the_interpreter_gets_wrong_are_the_two_minus_one_ones():
     assert sorted(ADD_MINUS_ONE_OPERATIONS) == ["addme", "subfme"]
     assert known_operations() >= ADD_MINUS_ONE_OPERATIONS
+
+
+# The primary opcodes of the accesses with a displacement (D form), to build words with any displacement.
+D_FORM_OPCODES = {
+    "lmw": 46, "stmw": 47, "lwz": 32, "lhz": 40, "stw": 36, "sth": 44,
+    "lfs": 48, "lfsu": 49, "lfd": 50, "lfdu": 51, "stfs": 52, "stfsu": 53, "stfd": 54, "stfdu": 55,
+}  # fmt: skip
+
+
+def displacement_word(
+    operation: str, displacement: int, data_register: int = 28, base_register: int = 3
+) -> int:
+    """`operation` with the given displacement; the data register is clear of the base for lmw."""
+    opcode = D_FORM_OPCODES[operation]
+    return (opcode << 26) | (data_register << 21) | (base_register << 16) | (displacement & 0xFFFF)
+
+
+def value_loaded_by(setup: list[int]) -> int:
+    """The constant that `load_constant` puts in a register: its upper half, then the lower half."""
+    high_half_load, low_half_or = setup
+    return ((high_half_load & 0xFFFF) << 16) | (low_half_or & 0xFFFF)
+
+
+MISALIGNED_AND_ALIGNED_DISPLACEMENTS = (-0x8000, -0x7FFF, -5, -4, -3, -1, 0, 1, 2, 3, 4, 8, 0x2803, 0x7FFF)
+
+
+@pytest.mark.parametrize("operation", sorted(ALIGNMENT_CHECKED_OPERATIONS))
+def test_accesses_that_trap_on_misalignment_get_an_aligned_address_inside_the_scratch_memory(operation):
+    # Dolphin's interpreter raises an alignment exception for these, and the recompiled code does
+    # not, so the address must never be misaligned, whatever displacement the word has.
+    for displacement in MISALIGNED_AND_ALIGNED_DISPLACEMENTS:
+        word = displacement_word(operation, displacement)
+        assert operation_of(word)[0] == operation
+        address = value_loaded_by(setup_before(word, random.Random(0))) + displacement
+        assert address % REQUIRED_ALIGNMENT == 0, displacement
+        assert SCRATCH_ADDRESS <= address < SCRATCH_ADDRESS + SCRATCH_SIZE, displacement
+
+
+@pytest.mark.parametrize("operation", sorted(ALIGNMENT_CHECKED_OPERATIONS))
+def test_an_aligned_displacement_leaves_the_base_where_it_always_was(operation):
+    # The words of the game have aligned displacements, so its runs are the same as before.
+    for displacement in (-8, 0, 4, 8, 0x2800):
+        setup = setup_before(displacement_word(operation, displacement), random.Random(0))
+        assert setup == load_constant(3, SCRATCH_CENTER)
+
+
+@pytest.mark.parametrize("operation", ["lwz", "lhz", "stw", "sth"])
+def test_integer_accesses_keep_their_misaligned_addresses_because_the_processor_handles_them(operation):
+    setup = setup_before(displacement_word(operation, 3), random.Random(0))
+    assert setup == load_constant(3, SCRATCH_CENTER)
+
+
+def test_paired_single_accesses_keep_their_misaligned_addresses_as_dolphin_raises_nothing_for_them():
+    assert setup_before(psq_l(1, 3, 4), random.Random(0)) == load_constant(4, SCRATCH_CENTER)
+
+
+def test_the_operations_that_need_an_aligned_address_are_accesses_with_a_displacement():
+    assert ALIGNMENT_CHECKED_OPERATIONS <= DISPLACEMENT_OPERATIONS
+    assert set(D_FORM_OPCODES) >= ALIGNMENT_CHECKED_OPERATIONS
 
 
 def test_jumps_and_traps_are_never_made_safe():

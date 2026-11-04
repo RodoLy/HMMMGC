@@ -114,7 +114,7 @@ from dol import Dol, write_dol  # noqa: E402
 from function_finder import INSTRUCTION_SIZE  # noqa: E402
 from lockstep_coverage import read_verified_addresses  # noqa: E402
 from lockstep_report import parse_log  # noqa: E402
-from ppc import Instruction, format_instruction  # noqa: E402
+from ppc import Instruction, format_instruction, sign_extend  # noqa: E402
 from ppc_encode import (  # noqa: E402
     BLR,
     addic,
@@ -233,6 +233,16 @@ INDEXED_OPERATIONS_WITH_UPDATE = frozenset({
     "lbzux", "lhaux", "lhzux", "lwzux", "stbux", "sthux", "stwux",
     "lfsux", "lfdux", "stfsux", "stfdux", "psq_lux", "psq_stux",
 })
+# The accesses with a displacement for which the console raises an alignment exception when the
+# address is not a multiple of 4, and Dolphin's interpreter does too (Interpreter_LoadStore.cpp).
+# The recompiled code makes the access instead of raising the exception, so the two cannot be
+# compared on a misaligned address, and no program that works on a console makes one. (The
+# indexed forms are always given an aligned address, and the integer loads and stores do not
+# raise it: the processor handles a misaligned one itself.)
+ALIGNMENT_CHECKED_OPERATIONS = frozenset({
+    "lfs", "lfsu", "lfd", "lfdu", "stfs", "stfsu", "stfd", "stfdu", "lmw", "stmw",
+})
+REQUIRED_ALIGNMENT = 4  # bytes
 # "Add to minus one" (rA + CA - 1) and "subtract from minus one" (~rA + CA - 1). With the carry
 # set, the sum is rA + 2**32, which always carries out. Dolphin's interpreter works the carry out
 # from Helper_Carry(a, carry - 1), which is false for it (addmex and subfmex in
@@ -345,6 +355,19 @@ def clear_carry() -> list[int]:
     return [addic(0, 0, 0)]
 
 
+def misalignment_to_cancel(word: int, operation: str) -> int:
+    """How far below SCRATCH_CENTER the base register must be for the address to be aligned.
+
+    The address is the base register plus the word's displacement, and the displacement is the
+    game's own (or a made-up one), so it is not always a multiple of 4. For the operations that
+    raise an alignment exception, the base register is lowered by the remainder, which makes the
+    address a multiple of 4; for the game's own words the remainder is zero and nothing changes.
+    """
+    if operation not in ALIGNMENT_CHECKED_OPERATIONS:
+        return 0
+    return sign_extend(word & 0xFFFF, 16) % REQUIRED_ALIGNMENT  # Python's remainder is never negative
+
+
 def setup_before(word: int, rng: random.Random) -> list[int] | None:
     """The instructions to run just before `word` so that it can run safely.
 
@@ -382,7 +405,7 @@ def setup_before(word: int, rng: random.Random) -> list[int] | None:
             return None  # an invalid form: the loaded value and the new address want the same register
         if operation == "lmw" and base >= field_rd(word):  # the base register would be overwritten
             return None
-        return load_constant(base, SCRATCH_CENTER)
+        return load_constant(base, SCRATCH_CENTER - misalignment_to_cancel(word, operation))
     if treatment is Treatment.INDEXED:
         if base == 0:
             if operation in INDEXED_OPERATIONS_WITH_UPDATE:
