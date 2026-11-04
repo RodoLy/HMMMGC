@@ -578,6 +578,21 @@ minutos) y corre la prueba en Linux x86-64, en Linux ARM64 y en Windows ARM64
 (en este último, dos veces: con MSVC y con el compilador portátil llvm-mingw); los
 informes quedan como archivos adjuntos de la ejecución.
 
+El paquete de Windows ARM64 se prueba en GitHub con otro flujo,
+`.github/workflows/package-windows-arm64.yml` (**Actions** → **Windows ARM64
+package** → **Run workflow**), siempre con un disco inventado y sin datos del
+juego. Comprueba, en este orden: que los programas del paquete sean ARM64 y
+arranquen con solo las carpetas de Windows en la `PATH`; esta misma prueba por
+instrucción, con el compilador del paquete; `play.ps1` dos veces, con Windows
+PowerShell 5.1 y con las rutas largas desactivadas, como en la mayoría de las
+computadoras (la primera lee el disco, lo extrae, recompila e instala el módulo;
+la segunda debe encontrar todo hecho; el camino más largo que hizo medía 253
+caracteres, de los 259 que Windows permite así); y que el juego instalado arranque
+como lo hace el launcher, sin dibujar nada y sin nada del compilador en la `PATH`, siga
+corriendo unos segundos y se cierre con código 0. **No** comprueba el juego real,
+la ventana ni la GPU (Vulkan u OpenGL con el controlador de Snapdragon), el
+control ni el teclado, ni una computadora de verdad.
+
 ### Qué NO demuestra
 
 - **Solo comprueba el código al que llegó la corrida.** «Cero divergencias»
@@ -1199,6 +1214,22 @@ It can also be started on GitHub, with nothing to install: the **Actions** tab �
 minutes) and runs the test on Linux x86-64, on Linux ARM64 and on Windows ARM64
 (on the last one twice: with MSVC and with the portable compiler llvm-mingw); the
 reports stay as attachments of the run.
+
+The Windows ARM64 package is tested on GitHub by another workflow,
+`.github/workflows/package-windows-arm64.yml` (**Actions** → **Windows ARM64
+package** → **Run workflow**), always with a made-up disc and no game data. In
+this order, it checks that the package's programs are ARM64 and start with only
+the folders of Windows on the `PATH`; this same instruction-level test, with the
+package's compiler; `play.ps1` twice, with Windows PowerShell 5.1 and with long
+paths turned off, as on most computers (the first run reads the disc, extracts
+it, recompiles it and installs the module; the second must find everything done;
+the longest path it made had 253 characters, of the 259 that Windows allows that
+way); and that the installed game starts the way the launcher starts it, drawing
+nothing
+and with nothing of the compiler on the `PATH`, keeps running for a few seconds
+and closes with exit code 0. It does **not** check the real game, the window or
+the GPU (Vulkan or OpenGL on the Snapdragon driver), the controller or the
+keyboard, nor a real computer.
 
 ### What it does NOT prove
 
