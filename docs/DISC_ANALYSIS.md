@@ -86,33 +86,33 @@ Bytecode de un intérprete propio implementado en `lsrun.cpp` /
 ff ff ff ff  00 00 0c 9f  ff ff ff ff  00 00 1c 8b  00 00 00 00  01 ...
 ```
 
-Formato aún sin documentar; es el primer objetivo de ingeniería inversa
-porque todo el mod de Jamie pasa por aquí.
+El formato está documentado en [`SCRIPTS.md`](SCRIPTS.md) y
+`python3 tools/lsb.py NOMBRE` desensambla cualquier script.
 
 Familias de scripts: `Eve_A##` (eventos de notas), `Eve_love##`, `Eve_good##`,
 `Eve_marry##`, `Eve_child##`, `Eve_conce##`, `Eve_pm_##`, `eve_pw_##`,
-`Eve_EP##` (epílogo?), `Eve_rm##`, `Eve_title`, `Eve_Marry`, `talk`, `eat`,
+`Eve_EP##` (epílogo), `Eve_rm##`, `Eve_title`, `Eve_Marry`, `talk`, `eat`,
 `tone`, `dolphin`.
 
 ### La boda con Jamie
 
 | Script | Tamaño | Texto (`message_e/event/`) |
 |---|---|---|
-| `Eve_marry00.lsb` … `Eve_marry21.lsb` | 1–2 KB | `eve_marry00_e.bin`, `eve_marry02_e.bin` (bodas normales) |
+| `Eve_marry00.lsb` … `Eve_marry21.lsb` | 1–2 KB | `eve_marry00_e.bin` (consejo antes de casarse), `eve_marry02_e.bin` (boda normal) |
 | `Eve_rm00.lsb` | 2 639 B | `eve_rm00_e.bin` |
 | `Eve_rm01.lsb` / `_e` / `_eu` | 7 307 B | `eve_rm01_e.bin` — **boda con Jamie** |
-| `Eve_rm02.lsb` / `_e` / `_eu` | 7 271 B | (sin texto `_e` propio; probable variante) |
+| `Eve_rm02.lsb` / `_e` / `_eu` | 7 271 B | (usa el texto de `eve_rm01_e.bin`; la elige `fn_80166888` cuando `save+0x227C != 0`, que parece ser el sexo del jugador) |
 
 `eve_rm01_e.bin` contiene la ceremonia con Jamie, el discurso de la Diosa
 ("Jamie, be happy. I will always be watching over you.") y la tarjeta
-"Several Seasons Later...", que es el epílogo que termina el juego. El
-script es 4–7× más grande que una boda normal porque incluye ese final.
+"Several Seasons Later...", con la que cierra la ceremonia. El script es 4–7×
+más grande que una boda normal por esa ceremonia, no por un final embebido.
 
-Hipótesis de trabajo para el mod: la secuencia "fin de juego" es o bien una
-built-in del intérprete invocada desde `Eve_rm01.lsb`, o bien una
-comprobación en código nativo (`cónyuge == Jamie`) tras la boda. Para
-distinguirlas: desensamblar `lsrun_bltin.cpp` y comparar el bytecode de
-`Eve_rm01` con `Eve_marry00`.
+Resuelto: el fin de juego no está en los scripts. Lo decide código nativo: con
+el flag 230 puesto, `fn_80166888` encadena `Eve_rm00`, `Eve_rm01`/`Eve_rm02` y
+`Eve_EP00`-`Eve_EP08`, y al terminar `Eve_EP08` el juego vuelve al título
+(estado 2). Evidencia, direcciones y diseño del mod en
+[`SCRIPTS.md`](SCRIPTS.md).
 
 ---
 
@@ -200,29 +200,31 @@ Bytecode for an in-house interpreter implemented in `lsrun.cpp` /
 ff ff ff ff  00 00 0c 9f  ff ff ff ff  00 00 1c 8b  00 00 00 00  01 ...
 ```
 
-The format is not documented yet; it is the first reverse-engineering
-target of the Jamie mod.
+The format is documented in [`SCRIPTS.md`](SCRIPTS.md), and
+`python3 tools/lsb.py NAME` disassembles any script.
 
 Script families: `Eve_A##` (note events), `Eve_love##`, `Eve_good##`,
 `Eve_marry##`, `Eve_child##`, `Eve_conce##`, `Eve_pm_##`, `eve_pw_##`,
-`Eve_EP##` (epilogue?), `Eve_rm##`, `Eve_title`, `Eve_Marry`, `talk`, `eat`,
+`Eve_EP##` (epilogue), `Eve_rm##`, `Eve_title`, `Eve_Marry`, `talk`, `eat`,
 `tone`, `dolphin`.
 
 ### The Jamie wedding
 
 | Script | Size | Text (`message_e/event/`) |
 |---|---|---|
-| `Eve_marry00.lsb` … `Eve_marry21.lsb` | 1–2 KB | `eve_marry00_e.bin`, `eve_marry02_e.bin` (normal weddings) |
+| `Eve_marry00.lsb` … `Eve_marry21.lsb` | 1–2 KB | `eve_marry00_e.bin` (advice before marrying), `eve_marry02_e.bin` (normal wedding) |
 | `Eve_rm00.lsb` | 2,639 B | `eve_rm00_e.bin` |
 | `Eve_rm01.lsb` / `_e` / `_eu` | 7,307 B | `eve_rm01_e.bin` — **Jamie wedding** |
-| `Eve_rm02.lsb` / `_e` / `_eu` | 7,271 B | (no `_e` text of its own; probably a variant) |
+| `Eve_rm02.lsb` / `_e` / `_eu` | 7,271 B | (uses the text of `eve_rm01_e.bin`; `fn_80166888` picks it when `save+0x227C != 0`, which looks like the player's gender) |
 
 `Eve_rm01.lsb` (plus `_e` / `_eu` variants, 7,307 bytes each) is the Jamie
 wedding. Its text file `eve_rm01_e.bin` contains the ceremony, the Goddess's
-farewell and the "Several Seasons Later..." card that ends the game. It is
-4–7× larger than a normal wedding script because the ending is baked in.
+farewell and the "Several Seasons Later..." card that closes the ceremony. It
+is 4–7× larger than a normal wedding script because of that ceremony, not
+because an ending is baked in.
 
-Working hypothesis for the mod: the "end game" sequence is either an
-interpreter built-in called from `Eve_rm01.lsb`, or a native check
-(`spouse == Jamie`) after the wedding. To tell them apart: disassemble
-`lsrun_bltin.cpp` and diff the bytecode of `Eve_rm01` against `Eve_marry00`.
+Settled: the end of the game is not in the scripts. Native code decides it:
+with flag 230 set, `fn_80166888` chains `Eve_rm00`, `Eve_rm01`/`Eve_rm02` and
+`Eve_EP00`-`Eve_EP08`, and when `Eve_EP08` finishes the game returns to the
+title (state 2). Evidence, addresses and the mod design are in
+[`SCRIPTS.md`](SCRIPTS.md).
