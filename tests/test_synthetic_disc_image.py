@@ -16,18 +16,6 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
-from synthetic_disc_image import (  # noqa: E402
-    BI2_BIN_DISC_OFFSET,
-    HEADER_DOL_OFFSET,
-    HEADER_FST_MAXIMUM_SIZE,
-    HEADER_FST_OFFSET,
-    HEADER_FST_SIZE,
-    disc_image,
-    file_table,
-    main,
-    write_disc_image,
-)
-
 from dol import write_dol  # noqa: E402
 from ppc_encode import BLR, lis  # noqa: E402
 from synthetic_disc import (  # noqa: E402
@@ -38,6 +26,17 @@ from synthetic_disc import (  # noqa: E402
     DISC_MAGIC,
     dol_address_on_disc,
     write_system_files,
+)
+from synthetic_disc_image import (  # noqa: E402
+    BI2_BIN_DISC_OFFSET,
+    HEADER_DOL_OFFSET,
+    HEADER_FST_MAXIMUM_SIZE,
+    HEADER_FST_OFFSET,
+    HEADER_FST_SIZE,
+    disc_image,
+    file_table,
+    main,
+    write_disc_image,
 )
 
 GREETING = b"hello from a made-up disc\n"
