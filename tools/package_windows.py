@@ -11,8 +11,8 @@ shipped is not the game but everything needed to do that without installing anyt
                 holds the few source folders that building a game module needs
     toolchain/  the portable C compiler (llvm-mingw), CMake, Ninja and Python that build it
     licenses/   the license texts of the programs in bin/
-    Play.bat, Settings.bat, play.ps1, game.psd1
-                the double-click entry points, the script that does the work, and the data
+    Play.bat, play.ps1, game.psd1
+                the double-click entry point, the script that does the work, and the data
                 that says which game this package plays
 
 The inputs are folders that the workflow has already built or unpacked; this script only
@@ -29,8 +29,8 @@ entrega no es el juego sino todo lo necesario para hacerlo sin instalar nada:
                 de un juego
     toolchain/  el compilador de C portátil (llvm-mingw), CMake, Ninja y Python que lo construyen
     licenses/   los textos de las licencias de los programas de bin/
-    Play.bat, Settings.bat, play.ps1, game.psd1
-                los puntos de entrada con doble clic, el script que hace el trabajo y los datos
+    Play.bat, play.ps1, game.psd1
+                el punto de entrada con doble clic, el script que hace el trabajo y los datos
                 que dicen qué juego juega este paquete
 
 Las entradas son carpetas que el workflow ya construyó o descomprimió; este script solo decide
@@ -90,9 +90,8 @@ LICENSE_FILES = {
 # The ABI folder is shared with Dolphin's own build, whose C++ sources a module never compiles.
 SOURCE_EXCLUDED = ("*.cpp",)
 
-# Files of the package folder itself, from packaging/windows/. The player double-clicks Play.bat to
-# play and Settings.bat to open the launcher window.
-BATCH_FILES = ("Play.bat", "Settings.bat")
+# Files of the package folder itself, from packaging/windows/. The player double-clicks Play.bat.
+BATCH_FILES = ("Play.bat",)
 SCRIPT_FILE = "play.ps1"
 GAME_DEFINITION_FILE = "game.psd1"
 PACKAGE_DOCUMENTS = ("README.md", "THIRD_PARTY_NOTICES.md")

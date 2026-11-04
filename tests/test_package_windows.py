@@ -119,7 +119,7 @@ def inputs(tmp_path) -> package.PackageInputs:
     runtime = write_files(tmp_path / "runtime", ["vcruntime140.dll", "msvcp140.dll"])
     package_files = write_files(tmp_path / "package-files", list(package.PACKAGE_FILES))
     # Scripts are text with lines that end in "\n", as they come out of the repository.
-    for script in ("Play.bat", "Settings.bat", "play.ps1", "game.psd1"):
+    for script in ("Play.bat", "play.ps1", "game.psd1"):
         (package_files / script).write_text("first line\nsecond line é\n", encoding="utf-8")
     license_file = tmp_path / "LICENSE"
     license_file.write_text("GPL text", encoding="utf-8")
