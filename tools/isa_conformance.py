@@ -160,6 +160,12 @@ SCRATCH_SIZE = 0x10100  # 64 KB, and a margin for lmw/stmw running past the last
 SCRATCH_CENTER = SCRATCH_ADDRESS + 0x8000
 DONE_ADDRESS = 0x80600000  # main writes DONE_VALUE here when every case has run
 DONE_VALUE = 0xD0D0CAFE
+# Before each group of cases, main writes the number of the group here. A program that hangs
+# stays at the last group it started, and the number says which cases to look at. (A case that
+# raises an exception is enough to hang it: the processor jumps to the exception vector, where
+# there is no code.)
+PROGRESS_ADDRESS = DONE_ADDRESS + 4
+CONTROL_SECTION_SIZE = 8  # the two words above, which sit side by side
 
 # -- Layout of one machine state in the table ------------------------------------------------
 
@@ -762,6 +768,20 @@ def state_setup_code(row_address: int, float_state: FloatState) -> list[int]:
     return code
 
 
+def progress_code(group_number: int) -> list[int]:
+    """Instructions that write `group_number` to PROGRESS_ADDRESS.
+
+    They run before the group's machine state is loaded, which overwrites the two registers
+    they use.
+    """
+    address_register, number_register = 4, 0
+    return [
+        *load_constant(number_register, group_number),
+        lis(address_register, PROGRESS_ADDRESS >> 16),
+        stw(number_register, PROGRESS_ADDRESS & 0xFFFF, address_register),
+    ]
+
+
 # -- The program ------------------------------------------------------------------------------
 
 
@@ -797,6 +817,14 @@ class Program:
     data_sections: dict[int, tuple[int, bytes]]
     cases: list[Case]
     skipped_forms: dict[str, str]  # form -> why no case was made
+    group_first_cases: list[int]  # for each group, the position in `cases` of its first case
+
+    def cases_of_group(self, group_number: int) -> list[Case]:
+        """The cases that main runs after it writes `group_number` to PROGRESS_ADDRESS."""
+        if not 0 <= group_number < len(self.group_first_cases):
+            return []
+        end_positions = [*self.group_first_cases[1:], len(self.cases)]
+        return self.cases[self.group_first_cases[group_number] : end_positions[group_number]]
 
     def write(self, path: Path) -> Path:
         return write_dol(
@@ -845,7 +873,8 @@ def build_program(
         members = [draft for draft in drafts if draft.float_state is float_state]
         groups += [members[start : start + group_size] for start in range(0, len(members), group_size)]
 
-    # main: a prologue, then for each group a state set-up and one `bl` per case, then the end.
+    # main: a prologue, then for each group a note of its number, a state set-up and one `bl`
+    # per case, then the end.
     prologue = [mfmsr(0), ori(0, 0, MSR_FLOATING_POINT_AVAILABLE), mtmsr(0)]
     prologue += [lis(0, HID2_QUANTIZED_LOADS_AND_PAIRED_SINGLES >> 16), mtspr(SPR_HID2, 0)]
     prologue += [li(0, 0), mtspr(SPR_GQR0, 0)]  # float, unscaled: state_setup_code relies on it
@@ -858,7 +887,15 @@ def build_program(
     ]
     # The end of main: tell the outside world every case has run, then loop forever on one branch.
     epilogue = [*load_constant(3, DONE_VALUE), lis(4, DONE_ADDRESS >> 16), stw(3, 0, 4)]
-    main_length = len(prologue) + sum(len(s) for s in setups) + len(drafts) + len(epilogue) + 1
+    progress_length = len(progress_code(0))  # the same for every group number
+    main_length = (
+        len(prologue)
+        + (progress_length * len(groups))
+        + sum(len(s) for s in setups)
+        + len(drafts)
+        + len(epilogue)
+        + 1
+    )
 
     # Lay the cases out after main, one right after the other. They must touch: DolRecomp
     # charges cycles to a block only when its first instruction follows an instruction that
@@ -883,7 +920,10 @@ def build_program(
 
     main = list(prologue)
     case_index = 0
-    for group, setup in zip(groups, setups, strict=True):
+    group_first_cases = []
+    for group_number, (group, setup) in enumerate(zip(groups, setups, strict=True)):
+        group_first_cases.append(case_index)
+        main += progress_code(group_number)
         main += setup
         for _ in group:
             main.append(bl(CODE_ADDRESS + INSTRUCTION_SIZE * len(main), cases[case_index].address))
@@ -901,9 +941,9 @@ def build_program(
     data_sections = {
         0: (STATE_TABLE_ADDRESS, b"".join(state_rows)),
         1: (SCRATCH_ADDRESS, scratch),
-        2: (DONE_ADDRESS, bytes(4)),
+        2: (DONE_ADDRESS, bytes(CONTROL_SECTION_SIZE)),
     }
-    return Program(text_words, data_sections, cases, skipped)
+    return Program(text_words, data_sections, cases, skipped, group_first_cases)
 
 
 # -- The list of cases, to find them again in the verifier's log ---------------------------------

@@ -21,6 +21,7 @@ from isa_conformance import (  # noqa: E402
     ADD_MINUS_ONE_OPERATIONS,
     ALIGNMENT_CHECKED_OPERATIONS,
     CODE_ADDRESS,
+    CONTROL_SECTION_SIZE,
     DISPLACEMENT_OPERATIONS,
     DONE_ADDRESS,
     DONE_VALUE,
@@ -29,6 +30,7 @@ from isa_conformance import (  # noqa: E402
     INDEXED_OPERATIONS_WITH_UPDATE,
     NO_GAME_ADDRESS,
     OPERAND_FIELD_SHIFTS,
+    PROGRESS_ADDRESS,
     R0_OPERAND,
     READABLE_SPRS,
     REQUIRED_ALIGNMENT,
@@ -66,6 +68,7 @@ from isa_conformance import (  # noqa: E402
     main,
     named_encodings,
     parse_cases,
+    progress_code,
     random_state,
     register_combinations,
     register_pattern,
@@ -1005,6 +1008,58 @@ def test_main_ends_by_writing_the_marker_and_then_loops_on_one_branch():
     assert DONE_ADDRESS & 0xFFFF == 0  # one lis is enough to address it
 
 
+def positions_of(sequence: list[int], words: list[int]) -> list[int]:
+    """Every place in `words` where `sequence` appears, as an index into the list."""
+    return [
+        start
+        for start in range(len(words) - len(sequence) + 1)
+        if words[start : start + len(sequence)] == sequence
+    ]
+
+
+def test_the_progress_code_writes_the_group_number_next_to_the_marker():
+    assert [text_of(word) for word in progress_code(300)] == [
+        "lis r0, 0",
+        "ori r0, r0, 0x12c",  # 300
+        "lis r4, -0x7fa0",  # 0x8060
+        "stw r0, 4(r4)",  # the word after DONE_ADDRESS
+    ]
+    assert PROGRESS_ADDRESS == DONE_ADDRESS + 4
+    assert PROGRESS_ADDRESS & 0xFFFF == 4
+    assert CONTROL_SECTION_SIZE == 8
+
+
+def test_main_notes_the_number_of_each_group_just_before_it_loads_the_group_state():
+    program = build_program(CANDIDATES, seed=1, words_per_form=12, group_size=2)
+    group_count = len(program.group_first_cases)
+    assert group_count > 1
+    previous_position = -1
+    for group_number in range(group_count):
+        (position,) = positions_of(progress_code(group_number), program.text_words)
+        assert position > previous_position  # in order
+        previous_position = position
+        # The state set-up starts with the load of the address of the group's row of the table.
+        row_address = STATE_TABLE_ADDRESS + STATE_SIZE * group_number
+        first_setup_word = program.text_words[position + len(progress_code(group_number))]
+        assert first_setup_word == lis(2, row_address >> 16)
+
+
+def test_the_cases_of_each_group_are_the_ones_main_calls_after_its_note():
+    program = build_program(CANDIDATES, seed=1, words_per_form=12, group_size=2)
+    assert program.group_first_cases[0] == 0
+    assert program.group_first_cases == sorted(set(program.group_first_cases))
+    groups = [program.cases_of_group(number) for number in range(len(program.group_first_cases))]
+    assert all(1 <= len(group) <= 2 for group in groups)
+    assert [case for group in groups for case in group] == program.cases  # every case once, in order
+
+
+def test_a_group_number_that_main_never_wrote_has_no_cases():
+    program = build_program(CANDIDATES, seed=1, words_per_form=12, group_size=2)
+    assert program.cases_of_group(-1) == []
+    assert program.cases_of_group(len(program.group_first_cases)) == []
+    assert program.cases_of_group(0xFFFFFFFF) == []
+
+
 def test_cases_that_want_the_same_kind_of_floating_point_registers_share_a_state():
     program = build_program(CANDIDATES, seed=1, words_per_form=12, group_size=100)
     forms_in_order = [case.form for case in program.cases]
@@ -1028,6 +1083,8 @@ def test_the_program_is_a_dol_with_the_code_the_state_table_the_scratch_memory_a
     assert dol.is_mapped(STATE_TABLE_ADDRESS) and dol.is_mapped(STATE_TABLE_ADDRESS + STATE_SIZE - 1)
     assert dol.is_mapped(SCRATCH_ADDRESS) and dol.is_mapped(SCRATCH_ADDRESS + SCRATCH_SIZE - 1)
     assert dol.u32(DONE_ADDRESS) == 0  # the program writes DONE_VALUE here when it is finished
+    assert dol.u32(PROGRESS_ADDRESS) == 0  # and the number of the group it is running here
+    assert dol.is_mapped(DONE_ADDRESS + CONTROL_SECTION_SIZE - 1)
     assert dol.entry == CODE_ADDRESS
 
 

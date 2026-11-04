@@ -49,6 +49,7 @@ import argparse
 import contextlib
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -61,12 +62,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import synthetic_disc  # noqa: E402
 from dol import Dol  # noqa: E402
 from isa_conformance import (  # noqa: E402
+    CONTROL_SECTION_SIZE,
     DONE_ADDRESS,
     DONE_VALUE,
     Candidate,
     Case,
     Evaluation,
     FormResult,
+    Program,
     build_program,
     collect_candidates,
     evaluate,
@@ -99,6 +102,15 @@ SHUTDOWN_TIMEOUT_SECONDS = 120.0
 
 class SetupError(Exception):
     """Something this script needs is missing; the message says what to do."""
+
+
+class ProgramNotFinishedError(SetupError):
+    """The test program never wrote its marker: it hung, the runner quit, or the time ran out."""
+
+    def __init__(self, reason: str, group_number: int, log: Path):
+        super().__init__(f"the test program did not finish ({reason}); see {log}")
+        self.group_number = group_number  # the last group of cases that the program started
+        self.log = log
 
 
 @dataclass(frozen=True)
@@ -209,15 +221,38 @@ def wait_until_running(client: AutomationClient, runner: subprocess.Popen, timeo
 
 
 def wait_for_the_marker(
-    client: AutomationClient, runner: subprocess.Popen, scratch_file: Path, timeout_seconds: float
-) -> bool:
-    """Wait until the test program writes DONE_VALUE into the guest's memory."""
-    deadline = time.monotonic() + timeout_seconds
+    client: AutomationClient,
+    runner: subprocess.Popen,
+    scratch_file: Path,
+    timeout_seconds: float,
+    stall_seconds: float,
+    log: Path,
+) -> None:
+    """Wait until the test program writes DONE_VALUE into the guest's memory.
+
+    Raises ProgramNotFinishedError when the time runs out, when the runner quits, and when the
+    program stays in one group of cases for `stall_seconds`. The last one is the usual way for
+    a test program to fail: a case that raises an exception sends the processor to a place with
+    no code, and it would run there until the time ran out.
+    """
+    started = time.monotonic()
+    deadline = started + timeout_seconds
+    group_number, in_group_since = 0, started
     while time.monotonic() < deadline and runner.poll() is None:
-        if client.read_memory(DONE_ADDRESS, 4, scratch_file) == DONE_VALUE.to_bytes(4, "big"):
-            return True
+        control_words = client.read_memory(DONE_ADDRESS, CONTROL_SECTION_SIZE, scratch_file)
+        if control_words is not None:  # None means the game did not answer this time
+            marker, current_group = struct.unpack(">II", control_words)
+            if marker == DONE_VALUE:
+                return
+            now = time.monotonic()
+            if current_group != group_number:
+                group_number, in_group_since = current_group, now
+            elif now - in_group_since >= stall_seconds:
+                reason = f"it stayed in one group of cases for {stall_seconds:g} seconds"
+                raise ProgramNotFinishedError(reason, group_number, log)
         time.sleep(POLL_SECONDS)
-    return False
+    reason = "the runner quit" if runner.poll() is not None else "it ran out of time"
+    raise ProgramNotFinishedError(reason, group_number, log)
 
 
 @dataclass(frozen=True)
@@ -232,6 +267,7 @@ def run_under_the_verifier(
     module: Path,
     work_directory: Path,
     timeout_seconds: float,
+    stall_seconds: float,
     extra_environment: dict[str, str],
 ) -> RunFiles:
     """Run the test program to its end, close the game normally and return the verifier's files.
@@ -268,9 +304,9 @@ def run_under_the_verifier(
             runner = subprocess.Popen(command, env=environment, stdout=log, stderr=subprocess.STDOUT)
             try:
                 wait_until_running(client, runner, timeout_seconds)
-                finished = wait_for_the_marker(client, runner, work_directory / "marker.bin", timeout_seconds)
-                if not finished:
-                    raise SetupError(f"the test program did not finish; see {files.log}")
+                wait_for_the_marker(
+                    client, runner, work_directory / "marker.bin", timeout_seconds, stall_seconds, files.log
+                )
                 client.stop()
                 try:
                     runner.wait(timeout=SHUTDOWN_TIMEOUT_SECONDS)
@@ -291,6 +327,19 @@ class SeedOutcome:
     seed: int
     cases: list[Case]
     evaluation: Evaluation
+
+
+def where_the_program_stopped(program: Program, group_number: int) -> str:
+    """Which cases to look at when the test program hung: the ones of the group it was running."""
+    cases = program.cases_of_group(group_number)
+    if not cases:
+        return f"The last group it started was number {group_number}, which is not one of its groups."
+    lines = [
+        f"It stopped in group {group_number} of {len(program.group_first_cases)}. The hang is in one of "
+        "these cases or in the code that loads the group's machine state:"
+    ]
+    lines += [f"  0x{case.word_address:08X}  {case.text}  ({case.form})" for case in cases]
+    return "\n".join(lines)
 
 
 def run_seed(
@@ -325,9 +374,19 @@ def run_seed(
     module = recompile(tools, game_root, seed_directory / "module", arguments.toolchain, game_id)
 
     print(f"seed {seed}: running under the lockstep verifier ...", flush=True)
-    files = run_under_the_verifier(
-        tools, game_root, module, seed_directory / "run", arguments.timeout, extra_environment
-    )
+    try:
+        files = run_under_the_verifier(
+            tools,
+            game_root,
+            module,
+            seed_directory / "run",
+            arguments.timeout,
+            arguments.stall_timeout,
+            extra_environment,
+        )
+    except ProgramNotFinishedError as hang:
+        where = where_the_program_stopped(program, hang.group_number)
+        raise SetupError(f"seed {seed}: {hang}\n{where}") from hang
     evaluation = evaluate(
         program.cases,
         files.log.read_text(errors="replace"),
@@ -409,6 +468,12 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         type=float,
         default=900.0,
         help="seconds to wait for the game to start, and then for the program to finish (default: 900)",
+    )
+    parser.add_argument(
+        "--stall-timeout",
+        type=float,
+        default=300.0,
+        help="seconds the program may stay in one group of cases before it is taken for hung (default: 300)",
     )
     parser.add_argument(
         "--inject-fault",

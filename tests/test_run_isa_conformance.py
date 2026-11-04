@@ -18,10 +18,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import run_isa_conformance  # noqa: E402
 import synthetic_disc  # noqa: E402
 from dol import write_dol  # noqa: E402
-from isa_conformance import DONE_VALUE, Candidate, Case, Evaluation, FormResult  # noqa: E402
+from isa_conformance import DONE_VALUE, Candidate, Case, Evaluation, FormResult, Program  # noqa: E402
 from ppc_encode import BLR  # noqa: E402
 from run_isa_conformance import (  # noqa: E402
     ModernGekkoTools,
+    ProgramNotFinishedError,
     SeedOutcome,
     SetupError,
     format_summary,
@@ -30,6 +31,7 @@ from run_isa_conformance import (  # noqa: E402
     recompile,
     report_self_check,
     run_under_the_verifier,
+    where_the_program_stopped,
 )
 
 
@@ -57,8 +59,9 @@ FAKE_PORT = """
 """
 
 # What the real runner does that the orchestrator relies on: it writes `state=running` into
-# status.txt, answers `read_memory` with the guest's memory, and on `stop` writes the files the
-# verifier writes on exit and quits.
+# status.txt, answers `read_memory` with the guest's memory (here, the two control words: the
+# marker and the number of the group the program is running, which advances at every read when
+# FAKE_GROUP_ADVANCES is set), and on `stop` writes the files the verifier writes on exit and quits.
 FAKE_RUNNER = """
     import os
     import sys
@@ -71,13 +74,18 @@ FAKE_RUNNER = """
     for name in ("LOCKSTEP", "LOCKSTEP_ANY_ARRIVAL", "LOCKSTEP_INJECT_FAULT"):
         print(f"STATICRECOMP_{name}={os.environ.get('STATICRECOMP_' + name)}", flush=True)
     (automation / "status.txt").write_text("state=running\\nframe_count=1\\n")
-    marker = bytes.fromhex("%(marker)s")
+    control_words = bytes.fromhex("%(control_words)s")
+    reads = 0
     while True:
         for path in sorted((automation / "commands").glob("*.txt")):
             fields = dict(line.split("=", 1) for line in path.read_text().splitlines())
             (automation / "processed").mkdir(exist_ok=True)
             if fields["command"] == "read_memory":
-                Path(fields["path"]).write_bytes(marker)
+                reads += 1
+                answer = control_words
+                if os.environ.get("FAKE_GROUP_ADVANCES"):
+                    answer = control_words[:4] + reads.to_bytes(4, "big")
+                Path(fields["path"]).write_bytes(answer)
             path.rename(automation / "processed" / path.name)
             if fields["command"] == "stop":
                 Path(os.environ["STATICRECOMP_LOCKSTEP_COVERAGE_FILE"]).write_text("0x80000000\\n")
@@ -86,8 +94,9 @@ FAKE_RUNNER = """
         time.sleep(0.005)
 """
 
-FINISHED = DONE_VALUE.to_bytes(4, "big").hex()
-NOT_FINISHED = "00000000"
+# The marker and then the number of the group the program is running.
+FINISHED = DONE_VALUE.to_bytes(4, "big").hex() + "00000009"
+NOT_FINISHED_IN_GROUP_7 = "00000000" + "00000007"
 
 # Two made-up forms with one word each, to keep the tests of a synthetic run quick.
 ADD_R3_R4_R5 = 0x7C642A14
@@ -117,7 +126,7 @@ def tools(tmp_path) -> ModernGekkoTools:
     build_directory = tmp_path / "template" / "lib" / "ModernGekko" / "build"
     build_directory.mkdir(parents=True)
     port = write_script(build_directory / "moderngekko-port", FAKE_PORT)
-    runner = write_script(build_directory / "moderngekko-run", FAKE_RUNNER % {"marker": FINISHED})
+    runner = write_script(build_directory / "moderngekko-run", FAKE_RUNNER % {"control_words": FINISHED})
     return ModernGekkoTools(port, runner)
 
 
@@ -198,13 +207,14 @@ def test_a_failed_build_shows_the_end_of_its_log(tools, disc, tmp_path):
 # -- Running -----------------------------------------------------------------------------------
 
 
-def run(tools, tmp_path, extra_environment=None, timeout_seconds=10.0):
+def run(tools, tmp_path, extra_environment=None, timeout_seconds=10.0, stall_seconds=60.0):
     return run_under_the_verifier(
         tools,
         tmp_path / "game",
         tmp_path / "module.so",
         tmp_path / "run",
         timeout_seconds,
+        stall_seconds,
         extra_environment or {},
     )
 
@@ -230,11 +240,31 @@ def test_an_injected_fault_reaches_the_runner(tools, tmp_path):
     assert "STATICRECOMP_LOCKSTEP_INJECT_FAULT=0x80010000" in log
 
 
-def test_a_program_that_never_writes_its_marker_is_reported_with_the_log_to_read(tmp_path):
-    never_finishes = write_script(tmp_path / "moderngekko-run", FAKE_RUNNER % {"marker": NOT_FINISHED})
-    tools = ModernGekkoTools(tmp_path / "moderngekko-port", never_finishes)
-    with pytest.raises(SetupError, match=r"did not finish; see .*game.log"):
-        run(tools, tmp_path, timeout_seconds=2.0)
+def never_finishing_tools(tmp_path) -> ModernGekkoTools:
+    never_finishes = write_script(
+        tmp_path / "moderngekko-run", FAKE_RUNNER % {"control_words": NOT_FINISHED_IN_GROUP_7}
+    )
+    return ModernGekkoTools(tmp_path / "moderngekko-port", never_finishes)
+
+
+def test_a_program_that_moves_on_but_never_writes_its_marker_runs_out_of_time(tmp_path):
+    moving_on = {"FAKE_GROUP_ADVANCES": "1"}
+    with pytest.raises(ProgramNotFinishedError, match=r"\(it ran out of time\); see .*game.log"):
+        run(never_finishing_tools(tmp_path), tmp_path, moving_on, timeout_seconds=1.5, stall_seconds=0.3)
+
+
+def test_a_program_that_stays_in_one_group_is_given_up_on_long_before_the_time_runs_out(tmp_path):
+    with pytest.raises(
+        ProgramNotFinishedError, match=r"stayed in one group of cases for 0.3 seconds"
+    ) as hang:
+        run(never_finishing_tools(tmp_path), tmp_path, timeout_seconds=60.0, stall_seconds=0.3)
+    assert hang.value.group_number == 7
+    assert hang.value.log == tmp_path / "run" / "game.log"
+
+
+def test_a_hung_program_is_still_a_setup_error_with_the_log_to_read(tmp_path):
+    with pytest.raises(SetupError, match=r"did not finish .*; see .*game.log"):
+        run(never_finishing_tools(tmp_path), tmp_path, timeout_seconds=60.0, stall_seconds=0.3)
 
 
 def test_a_runner_that_exits_at_once_is_reported(tmp_path):
@@ -250,6 +280,54 @@ def test_without_a_screen_or_xvfb_the_message_says_what_to_install(tools, tmp_pa
     monkeypatch.setenv("PATH", str(tmp_path))  # no Xvfb here
     with pytest.raises(SetupError, match="apt install xvfb"):
         run(tools, tmp_path)
+
+
+# -- A program that hangs ----------------------------------------------------------------------
+
+
+def program_with_groups(group_first_cases: list[int]) -> Program:
+    """Five cases that sit 8 bytes apart, split into groups that start at `group_first_cases`."""
+    cases = [
+        Case(0x80010000 + 8 * number, 0x80010000 + 8 * number, "add", ADD_R3_R4_R5, 0) for number in range(5)
+    ]
+    return Program([], {}, cases, {}, group_first_cases)
+
+
+def test_a_hung_program_is_traced_to_the_cases_of_its_last_group():
+    message = where_the_program_stopped(program_with_groups([0, 2, 4]), 1)
+    assert "It stopped in group 1 of 3" in message
+    assert message.count("add r3, r4, r5") == 2  # the cases #2 and #3, which sit at 0x80010010 and 0x80010018
+    assert "0x80010010" in message
+    assert "0x80010018" in message
+    assert "0x80010008" not in message  # the group before
+    assert "0x80010020" not in message  # the group after
+
+
+def test_the_last_group_ends_with_the_last_case():
+    message = where_the_program_stopped(program_with_groups([0, 2, 4]), 2)
+    assert message.count("add r3, r4, r5") == 1
+    assert "0x80010020" in message
+
+
+def test_a_group_number_that_names_no_group_is_said_so_and_no_case_is_blamed():
+    message = where_the_program_stopped(program_with_groups([0, 2, 4]), 0xDEADBEEF)
+    assert "not one of its groups" in message
+    assert "add r3" not in message
+
+
+def test_a_synthetic_run_whose_program_hangs_ends_with_the_cases_to_look_at(tmp_path, monkeypatch, capsys):
+    build_directory = tmp_path / "template" / "lib" / "ModernGekko" / "build"
+    build_directory.mkdir(parents=True)
+    write_script(build_directory / "moderngekko-port", FAKE_PORT)
+    write_script(build_directory / "moderngekko-run", FAKE_RUNNER % {"control_words": "00000000" * 2})
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    arguments = synthetic_arguments(tmp_path, "--timeout", "30", "--stall-timeout", "0.3")
+    assert main(arguments) == 2
+    error = capsys.readouterr().err
+    assert "seed 1: the test program did not finish (it stayed in one group of cases" in error
+    assert "It stopped in group 0 of 1" in error
+    assert "add r3, r4, r5" in error
+    assert "lwz r3, 8(r4)" in error
 
 
 # -- Summary -----------------------------------------------------------------------------------
