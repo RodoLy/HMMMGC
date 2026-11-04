@@ -320,15 +320,29 @@ GQR0 a GQR7) sí se comparan. En las seis corridas el verificador terminó con
 `reports=0`, `skipped_zero=0`, `cap_hits=0`, `undercharges=0` y
 `late_matches=0`.
 
-**En otros procesadores.** Las semillas 1 y 2 se repitieron en los corredores de
-GitHub con el flujo `.github/workflows/isa-conformance.yml` (el mismo código, con
-ModernGekko compilado allí con GCC). En x86-64 y en ARM64 (Linux, aarch64) dieron
-exactamente las cifras de la corrida local para esas dos semillas: 13 687 casos,
-13 526 iguales, **0** distintos y 161 sin comparar. Que ARM64 coincida importa
-porque los procesadores ARM y x86 difieren justo en los casos límite del punto
-flotante (NaN, conversiones que desbordan, denormales), y esta prueba ejercita
-valores de borde en cada instrucción. Falta Windows ARM64 compilado con MSVC, que
-es lo que usará la laptop.
+**En otros procesadores y sistemas.** Las semillas 1 y 2 se repitieron en los
+corredores de GitHub con el flujo `.github/workflows/isa-conformance.yml` (el mismo
+código, con ModernGekko compilado allí). Dieron exactamente las cifras de la
+corrida local para esas dos semillas (13 687 casos, 13 526 iguales, **0** distintos
+y 161 sin comparar) en cuatro combinaciones:
+
+| Sistema y procesador | Compilador del módulo recompilado |
+|---|---|
+| Linux, x86-64 | GCC |
+| Linux, ARM64 (aarch64) | GCC |
+| Windows, ARM64 | MSVC (Visual Studio, `cl.exe` 19.51) |
+| Windows, ARM64 | Clang de llvm-mingw (el compilador portátil que lleva [el paquete para Windows](../packaging/windows/README.md)) |
+
+Que ARM64 coincida importa porque los procesadores ARM y x86 difieren justo en los
+casos límite del punto flotante (NaN, conversiones que desbordan, denormales), y
+esta prueba ejercita valores de borde en cada instrucción. Que coincida Windows con
+MSVC importa porque es el sistema y el compilador que usará la laptop, y porque
+MSVC no tiene `-ffp-contract=off` sino `/fp:strict` (ver «Qué NO demuestra»). El
+compilador portátil importa porque es el que usará el jugador: el paquete no lleva
+Visual Studio, y el módulo del juego se compila en su computadora, a partir de su
+propio disco, con llvm-mingw. Las dos compilaciones en Windows tardan distinto
+(unos tres minutos por semilla con MSVC y uno con llvm-mingw) pero el resultado es
+el mismo.
 
 **Lo que apareció por el camino.** La prueba no salió limpia a la primera, y cada
 tropiezo enseñó algo:
@@ -448,10 +462,13 @@ self-check passed: the verifier reported the injected case and nothing else
   garantía de que no haya otras que el generador esquiva sin querer.
 - Cada caso es una sola instrucción con un estado aleatorio: no prueba secuencias
   de instrucciones ni cómo se encadenan los bloques.
-- Corrió en x86-64 (en local y en GitHub) y en ARM64 con Linux y GCC (en
-  GitHub). Falta Windows ARM64 compilado con MSVC, que es lo que usará la
-  laptop: otro sistema, otro compilador y otro modo de punto flotante
-  (`/fp:strict`). Ningún flujo de trabajo de GitHub la ejecuta ahí todavía.
+- Corrió en x86-64 (en local y en GitHub), en ARM64 con Linux y GCC y en
+  Windows ARM64 con MSVC y con llvm-mingw (estas tres, en GitHub), siempre con
+  las mismas cifras. No corrió en la laptop del jugador: los corredores de GitHub son
+  máquinas virtuales ARM64 de un servidor, y aunque las dos son ARM64, el
+  procesador exacto puede cambiar. Tampoco se probó con varias versiones de cada
+  compilador: en Windows fueron MSVC 19.51 y Clang 23.1, y otra versión podría
+  optimizar de otra manera.
 
 ### Cómo repetirlo
 
@@ -509,9 +526,36 @@ módulo no exporta `ppc_set_mem_write_journal`, y una corrida así no prueba nad
 aunque salga "sin diferencias". Las opciones están en `--help`.
 
 Con `--headless` el ejecutor no abre ninguna ventana, así que no hace falta
-pantalla, ni real ni virtual (ni `xvfb`); es lo que usa la corrida de Windows en
+pantalla, ni real ni virtual (ni `xvfb`); es lo que usan las corridas de Windows en
 GitHub. En Windows y macOS, que tienen su propio sistema de ventanas, tampoco se
 inicia una pantalla virtual.
+
+Otras tres opciones sirven para probar lo que lleva el paquete de Windows en vez de
+una compilación propia de ModernGekko:
+
+- `--tools-directory CARPETA` en lugar de `--template`: una carpeta que tiene
+  `moderngekko-port` y `moderngekko-run` lado a lado, como la `bin` del paquete.
+  El compilador, CMake, Ninja y Python los busca `moderngekko-port` en la `PATH`,
+  así que para probar el paquete tal cual se le pone una `PATH` con solo las
+  carpetas de `toolchain` del paquete y las de Windows (lo hace el flujo
+  `package-windows-arm64.yml`).
+- `--toolchain clang` (o `gcc`, o `msvc`) elige el compilador del módulo
+  recompilado. `auto` toma el primero que encuentra.
+- `--synthetic-game-id ID`, con `--synthetic`: el identificador del disco inventado.
+  El paquete se compila para un solo juego y rechaza cualquier otro, así que para
+  probarlo hay que decirle que el disco inventado es `G4AEE9`.
+
+Ejemplo, desde PowerShell, con el paquete desempaquetado en `C:\hm`:
+
+```powershell
+$python = (Get-Command python).Source   # el Python que tiene Capstone (requirements.txt), no el del paquete
+$package = 'C:\hm\HarvestMoonMM-windows-arm64'
+$toolchain = "$package\toolchain"
+$env:PATH = "$toolchain\llvm-mingw\bin;$toolchain\cmake\bin;$toolchain\ninja;$toolchain\python;$env:SystemRoot\System32;$env:SystemRoot"
+$env:Python3_ROOT_DIR = "$toolchain\python"
+& $python tools\run_isa_conformance.py --synthetic --headless --synthetic-game-id G4AEE9 `
+    --tools-directory "$package\bin" --toolchain clang --seeds 1
+```
 
 **La variante sin el juego** pide lo mismo menos el disco y los símbolos:
 
@@ -530,8 +574,9 @@ memoria del programa, no lo arma y dice qué cambiar (`--words-per-form` o
 También se puede lanzar en GitHub, sin instalar nada: pestaña **Actions** →
 **Instruction conformance** → **Run workflow**. El flujo
 (`.github/workflows/isa-conformance.yml`) compila ModernGekko (de 20 a 40
-minutos) y corre la prueba en x86-64 y en ARM64 (Linux); los informes quedan
-como archivos adjuntos de la ejecución.
+minutos) y corre la prueba en Linux x86-64, en Linux ARM64 y en Windows ARM64
+(en este último, dos veces: con MSVC y con el compilador portátil llvm-mingw); los
+informes quedan como archivos adjuntos de la ejecución.
 
 ### Qué NO demuestra
 
@@ -580,19 +625,20 @@ como archivos adjuntos de la ejecución.
   de un evento, donde corre la revisión del campo (`fn_80166888`, la función más
   grande que ninguna corrida ejecutó).
 - **Las corridas que usan el juego fueron todas en x86-64.** La prueba por
-  instrucción sin el juego sí se repitió en ARM64 (Linux, GCC) con las mismas
-  cifras; falta Windows ARM64 con MSVC, que es lo que usará la laptop. El C
-  generado es el mismo en ARM64, pero lo compila otro compilador, y los
-  procesadores ARM difieren de los x86 justo en los casos límite del punto
-  flotante (NaN, conversiones que desbordan, denormales). Además, algunos
-  compiladores fusionan una
-  multiplicación y una suma en una sola operación, que redondea distinto de la
-  de PowerPC: el módulo se compila con `-ffp-contract=off` en GCC y Clang y con
-  `/fp:strict` en MSVC, que desde Visual Studio 2022 17.0 [no genera
+  instrucción sin el juego sí se repitió en ARM64 (Linux con GCC, y Windows con
+  MSVC y con llvm-mingw) con las mismas cifras. El C generado es el mismo en
+  ARM64, pero lo compilan otros compiladores, y los procesadores ARM difieren de
+  los x86 justo en los casos límite del punto flotante (NaN, conversiones que
+  desbordan, denormales): eso sí lo cubre la prueba por instrucción, porque
+  ejercita esos valores en cada instrucción. Lo que no cubre es que un compilador
+  fusione una multiplicación y una suma en una sola operación, que redondea
+  distinto de la de PowerPC: eso necesita dos instrucciones seguidas y cada caso de
+  la prueba es una sola. El módulo se compila con `-ffp-contract=off` en GCC y
+  Clang y con `/fp:strict` en MSVC, que desde Visual Studio 2022 17.0 [no genera
   contracciones](https://devblogs.microsoft.com/cppblog/the-fpcontract-flag-and-changes-to-fp-modes-in-vs2022/)
-  (así lo fija `moderngekko_port.cpp`; falta comprobarlo con una compilación real
-  en ARM64). Repetir la prueba por instrucción en la laptop sigue siendo la
-  comprobación más útil que queda.
+  (así lo fija `moderngekko_port.cpp`), pero ninguna corrida con el juego en
+  Windows ARM64 lo ha comprobado. Correr el verificador con el juego en esa
+  laptop sigue siendo la comprobación más útil que queda.
 
 ---
 
@@ -901,15 +947,29 @@ and GQR0 to GQR7) are compared. In all six runs the verifier ended with
 `reports=0`, `skipped_zero=0`, `cap_hits=0`, `undercharges=0` and
 `late_matches=0`.
 
-**On other processors.** Seeds 1 and 2 were repeated on GitHub's runners with the
-workflow `.github/workflows/isa-conformance.yml` (the same code, with ModernGekko
-built there with GCC). On x86-64 and on ARM64 (Linux, aarch64) they gave exactly
-the figures of the local run for those two seeds: 13,687 cases, 13,526 equal,
-**0** different and 161 not compared. That ARM64 agrees matters because ARM and
-x86 processors differ exactly in floating-point corner cases (NaN, overflowing
-conversions, denormals), and this test exercises edge values on every
-instruction. Windows ARM64 built with MSVC, which is what the laptop will use, is
-still to do.
+**On other processors and systems.** Seeds 1 and 2 were repeated on GitHub's
+runners with the workflow `.github/workflows/isa-conformance.yml` (the same code,
+with ModernGekko built there). They gave exactly the figures of the local run for
+those two seeds (13,687 cases, 13,526 equal, **0** different and 161 not compared)
+in four combinations:
+
+| System and processor | Compiler of the recompiled module |
+|---|---|
+| Linux, x86-64 | GCC |
+| Linux, ARM64 (aarch64) | GCC |
+| Windows, ARM64 | MSVC (Visual Studio, `cl.exe` 19.51) |
+| Windows, ARM64 | Clang from llvm-mingw (the portable compiler that [the Windows package](../packaging/windows/README.md) carries) |
+
+That ARM64 agrees matters because ARM and x86 processors differ exactly in
+floating-point corner cases (NaN, overflowing conversions, denormals), and this
+test exercises edge values on every instruction. That Windows with MSVC agrees
+matters because it is the system and the compiler of the laptop, and because MSVC
+has no `-ffp-contract=off` but `/fp:strict` (see "What it does NOT prove"). The
+portable compiler matters because it is the one the player will use: the package
+does not carry Visual Studio, and the game's module is built on their computer,
+from their own disc, with llvm-mingw. The two builds on Windows take different
+times (about three minutes per seed with MSVC and one with llvm-mingw) but the
+result is the same.
 
 **What turned up on the way.** The test did not come out clean the first time, and
 each stumble taught something:
@@ -1025,10 +1085,13 @@ self-check passed: the verifier reported the injected case and nothing else
   there are no others that the generator avoids by accident.
 - Each case is a single instruction with a random state: it does not test
   sequences of instructions or how blocks are chained.
-- It ran on x86-64 (locally and on GitHub) and on ARM64 with Linux and GCC (on
-  GitHub). Windows ARM64 built with MSVC is still to do, and that is what the
-  laptop will use: another system, another compiler and another floating-point
-  mode (`/fp:strict`). No GitHub workflow runs it there yet.
+- It ran on x86-64 (locally and on GitHub), on ARM64 with Linux and GCC and on
+  Windows ARM64 with MSVC and with llvm-mingw (the last three on GitHub), always
+  with the same figures. It did not run on the player's laptop: GitHub's runners are
+  ARM64 virtual machines on a server, and although both are ARM64, the exact
+  processor may differ. Nor was it tried with several versions of each compiler: on
+  Windows they were MSVC 19.51 and Clang 23.1, and another version might optimize
+  differently.
 
 ### How to repeat it
 
@@ -1086,8 +1149,35 @@ run proves nothing even if it ends "with no differences". The options are in
 `--help`.
 
 With `--headless` the runner opens no window, so no screen is needed, real or
-virtual (nor `xvfb`); the Windows run on GitHub uses it. On Windows and macOS,
+virtual (nor `xvfb`); the Windows runs on GitHub use it. On Windows and macOS,
 which have a window system of their own, no virtual screen is started either.
+
+Three more options test what the Windows package carries instead of a build of
+ModernGekko of our own:
+
+- `--tools-directory FOLDER` instead of `--template`: a folder that has
+  `moderngekko-port` and `moderngekko-run` side by side, like the package's `bin`.
+  `moderngekko-port` looks for the compiler, CMake, Ninja and Python in the `PATH`,
+  so to test the package as it is, the test gets a `PATH` with only the package's
+  `toolchain` folders and Windows's own (the workflow `package-windows-arm64.yml`
+  does it).
+- `--toolchain clang` (or `gcc`, or `msvc`) chooses the compiler of the recompiled
+  module. `auto` takes the first one it finds.
+- `--synthetic-game-id ID`, with `--synthetic`: the ID of the made-up disc. The
+  package is built for one game and refuses any other, so to test it the made-up
+  disc has to say it is `G4AEE9`.
+
+An example, from PowerShell, with the package unpacked in `C:\hm`:
+
+```powershell
+$python = (Get-Command python).Source   # the Python that has Capstone (requirements.txt), not the package's
+$package = 'C:\hm\HarvestMoonMM-windows-arm64'
+$toolchain = "$package\toolchain"
+$env:PATH = "$toolchain\llvm-mingw\bin;$toolchain\cmake\bin;$toolchain\ninja;$toolchain\python;$env:SystemRoot\System32;$env:SystemRoot"
+$env:Python3_ROOT_DIR = "$toolchain\python"
+& $python tools\run_isa_conformance.py --synthetic --headless --synthetic-game-id G4AEE9 `
+    --tools-directory "$package\bin" --toolchain clang --seeds 1
+```
 
 **The variant without the game** asks for the same minus the disc and the symbols:
 
@@ -1106,8 +1196,9 @@ memory, it refuses to build it and says what to change (`--words-per-form` or
 It can also be started on GitHub, with nothing to install: the **Actions** tab →
 **Instruction conformance** → **Run workflow**. The workflow
 (`.github/workflows/isa-conformance.yml`) builds ModernGekko (20 to 40
-minutes) and runs the test on x86-64 and on ARM64 (Linux); the reports stay as
-attachments of the run.
+minutes) and runs the test on Linux x86-64, on Linux ARM64 and on Windows ARM64
+(on the last one twice: with MSVC and with the portable compiler llvm-mingw); the
+reports stay as attachments of the run.
 
 ### What it does NOT prove
 
@@ -1153,17 +1244,18 @@ attachments of the run.
   festivals, and also the start of a new day and the end of an event, where the
   field check runs (`fn_80166888`, the biggest function no run executed).
 - **The runs that use the game were all on x86-64.** The instruction-level
-  test without the game was repeated on ARM64 (Linux, GCC) with the same
-  figures; Windows ARM64 with MSVC, which is what the laptop will use, is
-  still to do. The generated C is the same on ARM64, but a different compiler
-  builds it, and ARM processors differ from x86 ones exactly in floating-point
-  corner cases (NaN, overflowing conversions, denormals). Also, some compilers
-  fuse a multiplication and an addition into
-  one operation, which rounds differently from PowerPC's: the module is built
-  with `-ffp-contract=off` on GCC and Clang and with `/fp:strict` on MSVC, which
-  [generates no
+  test without the game was repeated on ARM64 (Linux with GCC, and Windows with
+  MSVC and with llvm-mingw) with the same figures. The generated C is the same on
+  ARM64, but other compilers build it, and ARM processors differ from x86 ones
+  exactly in floating-point corner cases (NaN, overflowing conversions,
+  denormals): the instruction-level test does cover that, because it exercises
+  those values on every instruction. What it does not cover is a compiler fusing a
+  multiplication and an addition into one operation, which rounds differently from
+  PowerPC's: that needs two instructions in a row, and each case of the test is a
+  single one. The module is built with `-ffp-contract=off` on GCC and Clang and
+  with `/fp:strict` on MSVC, which [generates no
   contractions](https://devblogs.microsoft.com/cppblog/the-fpcontract-flag-and-changes-to-fp-modes-in-vs2022/)
-  since Visual Studio 2022 17.0 (that is what `moderngekko_port.cpp` sets; a real
-  build on ARM64 has yet to confirm it). Repeating the instruction-level test on
-  the laptop is still the most useful check left.
+  since Visual Studio 2022 17.0 (that is what `moderngekko_port.cpp` sets), but no
+  run with the game on Windows ARM64 has checked it. Running the verifier with the
+  game on that laptop is still the most useful check left.
 
