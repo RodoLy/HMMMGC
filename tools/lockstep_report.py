@@ -34,7 +34,7 @@ is a heuristic: `end_inside_loop` says the divergence can be an iteration
 artefact, not that it is one, so the report lists each distinct end address
 once for a person to confirm.
 
-A verifier built with patches/moderngekko/lockstep-any-arrival.patch does not
+A verifier built with patches/moderngekko/lockstep-verifier.patch does not
 produce the last two artefacts to begin with: it lets the interpreter run on
 past the end address and passes the block when the recompiled end state
 equals the interpreter's state at any later visit. Each block that passed on
@@ -75,7 +75,7 @@ pero es una heurística: `end_inside_loop` dice que la diferencia puede ser un
 artefacto de iteración, no que lo sea, así que el reporte lista cada
 dirección final distinta una sola vez para que una persona la confirme.
 
-Un verificador compilado con patches/moderngekko/lockstep-any-arrival.patch
+Un verificador compilado con patches/moderngekko/lockstep-verifier.patch
 no produce esos dos últimos artefactos: deja que el intérprete siga más allá
 de la dirección final y da el bloque por bueno si el estado final recompilado
 es igual al del intérprete en cualquier visita posterior. Cada bloque que

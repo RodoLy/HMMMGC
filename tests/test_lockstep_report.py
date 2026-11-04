@@ -103,7 +103,7 @@ CTRLFLOW:N_end=0x{TAIL_CALLER + 4:08X},I_pc=0x80000500,steps=7,N_cyc=10,I_cyc=20
 undercharges=0 max_deficit=0 distinct_pcs=100
 """
 
-# What a verifier built with patches/moderngekko/lockstep-any-arrival.patch prints for a run in which
+# What a verifier built with patches/moderngekko/lockstep-verifier.patch prints for a run in which
 # three blocks passed, but only on a later visit of the interpreter to their end address.
 LATE_MATCH_LOG = f"""\
 [lockstep] ENABLED: start=0 limit=0 maxreport=0 stepcap=20000 whitelist=0
