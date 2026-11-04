@@ -24,6 +24,7 @@ from synthetic_disc_image import (  # noqa: E402
     HEADER_FST_SIZE,
     disc_image,
     file_table,
+    main,
     write_disc_image,
 )
 
@@ -191,3 +192,24 @@ def test_the_image_is_written_to_the_file_asked_for(game_root, tmp_path):
     image_path = tmp_path / "disc.gcm"
     write_disc_image(game_root, image_path)
     assert image_path.read_bytes() == disc_image(game_root)
+
+
+# -- The command line --------------------------------------------------------------------------------
+
+
+def test_the_command_line_writes_the_image_and_says_where_it_is(game_root, tmp_path, capsys):
+    image_path = tmp_path / "disc.gcm"
+    assert main([str(game_root), str(image_path)]) == 0
+    assert image_path.read_bytes() == disc_image(game_root)
+    assert str(image_path) in capsys.readouterr().out
+
+
+def test_the_command_line_reports_a_game_folder_it_cannot_pack(game_root, tmp_path, capsys):
+    (game_root / "files" / "a folder").mkdir()
+    assert main([str(game_root), str(tmp_path / "disc.gcm")]) == 2
+    assert "may only hold files" in capsys.readouterr().err
+
+
+def test_the_command_line_reports_a_folder_that_is_not_a_game(tmp_path, capsys):
+    assert main([str(tmp_path / "nothing"), str(tmp_path / "disc.gcm")]) == 2
+    assert "error:" in capsys.readouterr().err

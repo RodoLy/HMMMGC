@@ -38,8 +38,12 @@ La imagen tiene la distribución de un disco de GameCube, y la del disco de carp
 
 Solo se empaquetan los archivos que están directamente en `files/`, sin carpetas: es todo lo que
 una prueba necesita.
+
+Usage / Uso:
+    python3 tools/synthetic_disc_image.py GAME_ROOT DISC_IMAGE
 """
 
+import argparse
 import struct
 import sys
 from pathlib import Path
@@ -131,3 +135,23 @@ def disc_image(game_root: Path) -> bytes:
 def write_disc_image(game_root: Path, image_path: Path) -> None:
     """Write the disc image of `game_root` to `image_path`."""
     image_path.write_bytes(disc_image(game_root))
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument(
+        "game_root", type=Path, help="a game folder with sys/ and files/ (see synthetic_disc.py)"
+    )
+    parser.add_argument("image_path", type=Path, help="the disc image to write")
+    arguments = parser.parse_args(argv)
+    try:
+        write_disc_image(arguments.game_root, arguments.image_path)
+    except (OSError, ValueError) as problem:
+        print(f"error: {problem}", file=sys.stderr)
+        return 2
+    print(f"disc image: {arguments.image_path} ({arguments.image_path.stat().st_size:,} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
