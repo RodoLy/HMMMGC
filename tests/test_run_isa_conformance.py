@@ -239,7 +239,7 @@ def test_a_failed_build_shows_the_end_of_its_log(tools, disc, tmp_path):
 # -- Running -----------------------------------------------------------------------------------
 
 
-def run(tools, tmp_path, extra_environment=None, timeout_seconds=10.0, stall_seconds=60.0):
+def run(tools, tmp_path, extra_environment=None, timeout_seconds=10.0, stall_seconds=60.0, headless=False):
     return run_under_the_verifier(
         tools,
         tmp_path / "game",
@@ -248,6 +248,7 @@ def run(tools, tmp_path, extra_environment=None, timeout_seconds=10.0, stall_sec
         timeout_seconds,
         stall_seconds,
         extra_environment or {},
+        headless,
     )
 
 
@@ -306,12 +307,37 @@ def test_a_runner_that_exits_at_once_is_reported(tmp_path):
         run(tools, tmp_path, timeout_seconds=5)
 
 
-def test_without_a_screen_or_xvfb_the_message_says_what_to_install(tools, tmp_path, monkeypatch):
+def without_a_screen_or_xvfb(tmp_path, monkeypatch) -> None:
+    """The situation of a server: no display, and no Xvfb to make one."""
     monkeypatch.delenv("DISPLAY")
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     monkeypatch.setenv("PATH", str(tmp_path))  # no Xvfb here
+
+
+def test_without_a_screen_or_xvfb_the_message_says_what_to_install(tools, tmp_path, monkeypatch):
+    without_a_screen_or_xvfb(tmp_path, monkeypatch)
     with pytest.raises(SetupError, match="apt install xvfb"):
         run(tools, tmp_path)
+
+
+def test_a_headless_runner_is_told_so_and_needs_no_screen(tools, tmp_path, monkeypatch):
+    without_a_screen_or_xvfb(tmp_path, monkeypatch)
+    log = run(tools, tmp_path, headless=True).log.read_text()
+    assert "--headless" in log
+    assert "--graphics Null" in log  # headless or not, nothing is drawn
+
+
+def test_a_runner_with_a_window_is_not_told_to_be_headless(tools, tmp_path):
+    assert "--headless" not in run(tools, tmp_path).log.read_text()
+
+
+@pytest.mark.parametrize("platform", ["win32", "darwin"])
+def test_windows_and_macos_need_no_virtual_screen(platform, tools, tmp_path, monkeypatch):
+    without_a_screen_or_xvfb(tmp_path, monkeypatch)
+    monkeypatch.setattr(sys, "platform", platform)
+    log = run(tools, tmp_path).log.read_text()
+    assert "--graphics Null" in log
+    assert "--headless" not in log  # the window is opened, on the system's own window system
 
 
 # -- A program that hangs ----------------------------------------------------------------------
@@ -432,6 +458,12 @@ def synthetic_arguments(tmp_path, *more: str) -> list[str]:
         *("--toolchain", "gcc"),
         *more,
     ]
+
+
+def test_the_headless_option_of_the_command_line_reaches_the_runner(tools, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    assert main(synthetic_arguments(tmp_path, "--headless")) == 0
+    assert "--headless" in (tmp_path / "work" / "seed_1" / "run" / "game.log").read_text()
 
 
 def test_a_missing_template_is_a_clear_error_and_exit_code_two(tmp_path, capsys):
