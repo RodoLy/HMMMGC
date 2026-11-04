@@ -1,0 +1,113 @@
+name: Instruction conformance
+
+# Runs the instruction-level test of docs/VALIDATION.md without the game (--synthetic): the
+# recompiled C code and Dolphin's interpreter execute made-up instruction words side by side on
+# the same processor, and the lockstep verifier reports every result that differs. It runs on
+# x86-64 and on ARM64, the processor of the laptops this project is meant for. No game data is
+# involved.
+#
+# It builds ModernGekko first (20 to 40 minutes), so it only runs when asked for:
+# Actions tab > Instruction conformance > Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: Seeds of the test programs, separated by spaces
+        default: "1 2"
+      words_per_form:
+        description: Words tried for each instruction form
+        default: "24"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic:
+    name: ${{ matrix.architecture }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { architecture: x86-64, runner: ubuntu-24.04 }
+          - { architecture: ARM64, runner: ubuntu-24.04-arm }
+    env:
+      TEMPLATE_URL: https://github.com/ExpansionPak/ModernGekko-Template.git
+      TEMPLATE_DIRECTORY: ${{ github.workspace }}/ModernGekko-Template
+      # Through the environment and not spliced into the commands, so that the text typed into
+      # the form cannot become part of a command.
+      SEEDS: ${{ inputs.seeds }}
+      WORDS_PER_FORM: ${{ inputs.words_per_form }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the packages ModernGekko needs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build build-essential pkg-config cmake \
+            libevdev-dev libudev-dev libgtk-3-dev libsystemd-dev libbluetooth-dev \
+            libasound2-dev libpulse-dev libgl1-mesa-dev libxrandr-dev libxi-dev xvfb
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install the Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Download ModernGekko-Template at the commit the project is pinned to
+        run: |
+          # The same commit as scripts/build_and_run_linux.sh, so every platform builds the same code.
+          template_commit=$(sed -n 's/^readonly TEMPLATE_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_and_run_linux.sh)
+          [[ -n "$template_commit" ]] || { echo "TEMPLATE_COMMIT not found in the Linux script" >&2; exit 1; }
+          echo "ModernGekko-Template commit: $template_commit"
+          git clone --no-checkout "$TEMPLATE_URL" "$TEMPLATE_DIRECTORY"
+          git -C "$TEMPLATE_DIRECTORY" checkout --quiet "$template_commit"
+          git -C "$TEMPLATE_DIRECTORY" submodule sync --recursive --quiet
+          # The submodules only the Windows and Android builds use (Qt, FFmpeg-bin, libadrenotools)
+          # are skipped, as in the Linux script. HTTP/1.1 because HTTP/2 often cuts big fetches.
+          for attempt in 1 2 3; do
+            git -C "$TEMPLATE_DIRECTORY" -c http.version=HTTP/1.1 \
+              -c submodule.Externals/Qt.update=none \
+              -c submodule.Externals/FFmpeg-bin.update=none \
+              -c submodule.Externals/libadrenotools.update=none \
+              submodule update --init --recursive --force --jobs 4 && break
+            echo "download attempt $attempt failed" >&2
+            [[ "$attempt" -lt 3 ]] || exit 1
+          done
+
+      - name: Apply the lockstep verifier patch
+        run: |
+          git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" \
+            apply "$GITHUB_WORKSPACE/patches/moderngekko/lockstep-verifier.patch"
+
+      - name: Build DolRecomp and ModernGekko
+        run: make -C "$TEMPLATE_DIRECTORY" tools
+
+      - name: Run the instruction-level test
+        run: |
+          read -ra seeds <<< "$SEEDS"
+          python tools/run_isa_conformance.py --synthetic \
+            --template "$TEMPLATE_DIRECTORY" \
+            --work-directory "$RUNNER_TEMP/isa_conformance" \
+            --toolchain gcc \
+            --seeds "${seeds[@]}" \
+            --words-per-form "$WORDS_PER_FORM"
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.architecture }}
+          path: |
+            ${{ runner.temp }}/isa_conformance/seed_*/report.txt
+            ${{ runner.temp }}/isa_conformance/seed_*/cases.tsv
+          if-no-files-found: warn
