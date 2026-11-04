@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from textfiles import read_program_output, write_text
+
 COMMANDS_FOLDER = "commands"
 PROCESSED_FOLDER = "processed"
 FAILED_FOLDER = "failed"
@@ -52,7 +54,7 @@ class AutomationClient:
         path = self.folder / STATUS_FILE
         if not path.is_file():
             return {}
-        lines = path.read_text(errors="replace").splitlines()
+        lines = read_program_output(path).splitlines()
         return {key: value for key, _, value in (line.partition("=") for line in lines)}
 
     def send(self, fields: dict[str, str]) -> CommandResult:
@@ -63,7 +65,7 @@ class AutomationClient:
         commands.mkdir(parents=True, exist_ok=True)
         # Written next to the folder and then renamed into it, so the game never reads half a command.
         temporary = self.folder / f"{number:04d}.tmp"
-        temporary.write_text("".join(f"{key}={value}\n" for key, value in fields.items()))
+        write_text(temporary, "".join(f"{key}={value}\n" for key, value in fields.items()))
         temporary.rename(commands / name)
         return self._wait_for_answer(name)
 

@@ -80,6 +80,7 @@ from isa_conformance import (  # noqa: E402
 from moderngekko_automation import AutomationClient  # noqa: E402
 from project import BUILD_DIRECTORY, DISC_DIRECTORY, GAME_ID, SYMBOLS_PATH  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
+from textfiles import read_program_output, write_text  # noqa: E402
 
 # The small files of a disc's sys/ folder that ModernGekko reads to recognise the game.
 DISC_FILES_TO_COPY = ("apploader.img", "bi2.bin", "boot.bin")
@@ -164,10 +165,10 @@ def recompile(
         "--output",
         str(output_directory),
     ]
-    with log_path.open("w") as log:
+    with log_path.open("wb") as log:
         completed = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=False)
     if completed.returncode != 0:
-        tail = "\n".join(log_path.read_text(errors="replace").splitlines()[-15:])
+        tail = "\n".join(read_program_output(log_path).splitlines()[-15:])
         raise SetupError(f"moderngekko-port build failed (full log: {log_path}):\n{tail}")
     modules = sorted((output_directory / game_id).glob("*/g*_recomp.*"))
     modules = [module for module in modules if module.suffix in (".so", ".dll", ".dylib")]
@@ -301,7 +302,7 @@ def run_under_the_verifier(
             "--automation-dir", str(automation_directory),
             "--user-dir", str(work_directory / "user"),
         ]  # fmt: skip
-        with files.log.open("w") as log:
+        with files.log.open("wb") as log:
             runner = subprocess.Popen(command, env=environment, stdout=log, stderr=subprocess.STDOUT)
             try:
                 wait_until_running(client, runner, timeout_seconds)
@@ -362,7 +363,7 @@ def run_seed(
     except SectionsOverlapError as overlap:
         raise SetupError(f"seed {seed}: {overlap}") from overlap
     program_path = program.write(seed_directory / "program.dol")
-    (seed_directory / "cases.tsv").write_text(format_cases(program.cases))
+    write_text(seed_directory / "cases.tsv", format_cases(program.cases))
     print(f"seed {seed}: {len(program.cases):,} cases of {len({case.form for case in program.cases})} forms")
 
     extra_environment = {}
@@ -393,10 +394,10 @@ def run_seed(
         raise SetupError(f"seed {seed}: {hang}\n{where}") from hang
     evaluation = evaluate(
         program.cases,
-        files.log.read_text(errors="replace"),
-        files.coverage.read_text() if files.coverage.is_file() else "",
+        read_program_output(files.log),
+        read_program_output(files.coverage) if files.coverage.is_file() else "",
     )
-    (seed_directory / "report.txt").write_text(evaluation.report)
+    write_text(seed_directory / "report.txt", evaluation.report)
     return SeedOutcome(seed, program.cases, evaluation)
 
 

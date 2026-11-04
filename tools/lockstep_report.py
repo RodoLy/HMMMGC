@@ -112,6 +112,7 @@ from function_finder import INSTRUCTION_SIZE  # noqa: E402
 from ppc import Instruction  # noqa: E402
 from project import MAIN_DOL_PATH, SYMBOLS_PATH  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
+from textfiles import read_program_output  # noqa: E402
 
 # -- What the verifier prints ------------------------------------------------
 # (vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep*.cpp
@@ -487,7 +488,7 @@ def main(argv: list[str] | None = None) -> int:
     if not arguments.dol.is_file():
         parser.error(f"{arguments.dol} not found; extract your disc first (tools/extract_disc.py)")
 
-    run = parse_log(arguments.log.read_text(errors="replace"))
+    run = parse_log(read_program_output(arguments.log))
     if not run.has_verifier_output:
         print(
             f"{arguments.log} has no verifier output; run the game with STATICRECOMP_LOCKSTEP=1 "

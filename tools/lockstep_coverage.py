@@ -61,6 +61,7 @@ from function_finder import INSTRUCTION_SIZE  # noqa: E402
 from ppc_mnemonics import ILLEGAL_FORM, form_name  # noqa: E402
 from project import MAIN_DOL_PATH, SYMBOLS_PATH  # noqa: E402
 from symbols import Symbol, SymbolTable  # noqa: E402
+from textfiles import read_program_output  # noqa: E402
 
 # One verified instruction per line, as the verifier writes it: 0x80003100
 COVERAGE_LINE = re.compile(r"0x(?P<address>[0-9A-Fa-f]{8})")
@@ -244,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"{path} not found")
 
     verified_addresses, unreadable_lines = read_verified_addresses(
-        path.read_text(errors="replace") for path in arguments.coverage
+        read_program_output(path) for path in arguments.coverage
     )
     if not verified_addresses:
         print("the coverage files hold no addresses; was the game closed cleanly?", file=sys.stderr)
