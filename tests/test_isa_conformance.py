@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 from dol import Dol, write_dol  # noqa: E402
 from isa_conformance import (  # noqa: E402
+    ADD_MINUS_ONE_OPERATIONS,
     CODE_ADDRESS,
     DISPLACEMENT_OPERATIONS,
     DONE_ADDRESS,
@@ -46,6 +47,7 @@ from isa_conformance import (  # noqa: E402
     build_program,
     capstone_view,
     classify,
+    clear_carry,
     collect_candidates,
     deal_by_register_pattern,
     encode_spr,
@@ -364,6 +366,69 @@ def test_the_mask_of_that_rlwinm_clears_the_reserved_fpscr_bit_and_nothing_else(
 @pytest.mark.parametrize("word", [MFFS_F0, MTFSB1_29], ids=["mffs", "mtfsb1"])
 def test_the_other_instructions_that_touch_the_fpscr_need_no_set_up(word):
     assert setup_before(word, random.Random(0)) == []
+
+
+# The instructions of opcode 31 that add or subtract with the carry. The ones that take a second
+# register (adde, subfe) get rB; the others have that field set to zero.
+EXTENDED_OPCODES_OF_THE_CARRY_FORMS = {
+    "adde": 138,
+    "subfe": 136,
+    "addze": 202,
+    "subfze": 200,
+    "addme": 234,
+    "subfme": 232,
+}
+FORMS_WITH_A_SECOND_REGISTER = ("adde", "subfe")
+OVERFLOW_ENABLE_BIT_POSITION = 10
+
+
+def carry_form_word(name: str, *, overflow_enable: bool, record: bool) -> int:
+    """`name` rD=r3, rA=r4 (and rB=r5 for the two that take one), with the `o` and `.` bits as asked."""
+    second_register = 5 if name in FORMS_WITH_A_SECOND_REGISTER else 0
+    return (
+        (31 << 26)
+        | (3 << 21)
+        | (4 << 16)
+        | (second_register << 11)
+        | (int(overflow_enable) << OVERFLOW_ENABLE_BIT_POSITION)
+        | (EXTENDED_OPCODES_OF_THE_CARRY_FORMS[name] << 1)
+        | int(record)
+    )
+
+
+@pytest.mark.parametrize("record", [False, True], ids=["no dot", "dot"])
+@pytest.mark.parametrize("overflow_enable", [False, True], ids=["no o", "o"])
+@pytest.mark.parametrize("name", ["addme", "subfme"])
+def test_add_to_minus_one_and_subtract_from_minus_one_run_with_the_carry_clear(name, overflow_enable, record):
+    word = carry_form_word(name, overflow_enable=overflow_enable, record=record)
+    assert operation_of(word)[0] == name
+    assert [text_of(setup_word) for setup_word in setup_before(word, random.Random(0))] == ["addic r0, r0, 0"]
+
+
+@pytest.mark.parametrize("record", [False, True], ids=["no dot", "dot"])
+@pytest.mark.parametrize("overflow_enable", [False, True], ids=["no o", "o"])
+@pytest.mark.parametrize("name", ["adde", "subfe", "addze", "subfze"])
+def test_the_other_instructions_that_use_the_carry_run_with_the_carry_they_were_given(
+    name, overflow_enable, record
+):
+    # The interpreter gets the carry out of these right for either carry in, so a random one
+    # (which the machine state sets) is as good as any.
+    word = carry_form_word(name, overflow_enable=overflow_enable, record=record)
+    assert operation_of(word)[0] == name
+    assert setup_before(word, random.Random(0)) == []
+
+
+def test_the_instruction_that_clears_the_carry_changes_no_register_and_cannot_carry():
+    (clearing_word,) = clear_carry()
+    assert form_name(clearing_word) == "addic"
+    # addic rD, rA, SIMM puts rA + SIMM in rD and the carry out of the sum in XER[CA]. Here
+    # that is r0 + 0 into r0, which gives r0 back, with nothing carried out of it.
+    assert (field_rd(clearing_word), field_ra(clearing_word), clearing_word & 0xFFFF) == (0, 0, 0)
+
+
+def test_the_operations_whose_carry_out_the_interpreter_gets_wrong_are_the_two_minus_one_ones():
+    assert sorted(ADD_MINUS_ONE_OPERATIONS) == ["addme", "subfme"]
+    assert known_operations() >= ADD_MINUS_ONE_OPERATIONS
 
 
 def test_jumps_and_traps_are_never_made_safe():

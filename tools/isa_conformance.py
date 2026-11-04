@@ -117,6 +117,7 @@ from lockstep_report import parse_log  # noqa: E402
 from ppc import Instruction, format_instruction  # noqa: E402
 from ppc_encode import (  # noqa: E402
     BLR,
+    addic,
     b,
     bl,
     lfd,
@@ -232,6 +233,12 @@ INDEXED_OPERATIONS_WITH_UPDATE = frozenset({
     "lbzux", "lhaux", "lhzux", "lwzux", "stbux", "sthux", "stwux",
     "lfsux", "lfdux", "stfsux", "stfdux", "psq_lux", "psq_stux",
 })
+# "Add to minus one" (rA + CA - 1) and "subtract from minus one" (~rA + CA - 1). With the carry
+# set, the sum is rA + 2**32, which always carries out. Dolphin's interpreter works the carry out
+# from Helper_Carry(a, carry - 1), which is false for it (addmex and subfmex in
+# Interpreter_Integer.cpp), so it disagrees with the manual, and with the recompiled code, on
+# XER[CA] whenever CA is set before the instruction. The game uses neither instruction.
+ADD_MINUS_ONE_OPERATIONS = frozenset({"addme", "subfme"})
 # Control flow, traps, and what changes the memory map or reads the clock. Strings and the
 # reservation pair are left out because the game does not use them.
 SKIPPED_OPERATIONS = frozenset({
@@ -329,6 +336,15 @@ def clear_reserved_fpscr_bit(float_register: int) -> list[int]:
     ]
 
 
+def clear_carry() -> list[int]:
+    """The instruction that clears XER[CA] and changes nothing else.
+
+    addic adds an immediate to a register and sets CA to the carry out of the sum. Zero added to
+    r0 gives r0 again, and cannot carry. (Unlike addi, addic takes r0 as the register itself.)
+    """
+    return [addic(0, 0, 0)]
+
+
 def setup_before(word: int, rng: random.Random) -> list[int] | None:
     """The instructions to run just before `word` so that it can run safely.
 
@@ -344,6 +360,10 @@ def setup_before(word: int, rng: random.Random) -> list[int] | None:
             # carry the reserved bit, which the recompiled code keeps and Dolphin's
             # interpreter clears. The game only writes back what it read with mffs.
             return clear_reserved_fpscr_bit(field_rb(word))
+        if operation in ADD_MINUS_ONE_OPERATIONS:
+            # The reference gets XER[CA] wrong when the carry is set going in, so these words
+            # only run with it clear. See ADD_MINUS_ONE_OPERATIONS.
+            return clear_carry()
         return []
     if treatment is Treatment.SPECIAL_REGISTER:
         allowed = READABLE_SPRS if operation == "mfspr" else WRITABLE_SPRS

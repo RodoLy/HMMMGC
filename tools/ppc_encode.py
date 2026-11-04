@@ -20,6 +20,7 @@ import struct
 
 # Primary opcodes (the top six bits of the word).
 OPCODE_CMPLI = 10
+OPCODE_ADDIC = 12
 OPCODE_ADDI = 14
 OPCODE_ADDIS = 15
 OPCODE_BC = 16
@@ -67,6 +68,11 @@ def li(rd: int, value: int) -> int:
 
 def addi(rd: int, ra: int, value: int) -> int:
     return _d_form(OPCODE_ADDI, rd, ra, value)
+
+
+def addic(rd: int, ra: int, value: int) -> int:
+    """addic rD, rA, SIMM: like addi, but the carry out goes to XER[CA], and r0 is a real register."""
+    return _d_form(OPCODE_ADDIC, rd, ra, value)
 
 
 def ori(ra: int, rs: int, value: int) -> int:
