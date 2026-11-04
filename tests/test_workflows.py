@@ -194,6 +194,35 @@ def test_the_cache_is_saved_with_the_key_it_was_looked_up_with(package_workflow_
     assert "key: ${{ steps.cache.outputs.cache-primary-key }}" in package_workflow_text
 
 
+def play_test_step() -> dict:
+    return next(step for _, step, _ in workflow_steps(PACKAGE_WORKFLOW) if step.get("id") == "play")
+
+
+def test_every_run_of_the_play_script_has_a_time_limit_that_ends_before_the_step_does():
+    # play.ps1 opens a window to ask for a disc image when it has none, and nobody can answer it
+    # on a build machine: without a limit a run waits until GitHub stops the whole step.
+    step = play_test_step()
+    script = step["run"]
+    assert "WaitForExit(" in script
+    assert "taskkill.exe /F /T" in script  # stops the script and the programs it started
+    minutes_per_run = [int(minutes) for minutes in re.findall(r"\$minutesToWait = (\d+)", script)]
+    assert len(minutes_per_run) == 2  # one for each run
+    assert sum(minutes_per_run) < step["timeout-minutes"]
+
+
+def test_the_second_run_of_the_play_script_only_happens_if_the_first_left_the_extracted_game():
+    # With no disc given and no extracted game, the second run would ask for a disc in a window.
+    script = play_test_step()["run"]
+    guard = re.search(
+        r"-not \(Test-Path -LiteralPath \(Join-Path \$userFolder \$extractedProgram\)\)\) \{(.*?)\}",
+        script,
+        re.DOTALL,
+    )
+    assert guard
+    assert "break" in guard.group(1)
+    assert script.index("run 2 skipped") < script.index("Invoke-PlayScript -ArgumentLine")
+
+
 def test_a_failed_test_does_not_stop_the_other_tests_but_does_fail_the_run():
     steps = {step.get("id"): step for _, step, _ in workflow_steps(PACKAGE_WORKFLOW) if step.get("id")}
     tests = [steps["programs"], steps["conformance"], steps["play"]]
