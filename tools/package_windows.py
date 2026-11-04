@@ -10,6 +10,7 @@ shipped is not the game but everything needed to do that without installing anyt
                 it (moderngekko-port), with the files they read at run time; `bin/source/`
                 holds the few source folders that building a game module needs
     toolchain/  the portable C compiler (llvm-mingw), CMake, Ninja and Python that build it
+    licenses/   the license texts of the programs in bin/
     Play.bat, Settings.bat, play.ps1, game.psd1
                 the double-click entry points, the script that does the work, and the data
                 that says which game this package plays
@@ -27,6 +28,7 @@ entrega no es el juego sino todo lo necesario para hacerlo sin instalar nada:
                 tiene las pocas carpetas de código que hacen falta para construir el módulo
                 de un juego
     toolchain/  el compilador de C portátil (llvm-mingw), CMake, Ninja y Python que lo construyen
+    licenses/   los textos de las licencias de los programas de bin/
     Play.bat, Settings.bat, play.ps1, game.psd1
                 los puntos de entrada con doble clic, el script que hace el trabajo y los datos
                 que dicen qué juego juega este paquete
@@ -78,6 +80,13 @@ SOURCE_FOLDERS = (
     "vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp",
 )
 SOURCE_FILES = (f"vendor/dolphin/Data/Sys/GameSettings/{GAME_ID_OF_THE_PACKAGE_SETTINGS}.ini",)
+# The license texts of the programs in bin/, copied into licenses/: name there -> path in the source
+# tree. The licenses of the tools in toolchain/ travel inside their own folders.
+LICENSE_FILES = {
+    "ModernGekko-GPL-3.0.txt": "LICENSE",
+    "Dolphin-COPYING.txt": "vendor/dolphin/COPYING",
+    "Dolphin-externals-licenses.md": "vendor/dolphin/Externals/licenses.md",
+}
 # The ABI folder is shared with Dolphin's own build, whose C++ sources a module never compiles.
 SOURCE_EXCLUDED = ("*.cpp",)
 
@@ -109,7 +118,7 @@ LLVM_MINGW_EXCLUDED = (
     "busybox/*",  # Unix tools that a build with CMake and Ninja does not use
 )
 CMAKE_EXCLUDED = (
-    "doc/*",
+    "doc/cmake/html/*",  # the manual; the license texts next to it stay
     "man/*",
     "bin/cmake-gui.exe",  # the graphical program, and the test and packaging programs
     "bin/ctest.exe",
@@ -261,6 +270,15 @@ def add_module_sources(inputs: PackageInputs, bin_directory: Path) -> None:
         shutil.copy2(inputs.source_directory / file, destination / file)
 
 
+def add_licenses(inputs: PackageInputs, root: Path) -> None:
+    """The license texts of ModernGekko and of Dolphin, which the programs in bin/ are made of."""
+    for name, relative_path in LICENSE_FILES.items():
+        source = inputs.source_directory / relative_path
+        require_file(source, f"license file {relative_path}")
+        (root / "licenses").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, root / "licenses" / name)
+
+
 def add_toolchain(inputs: PackageInputs, root: Path) -> None:
     """The compiler and the build tools, each in its own folder under toolchain/."""
     toolchain = root / "toolchain"
@@ -304,6 +322,7 @@ def assemble_package(inputs: PackageInputs, output_directory: Path) -> Path:
     bin_directory = root / "bin"
     add_programs(inputs, bin_directory)
     add_module_sources(inputs, bin_directory)
+    add_licenses(inputs, root)
     add_toolchain(inputs, root)
     add_package_files(inputs, root)
     write_versions(inputs, root)

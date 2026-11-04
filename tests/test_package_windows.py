@@ -61,6 +61,9 @@ def inputs(tmp_path) -> package.PackageInputs:
             "vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompCore.cpp",
             "vendor/dolphin/Data/Sys/GameSettings/G4AEE9.ini",
             "vendor/dolphin/Data/Sys/GameSettings/GALE01.ini",
+            "LICENSE",
+            "vendor/dolphin/COPYING",
+            "vendor/dolphin/Externals/licenses.md",
         ],
     )
     llvm_mingw = write_files(
@@ -92,7 +95,8 @@ def inputs(tmp_path) -> package.PackageInputs:
             "bin/cmake-gui.exe",
             "bin/ctest.exe",
             "share/cmake-4.4/Modules/Platform.cmake",
-            "doc/cmake.txt",
+            "doc/cmake/LICENSE.rst",
+            "doc/cmake/html/index.html",
         ],
     )
     ninja = write_files(tmp_path / "ninja", ["ninja.exe"])
@@ -226,10 +230,12 @@ def test_the_compiler_drops_the_runtimes_for_linux_and_the_tools_for_developing(
     )
 
 
-def test_cmake_keeps_its_modules_and_drops_the_graphical_program_and_the_documentation(package_directory):
+def test_cmake_keeps_its_modules_and_license_and_drops_the_graphical_program_and_the_manual(
+    package_directory,
+):
     files = files_under(package_directory / "toolchain" / "cmake")
-    assert "share/cmake-4.4/Modules/Platform.cmake" in files
-    assert not {"bin/cmake-gui.exe", "bin/ctest.exe", "doc/cmake.txt"} & files
+    assert {"share/cmake-4.4/Modules/Platform.cmake", "doc/cmake/LICENSE.rst"} <= files
+    assert not {"bin/cmake-gui.exe", "bin/ctest.exe", "doc/cmake/html/index.html"} & files
 
 
 def test_python_keeps_the_interpreter_and_the_library_and_drops_tests_pip_and_tk(package_directory):
@@ -247,6 +253,12 @@ def test_python_keeps_the_interpreter_and_the_library_and_drops_tests_pip_and_tk
         }
         & files
     )
+
+
+def test_the_license_texts_of_the_programs_are_in_the_licenses_folder(package_directory):
+    assert files_under(package_directory / "licenses") == set(package.LICENSE_FILES)
+    copied = (package_directory / "licenses" / "Dolphin-COPYING.txt").read_text(encoding="utf-8")
+    assert copied == "vendor/dolphin/COPYING"  # the made-up files hold their own path
 
 
 def test_the_files_of_the_package_folder_the_license_and_the_versions_are_in_the_root(package_directory):
@@ -336,6 +348,12 @@ def test_a_missing_source_folder_is_named_in_the_error(inputs, tmp_path):
 def test_a_toolchain_folder_without_its_main_program_is_refused(inputs, tmp_path):
     (inputs.cmake_directory / "bin" / "cmake.exe").unlink()
     with pytest.raises(package.PackageError, match=r"cmake.*bin/cmake\.exe"):
+        package.assemble_package(inputs, tmp_path / "out")
+
+
+def test_a_missing_license_text_is_named_in_the_error(inputs, tmp_path):
+    (inputs.source_directory / "vendor/dolphin/COPYING").unlink()
+    with pytest.raises(package.PackageError, match="vendor/dolphin/COPYING"):
         package.assemble_package(inputs, tmp_path / "out")
 
 
