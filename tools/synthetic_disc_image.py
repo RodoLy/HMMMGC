@@ -76,6 +76,10 @@ def file_table(names: list[str], disc_offsets: list[int], lengths: list[int]) ->
     A row is a flag byte and a three-byte offset of the name inside the names that follow the
     rows, then two words: for a file, where it is on the disc and how long it is. The first row is
     the root folder, whose two words are its parent (itself) and the number of rows in all.
+
+    Dolphin refuses a table that does not end with a zero byte, and one in which the name of the
+    root folder (the very start of the names) is not inside the table. With no files there are no
+    names, so the names are a single empty one: the root folder's.
     """
     encoded_names = [name.encode("utf-8") + b"\0" for name in names]
     row_count = 1 + len(names)
@@ -85,7 +89,7 @@ def file_table(names: list[str], disc_offsets: list[int], lengths: list[int]) ->
     for encoded_name, disc_offset, length in zip(encoded_names, disc_offsets, lengths, strict=True):
         rows.append(struct.pack(">III", name_offset, disc_offset, length))
         name_offset += len(encoded_name)
-    return b"".join(rows) + b"".join(encoded_names)
+    return b"".join(rows) + (b"".join(encoded_names) or b"\0")
 
 
 def disc_image(game_root: Path) -> bytes:

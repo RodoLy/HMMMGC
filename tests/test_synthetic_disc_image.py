@@ -4,8 +4,10 @@ Pruebas de la imagen de disco armada con una carpeta de juego. Sin el juego ni M
 
 The tests read the image back the way a disc reader does (the header tells where the file table
 is, the table tells where each file is), so they check the layout and not only that the code that
-writes the image agrees with itself. That Dolphin reads the image too is checked where Dolphin
-is: the Windows package's workflow extracts one with the package's launcher.
+writes the image agrees with itself. They also apply the rules with which Dolphin's reader refuses
+a file table (DiscIO/FileSystemGCWii.cpp), which a disc reader that is not strict would not notice.
+That Dolphin reads the image is checked where Dolphin is: the Windows package's workflow extracts
+one with the package's launcher.
 """
 
 import struct
@@ -84,6 +86,66 @@ def read_files(image: bytes) -> dict[str, tuple[int, bytes]]:
     return files
 
 
+FILE_TABLE_ROW_SIZE = 12
+LARGEST_FILE_TABLE = 128 * 1024 * 1024  # Dolphin takes anything bigger for a damaged image
+
+
+def reasons_dolphin_would_refuse(image: bytes) -> list[str]:
+    """Why Dolphin's reader would not take the file table of this image; nothing if it takes it.
+
+    These are the checks of the constructor of FileSystemGCWii and of FileInfoGCWii::IsValid, in
+    the order that Dolphin makes them. When one fails, Dolphin says "could not read the game
+    partition filesystem" and the launcher refuses the disc.
+    """
+    if read_word(image, 0x1C) != DISC_MAGIC:
+        return ["the disc has no GameCube magic word"]
+    table_offset, table_size = read_word(image, HEADER_FST_OFFSET), read_word(image, HEADER_FST_SIZE)
+    if table_size < FILE_TABLE_ROW_SIZE:
+        return ["the file table is too small"]
+    if table_size > LARGEST_FILE_TABLE:
+        return ["the file table is abnormally large"]
+    if table_offset + table_size > len(image):
+        return ["the file table is not inside the image"]
+    table = image[table_offset : table_offset + table_size]
+
+    def word(row: int, column: int) -> int:
+        return struct.unpack_from(">I", table, row * FILE_TABLE_ROW_SIZE + column * 4)[0]
+
+    def is_folder(row: int) -> bool:
+        return word(row, 0) & 0xFF000000 != 0
+
+    if not is_folder(0):
+        return ["the root of the file system is not a folder"]
+    row_count = word(0, 2)
+    if FILE_TABLE_ROW_SIZE * row_count > table_size:
+        return ["the file table has too many rows for its size"]
+    if table[-1] != 0:
+        return ["the file table does not end with a zero byte"]
+
+    def row_problem(row: int, parent: int) -> str | None:
+        """The first problem of this row and of what it holds, the way IsValid walks them."""
+        if FILE_TABLE_ROW_SIZE * row_count + (word(row, 0) & 0xFFFFFF) >= table_size:
+            return f"row {row}: its name is not inside the table"
+        if not is_folder(row):
+            return None
+        end = word(row, 2)
+        if word(row, 1) != parent:
+            return f"row {row}: its folder has the wrong parent"
+        if end <= row:
+            return f"row {row}: its folder ends before it begins"
+        if end > word(parent, 2):
+            return f"row {row}: its folder is bigger than the one that holds it"
+        child = row + 1
+        while child < end:
+            if problem := row_problem(child, row):
+                return problem
+            child = word(child, 2) if is_folder(child) else child + 1
+        return None
+
+    problem = row_problem(0, 0)
+    return [problem] if problem else []
+
+
 # -- The header ------------------------------------------------------------------------------------
 
 
@@ -154,12 +216,51 @@ def test_the_header_gives_the_table_as_much_room_as_it_takes(game_root):
     assert read_word(image, HEADER_FST_MAXIMUM_SIZE) == read_word(image, HEADER_FST_SIZE)
 
 
-def test_a_game_without_files_has_a_table_of_only_the_root_folder(game_root):
+def test_a_game_without_files_has_a_table_of_only_the_root_folder_and_the_zero_byte_that_ends_it(game_root):
     for path in (game_root / "files").iterdir():
         path.unlink()
     image = disc_image(game_root)
     assert read_files(image) == {}
-    assert read_word(image, HEADER_FST_SIZE) == 12
+    assert read_word(image, HEADER_FST_SIZE) == 12 + 1  # the root's row, and the empty name after it
+    table_offset = read_word(image, HEADER_FST_OFFSET)
+    assert image[table_offset + 12 : table_offset + 13] == b"\0"
+
+
+# -- What Dolphin's reader accepts -------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("file_names", [[], ["only.bin"], ["greeting.txt", "binary.bin"]])
+def test_dolphin_takes_the_file_table_of_a_game_with_no_files_one_file_or_several(game_root, file_names):
+    for path in (game_root / "files").iterdir():
+        path.unlink()
+    for name in file_names:
+        (game_root / "files" / name).write_bytes(GREETING)
+    assert reasons_dolphin_would_refuse(disc_image(game_root)) == []
+
+
+def test_the_checks_of_dolphin_notice_a_table_that_does_not_end_with_a_zero_byte(game_root):
+    image = bytearray(disc_image(game_root))
+    last_byte = read_word(image, HEADER_FST_OFFSET) + read_word(image, HEADER_FST_SIZE) - 1
+    image[last_byte] = ord("x")
+    assert reasons_dolphin_would_refuse(bytes(image)) == ["the file table does not end with a zero byte"]
+
+
+def test_the_checks_of_dolphin_notice_a_name_that_is_not_inside_the_table(game_root):
+    image = bytearray(disc_image(game_root))
+    first_file_row = read_word(image, HEADER_FST_OFFSET) + 12
+    struct.pack_into(">I", image, first_file_row, 0x00FFFFFF)  # a name offset far beyond the table
+    assert reasons_dolphin_would_refuse(bytes(image)) == ["row 1: its name is not inside the table"]
+
+
+def test_the_checks_of_dolphin_notice_a_file_table_with_the_old_layout_of_a_game_without_files():
+    # The table that had only the root's row, with no name after it, which Dolphin refuses.
+    root_only = struct.pack(">III", 0x01000000, 0, 1)
+    image = bytearray(0x3000)
+    struct.pack_into(">I", image, 0x1C, DISC_MAGIC)
+    struct.pack_into(">I", image, HEADER_FST_OFFSET, 0x2000)
+    struct.pack_into(">I", image, HEADER_FST_SIZE, len(root_only))
+    image[0x2000 : 0x2000 + len(root_only)] = root_only
+    assert reasons_dolphin_would_refuse(bytes(image)) == ["the file table does not end with a zero byte"]
 
 
 def test_the_file_table_lists_the_root_folder_and_then_each_file_with_its_name(game_root):
