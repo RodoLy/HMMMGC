@@ -502,8 +502,16 @@ Cada semilla tarda de dos a cuatro minutos con dos núcleos. Deja en
 `build/isa_conformance/seed_N/` el programa de prueba, la lista de casos
 (`cases.tsv`), el informe (`report.txt`) y el registro del verificador. El
 código de salida es 0 si ningún caso difirió, 1 si alguno difirió y 2 si falló
-la preparación (falta una herramienta, el compilador o la pantalla); las
-opciones están en `--help`.
+la preparación (falta una herramienta, el compilador o la pantalla) o si el
+verificador no comparó ningún caso: el verificador se apaga solo, sin hacer
+fallar la corrida, cuando el ejecutor no se compiló con el parche o cuando el
+módulo no exporta `ppc_set_mem_write_journal`, y una corrida así no prueba nada
+aunque salga "sin diferencias". Las opciones están en `--help`.
+
+Con `--headless` el ejecutor no abre ninguna ventana, así que no hace falta
+pantalla, ni real ni virtual (ni `xvfb`); es lo que usa la corrida de Windows en
+GitHub. En Windows y macOS, que tienen su propio sistema de ventanas, tampoco se
+inicia una pantalla virtual.
 
 **La variante sin el juego** pide lo mismo menos el disco y los símbolos:
 
@@ -1071,7 +1079,15 @@ Each seed takes two to four minutes on two cores. It leaves the test program, th
 list of cases (`cases.tsv`), the report (`report.txt`) and the verifier's log in
 `build/isa_conformance/seed_N/`. The exit code is 0 if no case differed, 1 if
 any did and 2 if the set-up failed (a tool, the compiler or the screen is
-missing); the options are in `--help`.
+missing) or if the verifier compared no case at all: the verifier switches
+itself off, without failing the run, when the runner was not built with the
+patch or when the module does not export `ppc_set_mem_write_journal`, and such a
+run proves nothing even if it ends "with no differences". The options are in
+`--help`.
+
+With `--headless` the runner opens no window, so no screen is needed, real or
+virtual (nor `xvfb`); the Windows run on GitHub uses it. On Windows and macOS,
+which have a window system of their own, no virtual screen is started either.
 
 **The variant without the game** asks for the same minus the disc and the symbols:
 
