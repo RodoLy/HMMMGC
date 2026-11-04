@@ -115,6 +115,11 @@ class ProgramNotFinishedError(SetupError):
         self.log = log
 
 
+def program_file_name(program: str) -> str:
+    """The file a program is built as: `moderngekko-run` is `moderngekko-run.exe` on Windows."""
+    return f"{program}.exe" if sys.platform == "win32" else program
+
+
 @dataclass(frozen=True)
 class ModernGekkoTools:
     port: Path  # recompiles a game
@@ -123,7 +128,10 @@ class ModernGekkoTools:
     @classmethod
     def in_template(cls, template_directory: Path) -> "ModernGekkoTools":
         build_directory = template_directory / "lib" / "ModernGekko" / "build"
-        tools = cls(build_directory / "moderngekko-port", build_directory / "moderngekko-run")
+        tools = cls(
+            build_directory / program_file_name("moderngekko-port"),
+            build_directory / program_file_name("moderngekko-run"),
+        )
         for tool in (tools.port, tools.runner):
             if not tool.is_file():
                 raise SetupError(f"{tool} not found. Build ModernGekko first: see docs/BUILDING.md.")

@@ -152,6 +152,28 @@ def test_a_missing_tool_is_named_and_the_guide_to_build_it_is_pointed_at(tmp_pat
         ModernGekkoTools.in_template(tmp_path / "no-template")
 
 
+def test_on_windows_the_tools_are_the_exe_files_of_the_template_build_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    build_directory = tmp_path / "template" / "lib" / "ModernGekko" / "build"
+    build_directory.mkdir(parents=True)
+    port = build_directory / "moderngekko-port.exe"
+    runner = build_directory / "moderngekko-run.exe"
+    port.write_text("the recompiler")
+    runner.write_text("the runner")
+    assert ModernGekkoTools.in_template(tmp_path / "template") == ModernGekkoTools(port, runner)
+
+
+def test_on_windows_a_missing_tool_is_named_with_its_exe_suffix(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    with pytest.raises(SetupError, match=r"moderngekko-port\.exe not found"):
+        ModernGekkoTools.in_template(tmp_path / "no-template")
+
+
+def test_on_linux_the_tools_have_no_suffix_even_if_the_build_folder_holds_exe_files(tools, tmp_path):
+    (tools.port.parent / "moderngekko-port.exe").write_text("not the one to use")
+    assert ModernGekkoTools.in_template(tmp_path / "template") == tools
+
+
 # -- The folder the runner takes for a game ----------------------------------------------------
 
 
