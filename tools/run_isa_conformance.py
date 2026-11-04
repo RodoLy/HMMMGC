@@ -43,6 +43,7 @@ Usage / Uso:
     python3 tools/run_isa_conformance.py --seeds 1 2 3 4 5     # more random states
     python3 tools/run_isa_conformance.py --inject-fault lwz    # self-check: must report 1 case
     python3 tools/run_isa_conformance.py --synthetic           # every form, with no game at all
+    python3 tools/run_isa_conformance.py --synthetic --headless  # and with no window either
 """
 
 import argparse
@@ -96,6 +97,9 @@ VERIFIER_ENVIRONMENT = {
 DEFAULT_TEMPLATE_DIRECTORY = Path.home() / "ModernGekko-Template"
 DEFAULT_WORK_DIRECTORY = BUILD_DIRECTORY / "isa_conformance"
 SCREEN = "640x480x24"  # the virtual screen when no display exists; nothing is drawn on it
+# These systems always have a window system of their own; the others (Linux, the BSDs) need an X or
+# Wayland display, and a machine without one needs a virtual one.
+PLATFORMS_WITH_A_WINDOW_SYSTEM = ("win32", "darwin")
 POLL_SECONDS = 0.5
 SHUTDOWN_TIMEOUT_SECONDS = 120.0
 
@@ -189,14 +193,18 @@ def recompile(
 
 
 @contextlib.contextmanager
-def display_for_the_runner() -> Iterator[dict[str, str]]:
+def display_for_the_runner(headless: bool) -> Iterator[dict[str, str]]:
     """Environment variables that give the runner a screen: the user's, or a virtual one.
 
-    ModernGekko opens a window even when it draws nothing, so a machine without a screen
-    (a server, a container) needs a virtual one.
+    ModernGekko opens a window even when it draws nothing, so a Linux machine without a screen
+    (a server, a container) needs a virtual one. Windows and macOS have their own window
+    system, and a headless runner opens no window, so those need nothing.
     """
+    if headless or sys.platform in PLATFORMS_WITH_A_WINDOW_SYSTEM:
+        yield {}  # no window will be opened, or the system has the means to open one
+        return
     if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
-        yield {}
+        yield {}  # the user's own screen
         return
     if shutil.which("Xvfb") is None:
         raise SetupError("There is no display and Xvfb is not installed: sudo apt install xvfb")
@@ -279,11 +287,12 @@ def run_under_the_verifier(
     timeout_seconds: float,
     stall_seconds: float,
     extra_environment: dict[str, str],
+    headless: bool = False,
 ) -> RunFiles:
     """Run the test program to its end, close the game normally and return the verifier's files.
 
     The game has to close normally: the verifier writes its summary and the coverage file
-    when it shuts down.
+    when it shuts down. With `headless` the runner opens no window, so no screen is needed.
     """
     shutil.rmtree(work_directory, ignore_errors=True)
     automation_directory = work_directory / "automation"
@@ -293,7 +302,7 @@ def run_under_the_verifier(
     client = AutomationClient(
         automation_directory, command_timeout_seconds=timeout_seconds, poll_seconds=POLL_SECONDS
     )
-    with display_for_the_runner() as display:
+    with display_for_the_runner(headless) as display:
         environment = {
             **os.environ,
             **display,
@@ -310,6 +319,8 @@ def run_under_the_verifier(
             "--automation-dir", str(automation_directory),
             "--user-dir", str(work_directory / "user"),
         ]  # fmt: skip
+        if headless:
+            command.append("--headless")
         with files.log.open("wb") as log:
             runner = subprocess.Popen(command, env=environment, stdout=log, stderr=subprocess.STDOUT)
             try:
@@ -396,6 +407,7 @@ def run_seed(
             arguments.timeout,
             arguments.stall_timeout,
             extra_environment,
+            arguments.headless,
         )
     except ProgramNotFinishedError as hang:
         where = where_the_program_stopped(program, hang.group_number)
@@ -462,6 +474,11 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         default="auto",
         choices=["auto", "gcc", "clang", "msvc"],
         help="the C compiler for the module (default: auto)",
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="run ModernGekko without a window, so that no screen (real or virtual) is needed",
     )
     parser.add_argument(
         "--seeds",
