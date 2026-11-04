@@ -109,20 +109,27 @@ class SymbolTable:
                 return symbol
         return None
 
-    def describe(self, address: int) -> str:
-        """`name` for a symbol's start, `name+0x10` inside it, else the
-        bare address."""
+    def containing(self, address: int) -> Symbol | None:
+        """The symbol whose [address, address + size) range holds `address`,
+        or None when the address falls between symbols."""
         if self._sorted_addresses is None:
             self._sorted_addresses = sorted(self.by_address)
         addresses = self._sorted_addresses
         position = bisect.bisect_right(addresses, address) - 1
-        if position >= 0:
-            symbol = self.by_address[addresses[position]]
-            if address == symbol.address:
-                return symbol.name
-            if address < symbol.address + symbol.size:
-                return f"{symbol.name}+0x{address - symbol.address:X}"
-        return f"0x{address:08X}"
+        if position < 0:
+            return None
+        symbol = self.by_address[addresses[position]]
+        return symbol if address < symbol.address + symbol.size else None
+
+    def describe(self, address: int) -> str:
+        """`name` for a symbol's start, `name+0x10` inside it, else the
+        bare address."""
+        symbol = self.containing(address)
+        if symbol is None:
+            return f"0x{address:08X}"
+        if address == symbol.address:
+            return symbol.name
+        return f"{symbol.name}+0x{address - symbol.address:X}"
 
     def keep_names_from(self, previous: "SymbolTable") -> list[str]:
         """Carry what people decided in an earlier symbols.txt over to this one.

@@ -68,6 +68,14 @@ def test_describe_names_addresses_inside_symbols():
     assert table.describe(0x8016F500) == "0x8016F500"  # past the end of OSInit
 
 
+def test_containing_finds_the_symbol_that_holds_an_address():
+    table = make_table()
+    assert table.containing(0x8016EF2C).name == "OSInit"  # first byte
+    assert table.containing(0x8016F40B).name == "OSInit"  # last byte
+    assert table.containing(0x8016F40C) is None  # one past the end
+    assert table.containing(0x80000000) is None  # before every symbol
+
+
 def test_hand_given_names_survive_regeneration():
     previous = SymbolTable([Symbol("__check_pad3", ".init", 0x80003100, "function", 0x40, scope="global")])
     regenerated = make_table()
