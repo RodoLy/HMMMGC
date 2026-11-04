@@ -103,6 +103,17 @@ CTRLFLOW:N_end=0x{TAIL_CALLER + 4:08X},I_pc=0x80000500,steps=7,N_cyc=10,I_cyc=20
 undercharges=0 max_deficit=0 distinct_pcs=100
 """
 
+# What a verifier built with patches/moderngekko/lockstep-any-arrival.patch prints for a run in which
+# three blocks passed, but only on a later visit of the interpreter to their end address.
+LATE_MATCH_LOG = f"""\
+[lockstep] ENABLED: start=0 limit=0 maxreport=0 stepcap=20000 whitelist=0
+[lockstep] LATE-MATCH #1 entry=0x{COUNTING_LOOP:08X} end=0x{LOOP_BODY_END:08X} arrival=3 steps=41
+[lockstep] LATE-MATCH #2 entry=0x{COUNTING_LOOP:08X} end=0x{LOOP_BODY_END:08X} arrival=5 steps=77
+[lockstep] LATE-MATCH #3 entry=0x{RECURSIVE:08X} end=0x{RECURSIVE + 4:08X} arrival=2 steps=12
+[lockstep] summary: checks=50 reports=0 skipped_fallback=0 skipped_zero=0 cap_hits=0 filtered=0 \
+undercharges=0 max_deficit=0 distinct_pcs=50 late_matches=3
+"""
+
 
 def divergence_from(fields_text: str, end_address: int = STRAIGHT_LINE + 8):
     """A parsed divergence with the given fields, ending at a straight-line address."""
@@ -262,6 +273,7 @@ def test_the_report_names_functions_and_says_what_needs_a_person(dol, symbols):
     assert f"entry=0x{STRAIGHT_LINE:08X} (straight_line)" in report
     assert "control_flow (1):" in report
     assert "Verdict: some divergences need a person to read them" in report
+    assert "later visit" not in report  # no late matches in this log, so no section for them
     assert exit_status(run, classified) == EXIT_NEEDS_A_PERSON
 
 
@@ -307,6 +319,43 @@ def test_a_mismatch_between_summary_and_lines_is_called_out(dol, symbols):
     run = parse_log(log)
     report = format_report("g.log", run, classify_all(run, dol, symbols), symbols)
     assert "WARNING: the verifier counted 3 divergences but the log holds 1 lines" in report
+
+
+# -- Late matches (patched verifier) -------------------------------------------
+
+
+def test_late_matches_are_read_from_the_log():
+    run = parse_log(LATE_MATCH_LOG)
+    assert [(match.number, match.arrival, match.steps) for match in run.late_matches] == [
+        (1, 3, 41),
+        (2, 5, 77),
+        (3, 2, 12),
+    ]
+    assert run.late_matches[0].entry_address == COUNTING_LOOP
+    assert run.late_matches[0].end_address == LOOP_BODY_END
+    assert run.summary["late_matches"] == 3
+    assert run.divergences == []
+
+
+def test_a_log_without_late_matches_has_none():
+    assert parse_log(SAMPLE_LOG).late_matches == []
+
+
+def test_late_matches_alone_count_as_verifier_output():
+    line = "[lockstep] LATE-MATCH #1 entry=0x80003100 end=0x80003108 arrival=2 steps=9\n"
+    assert parse_log(line).has_verifier_output
+
+
+def test_the_report_groups_late_matches_by_end_address(dol, symbols):
+    run = parse_log(LATE_MATCH_LOG)
+    classified = classify_all(run, dol, symbols)
+    report = format_report("game.log", run, classified, symbols)
+    assert "Blocks that passed only at a later visit to their end address (not divergences):" in report
+    assert f"2 x end=0x{LOOP_BODY_END:08X} (counting_loop+0x8) (matched at visit 3 to 5)" in report
+    assert f"1 x end=0x{RECURSIVE + 4:08X} (recursive+0x4) (matched at visit 2)" in report
+    assert "3  blocks that matched the interpreter only at a later visit to their end address" in report
+    assert "Verdict: no divergences" in report
+    assert exit_status(run, classified) == EXIT_ALL_EXPLAINED
 
 
 # -- Command line --------------------------------------------------------------
