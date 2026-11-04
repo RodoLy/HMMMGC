@@ -190,6 +190,26 @@ def test_on_linux_the_tools_have_no_suffix_even_if_the_build_folder_holds_exe_fi
     assert ModernGekkoTools.in_template(tmp_path / "template") == tools
 
 
+def test_the_tools_are_found_side_by_side_in_any_folder(tools):
+    assert ModernGekkoTools.in_directory(tools.port.parent) == tools
+
+
+def test_a_folder_without_the_tools_is_named_with_no_hint_about_building(tmp_path):
+    with pytest.raises(SetupError) as problem:
+        ModernGekkoTools.in_directory(tmp_path / "bin")
+    assert str(problem.value) == f"{tmp_path / 'bin' / 'moderngekko-port'} not found."
+
+
+def test_on_windows_the_tools_of_a_folder_are_its_exe_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    package_bin = tmp_path / "package" / "bin"
+    package_bin.mkdir(parents=True)
+    port, runner = package_bin / "moderngekko-port.exe", package_bin / "moderngekko-run.exe"
+    port.write_text("the recompiler")
+    runner.write_text("the runner")
+    assert ModernGekkoTools.in_directory(package_bin) == ModernGekkoTools(port, runner)
+
+
 # -- The folder the runner takes for a game ----------------------------------------------------
 
 
@@ -514,6 +534,27 @@ def test_the_headless_option_of_the_command_line_reaches_the_runner(tools, tmp_p
     monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
     assert main(synthetic_arguments(tmp_path, "--headless")) == 0
     assert "--headless" in (tmp_path / "work" / "seed_1" / "run" / "game.log").read_text()
+
+
+def test_the_tools_directory_option_takes_the_tools_from_that_folder(tools, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    arguments = synthetic_arguments(tmp_path)
+    template_option = arguments.index("--template")
+    del arguments[template_option : template_option + 2]  # no template at all: only the folder
+    assert main([*arguments, "--tools-directory", str(tools.port.parent)]) == 0
+    assert "seed 1: 2 cases of 2 forms" in capsys.readouterr().out
+
+
+def test_a_tools_directory_without_the_tools_is_a_clear_error_and_exit_code_two(tmp_path, capsys):
+    assert main(["--tools-directory", str(tmp_path / "missing")]) == 2
+    assert "moderngekko-port not found" in capsys.readouterr().err
+
+
+def test_a_template_and_a_tools_directory_together_are_refused(tmp_path, capsys):
+    with pytest.raises(SystemExit) as refusal:
+        main(["--template", str(tmp_path), "--tools-directory", str(tmp_path)])
+    assert refusal.value.code == 2
+    assert "not allowed with argument" in capsys.readouterr().err
 
 
 def test_a_missing_template_is_a_clear_error_and_exit_code_two(tmp_path, capsys):

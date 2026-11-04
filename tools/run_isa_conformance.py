@@ -44,6 +44,7 @@ Usage / Uso:
     python3 tools/run_isa_conformance.py --inject-fault lwz    # self-check: must report 1 case
     python3 tools/run_isa_conformance.py --synthetic           # every form, with no game at all
     python3 tools/run_isa_conformance.py --synthetic --headless  # and with no window either
+    python3 tools/run_isa_conformance.py --synthetic --tools-directory package/bin  # a package's tools
 """
 
 import argparse
@@ -131,14 +132,22 @@ class ModernGekkoTools:
 
     @classmethod
     def in_template(cls, template_directory: Path) -> "ModernGekkoTools":
-        build_directory = template_directory / "lib" / "ModernGekko" / "build"
+        """The programs of a ModernGekko-Template that has been built."""
+        return cls.in_directory(
+            template_directory / "lib" / "ModernGekko" / "build",
+            hint="Build ModernGekko first: see docs/BUILDING.md.",
+        )
+
+    @classmethod
+    def in_directory(cls, directory: Path, hint: str = "") -> "ModernGekkoTools":
+        """The programs sitting side by side in `directory`: a build folder, or a package's `bin`."""
         tools = cls(
-            build_directory / program_file_name("moderngekko-port"),
-            build_directory / program_file_name("moderngekko-run"),
+            directory / program_file_name("moderngekko-port"),
+            directory / program_file_name("moderngekko-run"),
         )
         for tool in (tools.port, tools.runner):
             if not tool.is_file():
-                raise SetupError(f"{tool} not found. Build ModernGekko first: see docs/BUILDING.md.")
+                raise SetupError(f"{tool} not found. {hint}".rstrip())
         return tools
 
 
@@ -467,11 +476,18 @@ def format_summary(outcomes: list[SeedOutcome]) -> str:
 
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument(
+    where_the_tools_are = parser.add_mutually_exclusive_group()
+    where_the_tools_are.add_argument(
         "--template",
         type=Path,
         default=Path(os.environ.get("MODERNGEKKO_TEMPLATE", DEFAULT_TEMPLATE_DIRECTORY)),
         help="where ModernGekko-Template is built (default: $MODERNGEKKO_TEMPLATE or ~/ModernGekko-Template)",
+    )
+    where_the_tools_are.add_argument(
+        "--tools-directory",
+        type=Path,
+        help="a folder that holds moderngekko-port and moderngekko-run side by side, such as the bin "
+        "folder of the Windows package, instead of a ModernGekko-Template build",
     )
     parser.add_argument(
         "--synthetic",
@@ -536,7 +552,11 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     arguments = parse_arguments(argv)
     try:
-        tools = ModernGekkoTools.in_template(arguments.template)
+        tools = (
+            ModernGekkoTools.in_directory(arguments.tools_directory)
+            if arguments.tools_directory
+            else ModernGekkoTools.in_template(arguments.template)
+        )
         # The words of the game; a --synthetic run makes up its own, a different set for each seed.
         game_words = (
             {}
