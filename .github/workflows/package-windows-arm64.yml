@@ -1,0 +1,356 @@
+name: Windows ARM64 package
+
+# Builds the package that lets a player run the game natively on Windows on ARM (a Snapdragon
+# laptop): the launcher, the runner and the recompiler, built here, and the portable compiler that
+# recompiles the game on the player's own computer. Then it tries the package the way a player
+# would, with a made-up disc instead of a real one, and keeps the zip as an artifact. No game
+# data is involved at any point.
+#
+# It only runs when asked for: Actions tab > Windows ARM64 package > Run workflow. The first run
+# builds the programs (20 to 40 minutes). They are kept in the repository's cache, keyed by the
+# sources and settings they were built from, so a run after a change to the scripts, the
+# documents or the tools of the package only assembles and tests it.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build, assemble and test the package
+    runs-on: windows-11-arm
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEMPLATE_URL: https://github.com/ExpansionPak/ModernGekko-Template.git
+      # Short paths on purpose: the files of a recompiled module sit in a folder named after the
+      # hash of the program, and Windows programs stop at 260 characters by default.
+      TEMPLATE_DIRECTORY: C:/mg
+      TOOLCHAIN_DIRECTORY: C:/toolchain
+      DIST_DIRECTORY: C:/dist
+      TEST_PACKAGE_DIRECTORY: C:/hm
+      TEST_WORK_DIRECTORY: C:/w
+      PYTHONUTF8: "1"
+      # Part of the key of the cache of compiled programs. Change it when the build commands in
+      # this file change, so that programs built the old way are not used again.
+      BUILD_CACHE_VERSION: "1"
+    steps:
+      # Git for Windows turns line endings into CRLF by default, and the lockstep patch only applies
+      # to files that end their lines with LF. Before the first checkout, so that all of them agree.
+      - name: Keep the line endings of the repositories, and allow long paths
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+          New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' `
+            -Name LongPathsEnabled -PropertyType DWord -Value 1 -Force | Out-Null
+
+      - uses: actions/checkout@v4
+
+      # The MSVC environment first: ModernGekko builds with it, pip builds Capstone from source
+      # with it (there is no wheel for Windows on ARM), and it says where the Visual C++ runtime is.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: arm64
+
+      - name: Download ModernGekko-Template at the commit the project is pinned to
+        run: |
+          # The same commit as scripts/build_and_run_linux.sh, so every platform builds the same code.
+          template_commit=$(sed -n 's/^readonly TEMPLATE_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_and_run_linux.sh)
+          [[ -n "$template_commit" ]] || { echo "TEMPLATE_COMMIT not found in the Linux script" >&2; exit 1; }
+          echo "ModernGekko-Template commit: $template_commit"
+          git clone --no-checkout "$TEMPLATE_URL" "$TEMPLATE_DIRECTORY"
+          git -C "$TEMPLATE_DIRECTORY" checkout --quiet "$template_commit"
+          git -C "$TEMPLATE_DIRECTORY" submodule sync --recursive --quiet
+          # Qt is not used (ModernGekko turns it off) and libadrenotools is for Android.
+          # HTTP/1.1 because HTTP/2 often cuts big fetches ("curl 92").
+          for attempt in 1 2 3; do
+            git -C "$TEMPLATE_DIRECTORY" -c http.version=HTTP/1.1 \
+              -c submodule.Externals/Qt.update=none \
+              -c submodule.Externals/libadrenotools.update=none \
+              submodule update --init --recursive --force --depth 1 --jobs 4 && break
+            echo "download attempt $attempt failed" >&2
+            [[ "$attempt" -lt 3 ]] || exit 1
+          done
+
+      # Two patches for Dolphin's code (the lockstep verifier, and a fix so that it also works with
+      # the portable compiler) and one for ModernGekko (so that moderngekko-port finds the module
+      # sources beside itself). See patches/README.md.
+      - name: Apply the patches
+        run: |
+          git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" apply \
+            "$GITHUB_WORKSPACE/patches/moderngekko/lockstep-verifier.patch" \
+            "$GITHUB_WORKSPACE/patches/moderngekko/export-lockstep-hook-on-mingw.patch"
+          git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko" apply \
+            "$GITHUB_WORKSPACE/patches/moderngekko/relocatable-port.patch"
+
+      # What the build makes (the programs, the data they read and the Visual C++ runtime) is kept
+      # in a folder of the workspace. The key lists everything that changes what is built: the
+      # version of the template, the patches, the branding of the package, and BUILD_CACHE_VERSION.
+      - name: Look for programs built earlier from the same sources
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build-output
+          key: windows-arm64-programs-${{ env.BUILD_CACHE_VERSION }}-${{ hashFiles('scripts/build_and_run_linux.sh', 'patches/moderngekko/*.patch', 'packaging/windows/branding.cmake') }}
+
+      # branding.cmake makes the launcher the game's own (its file name, its folder in
+      # %LOCALAPPDATA%, the disc it accepts, GameCube controls).
+      - name: Configure ModernGekko
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          cmake -C "$GITHUB_WORKSPACE/packaging/windows/branding.cmake" \
+            -S "$TEMPLATE_DIRECTORY/lib/ModernGekko" -B "$TEMPLATE_DIRECTORY/lib/ModernGekko/build" \
+            -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DDOLRECOMP_ENABLE_LLVM=OFF
+
+      - name: Build the launcher, the runner, DolRecomp and moderngekko-port
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          cmake --build "$TEMPLATE_DIRECTORY/lib/ModernGekko/build" --target \
+            moderngekko-launcher moderngekko-run dolrecomp moderngekko-port moderngekko-port-recompiler
+
+      - name: Keep the programs and what they need
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $build = Join-Path $env:TEMPLATE_DIRECTORY 'lib/ModernGekko/build'
+          $programs = Join-Path $env:GITHUB_WORKSPACE 'build-output/programs'
+          $runtime = Join-Path $env:GITHUB_WORKSPACE 'build-output/runtime'
+          New-Item -ItemType Directory -Force $programs, $runtime | Out-Null
+
+          # The launcher has the name that branding.cmake gives it. tools/package_windows.py takes
+          # the programs from the root of this folder, as the other tools do (see its inputs).
+          foreach ($name in 'HarvestMoonMM', 'moderngekko-port', 'moderngekko-run', 'dolrecomp') {
+              $program = Join-Path $build "$name.exe"
+              if (-not (Test-Path -LiteralPath $program)) {
+                  Get-ChildItem $build -Filter *.exe -Recurse -Depth 3 | ForEach-Object { Write-Host $_.FullName }
+                  throw "$name.exe was not built where it is expected: $program"
+              }
+              Copy-Item -LiteralPath $program -Destination $programs
+          }
+          Get-ChildItem $build -Filter *.dll -File | Copy-Item -Destination $programs
+          Copy-Item -LiteralPath (Join-Path $build 'Sys') -Destination $programs -Recurse
+
+          # The runtime of Visual C++ is shipped beside the programs, so that nothing has to be
+          # installed. Programs built with a static runtime do not use it, and it does no harm.
+          $runtimeFolder = $null
+          if ($env:VCToolsRedistDir) {
+              $runtimeFolder = Get-ChildItem (Join-Path $env:VCToolsRedistDir 'arm64') -Directory -Filter 'Microsoft.VC*.CRT' `
+                  -ErrorAction SilentlyContinue | Select-Object -First 1
+          }
+          if ($runtimeFolder) {
+              Copy-Item (Join-Path $runtimeFolder.FullName '*.dll') -Destination $runtime
+          } else {
+              Write-Warning "No Visual C++ runtime for ARM64 was found (VCToolsRedistDir: $env:VCToolsRedistDir)"
+          }
+          Get-ChildItem $programs, $runtime -File | Format-Table Name, Length -AutoSize
+
+      # Saved right away and not at the end of the job, so that a failure of the tests below does
+      # not throw away a build of half an hour.
+      - name: Save the programs for the next run
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build-output
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Download the portable compiler, CMake and Ninja
+        run: python tools/fetch_windows_toolchain.py --destination "$TOOLCHAIN_DIRECTORY"
+
+      - name: Assemble the package
+        run: |
+          # Python is not downloaded: the runner has one for Windows on ARM, and the package only
+          # needs the interpreter and the standard library (tools/package_windows.py trims the rest).
+          python_directory="$(cygpath -m "$(dirname "$(command -v python)")")"
+          python_version="$(python -c "import platform, sys; sys.stdout.write(platform.python_version())")"
+          python tools/package_windows.py \
+            --build-directory "$GITHUB_WORKSPACE/build-output/programs" \
+            --runtime-directory "$GITHUB_WORKSPACE/build-output/runtime" \
+            --source-directory "$TEMPLATE_DIRECTORY/lib/ModernGekko" \
+            --llvm-mingw-directory "$TOOLCHAIN_DIRECTORY/llvm-mingw" \
+            --cmake-directory "$TOOLCHAIN_DIRECTORY/cmake" \
+            --ninja-directory "$TOOLCHAIN_DIRECTORY/ninja" \
+            --python-directory "$python_directory" \
+            --output-directory "$DIST_DIRECTORY" \
+            --zip "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64.zip" \
+            --version "HMMMGC=$GITHUB_SHA" \
+            --version "ModernGekko-Template=$(git -C "$TEMPLATE_DIRECTORY" rev-parse HEAD)" \
+            --version "ModernGekko=$(git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko" rev-parse --short=7 HEAD)" \
+            --version "Dolphin (RecompCore)=$(git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" rev-parse --short=7 HEAD)" \
+            --version "Python=$python_version" \
+            --version "patches=lockstep-verifier, export-lockstep-hook-on-mingw, relocatable-port (folder patches of HMMMGC)"
+          cat "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64/VERSIONS.txt"
+          {
+            echo "### Package"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Zip | \`$(du -h "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64.zip" | cut -f1)\` |"
+            echo "| SHA-256 | \`$(sha256sum "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64.zip" | cut -d' ' -f1)\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The tests use the zip, unpacked in another folder, as a player would have it.
+      - name: Unpack the zip in another folder
+        run: python -m zipfile -e "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64.zip" "$TEST_PACKAGE_DIRECTORY"
+
+      # The three tests below are independent of each other: if one fails the next still runs, so
+      # that a single run shows everything that is wrong. The last step of the job fails if any did.
+      - name: Test that the programs are for ARM64 and start with nothing but Windows
+        id: programs
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:TEST_PACKAGE_DIRECTORY 'HarvestMoonMM-windows-arm64'
+          $problems = @()
+          foreach ($name in 'HarvestMoonMM', 'moderngekko-port', 'moderngekko-run', 'dolrecomp') {
+              $machine = (dumpbin /headers (Join-Path $package "bin\$name.exe") | Select-String 'machine \(' | Select-Object -First 1).Line.Trim()
+              Write-Host "$name.exe: $machine"
+              if ($machine -notmatch 'ARM64') { $problems += "$name.exe is not an ARM64 program" }
+          }
+          # Only the folders of Windows on the path: a missing DLL of the package makes the
+          # program fail with 0xC0000135, and a DLL for another processor with 0xC000007B.
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          foreach ($name in 'moderngekko-port', 'moderngekko-run', 'dolrecomp') {
+              & (Join-Path $package "bin\$name.exe") --help *> $null
+              Write-Host "$name.exe --help: exit code $LASTEXITCODE"
+              if ($LASTEXITCODE -in -1073741515, -1073741701) { $problems += "$name.exe did not start: a DLL is missing or is not for ARM64" }
+          }
+          if ($problems) { $problems | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
+
+      - name: Install the Python dependencies of the test
+        run: python -m pip install -r requirements.txt
+
+      # The test of docs/VALIDATION.md without a game, with the tools of the package and with the
+      # compiler of the package: a PATH with only its tools, and none of the variables of the
+      # Visual Studio environment, so that nothing can fall back to MSVC.
+      - name: Test the package with the instruction-level test
+        id: conformance
+        continue-on-error: true
+        timeout-minutes: 40
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:TEST_PACKAGE_DIRECTORY 'HarvestMoonMM-windows-arm64'
+          $toolchain = Join-Path $package 'toolchain'
+          $runnerPython = (Get-Command python).Source
+          $env:PATH = "$toolchain\llvm-mingw\bin;$toolchain\cmake\bin;$toolchain\ninja;$toolchain\python;$env:SystemRoot\System32;$env:SystemRoot"
+          $env:Python3_ROOT_DIR = "$toolchain\python"
+          Remove-Item Env:INCLUDE, Env:LIB, Env:LIBPATH -ErrorAction SilentlyContinue
+          clang --version | Select-Object -First 1
+          & $runnerPython tools/run_isa_conformance.py --synthetic --headless `
+            --synthetic-game-id G4AEE9 `
+            --tools-directory "$package\bin" `
+            --work-directory $env:TEST_WORK_DIRECTORY `
+            --toolchain clang `
+            --seeds 1 `
+            --words-per-form 8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # What a player does, from the disc image on: Windows PowerShell 5.1, which is the one every
+      # Windows has, runs play.ps1 on a disc image of the made-up game that the test above left. It
+      # extracts it, recompiles it and installs the module. Run a second time, it must find
+      # everything done.
+      - name: Test play.ps1 with a made-up disc image
+        id: play
+        continue-on-error: true
+        timeout-minutes: 40
+        shell: powershell
+        run: |
+          $package = Join-Path $env:TEST_PACKAGE_DIRECTORY 'HarvestMoonMM-windows-arm64'
+          $gameFolder = Join-Path $env:TEST_WORK_DIRECTORY 'seed_1\game'
+          if (-not (Test-Path -LiteralPath (Join-Path $gameFolder 'sys\main.dol'))) {
+              throw "The instruction-level test left no made-up game to put on a disc: $gameFolder"
+          }
+          New-Item -ItemType Directory -Force C:\disc | Out-Null
+          python tools/synthetic_disc_image.py $gameFolder C:\disc\G4AEE9.gcm
+          if ($LASTEXITCODE -ne 0) { throw 'The disc image could not be made' }
+
+          $userFolder = Join-Path $env:LOCALAPPDATA 'HarvestMoonMM'
+          $playScript = Join-Path $package 'play.ps1'
+          $problems = @()
+          foreach ($run in 1, 2) {
+              $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', $playScript, '-PrepareOnly')
+              if ($run -eq 1) { $arguments += @('-Disc', 'C:\disc\G4AEE9.gcm') }
+              $started = Get-Date
+              & powershell.exe @arguments
+              $exitCode = $LASTEXITCODE
+              $seconds = [int] ((Get-Date) - $started).TotalSeconds
+              Write-Host "play.ps1, run ${run}: exit code $exitCode, $seconds seconds"
+              if ($exitCode -ne 0) { $problems += "play.ps1 failed in run $run (exit code $exitCode)" }
+          }
+          foreach ($expected in 'games\G4AEE9\sys\main.dol', 'StaticRecompModules\gG4AEE9_recomp.dll', 'Logs\play.log') {
+              $path = Join-Path $userFolder $expected
+              Write-Host "${expected}: $(Test-Path -LiteralPath $path)"
+              if (-not (Test-Path -LiteralPath $path)) { $problems += "$expected was not made" }
+          }
+          if ($problems) { $problems | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
+
+      # The logs of a failure are worth reading at once; the same files are kept as an artifact.
+      - name: Show the end of the logs if a test failed
+        if: failure() || steps.programs.outcome == 'failure' || steps.conformance.outcome == 'failure' || steps.play.outcome == 'failure'
+        shell: pwsh
+        run: |
+          $logs = @(Join-Path $env:LOCALAPPDATA 'HarvestMoonMM\Logs\play.log')
+          $logs += Get-ChildItem $env:TEST_WORK_DIRECTORY -Include module.log, game.log -Recurse -File -ErrorAction SilentlyContinue |
+              ForEach-Object { $_.FullName }
+          foreach ($log in $logs) {
+              if (-not (Test-Path -LiteralPath $log)) { continue }
+              Write-Host "::group::$log"
+              Get-Content -LiteralPath $log -Tail 150
+              Write-Host '::endgroup::'
+          }
+
+      # The upload step cannot take files from folders that have no parent in common, so the logs
+      # are copied into one folder.
+      - name: Gather the logs
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force C:\logs\play, C:\logs\conformance | Out-Null
+          Copy-Item (Join-Path $env:LOCALAPPDATA 'HarvestMoonMM\Logs\*') C:\logs\play -ErrorAction SilentlyContinue
+          $files = Get-ChildItem $env:TEST_WORK_DIRECTORY -Include report.txt, cases.tsv, module.log, game.log -Recurse -File `
+              -ErrorAction SilentlyContinue
+          foreach ($file in $files) {
+              if ($file.FullName -match '\\(seed_\d+)\\') {
+                  $folder = "C:\logs\conformance\$($Matches[1])"
+                  New-Item -ItemType Directory -Force $folder | Out-Null
+                  Copy-Item -LiteralPath $file.FullName -Destination $folder
+              }
+          }
+
+      - name: Keep the package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HarvestMoonMM-windows-arm64
+          path: C:/dist/HarvestMoonMM-windows-arm64.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0 # the zip is already compressed
+
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-test-logs
+          path: C:/logs
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail if a test of the package failed
+        if: always()
+        env:
+          PROGRAMS_TEST: ${{ steps.programs.outcome }}
+          CONFORMANCE_TEST: ${{ steps.conformance.outcome }}
+          PLAY_TEST: ${{ steps.play.outcome }}
+        run: |
+          echo "programs: $PROGRAMS_TEST, instruction-level test: $CONFORMANCE_TEST, play.ps1: $PLAY_TEST"
+          [[ "$PROGRAMS_TEST" == success && "$CONFORMANCE_TEST" == success && "$PLAY_TEST" == success ]]
