@@ -206,6 +206,21 @@ function Invoke-Program {
     }
 }
 
+# The programs of the package write UTF-8, and so do the paths in what they say, so the console
+# reads UTF-8 while the game is prepared. Returns the encoding to put back at the end, or $null
+# when it could not be changed: with no console (the output goes to a file, for example) there is
+# nothing to change and nothing is lost.
+function Set-ConsoleUtf8 {
+    try {
+        $previous = [Console]::OutputEncoding
+        [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+        return $previous
+    }
+    catch {
+        return $null
+    }
+}
+
 # -- Checks before starting --------------------------------------------------------------------------
 
 function Get-ComputerArchitecture {
@@ -334,11 +349,8 @@ function Start-Launcher {
 
 # -- The run -----------------------------------------------------------------------------------------
 
-$previousOutputEncoding = [Console]::OutputEncoding
+$previousOutputEncoding = Set-ConsoleUtf8
 try {
-    # The programs of the package write UTF-8, and so do the paths in what they say.
-    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
-
     $architecture = Get-ComputerArchitecture
     if ($architecture -ne 'Arm64') { throw (Get-Message 'WrongComputer' $architecture) }
     $missingFile = Find-MissingFile
@@ -366,6 +378,6 @@ catch {
 }
 finally {
     Close-Log
-    [Console]::OutputEncoding = $previousOutputEncoding
+    if ($previousOutputEncoding) { [Console]::OutputEncoding = $previousOutputEncoding }
 }
 exit 0
