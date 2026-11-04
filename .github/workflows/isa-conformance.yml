@@ -3,9 +3,9 @@ name: Instruction conformance
 # Runs the instruction-level test of docs/VALIDATION.md without the game (--synthetic): the
 # recompiled C code and Dolphin's interpreter execute made-up instruction words side by side on
 # the same processor, and the lockstep verifier reports every result that differs. It runs on
-# x86-64 and on ARM64 with Linux and GCC, and on Windows ARM64 with MSVC, the system, the
-# processor and the compiler of the laptops this project is meant for. No game data is
-# involved.
+# x86-64 and on ARM64 with Linux and GCC, and on Windows ARM64 twice: with MSVC, and with the
+# portable compiler (llvm-mingw) that the Windows package ships. Windows ARM64 is the system and
+# the processor of the laptops this project is meant for. No game data is involved.
 #
 # It builds ModernGekko first (20 to 40 minutes), so it only runs when asked for:
 # Actions tab > Instruction conformance > Run workflow.
@@ -126,6 +126,7 @@ jobs:
       # hash of the program, and Windows programs stop at 260 characters by default.
       TEMPLATE_DIRECTORY: C:/mg
       WORK_DIRECTORY: C:/w
+      PORTABLE_WORK_DIRECTORY: C:/w-clang
       PYTHONUTF8: "1"
       # Through the environment and not spliced into the commands, so that the text typed into
       # the form cannot become part of a command.
@@ -176,10 +177,13 @@ jobs:
             [[ "$attempt" -lt 3 ]] || exit 1
           done
 
-      - name: Apply the lockstep verifier patch
+      # The second patch only matters to the module built with the portable compiler (below), and
+      # changes nothing for MSVC.
+      - name: Apply the lockstep verifier patches
         run: |
-          git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" \
-            apply "$GITHUB_WORKSPACE/patches/moderngekko/lockstep-verifier.patch"
+          git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" apply \
+            "$GITHUB_WORKSPACE/patches/moderngekko/lockstep-verifier.patch" \
+            "$GITHUB_WORKSPACE/patches/moderngekko/export-lockstep-hook-on-mingw.patch"
 
       - name: Look at the build tools
         run: |
@@ -207,11 +211,55 @@ jobs:
             --seeds "${seeds[@]}" \
             --words-per-form "$WORDS_PER_FORM"
 
+      # The player's laptop will not have Visual Studio: the module of the game is compiled there
+      # from the player's own disc, so the project ships a portable compiler (llvm-mingw, which has
+      # a build that runs on Windows ARM64) and the same test has to pass with it.
+      - name: Download the portable compiler (llvm-mingw)
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LLVM_MINGW_RELEASE: "20261020"
+        run: |
+          New-Item -ItemType Directory -Force C:\compiler | Out-Null
+          Set-Location C:\compiler
+          gh release download $env:LLVM_MINGW_RELEASE --repo mstorsjo/llvm-mingw --pattern '*-ucrt-aarch64.zip'
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Could not download llvm-mingw $env:LLVM_MINGW_RELEASE. The latest releases are:"
+            gh release list --repo mstorsjo/llvm-mingw --limit 5
+            exit 1
+          }
+          Get-FileHash -Algorithm SHA256 *.zip | Format-List Hash, Path
+          Expand-Archive -Path (Get-Item *.zip).FullName -DestinationPath C:\compiler -Force
+          $clang = Join-Path (Get-ChildItem C:\compiler -Directory -Filter 'llvm-mingw-*').FullName 'bin\clang.exe'
+          & $clang --version
+
+      # A PATH with the portable compiler, CMake, Ninja and Python only, and none of the variables
+      # of the Visual Studio environment, so that nothing can fall back to MSVC.
+      - name: Run the instruction-level test with the portable compiler
+        if: always()
+        shell: pwsh
+        run: |
+          $compiler = Join-Path (Get-ChildItem C:\compiler -Directory -Filter 'llvm-mingw-*').FullName 'bin'
+          $python = Split-Path (Get-Command python).Source
+          $env:PATH = "$compiler;C:\Program Files\CMake\bin;C:\Tools\Ninja;$python;C:\Windows\System32;C:\Windows"
+          Remove-Item Env:INCLUDE, Env:LIB, Env:LIBPATH -ErrorAction SilentlyContinue
+          clang --version | Select-Object -First 1
+          $seeds = $env:SEEDS -split ' '
+          python tools/run_isa_conformance.py --synthetic --headless `
+            --template $env:TEMPLATE_DIRECTORY `
+            --work-directory $env:PORTABLE_WORK_DIRECTORY `
+            --toolchain clang `
+            --seeds $seeds `
+            --words-per-form $env:WORDS_PER_FORM
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       # The reports are also kept as artifacts, but the logs of a failure are worth reading at once.
       - name: Show the end of the logs if the test failed
         if: failure()
         run: |
-          for log in "$WORK_DIRECTORY"/seed_*/module.log "$WORK_DIRECTORY"/seed_*/run/game.log; do
+          for log in "$WORK_DIRECTORY"/seed_*/module.log "$WORK_DIRECTORY"/seed_*/run/game.log \
+                     "$PORTABLE_WORK_DIRECTORY"/seed_*/module.log "$PORTABLE_WORK_DIRECTORY"/seed_*/run/game.log; do
             [[ -f "$log" ]] || continue
             echo "::group::$log"
             tail -n 150 "$log"
@@ -226,4 +274,6 @@ jobs:
           path: |
             C:/w/seed_*/report.txt
             C:/w/seed_*/cases.tsv
+            C:/w-clang/seed_*/report.txt
+            C:/w-clang/seed_*/cases.tsv
           if-no-files-found: warn
