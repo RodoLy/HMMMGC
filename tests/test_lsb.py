@@ -48,7 +48,10 @@ from synthetic_script import (  # noqa: E402
     push_float,
 )
 
-from dol import Dol  # noqa: E402
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
+)
 from lsb import (  # noqa: E402
     BUILTIN_COUNT_ADDRESS,
     BUILTIN_NAMES,
@@ -66,8 +69,8 @@ from lsb import (  # noqa: E402
     read_varint,
     resolve_script_path,
 )
+from ppc_encode import BLR, li  # noqa: E402
 from symbols import Symbol, SymbolTable  # noqa: E402
-from synthetic import BLR, build_dol, li  # noqa: E402
 
 # ---------------------------------------------------------------- integers
 
@@ -364,7 +367,7 @@ def test_command_line_asks_for_a_script_when_given_nothing(capsys, monkeypatch):
 def test_builtin_listing_joins_the_native_table_symbols_and_script_usage(tmp_path):
     table = struct.pack(">3I", 0, 0x80060D14, 0x80062EC8)  # slot 0 is empty, as in the real table
     dol = Dol(
-        build_dol(
+        write_dol(
             tmp_path / "main.dol",
             text={0: (0x80003100, [li(3, 1), BLR])},
             data={

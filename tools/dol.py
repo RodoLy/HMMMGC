@@ -19,6 +19,8 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
+from ppc_encode import words_to_bytes
+
 TEXT_SECTION_SLOTS = 7
 DATA_SECTION_SLOTS = 11
 SECTION_SLOTS = TEXT_SECTION_SLOTS + DATA_SECTION_SLOTS
@@ -185,3 +187,34 @@ class Dol:
 
     def text_sections(self) -> list[Section]:
         return [section for section in self.sections if section.is_text]
+
+
+def write_dol(
+    path: Path,
+    text: dict[int, tuple[int, list[int]]],
+    data: dict[int, tuple[int, bytes]],
+    entry: int,
+    bss: tuple[int, int] = (0, 0),
+) -> Path:
+    """Write a DOL, the inverse of `Dol`: for tests and for generated programs.
+
+    Escribe un DOL, lo inverso de `Dol`: para pruebas y programas generados.
+
+    `text` maps a text slot (0-6) to (load address, instruction words); `data`
+    maps a data slot (0-10) to (load address, bytes). `bss` is (address, size).
+    The sections are laid out one after another right after the header.
+    """
+    offsets = [0] * SECTION_SLOTS
+    addresses = [0] * SECTION_SLOTS
+    sizes = [0] * SECTION_SLOTS
+    body = b""
+    sections = [(slot, address, words_to_bytes(words)) for slot, (address, words) in text.items()]
+    sections += [(TEXT_SECTION_SLOTS + slot, address, content) for slot, (address, content) in data.items()]
+    for slot, address, content in sections:
+        offsets[slot] = HEADER_SIZE + len(body)
+        addresses[slot] = address
+        sizes[slot] = len(content)
+        body += content
+    header = struct.pack(f">{3 * SECTION_SLOTS}I3I", *offsets, *addresses, *sizes, *bss, entry)
+    path.write_bytes(header.ljust(HEADER_SIZE, b"\0") + body)
+    return path

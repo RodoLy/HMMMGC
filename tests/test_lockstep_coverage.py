@@ -14,15 +14,18 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dol import Dol  # noqa: E402
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
+)
 from lockstep_coverage import (  # noqa: E402
     format_report,
     main,
     measure,
     read_verified_addresses,
 )
+from ppc_encode import BLR, bl, li, ori  # noqa: E402
 from symbols import Symbol, SymbolTable  # noqa: E402
-from synthetic import BLR, bl, build_dol, li, ori  # noqa: E402
 
 ADD_AND_RECORD = 0x7C642A15  # add. r3,r4,r5
 FADDS = 0xEC22182A  # fadds f1,f2,f3
@@ -52,7 +55,7 @@ TEXT_WORDS[-1] = BLR
 @pytest.fixture
 def dol(tmp_path) -> Dol:
     return Dol(
-        build_dol(
+        write_dol(
             tmp_path / "test.dol", text={0: (ENTRY_FUNCTION, TEXT_WORDS)}, data={}, entry=ENTRY_FUNCTION
         )
     )
