@@ -43,6 +43,7 @@ EXTENDED_MTCRF = 144
 EXTENDED_OR = 444
 EXTENDED_MTSPR = 467
 EXTENDED_MTFSF = 711
+EXTENDED_NEG = 104
 
 SPR_CTR = 9
 BO_IF_TRUE = 12  # branch if the condition-register bit is set
@@ -118,13 +119,27 @@ def slwi(ra: int, rs: int, shift: int) -> int:
     return rlwinm(ra, rs, shift, 0, 31 - shift)
 
 
+def srwi(ra: int, rs: int, shift: int) -> int:
+    """rlwinm rA, rS, 32 - shift, shift, 31: shift right, filling with zeros."""
+    return rlwinm(ra, rs, 32 - shift, shift, 31)
+
+
 def lwzx(rd: int, ra: int, rb: int) -> int:
     return (OPCODE_EXTENDED << 26) | (rd << 21) | (ra << 16) | (rb << 11) | (EXTENDED_LWZX << 1)
 
 
+def or_(ra: int, rs: int, rb: int) -> int:
+    """or rA, rS, rB."""
+    return (OPCODE_EXTENDED << 26) | (rs << 21) | (ra << 16) | (rb << 11) | (EXTENDED_OR << 1)
+
+
 def mr(ra: int, rs: int) -> int:
     """or rA, rS, rS."""
-    return (OPCODE_EXTENDED << 26) | (rs << 21) | (ra << 16) | (rs << 11) | (EXTENDED_OR << 1)
+    return or_(ra, rs, rs)
+
+
+def neg(rd: int, ra: int) -> int:
+    return (OPCODE_EXTENDED << 26) | (rd << 21) | (ra << 16) | (EXTENDED_NEG << 1)
 
 
 def mtspr(spr: int, rs: int) -> int:
