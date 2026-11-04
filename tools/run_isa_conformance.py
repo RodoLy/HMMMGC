@@ -46,6 +46,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from dol import Dol  # noqa: E402
 from isa_conformance import (  # noqa: E402
     DONE_ADDRESS,
     DONE_VALUE,
@@ -59,8 +60,6 @@ from isa_conformance import (  # noqa: E402
     format_cases,
 )
 from moderngekko_automation import AutomationClient  # noqa: E402
-
-from dol import Dol  # noqa: E402
 from project import BUILD_DIRECTORY, DISC_DIRECTORY, GAME_ID, SYMBOLS_PATH  # noqa: E402
 from symbols import SymbolTable  # noqa: E402
 

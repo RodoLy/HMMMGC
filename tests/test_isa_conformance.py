@@ -16,6 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+from dol import Dol, write_dol  # noqa: E402
 from isa_conformance import (  # noqa: E402
     CODE_ADDRESS,
     DISPLACEMENT_OPERATIONS,
@@ -57,8 +58,6 @@ from isa_conformance import (  # noqa: E402
     state_setup_code,
     treatment_of,
 )
-
-from dol import Dol, write_dol  # noqa: E402
 from ppc import Instruction, format_instruction, sign_extend  # noqa: E402
 from ppc_encode import BLR, b, lfd, lis, lmw, lwz, lwzx, mtfsf, mtspr, stw  # noqa: E402
 from ppc_mnemonics import (  # noqa: E402
