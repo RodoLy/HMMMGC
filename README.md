@@ -28,8 +28,8 @@ disco (ISO, GCM o RVZ).
   código recompilado se compara con el intérprete de Dolphin mientras se juega
   y, instrucción por instrucción con operandos aleatorios (26 450 casos con las
   palabras del juego y 41 045 con palabras inventadas de 316 formas, sin
-  necesitar el juego; esta última también corrió en ARM64 con las mismas
-  cifras). No ha aparecido ninguna diferencia que afecte al juego; la prueba con
+  necesitar el juego; esta última también corrió en ARM64, en Linux y en
+  Windows, con las mismas cifras). No ha aparecido ninguna diferencia que afecte al juego; la prueba con
   palabras inventadas sí encontró una laguna de DolRecomp (`mtfsb1`) y un error
   del intérprete de Dolphin (`addme` y `subfme`), que el juego no usa. Los
   límites de todo esto, en [docs/VALIDATION.md](docs/VALIDATION.md).
@@ -53,6 +53,12 @@ Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 
 Para compilar y abrir el juego recompilado en Ubuntu, o en Windows dentro de
 WSL2, sigue [docs/BUILDING.md](docs/BUILDING.md); un solo script hace todo.
+
+Para laptops con Windows en ARM (Snapdragon), donde WSL2 todavía no puede usar
+la GPU, hay un paquete nativo experimental, sin WSL ni emulador: lo arma un
+workflow de GitHub y se juega con `Play.bat`
+([packaging/windows/README.md](packaging/windows/README.md)). Todavía no se ha
+probado con el juego real.
 
 ### Empezar (herramientas de análisis)
 
@@ -80,7 +86,9 @@ python3 tools/disasm.py main
 - Instala el Python **x64** de [python.org](https://www.python.org/downloads/windows/),
   también si tu PC tiene procesador ARM: `capstone` no publica paquete
   precompilado (wheel) para Windows ARM64, y Python x64 corre ahí gracias a la
-  emulación de Windows 11.
+  emulación de Windows 11. (Con Visual Studio y sus herramientas de C++ para
+  ARM64 también sirve el Python ARM64: `pip` compila `capstone` desde el código
+  fuente; así lo hace el workflow de GitHub.)
 - Usa `py` en lugar de `python3`. En PowerShell, la variable de los tests se
   define así:
 
@@ -131,7 +139,8 @@ This repository contains no game data. You need your own backup of the disc
   recompiled code is compared with Dolphin's interpreter while the game plays
   and, instruction by instruction on random operands (26,450 cases with the
   game's words and 41,045 with made-up words of 316 forms, with no need for
-  the game; the latter also ran on ARM64 with the same figures). No difference
+  the game; the latter also ran on ARM64, on Linux and on Windows, with the
+  same figures). No difference
   that affects the game has appeared; the test with made-up words did find a
   gap in DolRecomp (`mtfsb1`) and a bug in Dolphin's interpreter (`addme` and
   `subfme`), which the game does not use. The limits of all this are in
@@ -156,6 +165,12 @@ See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 
 To build and start the recompiled game on Ubuntu, or on Windows inside WSL2,
 follow [docs/BUILDING.md](docs/BUILDING.md); a single script does it all.
+
+For laptops with Windows on ARM (Snapdragon), where WSL2 cannot use the GPU
+yet, there is an experimental native package, with no WSL and no emulator: a
+GitHub workflow builds it and it is played with `Play.bat`
+([packaging/windows/README.md](packaging/windows/README.md)). It has not been
+tried with the real game yet.
 
 ### Getting started (analysis tools)
 
@@ -183,7 +198,8 @@ python3 tools/disasm.py main
 - Install the **x64** Python from [python.org](https://www.python.org/downloads/windows/),
   even if your PC has an ARM processor: `capstone` ships no prebuilt package
   (wheel) for Windows ARM64, and x64 Python runs there through Windows 11's
-  emulation.
+  emulation. (With Visual Studio and its C++ tools for ARM64, ARM64 Python
+  works too: `pip` builds `capstone` from source, as the GitHub workflow does.)
 - Use `py` instead of `python3`. In PowerShell, set the tests' variable like
   this:
 
