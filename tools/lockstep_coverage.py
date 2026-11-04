@@ -8,7 +8,7 @@ verifier compares a block of recompiled code with Dolphin's interpreter the
 first time the game runs it, so it only ever checks the code that the run
 reached. Started with STATICRECOMP_LOCKSTEP_COVERAGE_FILE=coverage.txt (see
 docs/VALIDATION.md), a verifier built with
-patches/moderngekko/lockstep-any-arrival.patch writes, when the game closes,
+patches/moderngekko/lockstep-verifier.patch writes, when the game closes,
 the address of every instruction it compared and found equal. This tool turns
 that file into numbers:
 
@@ -24,7 +24,7 @@ verificador compara un bloque de código recompilado con el intérprete de
 Dolphin la primera vez que el juego lo ejecuta, así que solo revisa el código
 al que llegó la corrida. Iniciado con STATICRECOMP_LOCKSTEP_COVERAGE_FILE=
 coverage.txt (ver docs/VALIDATION.md), un verificador compilado con
-patches/moderngekko/lockstep-any-arrival.patch escribe, al cerrar el juego,
+patches/moderngekko/lockstep-verifier.patch escribe, al cerrar el juego,
 la dirección de cada instrucción que comparó y encontró igual. Esta
 herramienta convierte ese archivo en números:
 

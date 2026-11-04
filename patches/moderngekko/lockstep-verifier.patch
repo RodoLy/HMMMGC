@@ -1,0 +1,330 @@
+Lockstep verifier: accept a later visit, ignore the FPSCR result flags, record coverage
+Verificador lockstep: aceptar una visita posterior, ignorar las banderas de resultado del FPSCR, registrar cobertura
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, vendor/dolphin (RecompCore) 10f7ac4, the versions that
+  scripts/build_and_run_linux.sh pins through ModernGekko-Template c2553a9.
+
+License / Licencia:
+  GPL-2.0-or-later, like the Dolphin files it modifies.
+  GPL-2.0-or-later, igual que los archivos de Dolphin que modifica.
+
+Read patches/README.md for what it adds and how to apply it.
+Lee patches/README.md para ver qué agrega y cómo aplicarlo.
+
+diff --git a/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.cpp b/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.cpp
+index 2bed07c..555a12d 100644
+--- a/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.cpp
++++ b/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.cpp
+@@ -6,8 +6,10 @@
+ #include "Core/System.h"
+ #include "Common/Logging/Log.h"
+ 
++#include <algorithm>
+ #include <cstdlib>
+ #include <cstdio>
++#include <vector>
+ 
+ namespace StaticRecompLockstep
+ {
+@@ -36,12 +38,29 @@ StaticRecompLockstepVerifier::~StaticRecompLockstepVerifier()
+     std::fprintf(stderr,
+                  "[lockstep] summary: checks=%llu reports=%llu skipped_fallback=%llu "
+                  "skipped_zero=%llu cap_hits=%llu filtered=%llu undercharges=%llu "
+-                 "max_deficit=%lld distinct_pcs=%zu\n",
++                 "max_deficit=%lld distinct_pcs=%zu late_matches=%llu\n",
+                  (unsigned long long)m_ls_checks, (unsigned long long)m_ls_reports,
+                  (unsigned long long)m_ls_skipped_fallback, (unsigned long long)m_ls_skipped_zero,
+                  (unsigned long long)m_ls_cap_hits, (unsigned long long)m_ls_filtered,
+                  (unsigned long long)m_ls_undercharges, (long long)m_ls_max_undercharge,
+-                 m_ls_checked.size());
++                 m_ls_checked.size(), (unsigned long long)m_ls_late_matches);
++    if (!m_ls_coverage_file.empty())
++    {
++      std::vector<u32> verified(m_ls_verified_instructions.begin(), m_ls_verified_instructions.end());
++      std::sort(verified.begin(), verified.end());
++      if (std::FILE* coverage = std::fopen(m_ls_coverage_file.c_str(), "w"))
++      {
++        for (const u32 address : verified)
++          std::fprintf(coverage, "0x%08X\n", address);
++        std::fclose(coverage);
++        std::fprintf(stderr, "[lockstep] coverage: %zu verified instructions written to %s\n",
++                     verified.size(), m_ls_coverage_file.c_str());
++      }
++      else
++      {
++        std::fprintf(stderr, "[lockstep] coverage: could not write %s\n", m_ls_coverage_file.c_str());
++      }
++    }
+     if (m_set_mem_journal)
+       m_set_mem_journal(nullptr, nullptr);
+   }
+@@ -74,6 +93,14 @@ void StaticRecompLockstepVerifier::Init()
+     m_ls_filter = s;
+   if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_NODEDUP"))
+     m_ls_nodedup = s[0] != '0';
++  if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_ANY_ARRIVAL"))
++    m_ls_any_arrival = s[0] != '0';
++  if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_IGNORE_FPSCR_FLAGS"))
++    m_ls_ignore_fpscr_flags = s[0] != '0';
++  if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_COVERAGE_FILE"))
++    m_ls_coverage_file = s;
++  if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_INJECT_FAULT"))
++    m_ls_inject_fault_pc = static_cast<u32>(std::strtoull(s, nullptr, 0));
+   if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_MAXREPORT"))
+     m_ls_max_report = std::strtoull(s, nullptr, 0);
+   if (const char* s = std::getenv("STATICRECOMP_LOCKSTEP_STEPCAP"))
+diff --git a/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.h b/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.h
+index fb54480..7f140e1 100644
+--- a/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.h
++++ b/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep.h
+@@ -148,6 +148,20 @@ private:
+   std::string m_ls_filter;
+   u64 m_ls_filtered = 0;
+   bool m_ls_nodedup = false;
++  // STATICRECOMP_LOCKSTEP_ANY_ARRIVAL: the shadow keeps going past the first arrival at the end PC
++  // and the block passes when the native end state equals the shadow's state at ANY arrival.
++  bool m_ls_any_arrival = false;
++  // STATICRECOMP_LOCKSTEP_IGNORE_FPSCR_FLAGS: do not compare the FPSCR result flags (FPRF, FR, FI).
++  bool m_ls_ignore_fpscr_flags = false;
++  // STATICRECOMP_LOCKSTEP_INJECT_FAULT=<entry pc>: flips a bit of r3 in the native end state of that
++  // block before comparing (and flips it back after), a negative control for the verifier itself.
++  u32 m_ls_inject_fault_pc = 0;
++  u64 m_ls_late_matches = 0;  // ANY_ARRIVAL: blocks that matched the shadow only after its first arrival
++  // STATICRECOMP_LOCKSTEP_COVERAGE_FILE=<path>: at shutdown, write the address of every instruction
++  // the shadow ran in a block that passed, one 0x00000000 per line, so that a run can say how much of
++  // the game it verified (tools/lockstep_coverage.py reads the file).
++  std::string m_ls_coverage_file;
++  std::unordered_set<u32> m_ls_verified_instructions;
+   int m_ls_step_cap = 20000;
+   u64 m_ls_cap_hits = 0;
+   u64 m_ls_checks = 0;          // distinct blocks differentially checked
+diff --git a/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep_Check.cpp b/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep_Check.cpp
+index 9c486ef..9c08e41 100644
+--- a/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep_Check.cpp
++++ b/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompLockstep_Check.cpp
+@@ -160,77 +160,14 @@ void StaticRecompLockstepVerifier::LockstepCheck(u32 entry_pc, u32 end_pc, const
+     if ((entry_state.gpr[4] >> 28) == 8)
+       dump("r4", entry_state.gpr[4]);
+   }
+-  int steps = 0;
+-  s64 interp_cycles = 0;
+-  const bool end_is_loop_header = LsIsLoopHeader(ram, ram_size, end_pc);
+-  while (steps < m_ls_step_cap)
+-  {
+-    const u32 before = ppc.pc;
+-    interp_cycles += interp.SingleStepInner();
+-    ++steps;
+-
+-    if (m_ls_trace_pc != 0 && entry_pc == m_ls_trace_pc)
+-    {
+-      std::fprintf(stderr,
+-                   "[ls-trace] step %d: pc=0x%08X r3=0x%08X r4=0x%08X r5=0x%08X r13=0x%08X "
+-                   "msr=0x%08X xer=0x%08X cr=0x%08X lr=0x%08X ctr=0x%08X\n",
+-                   steps, before, ppc.gpr[3], ppc.gpr[4], ppc.gpr[5], ppc.gpr[13], ppc.msr.Hex,
+-                   ppc.GetXER().Hex, ppc.cr.Get(), ppc.spr[SPR_LR], ppc.spr[SPR_CTR]);
+-    }
+-    if (ppc.pc == end_pc)
+-    {
+-      // A native dispatch can fall through into a loop body and return at its
+-      // back-edge with PC set to the loop header. In that one case the shadow
+-      // must execute the inlined iteration before stopping. An arrival by any
+-      // branch (including a call to an address which also happens to be a loop
+-      // header) is already the native dispatch boundary.
+-      // ...and on a loop header, not until the shadow has done as much work as
+-      // the native block did. A generated chunk leaves an inlined loop at its
+-      // header once the block's charge crosses DOLRECOMP_C_LOOP_CYCLE_BUDGET
+-      // (emitter.c:324), so the iteration it stops on is timing-determined and
+-      // cannot be inferred from the code. Stopping at the first branch arrival
+-      // compares two different iterations of the same loop at the same PC,
+-      // which is the long-standing GPR divergence on both arm64 and x86-64.
+-      if (!end_is_loop_header)
+-        break;
+-      if (interp_cycles >= native_charge)
+-        break;
+-    }
+-    if (ppc.Exceptions != 0)
+-      break;
+-  }
+-
+-  StaticRecompLockstep::g_hw_write_sink = nullptr;
+-  StaticRecompLockstep::g_hw_write_sink_user = nullptr;
+-  StaticRecompLockstep::g_hw_read_sink = nullptr;
+-  StaticRecompLockstep::g_hw_read_sink_user = nullptr;
+-  StaticRecompLockstep::g_ram_write_journal = nullptr;
+-  StaticRecompLockstep::g_ram_write_journal_user = nullptr;
+-  StaticRecompLockstep::g_lc_write_journal = nullptr;
+-  StaticRecompLockstep::g_lc_write_journal_user = nullptr;
+-  StaticRecompLockstep::g_vmem_write_journal = nullptr;
+-  StaticRecompLockstep::g_vmem_write_journal_user = nullptr;
+-  StaticRecompLockstep::g_tb_override_active = false;
+-
+-  const bool reached = (ppc.pc == end_pc && ppc.Exceptions == 0);
+-  const bool cap_hit = !reached && ppc.Exceptions == 0 && steps >= m_ls_step_cap;
+-  if (cap_hit)
+-    ++m_ls_cap_hits;
+-  const bool undercharged = reached && (interp_cycles > native_charge + LS_UNDERCHARGE_GRACE) && !end_is_loop_header;
+-
+-  std::string diff;
+-  const auto addu = [&](const std::string& name, u64 nval, u64 ival) {
+-    if (nval != ival)
+-      diff += fmt::format(" {}:N={:#x},I={:#x}", name, nval, ival);
+-  };
+-
+-  if (!reached)
+-  {
+-    diff += fmt::format(" CTRLFLOW:N_end={:#010x},I_pc={:#010x},steps={},N_cyc={},I_cyc={}", end_pc,
+-                        ppc.pc, steps, native_charge, interp_cycles);
+-  }
+-  else
+-  {
++  // The comparison of the native end state with the shadow's current state. A lambda so that it can
++  // run at every arrival at end_pc when STATICRECOMP_LOCKSTEP_ANY_ARRIVAL is set.
++  const auto compare_native_end_state_with_shadow = [&]() -> std::string {
++    std::string diff;
++    const auto addu = [&](const std::string& name, u64 nval, u64 ival) {
++      if (nval != ival)
++        diff += fmt::format(" {}:N={:#x},I={:#x}", name, nval, ival);
++    };
+     for (int r = 0; r < 32; ++r)
+       addu(fmt::format("r{}", r), m_core.m_guest.gpr[r], ppc.gpr[r]);
+     for (int r = 0; r < 32; ++r)
+@@ -247,7 +184,13 @@ void StaticRecompLockstepVerifier::LockstepCheck(u32 entry_pc, u32 end_pc, const
+     addu("ctr", m_core.m_guest.ctr, ppc.spr[SPR_CTR]);
+     addu("cr", m_core.m_guest.cr, ppc.cr.Get());
+     addu("xer", m_core.m_guest.xer, ppc.GetXER().Hex);
+-    addu("fpscr", m_core.m_guest.fpscr, ppc.fpscr.Hex);
++    {
++      // FPRF, FI and FR are rewritten by every floating-point instruction.
++      constexpr u64 kFpscrResultFlags = 0x0007F000u;
++      const u64 compared_bits = m_ls_ignore_fpscr_flags ? ~kFpscrResultFlags : ~0ull;
++      if (((m_core.m_guest.fpscr ^ ppc.fpscr.Hex) & compared_bits) != 0)
++        addu("fpscr", m_core.m_guest.fpscr, ppc.fpscr.Hex);
++    }
+     addu("msr", m_core.m_guest.msr, ppc.msr.Hex);
+     addu("srr0", m_core.m_guest.srr0, ppc.spr[SPR_SRR0]);
+     addu("srr1", m_core.m_guest.srr1, ppc.spr[SPR_SRR1]);
+@@ -305,6 +248,123 @@ void StaticRecompLockstepVerifier::LockstepCheck(u32 entry_pc, u32 end_pc, const
+     }
+     if (m_ls_read_overflow)
+       diff += " mmio-read-seq-divergence";
++    return diff;
++  };
++
++  int steps = 0;
++  s64 interp_cycles = 0;
++  const bool fault_injected = m_ls_inject_fault_pc != 0 && entry_pc == m_ls_inject_fault_pc;
++  if (fault_injected)
++    m_core.m_guest.gpr[3] ^= 0x10u;
++  std::string first_arrival_diff;  // ANY_ARRIVAL: what differed the first time end_pc was reached
++  bool matched_at_an_arrival = false;
++  int arrivals_seen = 0;
++  std::vector<u32> shadow_executed_addresses;  // every instruction the shadow ran for this block
++  const bool end_is_loop_header = LsIsLoopHeader(ram, ram_size, end_pc);
++  while (steps < m_ls_step_cap)
++  {
++    const u32 before = ppc.pc;
++    shadow_executed_addresses.push_back(before);
++    interp_cycles += interp.SingleStepInner();
++    ++steps;
++
++    if (m_ls_trace_pc != 0 && entry_pc == m_ls_trace_pc)
++    {
++      std::fprintf(stderr,
++                   "[ls-trace] step %d: pc=0x%08X r3=0x%08X r4=0x%08X r5=0x%08X r13=0x%08X "
++                   "msr=0x%08X xer=0x%08X cr=0x%08X lr=0x%08X ctr=0x%08X\n",
++                   steps, before, ppc.gpr[3], ppc.gpr[4], ppc.gpr[5], ppc.gpr[13], ppc.msr.Hex,
++                   ppc.GetXER().Hex, ppc.cr.Get(), ppc.spr[SPR_LR], ppc.spr[SPR_CTR]);
++    }
++    if (m_ls_any_arrival && ppc.pc == end_pc && ppc.Exceptions == 0)
++    {
++      ++arrivals_seen;
++      std::string arrival_diff = compare_native_end_state_with_shadow();
++      if (arrival_diff.empty())
++      {
++        matched_at_an_arrival = true;
++        break;
++      }
++      if (first_arrival_diff.empty())
++        first_arrival_diff = std::move(arrival_diff);
++    }
++    else if (ppc.pc == end_pc)
++    {
++      // A native dispatch can fall through into a loop body and return at its
++      // back-edge with PC set to the loop header. In that one case the shadow
++      // must execute the inlined iteration before stopping. An arrival by any
++      // branch (including a call to an address which also happens to be a loop
++      // header) is already the native dispatch boundary.
++      // ...and on a loop header, not until the shadow has done as much work as
++      // the native block did. A generated chunk leaves an inlined loop at its
++      // header once the block's charge crosses DOLRECOMP_C_LOOP_CYCLE_BUDGET
++      // (emitter.c:324), so the iteration it stops on is timing-determined and
++      // cannot be inferred from the code. Stopping at the first branch arrival
++      // compares two different iterations of the same loop at the same PC,
++      // which is the long-standing GPR divergence on both arm64 and x86-64.
++      if (!end_is_loop_header)
++        break;
++      if (interp_cycles >= native_charge)
++        break;
++    }
++    if (ppc.Exceptions != 0)
++      break;
++  }
++
++  StaticRecompLockstep::g_hw_write_sink = nullptr;
++  StaticRecompLockstep::g_hw_write_sink_user = nullptr;
++  StaticRecompLockstep::g_hw_read_sink = nullptr;
++  StaticRecompLockstep::g_hw_read_sink_user = nullptr;
++  StaticRecompLockstep::g_ram_write_journal = nullptr;
++  StaticRecompLockstep::g_ram_write_journal_user = nullptr;
++  StaticRecompLockstep::g_lc_write_journal = nullptr;
++  StaticRecompLockstep::g_lc_write_journal_user = nullptr;
++  StaticRecompLockstep::g_vmem_write_journal = nullptr;
++  StaticRecompLockstep::g_vmem_write_journal_user = nullptr;
++  StaticRecompLockstep::g_tb_override_active = false;
++
++  const bool reached = (ppc.pc == end_pc && ppc.Exceptions == 0);
++  const bool cap_hit =
++      !reached && first_arrival_diff.empty() && ppc.Exceptions == 0 && steps >= m_ls_step_cap;
++  if (cap_hit)
++    ++m_ls_cap_hits;
++  const bool undercharged = reached && (interp_cycles > native_charge + LS_UNDERCHARGE_GRACE) && !end_is_loop_header;
++
++  std::string diff;
++  if (matched_at_an_arrival)
++  {
++    // Native's end state is on the shadow's trajectory: nothing differs.
++    if (arrivals_seen > 1)
++    {
++      ++m_ls_late_matches;
++      std::fprintf(stderr,
++                   "[lockstep] LATE-MATCH #%llu entry=0x%08X end=0x%08X arrival=%d steps=%d\n",
++                   (unsigned long long)m_ls_late_matches, entry_pc, end_pc, arrivals_seen, steps);
++    }
++  }
++  else if (!first_arrival_diff.empty())
++  {
++    // The shadow never again reached a state equal to native's: report the first arrival.
++    diff = first_arrival_diff;
++  }
++  else if (!reached)
++  {
++    diff += fmt::format(" CTRLFLOW:N_end={:#010x},I_pc={:#010x},steps={},N_cyc={},I_cyc={}", end_pc,
++                        ppc.pc, steps, native_charge, interp_cycles);
++  }
++  else
++  {
++    diff = compare_native_end_state_with_shadow();
++  }
++
++  if (fault_injected)
++    m_core.m_guest.gpr[3] ^= 0x10u;  // undo the injected fault
++
++  // A block with no difference verified every instruction the shadow ran for it.
++  if (diff.empty())
++  {
++    m_ls_verified_instructions.insert(shadow_executed_addresses.begin(),
++                                      shadow_executed_addresses.end());
+   }
+ 
+   if (!cap_hit && !diff.empty() && m_ls_whitelist.find(entry_pc) == m_ls_whitelist.end())
