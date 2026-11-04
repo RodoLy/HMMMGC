@@ -70,6 +70,7 @@ from isa_conformance import (  # noqa: E402
     Evaluation,
     FormResult,
     Program,
+    SectionsOverlapError,
     build_program,
     collect_candidates,
     evaluate,
@@ -356,7 +357,10 @@ def run_seed(
         disc_directory, game_id = None, synthetic_disc.GAME_ID
     else:
         candidates, disc_directory, game_id = game_words, arguments.disc, GAME_ID
-    program = build_program(candidates, seed, arguments.words_per_form, arguments.group_size)
+    try:
+        program = build_program(candidates, seed, arguments.words_per_form, arguments.group_size)
+    except SectionsOverlapError as overlap:
+        raise SetupError(f"seed {seed}: {overlap}") from overlap
     program_path = program.write(seed_directory / "program.dol")
     (seed_directory / "cases.tsv").write_text(format_cases(program.cases))
     print(f"seed {seed}: {len(program.cases):,} cases of {len({case.form for case in program.cases})} forms")

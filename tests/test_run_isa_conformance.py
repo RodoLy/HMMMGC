@@ -18,7 +18,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import run_isa_conformance  # noqa: E402
 import synthetic_disc  # noqa: E402
 from dol import write_dol  # noqa: E402
-from isa_conformance import DONE_VALUE, Candidate, Case, Evaluation, FormResult, Program  # noqa: E402
+from isa_conformance import (  # noqa: E402
+    DONE_VALUE,
+    SCRATCH_ADDRESS,
+    STATE_SIZE,
+    STATE_TABLE_ADDRESS,
+    Candidate,
+    Case,
+    Evaluation,
+    FormResult,
+    Program,
+)
 from ppc_encode import BLR  # noqa: E402
 from run_isa_conformance import (  # noqa: E402
     ModernGekkoTools,
@@ -425,6 +435,20 @@ def test_a_synthetic_run_makes_up_its_words_again_for_each_seed(tools, tmp_path,
     monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", words_of)
     assert main(synthetic_arguments(tmp_path, "--seeds", "4", "9")) == 0
     assert seeds_asked_for == [4, 9]
+
+
+def test_a_program_whose_sections_would_overlap_is_a_setup_error_that_says_what_to_change(
+    tools, tmp_path, monkeypatch, capsys
+):
+    group_count = (SCRATCH_ADDRESS - STATE_TABLE_ADDRESS) // STATE_SIZE + 1  # one row too many
+    words = {"add": [Candidate(ADD_R3_R4_R5, 0)] * group_count}
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: words)
+    arguments = synthetic_arguments(tmp_path, "--words-per-form", str(group_count), "--group-size", "1")
+    assert main(arguments) == 2
+    error = capsys.readouterr().err
+    assert "seed 1: the state table" in error
+    assert "the scratch memory" in error
+    assert "--group-size" in error
 
 
 def test_a_fault_in_a_form_that_the_program_does_not_have_is_a_setup_error(
