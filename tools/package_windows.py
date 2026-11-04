@@ -234,7 +234,8 @@ def copy_package_file(source: Path, destination: Path) -> None:
     require_file(source, "package file")
     destination.parent.mkdir(parents=True, exist_ok=True)
     if source.suffix in BATCH_FILE_SUFFIXES | POWERSHELL_SUFFIXES:
-        destination.write_bytes(as_windows_text(source.read_text(encoding="utf-8"), source.suffix))
+        # "utf-8-sig" drops a byte-order mark that the source already has, so that there is only one.
+        destination.write_bytes(as_windows_text(source.read_text(encoding="utf-8-sig"), source.suffix))
     else:
         shutil.copy2(source, destination)
 

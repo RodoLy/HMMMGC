@@ -288,6 +288,12 @@ def test_powershell_files_get_windows_line_ends_and_a_byte_order_mark(package_di
         assert contents == b"\xef\xbb\xbf" + "first line\r\nsecond line é\r\n".encode()
 
 
+def test_a_script_that_already_has_a_byte_order_mark_does_not_get_a_second_one(inputs, tmp_path):
+    (inputs.package_files_directory / "play.ps1").write_bytes(b"\xef\xbb\xbfone line\n")
+    root = package.assemble_package(inputs, tmp_path / "out")
+    assert (root / "play.ps1").read_bytes() == b"\xef\xbb\xbfone line\r\n"
+
+
 def test_a_script_that_already_has_windows_line_ends_does_not_get_them_doubled():
     assert package.as_windows_text("a\r\nb\r\n", ".bat") == b"a\r\nb\r\n"
 
