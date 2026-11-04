@@ -19,23 +19,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dol import Dol  # noqa: E402
-from function_finder import FunctionFinder  # noqa: E402
-from sdk_names import name_sdk_functions  # noqa: E402
-from synthetic import (  # noqa: E402
-    BLR,
-    EMPTY_EXCEPTION_SECTIONS,
-    b,
-    bl,
-    build_dol,
-    high_adjusted,
-    li,
-    lis,
-    low,
-    lwz,
-    mr,
-    words_to_bytes,
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
 )
+from function_finder import FunctionFinder  # noqa: E402
+from ppc_encode import BLR, b, bl, high_adjusted, li, lis, low, lwz, mr, words_to_bytes  # noqa: E402
+from sdk_names import name_sdk_functions  # noqa: E402
+from synthetic import EMPTY_EXCEPTION_SECTIONS  # noqa: E402
 
 INIT = 0x80003100
 TEXT = 0x80004000
@@ -84,7 +75,7 @@ def names(tmp_path_factory):
     strings[0x40:] = b"<< Dolphin SDK - DVD\trelease build: Apr  5 2004 >>\0".ljust(0x40, b"\0")
     small_data = words_to_bytes([AX_VERSION_STRING, DVD_VERSION_STRING])
 
-    path = build_dol(
+    path = write_dol(
         tmp_path_factory.mktemp("dol") / "sdk.dol",
         text={0: (INIT, [bl(INIT, CALLER), BLR]), 1: (TEXT, text)},
         data={**EMPTY_EXCEPTION_SECTIONS, 4: (STRINGS, bytes(strings)), 6: (SMALL_DATA, small_data)},

@@ -15,7 +15,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dol import Dol  # noqa: E402
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
+)
 from lockstep_report import (  # noqa: E402
     EXIT_ALL_EXPLAINED,
     EXIT_NEEDS_A_PERSON,
@@ -31,8 +34,8 @@ from lockstep_report import (  # noqa: E402
     parse_fields,
     parse_log,
 )
+from ppc_encode import BLR, addi, b, bgt, bl, cmplwi, li  # noqa: E402
 from symbols import Symbol, SymbolTable  # noqa: E402
-from synthetic import BLR, addi, b, bgt, bl, build_dol, cmplwi, li  # noqa: E402
 
 # Four functions, one per shape of code the loop check has to tell apart.
 COUNTING_LOOP = 0x80003100  # a loop whose back-edge is the bgt at 0x8000310C
@@ -72,7 +75,7 @@ def dol(tmp_path) -> Dol:
         first = (start - COUNTING_LOOP) // 4
         words[first : first + len(function_words)] = function_words
     return Dol(
-        build_dol(tmp_path / "test.dol", text={0: (COUNTING_LOOP, words)}, data={}, entry=COUNTING_LOOP)
+        write_dol(tmp_path / "test.dol", text={0: (COUNTING_LOOP, words)}, data={}, entry=COUNTING_LOOP)
     )
 
 

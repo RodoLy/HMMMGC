@@ -10,10 +10,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dol import Dol  # noqa: E402
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
+)
 from export_dolrecomp_map import dolrecomp_map_lines  # noqa: E402
+from ppc_encode import BLR  # noqa: E402
 from symbols import Symbol, SymbolTable, section_name_for  # noqa: E402
-from synthetic import BLR, build_dol  # noqa: E402
 
 
 def make_table() -> SymbolTable:
@@ -108,7 +111,7 @@ def test_size_changes_of_named_symbols_are_reported():
 
 
 def test_section_names_cover_bss_and_refuse_unmapped_addresses(tmp_path):
-    path = build_dol(
+    path = write_dol(
         tmp_path / "test.dol",
         text={1: (0x80004000, [BLR])},
         data={6: (0x80005000, b"\0" * 8)},

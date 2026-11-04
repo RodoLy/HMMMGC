@@ -17,17 +17,18 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dol import Dol  # noqa: E402
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
+)
 from function_finder import FunctionFinder  # noqa: E402
-from synthetic import (  # noqa: E402
+from ppc_encode import (  # noqa: E402
     BCTR,
     BLR,
-    EMPTY_EXCEPTION_SECTIONS,
     addi,
     b,
     bgt,
     bl,
-    build_dol,
     cmplwi,
     high_adjusted,
     li,
@@ -41,6 +42,7 @@ from synthetic import (  # noqa: E402
     slwi,
     words_to_bytes,
 )
+from synthetic import EMPTY_EXCEPTION_SECTIONS  # noqa: E402
 
 INIT = 0x80003100
 TEXT = 0x80004000
@@ -150,7 +152,7 @@ def data_bytes() -> bytes:
 @pytest.fixture(scope="module")
 def finder(tmp_path_factory) -> FunctionFinder:
     init_code = [bl(INIT + 4 * index, target) for index, target in enumerate((F, G, H, I, J))] + [BLR]
-    path = build_dol(
+    path = write_dol(
         tmp_path_factory.mktemp("dol") / "switches.dol",
         text={0: (INIT, init_code), 1: (TEXT, text_words())},
         data={**EMPTY_EXCEPTION_SECTIONS, 4: (DATA, data_bytes())},
@@ -203,7 +205,7 @@ def test_nothing_is_rejected_or_overlapping(finder):
 def test_startup_table_without_terminator_does_not_crash(tmp_path):
     """A _rom_copy_info that runs into the end of .init must not read past it."""
     init_code = [BLR, INIT, INIT, 0x10]  # first copy entry, no terminator
-    path = build_dol(
+    path = write_dol(
         tmp_path / "startup.dol",
         text={0: (INIT, init_code)},
         data=EMPTY_EXCEPTION_SECTIONS,

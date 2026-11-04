@@ -10,8 +10,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dol import Dol  # noqa: E402
-from synthetic import BLR, build_dol, li  # noqa: E402
+from dol import (
+    Dol,  # noqa: E402
+    write_dol,  # noqa: E402
+)
+from ppc_encode import BLR, li  # noqa: E402
 
 TEXT_ADDRESS = 0x80003100
 DATA_ADDRESS = 0x80004000
@@ -22,7 +25,7 @@ STRING_DATA = b"Harvest Moon\0\0\0\0" + b"Short\0\0\0"
 
 @pytest.fixture
 def dol(tmp_path) -> Dol:
-    path = build_dol(
+    path = write_dol(
         tmp_path / "test.dol",
         text={0: (TEXT_ADDRESS, [li(3, 1), BLR])},
         data={0: (DATA_ADDRESS, STRING_DATA)},
