@@ -152,13 +152,16 @@ from symbols import SymbolTable  # noqa: E402
 # -- Where things go in the test program ------------------------------------------------
 
 CODE_ADDRESS = 0x80003100  # where the code of a DOL normally starts
+# The state table has a row of STATE_SIZE bytes for each group of cases, so it grows with the
+# program and has to end before SCRATCH_ADDRESS. The 4 MB in between hold about 6,400 rows, that
+# is 25,000 cases at the default of four per group. build_program checks that the table fits.
 STATE_TABLE_ADDRESS = 0x80400000  # one random machine state per group of cases
-SCRATCH_ADDRESS = 0x80500000  # random memory for the loads and stores to work on
+SCRATCH_ADDRESS = 0x80800000  # random memory for the loads and stores to work on
 SCRATCH_SIZE = 0x10100  # 64 KB, and a margin for lmw/stmw running past the last byte
 # Loads and stores get an address of SCRATCH_CENTER plus the game's own displacement,
 # a signed 16-bit number, so every address falls inside the first 64 KB.
 SCRATCH_CENTER = SCRATCH_ADDRESS + 0x8000
-DONE_ADDRESS = 0x80600000  # main writes DONE_VALUE here when every case has run
+DONE_ADDRESS = 0x80900000  # main writes DONE_VALUE here when every case has run
 DONE_VALUE = 0xD0D0CAFE
 # Before each group of cases, main writes the number of the group here. A program that hangs
 # stays at the last group it started, and the number says which cases to look at. (A case that
@@ -832,6 +835,41 @@ class Program:
         )
 
 
+@dataclass(frozen=True)
+class Section:
+    """A stretch of memory that the test program fills when it is loaded."""
+
+    name: str
+    address: int
+    size: int
+
+    @property
+    def end(self) -> int:
+        return self.address + self.size
+
+
+class SectionsOverlapError(ValueError):
+    """Two parts of the test program would be loaded on top of each other."""
+
+
+def check_that_sections_do_not_overlap(sections: list[Section]) -> None:
+    """Raise SectionsOverlapError if two of `sections` share a byte of memory.
+
+    The loader copies the sections one after the other, so the one copied last overwrites the
+    end of the one before. Nothing fails when that happens: a row of the state table that the
+    scratch memory covered just holds other numbers, and the cases that use it start from a
+    machine state nobody chose.
+    """
+    in_memory_order = sorted(sections, key=lambda section: section.address)
+    for section, following in zip(in_memory_order, in_memory_order[1:], strict=False):
+        if section.end > following.address:
+            raise SectionsOverlapError(
+                f"{section.name} (0x{section.address:08X} to 0x{section.end:08X}) runs into "
+                f"{following.name} (which starts at 0x{following.address:08X}): "
+                "use fewer --words-per-form or a larger --group-size"
+            )
+
+
 def choose_drafts(
     candidates: dict[str, list[Candidate]], words_per_form: int, rng: random.Random
 ) -> tuple[list[CaseDraft], dict[str, str]]:
@@ -937,11 +975,21 @@ def build_program(
     for words in case_words:
         text_words += words
 
+    state_table = b"".join(state_rows)
     scratch = bytes(rng.getrandbits(8) for _ in range(SCRATCH_SIZE))
+    control_words = bytes(CONTROL_SECTION_SIZE)
+    check_that_sections_do_not_overlap(
+        [
+            Section("the code", CODE_ADDRESS, INSTRUCTION_SIZE * len(text_words)),
+            Section("the state table", STATE_TABLE_ADDRESS, len(state_table)),
+            Section("the scratch memory", SCRATCH_ADDRESS, len(scratch)),
+            Section("the control words", DONE_ADDRESS, len(control_words)),
+        ]
+    )
     data_sections = {
-        0: (STATE_TABLE_ADDRESS, b"".join(state_rows)),
+        0: (STATE_TABLE_ADDRESS, state_table),
         1: (SCRATCH_ADDRESS, scratch),
-        2: (DONE_ADDRESS, bytes(CONTROL_SECTION_SIZE)),
+        2: (DONE_ADDRESS, control_words),
     }
     return Program(text_words, data_sections, cases, skipped, group_first_cases)
 
@@ -1062,7 +1110,11 @@ def command_generate(arguments: argparse.Namespace) -> int:
         candidates = synthetic_candidates_for_seed(arguments.seed)
     else:
         candidates = collect_candidates(Dol(arguments.dol), SymbolTable.read(arguments.symbols))
-    program = build_program(candidates, arguments.seed, arguments.words_per_form, arguments.group_size)
+    try:
+        program = build_program(candidates, arguments.seed, arguments.words_per_form, arguments.group_size)
+    except SectionsOverlapError as overlap:
+        print(f"error: {overlap}", file=sys.stderr)
+        return 1
     program.write(arguments.output)
     arguments.cases.write_text(format_cases(program.cases))
     forms = {case.form for case in program.cases}

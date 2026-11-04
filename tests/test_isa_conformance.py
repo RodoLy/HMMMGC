@@ -48,9 +48,13 @@ from isa_conformance import (  # noqa: E402
     Case,
     FloatState,
     FormResult,
+    Program,
+    Section,
+    SectionsOverlapError,
     Treatment,
     build_program,
     capstone_view,
+    check_that_sections_do_not_overlap,
     classify,
     clear_carry,
     collect_candidates,
@@ -1021,7 +1025,7 @@ def test_the_progress_code_writes_the_group_number_next_to_the_marker():
     assert [text_of(word) for word in progress_code(300)] == [
         "lis r0, 0",
         "ori r0, r0, 0x12c",  # 300
-        "lis r4, -0x7fa0",  # 0x8060
+        "lis r4, -0x7f70",  # 0x8090
         "stw r0, 4(r4)",  # the word after DONE_ADDRESS
     ]
     assert PROGRESS_ADDRESS == DONE_ADDRESS + 4
@@ -1086,6 +1090,60 @@ def test_the_program_is_a_dol_with_the_code_the_state_table_the_scratch_memory_a
     assert dol.u32(PROGRESS_ADDRESS) == 0  # and the number of the group it is running here
     assert dol.is_mapped(DONE_ADDRESS + CONTROL_SECTION_SIZE - 1)
     assert dol.entry == CODE_ADDRESS
+
+
+# -- The sections of the program stay apart ------------------------------------------------------
+
+
+def test_sections_that_are_apart_or_touch_are_accepted():
+    check_that_sections_do_not_overlap(
+        [
+            Section("the scratch memory", 0x80200000, 0x100),
+            Section("the code", 0x80000000, 0x1000),
+            Section("the state table", 0x80001000, 0x2000),  # starts where the code ends
+        ]
+    )
+
+
+def test_a_section_that_runs_into_the_next_one_is_refused_and_both_are_named():
+    sections = [Section("the state table", 0x80400000, 0x1001), Section("the scratch memory", 0x80401000, 8)]
+    message = "the state table.*0x80401001.*the scratch memory.*0x80401000"
+    with pytest.raises(SectionsOverlapError, match=message):
+        check_that_sections_do_not_overlap(sections)
+
+
+def test_a_section_inside_another_is_refused_wherever_it_is_in_the_list():
+    big = Section("the code", 0x80000000, 0x10000)
+    small = Section("the control words", 0x80008000, 8)
+    for sections in ([big, small], [small, big]):
+        with pytest.raises(SectionsOverlapError, match="the code.*the control words"):
+            check_that_sections_do_not_overlap(sections)
+
+
+def program_with_one_case_per_group(group_count: int) -> Program:
+    """A program of `group_count` cases of `add`, each in a group (and so a table row) of its own."""
+    candidates = {"add": [candidate(ADD)] * group_count}
+    return build_program(candidates, seed=1, words_per_form=group_count, group_size=1)
+
+
+def test_a_program_with_more_groups_than_the_first_layout_held_keeps_its_table_clear_of_the_scratch_memory():
+    # The state table used to have 1 MB before the scratch memory. A large synthetic run needs more,
+    # and the scratch memory (random bytes) was loaded over the last rows: the cases that used them
+    # started from a state nobody chose and differed from the interpreter in the bits XER and
+    # FPSCR reserve.
+    group_count = 1700  # 1,700 rows of STATE_SIZE bytes are 1,115,200 bytes
+    program = program_with_one_case_per_group(group_count)
+    table_address, table = program.data_sections[0]
+    scratch_address, _ = program.data_sections[1]
+    assert len(table) == group_count * STATE_SIZE > 0x100000
+    assert table_address == STATE_TABLE_ADDRESS
+    assert table_address + len(table) <= scratch_address == SCRATCH_ADDRESS
+
+
+def test_a_program_whose_table_does_not_fit_before_the_scratch_memory_is_refused():
+    group_count = (SCRATCH_ADDRESS - STATE_TABLE_ADDRESS) // STATE_SIZE + 1
+    with pytest.raises(SectionsOverlapError, match="the state table.*the scratch memory.*--group-size"):
+        program_with_one_case_per_group(group_count)
 
 
 # -- The list of cases -------------------------------------------------------------------------
@@ -1223,6 +1281,20 @@ def test_generate_with_synthetic_needs_no_game_and_uses_made_up_words(tmp_path, 
     assert main(["generate", "--synthetic", "--output", str(output), "--cases", str(cases)]) == 0
     assert {case.form for case in parse_cases(cases.read_text())} == {"add", "lwz"}
     assert "2 cases of 2 forms" in capsys.readouterr().out
+
+
+def test_generate_says_so_when_the_sections_would_overlap(tmp_path, monkeypatch, capsys):
+    group_count = (SCRATCH_ADDRESS - STATE_TABLE_ADDRESS) // STATE_SIZE + 1
+    monkeypatch.setattr(
+        "isa_conformance.synthetic_candidates_for_seed",
+        lambda seed: {"add": [Candidate(ADD, NO_GAME_ADDRESS)] * group_count},
+    )
+    output, cases = tmp_path / "main.dol", tmp_path / "cases.tsv"
+    arguments = ["generate", "--synthetic", "--output", str(output), "--cases", str(cases)]
+    arguments += ["--words-per-form", str(group_count), "--group-size", "1"]
+    assert main(arguments) == 1
+    assert "the state table" in capsys.readouterr().err
+    assert not output.exists()
 
 
 def test_a_path_that_is_not_a_file_is_refused_before_any_work(tmp_path):
