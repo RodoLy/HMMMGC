@@ -15,9 +15,11 @@ sin emulador y sin instalar nada.
 recompilan el juego en tu computadora, a partir de tu disco.
 
 > **Estado: experimental.** Las herramientas se compilan en Windows ARM64 y pasan ahí la prueba
-> de instrucciones contra el intérprete de Dolphin (ver [VALIDATION.md][validation]), pero este
-> paquete todavía no se ha probado con el juego real en una computadora de verdad. Si algo
-> falla, el registro `Logs\play.log` (ver más abajo) ayuda a saber por qué.
+> de instrucciones contra el intérprete de Dolphin (ver [VALIDATION.md][validation]). El paquete
+> se prueba en GitHub con un disco inventado: extrae el disco, recompila el juego, lo instala y
+> lo arranca sin pantalla, y se cierra bien. Todavía no se ha probado con el juego real en una
+> computadora de verdad (ni la ventana, la GPU, el control o el teclado). Si algo falla, el
+> registro `Logs\play.log` (ver más abajo) ayuda a saber por qué.
 
 ### Cómo usarlo
 
@@ -118,9 +120,11 @@ emulator and nothing to install.
 recompile the game on your computer, from your disc.
 
 > **Status: experimental.** The tools are built on Windows ARM64 and pass the instruction test
-> against Dolphin's interpreter there (see [VALIDATION.md][validation]), but this package has
-> not been tried with the real game on a real computer yet. If something fails, the log
-> `Logs\play.log` (see below) helps to find out why.
+> against Dolphin's interpreter there (see [VALIDATION.md][validation]). The package is tested
+> on GitHub with a made-up disc: it extracts the disc, recompiles the game, installs it and
+> starts it with nothing drawn, and it closes properly. It has not been tried with the real game
+> on a real computer yet (nor the window, the GPU, the controller or the keyboard). If something
+> fails, the log `Logs\play.log` (see below) helps to find out why.
 
 ### How to use it
 
