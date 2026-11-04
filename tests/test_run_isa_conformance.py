@@ -16,7 +16,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 import run_isa_conformance  # noqa: E402
-from isa_conformance import DONE_VALUE, Case, Evaluation, FormResult  # noqa: E402
+import synthetic_disc  # noqa: E402
+from dol import write_dol  # noqa: E402
+from isa_conformance import DONE_VALUE, Candidate, Case, Evaluation, FormResult  # noqa: E402
+from ppc_encode import BLR  # noqa: E402
 from run_isa_conformance import (  # noqa: E402
     ModernGekkoTools,
     SeedOutcome,
@@ -43,13 +46,14 @@ FAKE_PORT = """
 
     command, game_root, *options = sys.argv[1:]
     output = Path(options[options.index("--output") + 1])
-    if "FAIL_THE_BUILD" in Path(game_root, "sys", "main.dol").read_text():
+    if b"FAIL_THE_BUILD" in Path(game_root, "sys", "main.dol").read_bytes():
         print("compiler: error: something broke")
         sys.exit(1)
-    module = output / "G4AEE9" / "0123abcd"
+    game_id = Path(game_root, "sys", "boot.bin").read_bytes()[:6].decode()
+    module = output / game_id / "0123abcd"
     (module / "module-build").mkdir(parents=True)
-    (module / "gG4AEE9_recomp.so").write_text("the module")
-    (module / "module-build" / "gG4AEE9_recomp.so").write_text("an intermediate copy")
+    (module / f"g{game_id}_recomp.so").write_text("the module")
+    (module / "module-build" / f"g{game_id}_recomp.so").write_text("an intermediate copy")
 """
 
 # What the real runner does that the orchestrator relies on: it writes `state=running` into
@@ -85,6 +89,11 @@ FAKE_RUNNER = """
 FINISHED = DONE_VALUE.to_bytes(4, "big").hex()
 NOT_FINISHED = "00000000"
 
+# Two made-up forms with one word each, to keep the tests of a synthetic run quick.
+ADD_R3_R4_R5 = 0x7C642A14
+LWZ_R3_8_R4 = 0x80640008  # lwz r3, 8(r4)
+MADE_UP_WORDS = {"add": [Candidate(ADD_R3_R4_R5, 0)], "lwz": [Candidate(LWZ_R3_8_R4, 0)]}
+
 
 @pytest.fixture(autouse=True)
 def quick_polling_and_a_screen(monkeypatch):
@@ -96,8 +105,10 @@ def quick_polling_and_a_screen(monkeypatch):
 def disc(tmp_path) -> Path:
     sys_directory = tmp_path / "disc" / "sys"
     sys_directory.mkdir(parents=True)
-    for name in ("apploader.img", "bi2.bin", "boot.bin", "main.dol"):
+    for name in ("apploader.img", "bi2.bin", "main.dol"):
         (sys_directory / name).write_text(f"the disc's {name}")
+    # A real disc header starts with the game's ID, and the fake `moderngekko-port` reads it.
+    (sys_directory / "boot.bin").write_bytes(b"G4AEE9 the disc's boot.bin")
     return tmp_path / "disc"
 
 
@@ -129,8 +140,8 @@ def test_the_game_folder_holds_the_discs_boot_files_and_the_test_program_as_main
     program = tmp_path / "program.dol"
     program.write_text("the test program")
     game_root = tmp_path / "game"
-    make_game_root(disc, program, game_root)
-    assert (game_root / "sys" / "boot.bin").read_text() == "the disc's boot.bin"
+    make_game_root(program, game_root, disc)
+    assert (game_root / "sys" / "boot.bin").read_bytes() == (disc / "sys" / "boot.bin").read_bytes()
     assert (game_root / "sys" / "main.dol").read_text() == "the test program"  # not the game's
     assert (game_root / "files").is_dir()
 
@@ -138,7 +149,23 @@ def test_the_game_folder_holds_the_discs_boot_files_and_the_test_program_as_main
 def test_a_disc_without_its_boot_files_says_how_to_get_them(tmp_path):
     (tmp_path / "empty-disc" / "sys").mkdir(parents=True)
     with pytest.raises(SetupError, match=r"apploader.img not found.*extract_disc"):
-        make_game_root(tmp_path / "empty-disc", tmp_path / "program.dol", tmp_path / "game")
+        make_game_root(tmp_path / "program.dol", tmp_path / "game", tmp_path / "empty-disc")
+
+
+def test_without_a_disc_the_game_folder_holds_made_up_boot_files_and_the_test_program(tmp_path):
+    program = write_dol(tmp_path / "program.dol", text={0: (0x80003100, [BLR])}, data={}, entry=0x80003100)
+    game_root = tmp_path / "game"
+    make_game_root(program, game_root)
+    sys_directory = game_root / "sys"
+    assert sorted(path.name for path in sys_directory.iterdir()) == [
+        "apploader.img",
+        "bi2.bin",
+        "boot.bin",
+        "main.dol",
+    ]
+    assert (sys_directory / "boot.bin").read_bytes().startswith(synthetic_disc.GAME_ID.encode())
+    assert (sys_directory / "main.dol").read_bytes() == program.read_bytes()
+    assert (game_root / "files").is_dir()
 
 
 # -- Recompiling -------------------------------------------------------------------------------
@@ -147,15 +174,23 @@ def test_a_disc_without_its_boot_files_says_how_to_get_them(tmp_path):
 def test_the_recompiled_module_is_the_library_not_a_file_inside_the_build_folder(tools, disc, tmp_path):
     program = tmp_path / "program.dol"
     program.write_text("the test program")
-    make_game_root(disc, program, tmp_path / "game")
+    make_game_root(program, tmp_path / "game", disc)
     module = recompile(tools, tmp_path / "game", tmp_path / "module", "gcc")
     assert module == tmp_path / "module" / "G4AEE9" / "0123abcd" / "gG4AEE9_recomp.so"
+
+
+def test_the_module_of_the_made_up_game_is_found_under_its_own_id(tools, tmp_path):
+    program = write_dol(tmp_path / "program.dol", text={0: (0x80003100, [BLR])}, data={}, entry=0x80003100)
+    make_game_root(program, tmp_path / "game")
+    game_id = synthetic_disc.GAME_ID
+    module = recompile(tools, tmp_path / "game", tmp_path / "module", "gcc", game_id)
+    assert module == tmp_path / "module" / game_id / "0123abcd" / f"g{game_id}_recomp.so"
 
 
 def test_a_failed_build_shows_the_end_of_its_log(tools, disc, tmp_path):
     program = tmp_path / "program.dol"
     program.write_text("FAIL_THE_BUILD")
-    make_game_root(disc, program, tmp_path / "game")
+    make_game_root(program, tmp_path / "game", disc)
     with pytest.raises(SetupError, match=r"compiler: error: something broke"):
         recompile(tools, tmp_path / "game", tmp_path / "module", "gcc")
 
@@ -278,6 +313,45 @@ def test_the_self_check_fails_otherwise(reported, capsys):
 # -- Command line ------------------------------------------------------------------------------
 
 
+def synthetic_arguments(tmp_path, *more: str) -> list[str]:
+    """The command line of a synthetic run that uses the fake tools, which the `tools` fixture made."""
+    return [
+        "--synthetic",
+        *("--template", str(tmp_path / "template")),
+        *("--work-directory", str(tmp_path / "work")),
+        *("--toolchain", "gcc"),
+        *more,
+    ]
+
+
 def test_a_missing_template_is_a_clear_error_and_exit_code_two(tmp_path, capsys):
     assert main(["--template", str(tmp_path / "missing")]) == 2
     assert "moderngekko-port not found" in capsys.readouterr().err
+
+
+def test_a_synthetic_run_needs_neither_the_disc_nor_the_symbols(tools, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    no_such_disc, no_such_symbols = tmp_path / "no-disc", tmp_path / "no-symbols.txt"
+    arguments = synthetic_arguments(tmp_path, "--disc", str(no_such_disc), "--symbols", str(no_such_symbols))
+    assert main(arguments) == 0
+    assert "seed 1: 2 cases of 2 forms" in capsys.readouterr().out
+
+
+def test_a_synthetic_run_makes_up_its_words_again_for_each_seed(tools, tmp_path, monkeypatch, capsys):
+    seeds_asked_for = []
+
+    def words_of(seed):
+        seeds_asked_for.append(seed)
+        return MADE_UP_WORDS
+
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", words_of)
+    assert main(synthetic_arguments(tmp_path, "--seeds", "4", "9")) == 0
+    assert seeds_asked_for == [4, 9]
+
+
+def test_a_fault_in_a_form_that_the_program_does_not_have_is_a_setup_error(
+    tools, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    assert main(synthetic_arguments(tmp_path, "--inject-fault", "fmadds")) == 2
+    assert "the test program has no case of form 'fmadds'" in capsys.readouterr().err

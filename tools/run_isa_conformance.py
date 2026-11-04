@@ -16,6 +16,11 @@ Nothing of the game's code runs: the test program takes the place of `main.dol`.
 folder only supplies the three small files of `sys/` that ModernGekko needs to recognise the
 game. The runner must be built with patches/moderngekko/lockstep-verifier.patch.
 
+With `--synthetic` the test program is made of instruction words that the tool makes up, one
+set for every form of the architecture and not only the forms the game uses, and the three
+files of `sys/` are made up too. That run needs no game and no disc, so a machine that only
+has the source code (a continuous-integration runner, a contributor's laptop) can do it.
+
 Un comando hace lo que describe docs/VALIDATION.md. Por cada semilla (1) arma un programa de
 prueba (un DOL) con las instrucciones del propio juego, (2) lo recompila con
 `moderngekko-port`, el mismo recompilador por el que pasa el juego, (3) lo ejecuta con
@@ -27,10 +32,17 @@ Del juego no se ejecuta nada: el programa de prueba ocupa el lugar de `main.dol`
 del disco solo aporta los tres archivos pequeños de `sys/` con los que ModernGekko reconoce el
 juego. El runner debe estar compilado con patches/moderngekko/lockstep-verifier.patch.
 
+Con `--synthetic` el programa de prueba se arma con palabras de instrucción que la herramienta
+inventa, un conjunto por cada forma de la arquitectura y no solo las que usa el juego, y los
+tres archivos de `sys/` también son inventados. Esa corrida no necesita el juego ni el disco,
+así que la puede hacer una máquina que solo tenga el código fuente (un servidor de integración
+continua, la laptop de quien contribuye).
+
 Usage / Uso:
     python3 tools/run_isa_conformance.py                       # one seed, the default sample
     python3 tools/run_isa_conformance.py --seeds 1 2 3 4 5     # more random states
     python3 tools/run_isa_conformance.py --inject-fault lwz    # self-check: must report 1 case
+    python3 tools/run_isa_conformance.py --synthetic           # every form, with no game at all
 """
 
 import argparse
@@ -46,6 +58,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import synthetic_disc  # noqa: E402
 from dol import Dol  # noqa: E402
 from isa_conformance import (  # noqa: E402
     DONE_ADDRESS,
@@ -58,6 +71,7 @@ from isa_conformance import (  # noqa: E402
     collect_candidates,
     evaluate,
     format_cases,
+    synthetic_candidates_for_seed,
 )
 from moderngekko_automation import AutomationClient  # noqa: E402
 from project import BUILD_DIRECTORY, DISC_DIRECTORY, GAME_ID, SYMBOLS_PATH  # noqa: E402
@@ -102,20 +116,29 @@ class ModernGekkoTools:
         return tools
 
 
-def make_game_root(disc_directory: Path, program: Path, game_root: Path) -> None:
-    """A game folder that ModernGekko takes for the real one, with the test program as main.dol."""
+def make_game_root(program: Path, game_root: Path, disc_directory: Path | None = None) -> None:
+    """A game folder that ModernGekko takes for a game, with the test program as main.dol.
+
+    With a disc, the folder holds that disc's boot files and ModernGekko takes it for the real
+    game. Without one, the boot files are made up, and the folder is a game that does not exist.
+    """
     sys_directory = game_root / "sys"
     sys_directory.mkdir(parents=True, exist_ok=True)
     (game_root / "files").mkdir(exist_ok=True)
-    for name in DISC_FILES_TO_COPY:
-        source = disc_directory / "sys" / name
-        if not source.is_file():
-            raise SetupError(f"{source} not found. Extract the disc first: tools/extract_disc.py.")
-        shutil.copy2(source, sys_directory / name)
+    if disc_directory is None:
+        synthetic_disc.write_system_files(sys_directory, program)
+    else:
+        for name in DISC_FILES_TO_COPY:
+            source = disc_directory / "sys" / name
+            if not source.is_file():
+                raise SetupError(f"{source} not found. Extract the disc first: tools/extract_disc.py.")
+            shutil.copy2(source, sys_directory / name)
     shutil.copy2(program, sys_directory / "main.dol")
 
 
-def recompile(tools: ModernGekkoTools, game_root: Path, output_directory: Path, toolchain: str) -> Path:
+def recompile(
+    tools: ModernGekkoTools, game_root: Path, output_directory: Path, toolchain: str, game_id: str = GAME_ID
+) -> Path:
     """Run `moderngekko-port build` and return the recompiled module."""
     shutil.rmtree(output_directory, ignore_errors=True)
     log_path = output_directory.parent / f"{output_directory.name}.log"
@@ -133,7 +156,7 @@ def recompile(tools: ModernGekkoTools, game_root: Path, output_directory: Path, 
     if completed.returncode != 0:
         tail = "\n".join(log_path.read_text(errors="replace").splitlines()[-15:])
         raise SetupError(f"moderngekko-port build failed (full log: {log_path}):\n{tail}")
-    modules = sorted((output_directory / GAME_ID).glob("*/g*_recomp.*"))
+    modules = sorted((output_directory / game_id).glob("*/g*_recomp.*"))
     modules = [module for module in modules if module.suffix in (".so", ".dll", ".dylib")]
     if not modules:
         raise SetupError(f"moderngekko-port build left no module under {output_directory}")
@@ -274,24 +297,33 @@ def run_seed(
     seed: int,
     arguments: argparse.Namespace,
     tools: ModernGekkoTools,
-    candidates: dict[str, list[Candidate]],
+    game_words: dict[str, list[Candidate]],
 ) -> SeedOutcome:
+    """One run, with the words of the game (`game_words`) or, with --synthetic, with made-up ones."""
     seed_directory = arguments.work_directory / f"seed_{seed}"
     seed_directory.mkdir(parents=True, exist_ok=True)
+    if arguments.synthetic:
+        candidates = synthetic_candidates_for_seed(seed)
+        disc_directory, game_id = None, synthetic_disc.GAME_ID
+    else:
+        candidates, disc_directory, game_id = game_words, arguments.disc, GAME_ID
     program = build_program(candidates, seed, arguments.words_per_form, arguments.group_size)
     program_path = program.write(seed_directory / "program.dol")
     (seed_directory / "cases.tsv").write_text(format_cases(program.cases))
     print(f"seed {seed}: {len(program.cases):,} cases of {len({case.form for case in program.cases})} forms")
 
-    game_root = seed_directory / "game"
-    make_game_root(arguments.disc, program_path, game_root)
-    print(f"seed {seed}: recompiling the test program ...", flush=True)
-    module = recompile(tools, game_root, seed_directory / "module", arguments.toolchain)
-
     extra_environment = {}
     if arguments.inject_fault:
-        faulty_case = next(case for case in program.cases if case.form == arguments.inject_fault)
+        faulty_case = next((case for case in program.cases if case.form == arguments.inject_fault), None)
+        if faulty_case is None:
+            raise SetupError(f"seed {seed}: the test program has no case of form {arguments.inject_fault!r}")
         extra_environment["STATICRECOMP_LOCKSTEP_INJECT_FAULT"] = f"0x{faulty_case.address:08X}"
+
+    game_root = seed_directory / "game"
+    make_game_root(program_path, game_root, disc_directory)
+    print(f"seed {seed}: recompiling the test program ...", flush=True)
+    module = recompile(tools, game_root, seed_directory / "module", arguments.toolchain, game_id)
+
     print(f"seed {seed}: running under the lockstep verifier ...", flush=True)
     files = run_under_the_verifier(
         tools, game_root, module, seed_directory / "run", arguments.timeout, extra_environment
@@ -337,6 +369,11 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         type=Path,
         default=Path(os.environ.get("MODERNGEKKO_TEMPLATE", DEFAULT_TEMPLATE_DIRECTORY)),
         help="where ModernGekko-Template is built (default: $MODERNGEKKO_TEMPLATE or ~/ModernGekko-Template)",
+    )
+    parser.add_argument(
+        "--synthetic",
+        action="store_true",
+        help="make up the instruction words and the disc's boot files: needs no game and no disc",
     )
     parser.add_argument(
         "--disc", type=Path, default=DISC_DIRECTORY, help=f"the extracted disc (default: {DISC_DIRECTORY})"
@@ -386,12 +423,15 @@ def main(argv: list[str] | None = None) -> int:
     arguments = parse_arguments(argv)
     try:
         tools = ModernGekkoTools.in_template(arguments.template)
-        candidates = collect_candidates(
-            Dol(arguments.disc / "sys" / "main.dol"), SymbolTable.read(arguments.symbols)
+        # The words of the game; a --synthetic run makes up its own, a different set for each seed.
+        game_words = (
+            {}
+            if arguments.synthetic
+            else collect_candidates(
+                Dol(arguments.disc / "sys" / "main.dol"), SymbolTable.read(arguments.symbols)
+            )
         )
-        if arguments.inject_fault and arguments.inject_fault not in candidates:
-            raise SetupError(f"the game has no instruction form called {arguments.inject_fault!r}")
-        outcomes = [run_seed(seed, arguments, tools, candidates) for seed in arguments.seeds]
+        outcomes = [run_seed(seed, arguments, tools, game_words) for seed in arguments.seeds]
     except SetupError as problem:
         print(f"error: {problem}", file=sys.stderr)
         return 2
