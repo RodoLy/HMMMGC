@@ -181,6 +181,18 @@ def test_the_game_id_is_six_letters_or_digits_and_says_gamecube_and_usa():
     assert game_id[3] == "E"  # the USA, which is what the video mode and the region follow
 
 
+def test_the_disc_header_can_claim_any_game_id():
+    header = boot_bin("G4AEE9")
+    assert header[:6] == b"G4AEE9"
+    assert header[6:] == boot_bin()[6:]  # nothing else changes
+
+
+@pytest.mark.parametrize("game_id", ["G4AEE", "G4AEE9X", "", "G4ÄEE9"])
+def test_a_game_id_that_is_not_six_ascii_characters_is_refused(game_id):
+    with pytest.raises(ValueError, match="six|6 ASCII|ASCII characters"):
+        boot_bin(game_id)
+
+
 def test_the_second_header_gives_the_memory_size_and_the_region():
     header = bi2_bin()
     assert len(header) == BI2_BIN_SIZE
@@ -306,3 +318,10 @@ def test_a_program_with_nothing_to_copy_has_a_table_that_ends_at_once():
     machine = Machine()
     machine.load_words(APPLOADER_LOAD_ADDRESS, apploader_code(CODE_ADDRESS, []))
     assert copies_requested(machine, apploader_code_functions(machine)["main"]) == []
+
+
+def test_the_files_can_be_written_for_a_disc_that_claims_another_game_id(tmp_path, program_path):
+    sys_directory = tmp_path / "sys"
+    sys_directory.mkdir()
+    write_system_files(sys_directory, program_path, "G4AEE9")
+    assert (sys_directory / "boot.bin").read_bytes() == boot_bin("G4AEE9")

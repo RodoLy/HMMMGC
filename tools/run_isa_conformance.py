@@ -151,17 +151,23 @@ class ModernGekkoTools:
         return tools
 
 
-def make_game_root(program: Path, game_root: Path, disc_directory: Path | None = None) -> None:
+def make_game_root(
+    program: Path,
+    game_root: Path,
+    disc_directory: Path | None = None,
+    made_up_game_id: str = synthetic_disc.GAME_ID,
+) -> None:
     """A game folder that ModernGekko takes for a game, with the test program as main.dol.
 
     With a disc, the folder holds that disc's boot files and ModernGekko takes it for the real
-    game. Without one, the boot files are made up, and the folder is a game that does not exist.
+    game. Without one, the boot files are made up, and the folder is a game that does not exist,
+    whose ID is `made_up_game_id`.
     """
     sys_directory = game_root / "sys"
     sys_directory.mkdir(parents=True, exist_ok=True)
     (game_root / "files").mkdir(exist_ok=True)
     if disc_directory is None:
-        synthetic_disc.write_system_files(sys_directory, program)
+        synthetic_disc.write_system_files(sys_directory, program, made_up_game_id)
     else:
         for name in DISC_FILES_TO_COPY:
             source = disc_directory / "sys" / name
@@ -400,7 +406,7 @@ def run_seed(
     seed_directory.mkdir(parents=True, exist_ok=True)
     if arguments.synthetic:
         candidates = synthetic_candidates_for_seed(seed)
-        disc_directory, game_id = None, synthetic_disc.GAME_ID
+        disc_directory, game_id = None, arguments.synthetic_game_id
     else:
         candidates, disc_directory, game_id = game_words, arguments.disc, GAME_ID
     try:
@@ -419,7 +425,7 @@ def run_seed(
         extra_environment["STATICRECOMP_LOCKSTEP_INJECT_FAULT"] = f"0x{faulty_case.address:08X}"
 
     game_root = seed_directory / "game"
-    make_game_root(program_path, game_root, disc_directory)
+    make_game_root(program_path, game_root, disc_directory, game_id)
     print(f"seed {seed}: recompiling the test program ...", flush=True)
     module = recompile(tools, game_root, seed_directory / "module", arguments.toolchain, game_id)
 
@@ -474,6 +480,15 @@ def format_summary(outcomes: list[SeedOutcome]) -> str:
 # -- Command line ------------------------------------------------------------------------------
 
 
+def six_character_game_id(text: str) -> str:
+    """A game ID as argparse takes it: six ASCII characters, such as G4AEE9."""
+    if len(text) != synthetic_disc.GAME_ID_LENGTH or not text.isascii():
+        raise argparse.ArgumentTypeError(
+            f"a game ID is {synthetic_disc.GAME_ID_LENGTH} ASCII characters, not {text!r}"
+        )
+    return text
+
+
 def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     where_the_tools_are = parser.add_mutually_exclusive_group()
@@ -493,6 +508,13 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         "--synthetic",
         action="store_true",
         help="make up the instruction words and the disc's boot files: needs no game and no disc",
+    )
+    parser.add_argument(
+        "--synthetic-game-id",
+        default=synthetic_disc.GAME_ID,
+        type=six_character_game_id,
+        help="with --synthetic, the ID the made-up disc has, for a ModernGekko that is tied to one "
+        f"game and refuses any other (default: {synthetic_disc.GAME_ID})",
     )
     parser.add_argument(
         "--disc", type=Path, default=DISC_DIRECTORY, help=f"the extracted disc (default: {DISC_DIRECTORY})"

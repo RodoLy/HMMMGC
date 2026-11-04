@@ -54,8 +54,10 @@ from ppc_encode import BLR, addi, lis, lwz, neg, or_, ori, srwi, stw  # noqa: E4
 
 # The ID names the module that the recompiler leaves behind, and its fourth letter picks the
 # video mode: G is for a GameCube game, IS is for the instruction set, E is for the USA, and the
-# publisher is left as 00.
+# publisher is left as 00. A build of ModernGekko that is tied to one game accepts only that
+# game's ID, and then the made-up disc has to claim to be that game: see `game_id` below.
 GAME_ID = "GISE00"
+GAME_ID_LENGTH = len(GAME_ID)
 GAME_NAME = b"Instruction set conformance test"
 BOOT_BIN_SIZE = 0x440
 DISC_MAGIC = 0xC2339F3D  # marks the header of a GameCube disc
@@ -103,10 +105,12 @@ def align_up(value: int, alignment: int) -> int:
     return (value + alignment - 1) // alignment * alignment
 
 
-def boot_bin() -> bytes:
-    """The disc header of a game that does not exist."""
+def boot_bin(game_id: str = GAME_ID) -> bytes:
+    """The disc header of a game that does not exist, which says it has the ID `game_id`."""
+    if len(game_id) != GAME_ID_LENGTH or not game_id.isascii():
+        raise ValueError(f"a game ID is {GAME_ID_LENGTH} ASCII characters, not {game_id!r}")
     header = bytearray(BOOT_BIN_SIZE)
-    header[: len(GAME_ID)] = GAME_ID.encode("ascii")
+    header[:GAME_ID_LENGTH] = game_id.encode("ascii")
     struct.pack_into(">I", header, DISC_MAGIC_OFFSET, DISC_MAGIC)
     header[GAME_NAME_OFFSET : GAME_NAME_OFFSET + len(GAME_NAME)] = GAME_NAME
     return bytes(header)
@@ -238,8 +242,8 @@ def apploader_img(program: Dol) -> bytes:
     return bytes(header) + struct.pack(f">{len(code)}I", *code)
 
 
-def write_system_files(sys_directory: Path, program_path: Path) -> None:
+def write_system_files(sys_directory: Path, program_path: Path, game_id: str = GAME_ID) -> None:
     """Write boot.bin, bi2.bin and apploader.img for a disc whose main.dol is the DOL at `program_path`."""
-    (sys_directory / "boot.bin").write_bytes(boot_bin())
+    (sys_directory / "boot.bin").write_bytes(boot_bin(game_id))
     (sys_directory / "bi2.bin").write_bytes(bi2_bin())
     (sys_directory / "apploader.img").write_bytes(apploader_img(Dol(program_path)))

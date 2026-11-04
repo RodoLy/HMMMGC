@@ -562,6 +562,23 @@ def test_a_missing_template_is_a_clear_error_and_exit_code_two(tmp_path, capsys)
     assert "moderngekko-port not found" in capsys.readouterr().err
 
 
+def test_a_synthetic_run_can_claim_the_id_of_the_one_game_a_build_accepts(
+    tools, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
+    assert main(synthetic_arguments(tmp_path, "--synthetic-game-id", "G4AEE9")) == 0
+    seed_directory = tmp_path / "work" / "seed_1"
+    assert (seed_directory / "game" / "sys" / "boot.bin").read_bytes().startswith(b"G4AEE9")
+    assert list((seed_directory / "module" / "G4AEE9").glob("*/gG4AEE9_recomp.*"))
+
+
+def test_a_synthetic_game_id_that_is_not_six_characters_is_refused(tmp_path, capsys):
+    with pytest.raises(SystemExit) as refusal:
+        main(["--synthetic", "--synthetic-game-id", "G4AEE", "--template", str(tmp_path)])
+    assert refusal.value.code == 2
+    assert "a game ID is 6 ASCII characters" in capsys.readouterr().err
+
+
 def test_a_synthetic_run_needs_neither_the_disc_nor_the_symbols(tools, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(run_isa_conformance, "synthetic_candidates_for_seed", lambda seed: MADE_UP_WORDS)
     no_such_disc, no_such_symbols = tmp_path / "no-disc", tmp_path / "no-symbols.txt"
