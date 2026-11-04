@@ -254,6 +254,16 @@ jobs:
             --words-per-form 8
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Most computers have long paths turned off, and the first step of this job turned them on so
+      # that the programs could be built. What follows makes long paths (the recompiled module sits
+      # in folders named after hashes), so it runs the way it would on a player's computer.
+      - name: Turn long paths off again, as they are on most computers
+        shell: pwsh
+        run: |
+          $filesystem = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
+          Set-ItemProperty -Path $filesystem -Name LongPathsEnabled -Value 0
+          Write-Host "LongPathsEnabled: $((Get-ItemProperty -Path $filesystem).LongPathsEnabled)"
+
       # What a player does, from the disc image on: Windows PowerShell 5.1, which is the one every
       # Windows has, runs play.ps1 on a disc image of the made-up game that the test above left. It
       # extracts it, recompiles it and installs the module. Run a second time, it must find
@@ -317,6 +327,11 @@ jobs:
                   if ($exitCode -ne 0) { $problems += "play.ps1 failed in run $run (exit code $exitCode)" }
               }
           }
+          # Windows stops at 260 characters in a path: this is how long the longest one that play.ps1
+          # made is.
+          $longestPath = Get-ChildItem -LiteralPath $userFolder -Recurse -Force -ErrorAction SilentlyContinue |
+              ForEach-Object { $_.FullName.Length } | Measure-Object -Maximum
+          Write-Host "The longest path made in $userFolder has $($longestPath.Maximum) characters"
           foreach ($expected in $extractedProgram, 'StaticRecompModules\gG4AEE9_recomp.dll', 'Logs\play.log') {
               $path = Join-Path $userFolder $expected
               Write-Host "${expected}: $(Test-Path -LiteralPath $path)"
@@ -324,9 +339,31 @@ jobs:
           }
           if ($problems) { $problems | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
 
+      # What the launcher does when the player presses Play: it starts the runner with the extracted
+      # game and the player's folder, and the runner finds the module that play.ps1 installed. Nothing
+      # is drawn. Only the folders of Windows are on the path, as on a player's computer, so the module
+      # must not need anything of the compiler that built it. It needs the play test to have succeeded.
+      - name: Test that the installed game starts and closes
+        id: start
+        if: steps.play.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:TEST_PACKAGE_DIRECTORY 'HarvestMoonMM-windows-arm64'
+          $userFolder = Join-Path $env:LOCALAPPDATA 'HarvestMoonMM'
+          $runnerPython = (Get-Command python).Source
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          & $runnerPython tools/check_installed_game.py `
+            --runner (Join-Path $package 'bin\moderngekko-run.exe') `
+            --game (Join-Path $userFolder 'games\G4AEE9') `
+            --user-dir $userFolder `
+            --work-directory (Join-Path $env:TEST_WORK_DIRECTORY 'installed_game')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       # The logs of a failure are worth reading at once; the same files are kept as an artifact.
       - name: Show the end of the logs if a test failed
-        if: failure() || steps.programs.outcome == 'failure' || steps.conformance.outcome == 'failure' || steps.play.outcome == 'failure'
+        if: failure() || steps.programs.outcome == 'failure' || steps.conformance.outcome == 'failure' || steps.play.outcome == 'failure' || steps.start.outcome == 'failure'
         shell: pwsh
         run: |
           $logs = @(Join-Path $env:LOCALAPPDATA 'HarvestMoonMM\Logs\play.log')
@@ -345,8 +382,9 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force C:\logs\play, C:\logs\conformance | Out-Null
+          New-Item -ItemType Directory -Force C:\logs\play, C:\logs\conformance, C:\logs\installed_game | Out-Null
           Copy-Item (Join-Path $env:LOCALAPPDATA 'HarvestMoonMM\Logs\*') C:\logs\play -ErrorAction SilentlyContinue
+          Copy-Item (Join-Path $env:TEST_WORK_DIRECTORY 'installed_game\game.log') C:\logs\installed_game -ErrorAction SilentlyContinue
           $files = Get-ChildItem $env:TEST_WORK_DIRECTORY -Include report.txt, cases.tsv, module.log, game.log -Recurse -File `
               -ErrorAction SilentlyContinue
           foreach ($file in $files) {
@@ -382,6 +420,7 @@ jobs:
           PROGRAMS_TEST: ${{ steps.programs.outcome }}
           CONFORMANCE_TEST: ${{ steps.conformance.outcome }}
           PLAY_TEST: ${{ steps.play.outcome }}
+          START_TEST: ${{ steps.start.outcome }}
         run: |
-          echo "programs: $PROGRAMS_TEST, instruction-level test: $CONFORMANCE_TEST, play.ps1: $PLAY_TEST"
-          [[ "$PROGRAMS_TEST" == success && "$CONFORMANCE_TEST" == success && "$PLAY_TEST" == success ]]
+          echo "programs: $PROGRAMS_TEST, instruction-level test: $CONFORMANCE_TEST, play.ps1: $PLAY_TEST, installed game: $START_TEST"
+          [[ "$PROGRAMS_TEST" == success && "$CONFORMANCE_TEST" == success && "$PLAY_TEST" == success && "$START_TEST" == success ]]

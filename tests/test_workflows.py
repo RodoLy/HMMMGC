@@ -165,6 +165,7 @@ def test_the_workflow_tests_the_game_that_the_package_plays(package_workflow_tex
     assert re.findall(r"games\\(\w{6})\\sys", package_workflow_text) == [game_id]
     assert re.findall(r"\bg(\w{6})_recomp\.dll", package_workflow_text) == [game_id]
     assert re.findall(r"C:\\disc\\(\w{6})\.gcm", package_workflow_text) == [game_id] * 2
+    assert re.findall(r"games\\(\w{6})'", package_workflow_text) == [game_id]  # the game that is started
 
 
 def test_the_workflow_builds_with_the_branding_of_the_package(package_workflow_text):
@@ -223,12 +224,54 @@ def test_the_second_run_of_the_play_script_only_happens_if_the_first_left_the_ex
     assert script.index("run 2 skipped") < script.index("Invoke-PlayScript -ArgumentLine")
 
 
+def steps_by_id() -> dict[str, dict]:
+    return {step.get("id"): step for _, step, _ in workflow_steps(PACKAGE_WORKFLOW) if step.get("id")}
+
+
 def test_a_failed_test_does_not_stop_the_other_tests_but_does_fail_the_run():
-    steps = {step.get("id"): step for _, step, _ in workflow_steps(PACKAGE_WORKFLOW) if step.get("id")}
-    tests = [steps["programs"], steps["conformance"], steps["play"]]
+    steps = steps_by_id()
+    tests = [steps["programs"], steps["conformance"], steps["play"], steps["start"]]
     assert all(step.get("continue-on-error") is True for step in tests)
     assert all(step.get("timeout-minutes") for step in tests)  # a hung test must not use up the whole run
     last_step = list(workflow_steps(PACKAGE_WORKFLOW))[-1][1]
     assert last_step["if"] == "always()"
-    for test_id in ("programs", "conformance", "play"):
+    for test_id in ("programs", "conformance", "play", "start"):
         assert f"steps.{test_id}.outcome" in str(last_step["env"])
+        assert f"steps.{test_id}.outcome == 'failure'" in str(steps_by_name()[LOGS_STEP]["if"])
+
+
+LOGS_STEP = "Show the end of the logs if a test failed"
+LONG_PATHS_STEP = "Turn long paths off again, as they are on most computers"
+
+
+def steps_by_name() -> dict[str, dict]:
+    return {step["name"]: step for _, step, _ in workflow_steps(PACKAGE_WORKFLOW) if "name" in step}
+
+
+def test_long_paths_are_turned_off_after_the_programs_are_built_and_before_the_play_test():
+    # The programs are built with long paths turned on, but most computers have them off, and the
+    # recompiled module makes paths that are long enough to show the difference.
+    names = list(steps_by_name())
+    assert names.index("Build the launcher, the runner, DolRecomp and moderngekko-port") < names.index(
+        LONG_PATHS_STEP
+    )
+    assert names.index(LONG_PATHS_STEP) < names.index("Test play.ps1 with a made-up disc image")
+    assert "LongPathsEnabled -Value 0" in steps_by_name()[LONG_PATHS_STEP]["run"]
+
+
+def test_the_installed_game_is_started_only_if_it_was_installed_and_with_only_windows_on_the_path():
+    start = steps_by_id()["start"]
+    assert start["if"] == "steps.play.outcome == 'success'"
+    # As on a player's computer, where nothing of the compiler is on the path.
+    assert '$env:PATH = "$env:SystemRoot\\System32;$env:SystemRoot"' in start["run"]
+    assert "--module" not in start["run"]  # the runner has to find the module that play.ps1 installed
+
+
+def test_the_options_the_workflow_gives_to_the_check_of_the_installed_game_are_the_ones_it_has():
+    used = set(re.findall(r"--[a-z-]+", steps_by_id()["start"]["run"]))
+    tool = REPOSITORY / "tools" / "check_installed_game.py"
+    help_text = subprocess.run(
+        [sys.executable, str(tool), "--help"], capture_output=True, text=True, check=True
+    )
+    assert used
+    assert all(option in help_text.stdout for option in used)
