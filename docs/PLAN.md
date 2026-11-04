@@ -35,6 +35,22 @@ le sirve.
 - [x] Pantalla de título, menú y partida nueva con entrada de control
       (automatización de ModernGekko), hasta el saludo del alcalde en el
       intro; `fallback=0`, todo corre recompilado.
+- [x] Validación diferencial: el verificador lockstep de ModernGekko compara
+      cada bloque recompilado con el intérprete de Dolphin mientras se juega.
+      11 286 bloques (arranque, intro, título, partida nueva, casa, granja y
+      camino) sin una sola divergencia con el verificador parcheado, y los
+      fallos inyectados a propósito sí se detectan. Herramientas: `tools/lockstep_report.py` y
+      `tools/lockstep_coverage.py`. Resultados y límites en
+      [VALIDATION.md](VALIDATION.md).
+- [x] Prueba por instrucción: cada una de las 157 formas de instrucción del
+      juego que se pueden ejecutar, con palabras copiadas del propio juego y
+      operandos aleatorios, comparada con el intérprete de Dolphin. 10
+      semillas, 26 450 casos, 0 diferencias; 269 sin comparar (instrucciones de
+      caché y SPRG/PVR, que el módulo ejecuta con el intérprete).
+      `tools/run_isa_conformance.py`; detalles en [VALIDATION.md](VALIDATION.md).
+- [ ] Ampliar la validación con partida (tiendas, pueblo, minijuegos,
+      festivales, un día nuevo y el fin de un evento) y repetir las dos
+      comprobaciones en ARM64.
 - [ ] Hito: mover al personaje y jugar a velocidad completa en una PC con
       GPU.
 - [ ] Jugar con GPU en laptops Windows ARM (Snapdragon): WSL2 no puede usar
@@ -93,9 +109,10 @@ le sirve.
 - [ ] Menú in-game: dinero, stamina, hora, notas, afecto.
 - [x] Hooks de funciones para mods: `scripts/build_mods.sh` compila mods que
       enganchan funciones del juego por su nombre
-      ([mods/README.md](../mods/README.md)); `boot_logger` lo prueba. Los
-      *patch* (reemplazar una función) existen en la API, pero ningún mod los
-      ha probado todavía dentro del juego.
+      ([mods/README.md](../mods/README.md)); `boot_logger` lo prueba y
+      `state_logger` muestra los estados del juego (sirve para saber cuándo
+      corre el gancho de Jamie). Los *patch* (reemplazar una función) existen
+      en la API, pero ningún mod los ha probado todavía dentro del juego.
 - [ ] Carpeta de reemplazo de assets para mods.
 
 **Fase 5 – Release**
@@ -154,6 +171,21 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 - [x] Title screen, menu and a new game with controller input
       (ModernGekko's automation), up to the mayor's greeting in the intro;
       `fallback=0`, everything runs recompiled.
+- [x] Differential validation: ModernGekko's lockstep verifier compares every
+      recompiled block with Dolphin's interpreter while the game plays.
+      11,286 blocks (boot, intro, title, new game, house, farm and road) with
+      not one divergence under the patched verifier, and faults injected on
+      purpose are detected. Tools:
+      `tools/lockstep_report.py` and `tools/lockstep_coverage.py`. Results and
+      limits in [VALIDATION.md](VALIDATION.md).
+- [x] Instruction-level test: each of the game's 157 runnable instruction
+      forms, with words copied from the game itself and random operands,
+      compared with Dolphin's interpreter. 10 seeds, 26,450 cases, 0
+      differences; 269 not compared (cache instructions and SPRG/PVR, which
+      the module runs through the interpreter).
+      `tools/run_isa_conformance.py`; details in [VALIDATION.md](VALIDATION.md).
+- [ ] Widen the validation with play (shops, village, minigames, festivals, a
+      new day and the end of an event) and repeat both checks on ARM64.
 - [ ] Milestone: move the character and play at full speed on a PC with a
       GPU.
 - [ ] Play with a GPU on Windows ARM laptops (Snapdragon): WSL2 cannot use
@@ -211,8 +243,9 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 - [ ] In-game menu: money, stamina, time, notes, affection.
 - [x] Function hooks for mods: `scripts/build_mods.sh` builds mods that hook
       the game's functions by name ([mods/README.md](../mods/README.md));
-      `boot_logger` proves it. *Patches* (replacing a function) exist in the
-      API, but no mod has tried one inside the game yet.
+      `boot_logger` proves it and `state_logger` shows the game's states (it
+      tells when the Jamie hook will run). *Patches* (replacing a function)
+      exist in the API, but no mod has tried one inside the game yet.
 - [ ] Asset-override folder for mods.
 
 **Phase 5 – Release**

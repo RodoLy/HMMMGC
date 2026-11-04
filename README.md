@@ -24,7 +24,11 @@ disco (ISO, GCM o RVZ).
   pantalla de título y empieza una partida nueva, todo desde código
   recompilado ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
   Ya se pueden compilar mods que enganchan funciones del juego por su nombre
-  (`scripts/build_mods.sh`; guía en [mods/README.md](mods/README.md)).
+  (`scripts/build_mods.sh`; guía en [mods/README.md](mods/README.md)). El
+  código recompilado se compara con el intérprete de Dolphin mientras se juega
+  y, instrucción por instrucción con operandos aleatorios (26 450 casos); no se
+  ha encontrado ningún error de cálculo, con los límites que explica
+  [docs/VALIDATION.md](docs/VALIDATION.md).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -110,7 +114,11 @@ This repository contains no game data. You need your own backup of the disc
   reaches the title screen and starts a new game, all from recompiled code
   ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)). Mods that
   attach to the game's functions by name can now be built
-  (`scripts/build_mods.sh`; guide in [mods/README.md](mods/README.md)).
+  (`scripts/build_mods.sh`; guide in [mods/README.md](mods/README.md)). The
+  recompiled code is compared with Dolphin's interpreter while the game plays
+  and, instruction by instruction on random operands (26,450 cases); no
+  calculation error has been found, within the limits that
+  [docs/VALIDATION.md](docs/VALIDATION.md) explains.
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and
