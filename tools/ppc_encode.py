@@ -28,13 +28,17 @@ OPCODE_RLWINM = 21
 OPCODE_ORI = 24
 OPCODE_EXTENDED = 31
 OPCODE_LWZ = 32
+OPCODE_STW = 36
 OPCODE_LMW = 46
 OPCODE_LFD = 50
+OPCODE_STFD = 54
 OPCODE_PSQ_L = 56
 OPCODE_FLOAT_DOUBLE = 63
 
 # Extended opcodes (bits 21-30) of the primary opcodes above.
 EXTENDED_LWZX = 23
+EXTENDED_MFMSR = 83
+EXTENDED_MTMSR = 146
 EXTENDED_MTCRF = 144
 EXTENDED_OR = 444
 EXTENDED_MTSPR = 467
@@ -72,12 +76,20 @@ def lwz(rd: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_LWZ, rd, ra, displacement)
 
 
+def stw(rs: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_STW, rs, ra, displacement)
+
+
 def lmw(rd: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_LMW, rd, ra, displacement)
 
 
 def lfd(frd: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_LFD, frd, ra, displacement)
+
+
+def stfd(frs: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_STFD, frs, ra, displacement)
 
 
 def cmplwi(ra: int, value: int) -> int:
@@ -89,9 +101,21 @@ def psq_l(frd: int, displacement: int, ra: int) -> int:
     return (OPCODE_PSQ_L << 26) | (frd << 21) | (ra << 16) | (displacement & 0xFFF)
 
 
+def rlwinm(ra: int, rs: int, shift: int, mask_begin: int, mask_end: int) -> int:
+    """rlwinm rA, rS, SH, MB, ME: rotate rS left by SH, then keep the bits MB through ME.
+
+    Bits are numbered as in the manual, from 0 at the most significant to 31. When MB is
+    greater than ME the mask wraps around: it keeps every bit except those after ME and
+    before MB.
+    """
+    return (
+        (OPCODE_RLWINM << 26) | (rs << 21) | (ra << 16) | (shift << 11) | (mask_begin << 6) | (mask_end << 1)
+    )
+
+
 def slwi(ra: int, rs: int, shift: int) -> int:
     """rlwinm rA, rS, shift, 0, 31 - shift."""
-    return (OPCODE_RLWINM << 26) | (rs << 21) | (ra << 16) | (shift << 11) | (0 << 6) | ((31 - shift) << 1)
+    return rlwinm(ra, rs, shift, 0, 31 - shift)
 
 
 def lwzx(rd: int, ra: int, rb: int) -> int:
@@ -111,6 +135,14 @@ def mtspr(spr: int, rs: int) -> int:
 
 def mtctr(rs: int) -> int:
     return mtspr(SPR_CTR, rs)
+
+
+def mfmsr(rd: int) -> int:
+    return (OPCODE_EXTENDED << 26) | (rd << 21) | (EXTENDED_MFMSR << 1)
+
+
+def mtmsr(rs: int) -> int:
+    return (OPCODE_EXTENDED << 26) | (rs << 21) | (EXTENDED_MTMSR << 1)
 
 
 def mtcrf(field_mask: int, rs: int) -> int:
