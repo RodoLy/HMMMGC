@@ -92,6 +92,15 @@ python3 tools/disasm.py main
 
 Antes de contribuir lee [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### Licencia
+
+Este proyecto se distribuye bajo la GNU General Public License, versión 3 o
+posterior (GPL-3.0-or-later); el texto completo está en [LICENSE](LICENSE). Es
+la licencia de ModernGekko y es compatible con la de DolRecomp (GPLv3) y con la
+de Dolphin, sobre los que se construye. Los parches de `patches/` modifican
+archivos derivados de Dolphin que son GPL-2.0-or-later y se ofrecen con esos
+mismos términos. El juego no se incluye ni se distribuye.
+
 ---
 
 ## English
@@ -181,3 +190,12 @@ python3 tools/disasm.py main
   `py tools/check_disc.py` confirms it came out right.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
+
+### License
+
+This project is distributed under the GNU General Public License, version 3 or
+later (GPL-3.0-or-later); the full text is in [LICENSE](LICENSE). It is the
+license of ModernGekko and is compatible with those of DolRecomp (GPLv3) and
+Dolphin, which the project builds on. The patches in `patches/` modify
+Dolphin-derived files that are GPL-2.0-or-later and are offered under those
+same terms. The game is neither included nor distributed.
