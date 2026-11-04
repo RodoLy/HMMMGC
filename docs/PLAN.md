@@ -52,14 +52,16 @@ le sirve.
       todo el procesador, no solo lo que usa el juego) en un disco inventado, así
       que cualquier máquina con ModernGekko puede repetirla. 6 semillas,
       41 045 casos, 0 diferencias; 485 sin comparar. Las semillas 1 y 2
-      también corrieron en ARM64 (Linux, en GitHub) con las mismas cifras.
+      también corrieron en GitHub, con las mismas cifras, en ARM64: Linux con
+      GCC, y Windows con MSVC y con el compilador portátil llvm-mingw.
       Encontró un error del intérprete de Dolphin (el acarreo de `addme` y
       `subfme`) y una laguna de DolRecomp (`mtfsb1` y el bit FX); el juego no usa
       ninguna de las dos instrucciones. `run_isa_conformance.py --synthetic`;
       detalles en [VALIDATION.md](VALIDATION.md).
 - [ ] Ampliar la validación con partida (tiendas, pueblo, minijuegos,
-      festivales, un día nuevo y el fin de un evento), repetir en ARM64 las dos
-      comprobaciones que usan el juego, y las tres en Windows ARM64 con MSVC.
+      festivales, un día nuevo y el fin de un evento) y repetir en ARM64 (Linux y
+      Windows) las dos comprobaciones que usan el juego; la que no lo usa ya
+      corrió en las dos con las mismas cifras.
 - [ ] Hito: mover al personaje y jugar a velocidad completa en una PC con
       GPU.
 - [ ] Jugar con GPU en laptops Windows ARM (Snapdragon): WSL2 no puede usar
@@ -197,14 +199,16 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       the whole processor, not only what the game uses) on a made-up disc, so any
       machine with ModernGekko can repeat it. 6 seeds,
       41,045 cases, 0 differences; 485 not compared. Seeds 1 and 2 also
-      ran on ARM64 (Linux, on GitHub) with the same figures. It found a bug in
+      ran on GitHub, with the same figures, on ARM64: Linux with GCC, and
+      Windows with MSVC and with the portable compiler llvm-mingw. It found a bug in
       Dolphin's interpreter (the carry of `addme` and `subfme`) and a gap in
       DolRecomp (`mtfsb1` and the FX bit); the game uses neither instruction.
       `run_isa_conformance.py --synthetic`; details in
       [VALIDATION.md](VALIDATION.md).
 - [ ] Widen the validation with play (shops, village, minigames, festivals, a
-      new day and the end of an event), repeat the two checks that use the game
-      on ARM64, and all three on Windows ARM64 with MSVC.
+      new day and the end of an event) and repeat on ARM64 (Linux and Windows)
+      the two checks that use the game; the one that does not has already run
+      on both with the same figures.
 - [ ] Milestone: move the character and play at full speed on a PC with a
       GPU.
 - [ ] Play with a GPU on Windows ARM laptops (Snapdragon): WSL2 cannot use
