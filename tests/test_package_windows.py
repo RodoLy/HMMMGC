@@ -17,6 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+import fetch_windows_toolchain  # noqa: E402
 import package_windows as package  # noqa: E402
 
 LAUNCHER_NAME = "HarvestMoonMM"
@@ -437,7 +438,29 @@ def test_the_command_line_builds_the_folder_and_the_zip_and_says_where_they_are(
     versions = (tmp_path / "cli-out" / package.PACKAGE_FOLDER_NAME / "VERSIONS.txt").read_text(
         encoding="utf-8"
     )
-    assert versions == "ModernGekko: abc\n"
+    pinned = {tool.name: tool.version for tool in fetch_windows_toolchain.TOOLS}
+    assert versions == "".join(
+        f"{name}: {version}\n" for name, version in sorted({**pinned, "ModernGekko": "abc"}.items())
+    )
+
+
+def test_the_command_line_records_the_versions_of_the_downloaded_build_tools_by_itself(inputs, tmp_path):
+    assert package.main(command_line(inputs, tmp_path)) == 0
+    versions = (tmp_path / "cli-out" / package.PACKAGE_FOLDER_NAME / "VERSIONS.txt").read_text(
+        encoding="utf-8"
+    )
+    for tool in fetch_windows_toolchain.TOOLS:
+        assert f"{tool.name}: {tool.version}\n" in versions
+
+
+def test_a_version_given_on_the_command_line_wins_over_the_downloaded_tool_of_the_same_name(inputs, tmp_path):
+    assert package.main(command_line(inputs, tmp_path, "--version", "CMake=9.9.9")) == 0
+    versions = (tmp_path / "cli-out" / package.PACKAGE_FOLDER_NAME / "VERSIONS.txt").read_text(
+        encoding="utf-8"
+    )
+    pinned_cmake = next(tool for tool in fetch_windows_toolchain.TOOLS if tool.name == "CMake")
+    assert "CMake: 9.9.9\n" in versions
+    assert f"CMake: {pinned_cmake.version}\n" not in versions
 
 
 def test_the_command_line_reports_a_problem_and_fails_with_status_2(inputs, tmp_path, capsys):

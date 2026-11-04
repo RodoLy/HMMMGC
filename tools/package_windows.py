@@ -57,6 +57,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from fetch_windows_toolchain import TOOLS as PINNED_TOOLS  # noqa: E402
 from textfiles import write_text  # noqa: E402
 
 PACKAGE_FOLDER_NAME = "HarvestMoonMM-windows-arm64"
@@ -386,13 +387,18 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         action="append",
         default=[],
         metavar="NAME=VERSION",
-        help="something that is in the package and its version, for VERSIONS.txt; repeat it",
+        help="something that is in the package and its version, for VERSIONS.txt; repeat it. The "
+        "build tools that tools/fetch_windows_toolchain.py downloads are recorded without it",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     arguments = parse_arguments(argv)
+    # The versions of the build tools are written in the tool that downloads them, so that the
+    # package cannot say something else. A --version for the same name wins, for other folders.
+    versions = {tool.name: tool.version for tool in PINNED_TOOLS}
+    versions.update(arguments.version)
     inputs = PackageInputs(
         build_directory=arguments.build_directory,
         source_directory=arguments.source_directory,
@@ -404,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
         runtime_directory=arguments.runtime_directory,
         package_files_directory=arguments.package_files_directory,
         license_file=arguments.license_file,
-        versions=dict(arguments.version),
+        versions=versions,
     )
     try:
         package_directory = assemble_package(inputs, arguments.output_directory)
