@@ -1,0 +1,30 @@
+Export the lockstep hook from modules built with MinGW compilers
+Exporta el gancho lockstep de los módulos compilados con compiladores MinGW
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, vendor/dolphin (RecompCore) 10f7ac4, the versions that
+  scripts/build_and_run_linux.sh pins through ModernGekko-Template c2553a9.
+
+License / Licencia:
+  GPL-3.0-or-later, like the GXRuntime file it modifies.
+  GPL-3.0-or-later, igual que el archivo de GXRuntime que modifica.
+
+Read patches/README.md for what it fixes and how to apply it.
+Lee patches/README.md para ver qué corrige y cómo aplicarlo.
+
+diff --git a/GXRuntime/src/core/cpu.c b/GXRuntime/src/core/cpu.c
+index 345b960..f0f636d 100644
+--- a/GXRuntime/src/core/cpu.c
++++ b/GXRuntime/src/core/cpu.c
+@@ -24,7 +24,10 @@
+  * offset (into cpu->ram) about to be written, `size` the width in bytes. */
+ PPCMemWriteJournal g_mem_write_journal = NULL;
+ void* g_mem_write_journal_user = NULL;
+-#if defined(_MSC_VER)
++#if defined(_WIN32)
++/* On every Windows compiler, MSVC and the MinGW ones alike (module_export.c does the same): a
++ * MinGW linker that finds one `dllexport` stops exporting everything else on its own, so
++ * `visibility("default")` would leave this function out of the module. */
+ __declspec(dllexport) void ppc_set_mem_write_journal(PPCMemWriteJournal fn, void* user) {
+ #else
+ __attribute__((visibility("default"))) void ppc_set_mem_write_journal(PPCMemWriteJournal fn, void* user) {

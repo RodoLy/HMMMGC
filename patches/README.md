@@ -42,6 +42,34 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `moderngekko/export-lockstep-hook-on-mingw.patch`
+
+Arregla que el verificador lockstep se apague solo cuando el módulo del juego
+se compila en Windows con un compilador MinGW (por ejemplo llvm-mingw, el
+compilador portátil pensado para el paquete de Windows). El verificador busca
+por nombre la función `ppc_set_mem_write_journal` del módulo, y
+`GXRuntime/src/core/cpu.c` la marcaba `dllexport` solo para MSVC. Con MinGW, en
+cuanto el enlazador ve un `dllexport` (el de `staticrecomp_get_module`) deja de
+exportar todo lo demás por su cuenta, así que la función quedaba fuera y el
+verificador avisaba `module lacks ppc_set_mem_write_journal export` y se
+apagaba. El parche usa `_WIN32`, como ya hace `module_export.c`. En MSVC, Linux
+y macOS no cambia nada.
+
+**Versiones a las que se aplica:** las mismas que el parche anterior.
+
+**Licencia:** modifica un archivo de GXRuntime, que es GPL-3.0-or-later, y se
+distribuye con esa misma licencia.
+
+**Aplicar:** `cpu.c` se compila dentro del módulo de cada juego, así que basta
+con aplicarlo antes de compilar el módulo; las herramientas no se recompilan.
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # o tu MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko/vendor/dolphin" apply "$PWD/patches/moderngekko/export-lockstep-hook-on-mingw.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ---
 
 ## English
@@ -81,3 +109,31 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+### `moderngekko/export-lockstep-hook-on-mingw.patch`
+
+Fixes the lockstep verifier switching itself off when the game's module is
+built on Windows with a MinGW compiler (llvm-mingw, for example, the portable
+compiler meant for the Windows package). The verifier looks up the module's
+`ppc_set_mem_write_journal` function by name, and
+`GXRuntime/src/core/cpu.c` marked it `dllexport` for MSVC only. With MinGW, as
+soon as the linker sees one `dllexport` (the one on `staticrecomp_get_module`)
+it stops exporting everything else on its own, so the function was left out and
+the verifier printed `module lacks ppc_set_mem_write_journal export` and
+disabled itself. The patch tests `_WIN32`, as `module_export.c` already does.
+Nothing changes on MSVC, Linux or macOS.
+
+**Applies to:** the same versions as the previous patch.
+
+**License:** it modifies a GXRuntime file, which is GPL-3.0-or-later, and is
+distributed under the same license.
+
+**Apply:** `cpu.c` is compiled into each game's module, so applying it before
+the module is built is enough; the tools are not rebuilt.
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko/vendor/dolphin" apply "$PWD/patches/moderngekko/export-lockstep-hook-on-mingw.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
