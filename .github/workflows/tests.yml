@@ -1,0 +1,60 @@
+name: Tests
+
+# Lint and unit tests of the Python tools, and a shellcheck of the scripts.
+# None of it needs the game: the tests that read the game's executable are
+# skipped when HM_MM_DOL is not set.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, python-version: "3.11" }
+          - { runner: ubuntu-24.04, python-version: "3.12" }
+          - { runner: ubuntu-24.04, python-version: "3.13" }
+          # The ARM64 processor the project is meant to run on.
+          - { runner: ubuntu-24.04-arm, python-version: "3.12" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install the dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Test
+        run: python -m pytest -q
+
+  shell-scripts:
+    name: Shell scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: shellcheck scripts/*.sh
