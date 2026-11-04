@@ -23,7 +23,11 @@ from isa_conformance import (  # noqa: E402
     DONE_ADDRESS,
     DONE_VALUE,
     INDEXED_OPERATIONS,
+    INDEXED_OPERATIONS_WITH_UPDATE,
+    NO_GAME_ADDRESS,
+    OPERAND_FIELD_SHIFTS,
     R0_OPERAND,
+    READABLE_SPRS,
     SCRATCH_ADDRESS,
     SCRATCH_CENTER,
     SCRATCH_SIZE,
@@ -31,6 +35,8 @@ from isa_conformance import (  # noqa: E402
     STATE_FPRS,
     STATE_SIZE,
     STATE_TABLE_ADDRESS,
+    SYNTHETIC_REGISTERS,
+    WRITABLE_SPRS,
     XER_MASK,
     Candidate,
     Case,
@@ -38,9 +44,11 @@ from isa_conformance import (  # noqa: E402
     FormResult,
     Treatment,
     build_program,
+    capstone_view,
     classify,
     collect_candidates,
     deal_by_register_pattern,
+    encode_spr,
     existing_file,
     field_ra,
     field_rb,
@@ -48,14 +56,21 @@ from isa_conformance import (  # noqa: E402
     float_state_of,
     format_cases,
     format_report,
+    is_instruction,
     load_constant,
     main,
+    named_encodings,
     parse_cases,
     random_state,
+    register_combinations,
     register_pattern,
+    reserved_bits,
     setup_before,
     spr_number,
     state_setup_code,
+    synthetic_candidates,
+    synthetic_candidates_for_seed,
+    synthetic_word,
     treatment_of,
 )
 from ppc import Instruction, format_instruction, sign_extend  # noqa: E402
@@ -72,6 +87,7 @@ from ppc_mnemonics import (  # noqa: E402
     OPCODE_63_TEN_BIT_NAMES,
     PRIMARY_OPCODE_NAMES,
     form_name,
+    operation_of,
 )
 from symbols import Symbol, SymbolTable  # noqa: E402
 
@@ -233,10 +249,39 @@ def test_an_indexed_access_is_not_run_when_the_two_registers_are_the_same():
     assert setup_before(lwzx(3, 4, 4), random.Random(0)) is None
 
 
+def test_an_indexed_update_form_without_a_base_register_is_not_run_but_the_other_forms_are():
+    # With rA = r0 the update forms are invalid, and their address would be r0 + rB, which is
+    # anywhere in memory: the first run of the made-up words hung on one of them.
+    update_forms_found = set()
+    for encoding, _ in named_encodings():
+        operation, _ = operation_of(encoding)
+        if treatment_of(operation) is not Treatment.INDEXED:
+            continue
+        without_base = encoding | (3 << 21) | (0 << 16) | (5 << 11)
+        setup = setup_before(without_base, random.Random(0))
+        if operation in INDEXED_OPERATIONS_WITH_UPDATE:
+            assert setup is None, operation
+            update_forms_found.add(operation)
+        else:
+            assert setup == load_constant(5, SCRATCH_CENTER), operation  # the address is rB alone
+    assert update_forms_found == INDEXED_OPERATIONS_WITH_UPDATE
+
+
 def test_an_update_form_is_not_run_when_the_destination_is_the_base():
     lwzux_r4_r4_r5 = (31 << 26) | (4 << 21) | (4 << 16) | (5 << 11) | (55 << 1)
     assert form_name(lwzux_r4_r4_r5) == "lwzux"
     assert setup_before(lwzux_r4_r4_r5, random.Random(0)) is None
+
+
+@pytest.mark.parametrize(
+    ("opcode", "form"), [(33, "lwzu"), (35, "lbzu"), (41, "lhzu"), (43, "lhau")], ids=lambda value: str(value)
+)
+def test_an_update_load_with_a_displacement_is_not_run_when_the_destination_is_the_base(opcode, form):
+    destination_is_base = (opcode << 26) | (4 << 21) | (4 << 16) | 8
+    other_destination = (opcode << 26) | (5 << 21) | (4 << 16) | 8
+    assert form_name(destination_is_base) == form
+    assert setup_before(destination_is_base, random.Random(0)) is None
+    assert setup_before(other_destination, random.Random(0)) == load_constant(4, SCRATCH_CENTER)
 
 
 @pytest.mark.parametrize(
@@ -366,6 +411,268 @@ def test_words_that_are_not_instructions_are_not_candidates(game):
     candidates = collect_candidates(*game)
     assert ILLEGAL_FORM not in candidates
     assert all(candidate.word != 0 for words in candidates.values() for candidate in words)
+
+
+# -- Words that need no game -------------------------------------------------------------------
+
+ADDO = 0x7C642E14  # addo r3,r4,r5: Capstone does not know the overflow-enabled forms
+ADD_RECORD = 0x7C642A15  # add. r3,r4,r5
+MTFSB0_RECORD = 0xFC60008D  # mtfsb0. 3
+FCMPO = 0xFC011040  # fcmpo cr0,f1,f2: Capstone does not know this one either
+MCRXR = 0x7C000400  # mcrxr cr0
+LWZX_WITH_BIT_0_SET = 0x7C64282F  # lwzx r3,r4,r5 with the bit that must be zero set
+STWCX_RECORD = 0x7C00212D  # stwcx. r0,0,r4: its bit 0 is always set, and is part of the instruction
+MFSR = 0x7C0004A6  # mfsr r0,0
+# Forms the tables name that Capstone cannot read and that this test program does not run anyway
+# (the string instructions, and the external-control pair): the generator never reaches them.
+FORMS_THE_GENERATOR_CANNOT_REACH = {"eciwx", "ecowx", "lswx", "stswx"}
+
+
+def every_form_the_tables_name() -> set[str]:
+    """The form names of all the encodings, with the record, link and absolute bits clear and set."""
+    return {form_name(encoding | low_bits) for encoding, _ in named_encodings() for low_bits in range(4)}
+
+
+@pytest.fixture(scope="module")
+def made_up_words() -> dict[str, list[Candidate]]:
+    """The generator's output, made once: building it takes a couple of seconds."""
+    return synthetic_candidates(random.Random(1), random_fills_per_encoding=4)
+
+
+def test_the_encodings_to_fill_in_name_every_operation_of_the_tables_and_nothing_else():
+    operations = {operation_of(encoding)[0] for encoding, _ in named_encodings()}
+    assert operations == known_operations()
+
+
+def test_an_encoding_leaves_free_only_the_bits_below_its_opcode_fields():
+    for encoding, free_bits in named_encodings():
+        assert encoding & free_bits == 0
+        if encoding >> 26 in (4, 19, 31, 59, 63):
+            assert free_bits & (0x3FF << 1) == 0  # the extended opcode is part of the encoding
+
+
+def test_every_mix_of_the_chosen_registers_is_made_once_with_and_without_the_record_bit():
+    add_encoding, free_bits = 0x7C000214, 0x03FF_F801
+    words = list(register_combinations(add_encoding, free_bits))
+    assert len(words) == len(set(words)) == len(SYNTHETIC_REGISTERS) ** 3 * 2
+    assert {form_name(word) for word in words} == {"add", "add."}
+    mixes = {tuple((word >> shift) & 0x1F for shift in OPERAND_FIELD_SHIFTS) for word in words}
+    assert len(mixes) == len(SYNTHETIC_REGISTERS) ** 3
+    assert all(register in SYNTHETIC_REGISTERS for mix in mixes for register in mix)
+    # Nothing outside the three register fields and the record bit differs from the encoding.
+    assert {word & ~free_bits for word in words} == {add_encoding}
+
+
+def test_a_branch_gets_all_four_values_of_its_link_and_absolute_address_bits():
+    branch_encoding, free_bits = 18 << 26, 0x03FF_FFFF
+    forms = {form_name(word) for word in register_combinations(branch_encoding, free_bits)}
+    assert forms == {"b", "bl", "ba", "bla"}
+
+
+def test_a_made_up_word_keeps_its_opcode_and_varies_everything_else():
+    encoding, free_bits = 0x7C000214, 0x03FF_F801
+    words = {synthetic_word(encoding, free_bits, random.Random(seed)) for seed in range(200)}
+    assert all(word & ~free_bits == encoding for word in words)
+    assert len(words) > 100
+
+
+def test_a_made_up_word_often_names_the_same_register_twice():
+    rng = random.Random(7)
+    words = [synthetic_word(0x7C000214, 0x03FF_F801, rng) for _ in range(300)]
+    aliasing = [
+        word for word in words if len({register_pattern(word)}) and len(set(register_pattern(word))) < 3
+    ]
+    assert len(aliasing) > 60
+
+
+@pytest.mark.parametrize("spr", sorted(READABLE_SPRS | WRITABLE_SPRS))
+def test_the_number_of_a_special_register_survives_being_encoded(spr):
+    mfspr_encoding = 31 << 26 | 339 << 1
+    assert spr_number(encode_spr(mfspr_encoding, spr)) == spr
+    assert operation_of(encode_spr(mfspr_encoding, spr))[0] == "mfspr"
+
+
+def test_made_up_special_register_words_name_a_register_the_program_can_use():
+    rng = random.Random(3)
+    for operation, allowed in (("mfspr", READABLE_SPRS), ("mtspr", WRITABLE_SPRS)):
+        encoding = 31 << 26 | (339 if operation == "mfspr" else 467) << 1
+        free_bits = 0x03FF_F801
+        # A word draws its register number from the allowed ones, apart from the registers
+        # combinations (which are not made by synthetic_word at all).
+        assert all(spr_number(synthetic_word(encoding, free_bits, rng)) in allowed for _ in range(100)), (
+            operation
+        )
+
+
+@pytest.mark.parametrize(
+    ("word", "viewed_as"),
+    [
+        (ADD, ADD),
+        (ADD_RECORD, ADD_RECORD),  # the record bit belongs to add and Capstone knows it
+        (ADDO, ADD),  # the overflow-enable bit is cleared
+        (ADDO | 1, ADD_RECORD),
+        (MTFSB0_RECORD, MTFSB0_RECORD & ~1),  # Capstone only knows mtfsb0 without its record bit
+    ],
+    ids=["add", "add.", "addo", "addo.", "mtfsb0."],
+)
+def test_capstone_is_shown_the_word_without_the_bits_it_does_not_model(word, viewed_as):
+    assert capstone_view(word) == viewed_as
+
+
+def test_the_operands_of_an_overflow_enabled_word_are_read_through_its_plain_twin():
+    assert register_pattern(ADDO) == register_pattern(ADD) == (0, 1, 2)
+
+
+@pytest.mark.parametrize(
+    ("word", "is_defined"),
+    [
+        (ADD, True),
+        (ADDO, True),
+        (lwz(3, 8, 4), True),
+        (FCMPO, True),
+        (MCRXR, True),
+        (FCMPO | 1 << 22, False),  # a reserved bit of fcmpo
+        (MCRXR | 1 << 12, False),  # a reserved bit of mcrxr
+        (LWZX_WITH_BIT_0_SET, False),
+        (0x00000000, False),
+        (0x7C0007FE, False),  # opcode 31, an extended opcode that no instruction has
+    ],
+    ids=[
+        "add",
+        "addo",
+        "lwz",
+        "fcmpo",
+        "mcrxr",
+        "fcmpo reserved",
+        "mcrxr reserved",
+        "lwzx bit 0",
+        "zero",
+        "unnamed",
+    ],
+)
+def test_a_word_is_an_instruction_when_its_form_exists_and_its_reserved_bits_are_clear(word, is_defined):
+    assert is_instruction(word) is is_defined
+
+
+# A word that Capstone reads as an instruction of a later architecture, because a bit that the
+# 750CL manual keeps reserved means something there, and the same word with that bit clear.
+WORDS_WITH_A_RESERVED_BIT_SET = [
+    (0x7CA02000, 0x7C802000),  # cmpd cr1,r0,r4: the L bit makes a compare 64 bits wide (cmpw)
+    (0x2CA42003, 0x2C842003),  # cmpdi
+    (0x7CA00040, 0x7C800040),  # cmpld
+    (0x28A30FF5, 0x28830FF5),  # cmpldi
+    (0x7C60022C, 0x7C00022C),  # dcbt 0,r0,3: the hint
+    (0x7C8401EC, 0x7C0401EC),  # dcbtst r4,r0,4
+    (0x7CA000AC, 0x7C0000AC),  # dcbf 0,r0,5: the flush level
+    (0x7CA006AC, 0x7C0006AC),  # mbar 5: the barrier to wait for (eieio is the one with none)
+    (0x7C2004AC, 0x7C0004AC),  # lwsync: sync with its L bit
+    (0xFC8D058E, 0xFC8C058E),  # mtfsf 0x46,f0,0,1: the W bit
+    (0x7C002CA6, 0x7C0004A6),  # mfsr r0,0 with a bit set in the field after the segment number
+    (0x7C0004A7, 0x7C0004A6),  # mfsr r0,0 with bit 0 set
+    (0x7C002029, 0x7C002028),  # lwarx r0,0,r4 with the hint in bit 0
+    (0x10A41830, 0x10A01830),  # ps_res f5,f3 with a bit set in the field of rA: maddhd
+    (0x10605A6A, 0x1060582A),  # ps_add f3,f0,f11 with a bit set in the field of frC: vsel
+    (0x10002B8D, 0x10002B8C),  # psq_lx f0,r0,r5,0,7 with bit 0 set: vinsertw
+]  # fmt: skip
+
+
+@pytest.mark.parametrize(("reserved_bit_set", "plain"), WORDS_WITH_A_RESERVED_BIT_SET)
+def test_a_bit_that_the_manual_keeps_reserved_makes_a_word_no_instruction_even_if_capstone_reads_it(
+    reserved_bit_set, plain
+):
+    assert operation_of(reserved_bit_set) == operation_of(plain)  # the tables name both the same
+    assert not is_instruction(reserved_bit_set)
+    assert is_instruction(plain)
+
+
+@pytest.mark.parametrize(
+    ("word", "form"),
+    [(ADD_RECORD, "add."), (STWCX_RECORD, "stwcx."), (lwz(3, 1, 4), "lwz"), (b(0x80003100, 0x80003101), "b")],
+    ids=["a record bit", "a bit that is part of the name", "a displacement", "an address"],
+)
+def test_bit_0_is_not_reserved_where_the_form_uses_it(word, form):
+    assert form_name(word) == form
+    assert reserved_bits(word, operation_of(word)[0]) & 1 == 0
+
+
+def test_bit_0_is_reserved_in_a_form_that_has_an_extended_opcode_and_no_use_for_the_bit():
+    assert reserved_bits(MFSR, "mfsr") & 1
+    assert reserved_bits(ADD, "add") & 1 == 0  # add has a record twin: the bit is its Rc
+
+
+def test_the_made_up_words_reach_every_form_the_tables_name_that_capstone_can_read(made_up_words):
+    assert (
+        set(made_up_words) == every_form_the_tables_name() - {ILLEGAL_FORM} - FORMS_THE_GENERATOR_CANNOT_REACH
+    )
+
+
+@pytest.mark.parametrize(
+    "form", ["add", "addo.", "lwz", "fmadds", "ps_sum0", "rlwinm", "mtfsf", "psq_l", "sync", "fcmpo"]
+)
+def test_the_made_up_words_include_forms_of_every_kind(made_up_words, form):
+    assert made_up_words[form]
+
+
+def test_every_made_up_word_has_the_form_it_is_listed_under_and_is_an_instruction(made_up_words):
+    for form, candidates in made_up_words.items():
+        for candidate in candidates:
+            assert form_name(candidate.word) == form
+            assert is_instruction(candidate.word)
+
+
+def test_a_made_up_word_has_no_place_in_the_game(made_up_words):
+    assert all(
+        candidate.game_address == NO_GAME_ADDRESS for words in made_up_words.values() for candidate in words
+    )
+
+
+def test_the_words_of_a_form_are_distinct_and_in_order(made_up_words):
+    for candidates in made_up_words.values():
+        words = [candidate.word for candidate in candidates]
+        assert words == sorted(set(words))
+
+
+def test_a_form_gets_words_that_name_one_register_twice_and_words_that_name_r0(made_up_words):
+    patterns = {register_pattern(candidate.word) for candidate in made_up_words["add"]}
+    assert (0, 0, 2) in patterns  # rD = rA
+    assert (0, 1, 0) in patterns  # rD = rB
+    assert (0, 1, 1) in patterns  # rA = rB
+    assert (0, 0, 0) in patterns  # all three
+    assert any(R0_OPERAND in pattern for pattern in patterns)
+
+
+@pytest.fixture
+def a_few_encodings(monkeypatch):
+    """Only a handful of encodings to fill in, so that a test that makes words twice is quick."""
+    some = [(0x7C000214, 0x03FF_F801), (32 << 26, 0x03FF_FFFF), (63 << 26 | 29 << 1, 0x03FF_F801)]
+    monkeypatch.setattr("isa_conformance.named_encodings", lambda: iter(some))
+
+
+def test_the_same_seed_makes_the_same_words_and_another_seed_other_words(a_few_encodings):
+    first = synthetic_candidates(random.Random(1), random_fills_per_encoding=20)
+    again = synthetic_candidates(random.Random(1), random_fills_per_encoding=20)
+    other = synthetic_candidates(random.Random(2), random_fills_per_encoding=20)
+    assert first == again
+    assert first != other
+
+
+def test_the_words_of_a_run_depend_on_its_seed_only(a_few_encodings):
+    assert synthetic_candidates_for_seed(5) == synthetic_candidates_for_seed(5)
+    assert synthetic_candidates_for_seed(5) != synthetic_candidates_for_seed(6)
+
+
+def test_a_program_of_made_up_words_has_cases_for_the_special_register_forms_too(made_up_words):
+    program = build_program(made_up_words, seed=1, words_per_form=3, group_size=4)
+    forms = {case.form for case in program.cases}
+    assert {"mfspr", "mtspr", "add", "addo", "fcmpo"} <= forms
+    assert all(spr_number(case.word) in READABLE_SPRS for case in program.cases if case.form == "mfspr")
+    assert all(spr_number(case.word) in WRITABLE_SPRS for case in program.cases if case.form == "mtspr")
+
+
+def test_a_program_of_made_up_words_says_which_forms_it_leaves_out(made_up_words):
+    program = build_program(made_up_words, seed=1, words_per_form=3, group_size=4)
+    assert {"b", "bl", "bclr", "rfi", "sc", "tw", "mtmsr"} <= set(program.skipped_forms)
+    assert not {case.form for case in program.cases} & set(program.skipped_forms)
 
 
 # -- Random machine states ---------------------------------------------------------------------
@@ -682,6 +989,21 @@ def test_generate_writes_the_program_and_the_list_of_cases(game, tmp_path, capsy
     assert Dol(output).u32(CODE_ADDRESS) != 0
     assert {case.form for case in parse_cases(cases.read_text())} == {"add", "lwz", "fadd"}
     assert "not tested: bclr" in capsys.readouterr().out
+
+
+def test_generate_with_synthetic_needs_no_game_and_uses_made_up_words(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(
+        "isa_conformance.synthetic_candidates_for_seed",
+        lambda seed: {
+            "add": [Candidate(ADD, NO_GAME_ADDRESS)],
+            "lwz": [Candidate(lwz(3, 8, 4), NO_GAME_ADDRESS)],
+        },
+    )
+    output, cases = tmp_path / "main.dol", tmp_path / "cases.tsv"
+    # No --dol and no --symbols: the defaults point at a game that is not here.
+    assert main(["generate", "--synthetic", "--output", str(output), "--cases", str(cases)]) == 0
+    assert {case.form for case in parse_cases(cases.read_text())} == {"add", "lwz"}
+    assert "2 cases of 2 forms" in capsys.readouterr().out
 
 
 def test_a_path_that_is_not_a_file_is_refused_before_any_work(tmp_path):
