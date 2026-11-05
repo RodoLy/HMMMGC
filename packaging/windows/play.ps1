@@ -207,10 +207,12 @@ $Messages = @{
         ModsOff             = 'The mods are off (-NoMods): the game is played as it is on the disc.'
         ModsTurnedOff       = 'Mods turned off in the settings: {0}.'
         AllModsTurnedOff    = 'All the mods are turned off in the settings: the game is played as it is on the disc.'
-        SettingsHint        = 'Settings.bat lets you turn the mods on and off and choose how fast the character is.'
+        SettingsHint        = 'Settings.bat lets you turn the mods on and off and choose how fast the character and the game are.'
         SettingsProblems    = 'Some values in {0} could not be used and were left at their defaults: {1}'
         PlayerSpeedSet      = 'The character walks and runs at {0}% of the original speed.'
         PlayerSpeedIgnored  = 'The speed mod is turned off in the settings, so the character moves at the original speed.'
+        GameSpeedSet        = 'Fast-forward: the whole game runs at {0}% of the normal speed (or as fast as this computer can). Settings.bat changes it.'
+        GameSpeedFailed     = 'The speed of the game could not be set, so it runs at the speed it had before. The details are in {0}'
         GamePrepared        = 'The game is ready.'
         OpeningLauncher     = 'Opening the launcher. Press Play in it to start the game.'
         LauncherFailed      = 'The launcher closed with an error (code {0}). The details are in {1}'
@@ -247,10 +249,12 @@ Keyboard (the default layout of Dolphin, which this game runs on):
         ModsOff             = 'Los mods están apagados (-NoMods): el juego se juega como viene en el disco.'
         ModsTurnedOff       = 'Mods apagados en los ajustes: {0}.'
         AllModsTurnedOff    = 'Todos los mods están apagados en los ajustes: el juego se juega como viene en el disco.'
-        SettingsHint        = 'Con Settings.bat puedes activar y apagar los mods y elegir qué tan rápido es el personaje.'
+        SettingsHint        = 'Con Settings.bat puedes activar y apagar los mods y elegir qué tan rápido van el personaje y el juego.'
         SettingsProblems    = 'Algunos valores de {0} no se pudieron usar y se quedaron en su valor por omisión: {1}'
         PlayerSpeedSet      = 'El personaje camina y corre al {0}% de la velocidad original.'
         PlayerSpeedIgnored  = 'El mod de velocidad está apagado en los ajustes, así que el personaje se mueve a la velocidad original.'
+        GameSpeedSet        = 'Avance rápido: todo el juego corre al {0}% de la velocidad normal (o tan rápido como pueda esta computadora). Settings.bat lo cambia.'
+        GameSpeedFailed     = 'No se pudo poner la velocidad del juego, así que corre a la velocidad que tenía antes. Los detalles están en {0}'
         GamePrepared        = 'El juego está listo.'
         OpeningLauncher     = 'Abriendo el launcher. Pulsa Play en él para empezar el juego.'
         LauncherFailed      = 'El launcher se cerró con un error (código {0}). Los detalles están en {1}'
@@ -594,17 +598,36 @@ function Set-PlayerSpeed {
     Write-Host (Get-Message 'PlayerSpeedSet' $Percent)
 }
 
+# Tells the emulation core how fast the whole game is to run (the fast-forward of Settings.bat), in
+# percent of the normal speed. It is written every time, also when it is 100, so that a speed that
+# was chosen before and then put back to normal does not stay. Like the mods, it is an addition to
+# the game: a failure is a warning, and the game starts anyway.
+function Set-GameSpeed {
+    param([Parameter(Mandatory)] [int] $Percent)
+    try {
+        Set-CoreEmulationSpeed -UserDirectory $UserDirectory -Percent $Percent
+        Add-LogLine ('Game speed: ' + $Percent + '%')
+        if ($Percent -ne $GameSpeedPercentDefault) { Write-Host (Get-Message 'GameSpeedSet' $Percent) }
+    }
+    catch {
+        Add-LogLine ($_ | Out-String)
+        Write-Host (Get-Message 'GameSpeedFailed' $LogPath) -ForegroundColor Yellow
+    }
+}
+
 # Puts the mods in the state that was asked for. With -NoMods none is installed, and the settings are
 # not read. Otherwise the mods that the settings turn on are built and installed, the ones that they
 # turn off are taken out of the player's folder (so a mod that was on before stops being on), and the
 # speed of the character is given to the speed mod. -PlayerSpeed is for this run only and wins over
-# the speed that was saved.
+# the speed that was saved. The speed of the whole game is set here too, because it comes from the
+# same settings; with -NoMods the game runs at its normal speed, as it is on the disc.
 function Initialize-Mods {
     param([Parameter(Mandatory)] [string] $BuildDirectory)
 
     if ($NoMods) {
         Remove-InstalledMods -ModIds $AllModIds
         Write-Host (Get-Message 'ModsOff')
+        Set-GameSpeed -Percent $GameSpeedPercentDefault
         return
     }
 
@@ -627,6 +650,7 @@ function Initialize-Mods {
     $percent = $settings.PlayerSpeedPercent
     if ($null -ne $PlayerSpeed) { $percent = $PlayerSpeed }
     Set-PlayerSpeed -Percent $percent -ModIsOn ($enabledModIds -contains $PlayerSpeedModId)
+    Set-GameSpeed -Percent $settings.GameSpeedPercent
 }
 
 function Start-Launcher {

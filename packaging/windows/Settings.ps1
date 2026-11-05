@@ -2,9 +2,10 @@
 
 <#
 .SYNOPSIS
-    Opens a window where the player chooses which mods are on and how fast the character moves.
-    Abre una ventana donde el jugador elige qué mods están activos y qué tan rápido se mueve el
-    personaje.
+    Opens a window where the player chooses which mods are on, how fast the character moves and
+    how fast the whole game runs.
+    Abre una ventana donde el jugador elige qué mods están activos, qué tan rápido se mueve el
+    personaje y qué tan rápido corre todo el juego.
 
 .DESCRIPTION
     The choices are saved in settings.json, in the player's folder (%LOCALAPPDATA%\<UserDirectoryName>,
@@ -19,6 +20,8 @@
       - The speed of the character: a slider and a number box, from 25% (very slow) to 300% (three
         times as fast), where 100% is the speed of the original game. It is only used while the
         speed mod is on.
+      - The speed of the whole game (fast-forward), from 100% (normal) to 400%: scenes, dialogues
+        and the clock of the game go faster too. The computer may not reach a high value.
       - Buttons to save, to save and start the game (with the keyboard, or through the launcher),
         and to go back to the defaults.
 
@@ -35,6 +38,9 @@
       - La velocidad del personaje: un deslizador y una casilla numérica, de 25% (muy lento) a 300%
         (tres veces más rápido), donde 100% es la velocidad del juego original. Solo se usa mientras
         el mod de velocidad está activo.
+      - La velocidad de todo el juego (avance rápido), de 100% (normal) a 400%: las escenas, los
+        diálogos y el reloj del juego también van más rápido. Puede que la computadora no alcance un
+        valor alto.
       - Botones para guardar, para guardar y arrancar el juego (con el teclado, o con el launcher) y
         para volver a los valores por omisión.
 #>
@@ -68,6 +74,10 @@ $Messages = @{
         SpeedScale            = '{0}% slowest   -   100% original   -   {1}% fastest'
         SpeedWarning          = 'Above 200% the character may walk through thin walls.'
         SpeedModIsOff         = 'The speed mod is off, so the character moves at the original speed.'
+        GameSpeedHeading      = 'Speed of the whole game (fast-forward)'
+        GameSpeedExplanation  = 'Makes everything go faster, scenes and dialogues included, like the fast-forward of an emulator. 100% is the normal speed.'
+        GameSpeedScale        = '{0}% normal   -   {1}% fastest'
+        GameSpeedNote         = 'The clock of the game goes faster too, and the sound may break up. If the computer cannot reach the speed chosen, the game runs as fast as it can.'
         WhenItApplies         = 'The changes apply the next time the game is started with Play.bat or Play-Keyboard.bat.'
         ResetButton           = 'Defaults'
         SaveButton            = 'Save'
@@ -88,6 +98,10 @@ $Messages = @{
         SpeedScale            = '{0}% más lento   -   100% original   -   {1}% más rápido'
         SpeedWarning          = 'Por encima de 200% el personaje puede atravesar paredes delgadas.'
         SpeedModIsOff         = 'El mod de velocidad está apagado, así que el personaje se mueve a la velocidad original.'
+        GameSpeedHeading      = 'Velocidad de todo el juego (avance rápido)'
+        GameSpeedExplanation  = 'Hace que todo vaya más rápido, incluidas las escenas y los diálogos, como el avance rápido de un emulador. 100% es la velocidad normal.'
+        GameSpeedScale        = '{0}% normal   -   {1}% más rápido'
+        GameSpeedNote         = 'El reloj del juego también va más rápido, y el sonido puede cortarse. Si la computadora no alcanza la velocidad elegida, el juego corre tan rápido como puede.'
         WhenItApplies         = 'Los cambios se aplican la próxima vez que se arranca el juego con Play.bat o Play-Keyboard.bat.'
         ResetButton           = 'Valores originales'
         SaveButton            = 'Guardar'
@@ -192,6 +206,51 @@ function New-WindowButton {
     return $button
 }
 
+# A row with a slider and a number box that always show the same whole number, from $Minimum to
+# $Maximum, followed by a percent sign. Gives back the row and the two controls.
+function New-PercentRow {
+    param(
+        [Parameter(Mandatory)] [int] $Minimum,
+        [Parameter(Mandatory)] [int] $Maximum,
+        [Parameter(Mandatory)] [int] $Value,
+        [Parameter(Mandatory)] [int] $Step,
+        [Parameter(Mandatory)] [int] $TickEvery
+    )
+    $row = New-Object System.Windows.Forms.FlowLayoutPanel
+    $row.FlowDirection = [System.Windows.Forms.FlowDirection]::LeftToRight
+    $row.WrapContents = $false
+    $row.AutoSize = $true
+    $row.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+
+    $slider = New-Object System.Windows.Forms.TrackBar
+    $slider.Minimum = $Minimum
+    $slider.Maximum = $Maximum
+    $slider.TickFrequency = $TickEvery
+    $slider.SmallChange = $Step
+    $slider.LargeChange = $TickEvery
+    $slider.Width = 340
+    $slider.Value = $Value
+
+    $box = New-Object System.Windows.Forms.NumericUpDown
+    $box.Minimum = $Minimum
+    $box.Maximum = $Maximum
+    $box.Increment = $Step
+    $box.Width = 64
+    $box.Value = $Value
+    $box.Margin = New-Object System.Windows.Forms.Padding(8, 8, 0, 0)
+
+    # The slider and the number box always show the same number. The handlers run later, when the
+    # player moves one of them, so they find the other one through the variables of this call,
+    # which GetNewClosure keeps for them.
+    $slider.Add_ValueChanged({ $box.Value = $slider.Value }.GetNewClosure())
+    $box.Add_ValueChanged({ $slider.Value = [int] $box.Value }.GetNewClosure())
+
+    $row.Controls.Add($slider)
+    $row.Controls.Add($box)
+    $row.Controls.Add((New-TextLabel -Text '%' -Width 20 -TopMargin 12))
+    return [pscustomobject] @{ Row = $row; Slider = $slider; Box = $box }
+}
+
 # The settings that the window shows at this moment.
 function Get-ChosenSettings {
     $mods = [ordered] @{}
@@ -199,6 +258,7 @@ function Get-ChosenSettings {
     return [pscustomobject] @{
         Mods               = $mods
         PlayerSpeedPercent = [int] $SpeedBox.Value
+        GameSpeedPercent   = [int] $GameSpeedBox.Value
     }
 }
 
@@ -233,6 +293,7 @@ function Save-ChosenSettings {
 function Reset-ChosenSettings {
     foreach ($modId in $Game.ModIds) { $ModCheckBoxes[$modId].Checked = $true }
     $SpeedBox.Value = $PlayerSpeedPercentDefault
+    $GameSpeedBox.Value = $GameSpeedPercentDefault
     $StatusLabel.Text = ''
 }
 
@@ -290,39 +351,11 @@ try {
     $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'SpeedHeading') -Width $ContentWidth -Bold -TopMargin 16))
     $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'SpeedExplanation') -Width $ContentWidth -Muted))
 
-    $SpeedRow = New-Object System.Windows.Forms.FlowLayoutPanel
-    $SpeedRow.FlowDirection = [System.Windows.Forms.FlowDirection]::LeftToRight
-    $SpeedRow.WrapContents = $false
-    $SpeedRow.AutoSize = $true
-    $SpeedRow.AutoSizeMode = [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
-
-    $SpeedSlider = New-Object System.Windows.Forms.TrackBar
-    $SpeedSlider.Minimum = $PlayerSpeedPercentMinimum
-    $SpeedSlider.Maximum = $PlayerSpeedPercentMaximum
-    $SpeedSlider.TickFrequency = 25
-    $SpeedSlider.SmallChange = 5
-    $SpeedSlider.LargeChange = 25
-    $SpeedSlider.Width = 340
-    $SpeedSlider.Value = $initialSpeed
-
-    $SpeedBox = New-Object System.Windows.Forms.NumericUpDown
-    $SpeedBox.Minimum = $PlayerSpeedPercentMinimum
-    $SpeedBox.Maximum = $PlayerSpeedPercentMaximum
-    $SpeedBox.Increment = 5
-    $SpeedBox.Width = 64
-    $SpeedBox.Value = $initialSpeed
-    $SpeedBox.Margin = New-Object System.Windows.Forms.Padding(8, 8, 0, 0)
-
-    $PercentLabel = New-TextLabel -Text '%' -Width 20 -TopMargin 12
-
-    # The slider and the number box always show the same speed.
-    $SpeedSlider.Add_ValueChanged({ $SpeedBox.Value = $SpeedSlider.Value })
-    $SpeedBox.Add_ValueChanged({ $SpeedSlider.Value = [int] $SpeedBox.Value })
-
-    $SpeedRow.Controls.Add($SpeedSlider)
-    $SpeedRow.Controls.Add($SpeedBox)
-    $SpeedRow.Controls.Add($PercentLabel)
-    $Layout.Controls.Add($SpeedRow)
+    $speedRow = New-PercentRow -Minimum $PlayerSpeedPercentMinimum -Maximum $PlayerSpeedPercentMaximum `
+        -Value $initialSpeed -Step 5 -TickEvery 25
+    $SpeedSlider = $speedRow.Slider
+    $SpeedBox = $speedRow.Box
+    $Layout.Controls.Add($speedRow.Row)
 
     $scale = Get-Message 'SpeedScale' @($PlayerSpeedPercentMinimum, $PlayerSpeedPercentMaximum)
     $Layout.Controls.Add((New-TextLabel -Text $scale -Width $ContentWidth -Muted))
@@ -330,6 +363,17 @@ try {
     $SpeedModIsOffLabel = New-TextLabel -Text (Get-Message 'SpeedModIsOff') -Width $ContentWidth -Muted
     $Layout.Controls.Add($SpeedModIsOffLabel)
     Update-SpeedControls
+
+    # The speed of the whole game.
+    $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'GameSpeedHeading') -Width $ContentWidth -Bold -TopMargin 16))
+    $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'GameSpeedExplanation') -Width $ContentWidth -Muted))
+    $gameSpeedRow = New-PercentRow -Minimum $GameSpeedPercentMinimum -Maximum $GameSpeedPercentMaximum `
+        -Value $loaded.Settings.GameSpeedPercent -Step 25 -TickEvery 50
+    $GameSpeedBox = $gameSpeedRow.Box
+    $Layout.Controls.Add($gameSpeedRow.Row)
+    $gameSpeedScale = Get-Message 'GameSpeedScale' @($GameSpeedPercentMinimum, $GameSpeedPercentMaximum)
+    $Layout.Controls.Add((New-TextLabel -Text $gameSpeedScale -Width $ContentWidth -Muted))
+    $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'GameSpeedNote') -Width $ContentWidth -Muted))
 
     # What happens with the choices, and what the last click did.
     $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'WhenItApplies') -Width $ContentWidth -Muted -TopMargin 16))

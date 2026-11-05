@@ -541,17 +541,73 @@ def test_the_example_in_the_settings_code_is_a_file_that_the_code_reads_and_writ
     library = read_packaging_file("settings-file.ps1")
     assert library_value("SettingsFileName") == "'settings.json'"
     example = json.loads(re.search(r"^ +\{\n.*?^ +\}$", library, re.MULTILINE | re.DOTALL).group(0))
-    assert set(example) == {"mods", "playerSpeedPercent"}
+    assert set(example) == {"mods", "playerSpeedPercent", "gameSpeedPercent"}
     assert set(example["mods"]) == set(game_mod_ids())
     minimum = int(library_value("PlayerSpeedPercentMinimum"))
     maximum = int(library_value("PlayerSpeedPercentMaximum"))
     assert minimum <= example["playerSpeedPercent"] <= maximum
+    game_minimum = int(library_value("GameSpeedPercentMinimum"))
+    game_maximum = int(library_value("GameSpeedPercentMaximum"))
+    assert game_minimum <= example["gameSpeedPercent"] <= game_maximum
     reading = body_of_function(library, "Read-PlayerSettings")
     writing = body_of_function(library, "Save-PlayerSettings")
     for name in example:
         assert f"Properties['{name}']" in reading
     assert "[ordered] @{ mods = $Settings.Mods }" in writing
     assert "$content['playerSpeedPercent']" in writing
+    assert "$content['gameSpeedPercent']" in writing
+
+
+def test_the_speed_of_the_game_starts_at_the_normal_speed_and_only_goes_faster():
+    minimum = int(library_value("GameSpeedPercentMinimum"))
+    maximum = int(library_value("GameSpeedPercentMaximum"))
+    default = int(library_value("GameSpeedPercentDefault"))
+    assert minimum == default == 100  # a player who chose nothing plays at the normal speed
+    assert maximum > minimum
+
+
+def test_the_speed_of_the_game_goes_where_the_emulation_core_reads_it():
+    # Dolphin reads EmulationSpeed from the [Core] section of Config/Dolphin.ini in the user folder
+    # (Config::MAIN_EMULATION_SPEED), and its throttle follows it: 1 is the normal speed.
+    assert library_value("CoreSettingsRelativePath") == "'Config\\Dolphin.ini'"
+    assert library_value("CoreSettingsSection") == "'Core'"
+    assert library_value("EmulationSpeedKey") == "'EmulationSpeed'"
+
+
+def test_the_speed_of_the_game_is_written_with_a_point_whatever_the_language_of_windows_is():
+    library = read_packaging_file("settings-file.ps1")
+    converting = body_of_function(library, "ConvertTo-EmulationSpeedText")
+    assert "[System.Globalization.CultureInfo]::InvariantCulture" in converting
+    assert "$Percent / 100" in converting
+
+
+def test_the_core_settings_are_changed_one_line_at_a_time_and_kept_otherwise():
+    library = read_packaging_file("settings-file.ps1")
+    writing = body_of_function(library, "Set-CoreEmulationSpeed")
+    assert "Set-IniValue -Lines $lines" in writing
+    # Without a byte order mark, as Dolphin writes the file.
+    assert "New-Object System.Text.UTF8Encoding($false)" in writing
+    editing = body_of_function(library, "Set-IniValue")
+    assert "$result.Add($line)" in editing  # every other line is copied as it was
+
+
+def test_the_script_sets_the_speed_of_the_game_with_and_without_mods():
+    script = read_packaging_file("play.ps1")
+    body = body_of_function(script, "Initialize-Mods")
+    without_mods, _, with_mods = body.partition("$settings = Get-PlayerSettings")
+    assert "Set-GameSpeed -Percent $GameSpeedPercentDefault" in without_mods
+    assert "Set-GameSpeed -Percent $settings.GameSpeedPercent" in with_mods
+    setting = body_of_function(script, "Set-GameSpeed")
+    assert "Set-CoreEmulationSpeed -UserDirectory $UserDirectory" in setting
+    assert "catch {" in setting  # a failure is a warning, and the game starts anyway
+
+
+def test_the_settings_window_shows_and_saves_the_speed_of_the_game():
+    window = read_packaging_file("Settings.ps1")
+    assert "GameSpeedPercent   = [int] $GameSpeedBox.Value" in body_of_function(window, "Get-ChosenSettings")
+    resetting = body_of_function(window, "Reset-ChosenSettings")
+    assert "$GameSpeedBox.Value = $GameSpeedPercentDefault" in resetting
+    assert "-Minimum $GameSpeedPercentMinimum -Maximum $GameSpeedPercentMaximum" in window
 
 
 def test_the_settings_code_never_stops_the_game_for_a_value_it_cannot_use():

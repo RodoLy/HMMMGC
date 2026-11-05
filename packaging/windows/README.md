@@ -116,18 +116,28 @@ arranca el juego con `Play.bat` o `Play-Keyboard.bat`: un juego que ya está abi
 de la ventana se queda abierta una ventana negra; es normal. Mientras no hayas guardado nada, todos
 los mods están activos y el personaje va al 150 %.
 
+**Avance rápido.** En la misma ventana, **Velocidad de todo el juego** hace que todo vaya más rápido,
+incluidas las escenas y los diálogos, como el avance rápido de un emulador: de 100 % (normal) a 400 %.
+No es un mod: `Play.bat` se lo pasa al núcleo de emulación (`EmulationSpeed` de la sección `[Core]` de
+`%LOCALAPPDATA%\HarvestMoonMM\Config\Dolphin.ini`). El reloj del juego también corre más rápido y el
+sonido puede cortarse; si la computadora no alcanza la velocidad elegida, el juego va tan rápido como
+puede. Por ahora se elige antes de jugar; poder activarlo y apagarlo con una tecla mientras juegas
+(la barra espaciadora) necesita un cambio en el programa que corre el juego y llegará con un paquete
+nuevo.
+
 La elección queda en `%LOCALAPPDATA%\HarvestMoonMM\settings.json`, un archivo que también se puede
 editar a mano con un editor de texto:
 
 ```json
 {
   "mods": { "jamie_marriage": true, "player_speed": true },
-  "playerSpeedPercent": 150
+  "playerSpeedPercent": 150,
+  "gameSpeedPercent": 100
 }
 ```
 
 Un mod en `false` se quita de tu carpeta y el juego se juega sin él; uno que no aparece está activo.
-`playerSpeedPercent` es un número entero de 25 a 300. Un valor que no sirve se ignora (y `Play.bat`
+`playerSpeedPercent` es un número entero de 25 a 300 y `gameSpeedPercent` uno de 100 a 400. Un valor que no sirve se ignora (y `Play.bat`
 lo avisa) y el resto del archivo se sigue usando; si borras el archivo, vuelven los valores
 originales.
 
@@ -320,18 +330,27 @@ open the launcher** saves it and opens the launcher, and **Defaults** goes back 
 game that is already open does not change. A black window stays open behind the settings window; that
 is normal. Until you have saved something, every mod is on and the character goes at 150%.
 
+**Fast-forward.** In the same window, **Speed of the whole game** makes everything go faster, scenes
+and dialogues included, like the fast-forward of an emulator: from 100% (normal) to 400%. It is not a
+mod: `Play.bat` gives it to the emulation core (`EmulationSpeed` in the `[Core]` section of
+`%LOCALAPPDATA%\HarvestMoonMM\Config\Dolphin.ini`). The clock of the game runs faster too and the sound
+may break up; if the computer cannot reach the speed chosen, the game goes as fast as it can. For now
+it is chosen before playing; turning it on and off with a key while you play (the space bar) needs a
+change in the program that runs the game and will come with a new package.
+
 The choice is kept in `%LOCALAPPDATA%\HarvestMoonMM\settings.json`, a file that can also be edited by
 hand with a text editor:
 
 ```json
 {
   "mods": { "jamie_marriage": true, "player_speed": true },
-  "playerSpeedPercent": 150
+  "playerSpeedPercent": 150,
+  "gameSpeedPercent": 100
 }
 ```
 
 A mod set to `false` is taken out of your folder and the game is played without it; a mod that is not
-listed is on. `playerSpeedPercent` is a whole number from 25 to 300. A value that makes no sense is
+listed is on. `playerSpeedPercent` is a whole number from 25 to 300 and `gameSpeedPercent` one from 100 to 400. A value that makes no sense is
 ignored (and `Play.bat` says so) and the rest of the file is still used; if you delete the file, the
 defaults come back.
 
