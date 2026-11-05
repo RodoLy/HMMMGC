@@ -62,8 +62,10 @@ le sirve.
       festivales, un día nuevo y el fin de un evento) y repetir en ARM64 (Linux y
       Windows) las dos comprobaciones que usan el juego; la que no lo usa ya
       corrió en las dos con las mismas cifras.
-- [ ] Hito: mover al personaje y jugar a velocidad completa en una PC con
-      GPU.
+- [x] Hito: mover al personaje y jugar a velocidad completa en una PC con
+      GPU. Cumplido en una laptop con Snapdragon (Windows ARM64) con DirectX 12:
+      de 0.99 a 1.06 de velocidad con el cargador conectado y los ajustes de
+      [PERFORMANCE.md](PERFORMANCE.md); en batería, la ciudad baja a ~0.8.
 - [ ] Jugar con GPU en laptops Windows ARM (Snapdragon): WSL2 no puede usar
       la GPU ahí ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)).
       Ruta: ModernGekko nativo para Windows ARM64, sin WSL. Ya compila ahí con
@@ -72,10 +74,11 @@ le sirve.
       instrucción. Un workflow de GitHub arma el paquete (`packaging/windows`:
       un zip con `Play.bat`, donde el jugador elige su disco y el juego se
       recompila en su computadora; `Play-Keyboard.bat` para jugar con teclado)
-      y lo prueba como lo haría un jugador, con un disco inventado. Falta
-      probarlo con el juego real y con una GPU de verdad (Vulkan u OpenGL
-      sobre el controlador de Snapdragon, y el control y el teclado en
-      Windows).
+      y lo prueba como lo haría un jugador, con un disco inventado. Ya se
+      probó con el juego real en una laptop con Snapdragon, con la GPU por
+      DirectX 12 (el valor por defecto del paquete en ARM64): corre a velocidad
+      completa con el cargador conectado ([PERFORMANCE.md](PERFORMANCE.md)).
+      Falta la batería y confirmar el control y el teclado en Windows.
       Otra ruta, más barata de probar: `GALLIUM_DRIVER=d3d12` en WSL. Hay
       usuarios de laptops x64 a los que Mesa les caía a software y con eso
       vieron su GPU ([wslg#1394](https://github.com/microsoft/wslg/issues/1394)),
@@ -103,9 +106,10 @@ le sirve.
 **Fase 3 – Mejoras**
 - [ ] Resolución interna arbitraria (4K).
 - [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado.
-- [ ] 120 fps. El juego calcula todo por cuadro, a 60 o a 30 por segundo (falta
-      medir cuántas retrazas de video espera por cuadro), así que subir la
-      cadencia no es un ajuste: hay dos caminos. (a) Interpolar en el
+- [ ] 120 fps. El juego calcula todo por cuadro y presenta 30 por segundo,
+      con dos retrazas de video por cuadro (medido en una laptop: 29.97 cuadros
+      y 59.94 retrazas por segundo), así que subir la cadencia no es un ajuste:
+      hay dos caminos. (a) Interpolar en el
       renderizador: se dibuja entre el estado anterior y el actual (posición
       de los objetos y de la cámara) sin tocar la lógica ni la velocidad del
       juego. Es la idea que permite tasas de cuadros altas en otros recomps
@@ -113,8 +117,8 @@ le sirve.
       RT64) y necesita el renderizador propio de la fase 2. (b) Correr la
       lógica a 120 Hz: obliga a escalar todo lo que el juego cuenta por cuadro
       (movimiento, temporizadores, animaciones, audio) y es fácil romper algo.
-      Primer paso, cuando el juego corra bien: medir la cadencia real y
-      separar lo que cuenta cuadros de lo que lee el reloj.
+      Primer paso: separar lo que cuenta cuadros de lo que lee el reloj (la
+      cadencia real ya está medida).
 - [ ] Saltar timers de pantallas de carga.
 - [ ] Velocidad, aceleración y fricción del jugador en archivo de config.
 - [ ] Selector de idioma (el disco ya trae ES/FR/DE/IT).
@@ -213,8 +217,10 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       new day and the end of an event) and repeat on ARM64 (Linux and Windows)
       the two checks that use the game; the one that does not has already run
       on both with the same figures.
-- [ ] Milestone: move the character and play at full speed on a PC with a
-      GPU.
+- [x] Milestone: move the character and play at full speed on a PC with a
+      GPU. Done on a laptop with a Snapdragon (Windows ARM64) with DirectX 12:
+      0.99 to 1.06 speed with the charger connected and the settings of
+      [PERFORMANCE.md](PERFORMANCE.md); on battery, the city drops to ~0.8.
 - [ ] Play with a GPU on Windows ARM laptops (Snapdragon): WSL2 cannot use
       the GPU there ([microsoft/wslg#1470](https://github.com/microsoft/wslg/issues/1470)).
       Route: ModernGekko built natively for Windows ARM64, with no WSL. It
@@ -224,9 +230,11 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       (`packaging/windows`: a zip with `Play.bat`, where the player chooses
       their disc and the game is recompiled on their computer;
       `Play-Keyboard.bat` to play with the keyboard) and tests it the way a
-      player would, with a made-up disc. What is left is trying it with the
-      real game and a real GPU (Vulkan or OpenGL on the Snapdragon driver, and
-      the controller and keyboard on Windows).
+      player would, with a made-up disc. It has already been tried with the
+      real game on a laptop with a Snapdragon, with the GPU through DirectX 12
+      (the package's default on ARM64): it runs at full speed with the charger
+      connected ([PERFORMANCE.md](PERFORMANCE.md)). What is left is the
+      battery and confirming the controller and keyboard on Windows.
       Another route, cheaper to try: `GALLIUM_DRIVER=d3d12` in WSL. Some
       users of x64 laptops whose Mesa fell back to software saw their GPU
       with it ([wslg#1394](https://github.com/microsoft/wslg/issues/1394)),
@@ -253,9 +261,10 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 **Phase 3 – Enhancements**
 - [ ] Arbitrary internal resolution (4K).
 - [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD.
-- [ ] 120 fps. The game computes everything per frame, at 60 or 30 a second
-      (still to measure: how many video retraces it waits for per frame), so
-      raising the rate is not a setting: there are two routes. (a) Interpolate
+- [ ] 120 fps. The game computes everything per frame and presents 30 a
+      second, with two video retraces per frame (measured on a laptop: 29.97
+      frames and 59.94 retraces a second), so raising the rate is not a
+      setting: there are two routes. (a) Interpolate
       in the renderer: draw between the previous and the current state
       (object and camera positions) without touching the game's logic or
       speed. It is the idea behind high frame rates in other recomps
@@ -263,8 +272,8 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       RT64) and needs the own renderer of phase 2. (b) Run the logic at
       120 Hz: it forces scaling everything the game counts per frame
       (movement, timers, animations, audio) and it is easy to break
-      something. First step, once the game runs well: measure the real
-      cadence and tell what counts frames from what reads the clock.
+      something. First step: tell what counts frames from what reads the
+      clock (the real cadence is already measured).
 - [ ] Skip loading-screen timers.
 - [ ] Player speed, acceleration and friction in a config file.
 - [ ] Language selector (disc already ships ES/FR/DE/IT).

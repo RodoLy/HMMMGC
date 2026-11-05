@@ -17,9 +17,10 @@ recompilan el juego en tu computadora, a partir de tu disco.
 > **Estado: experimental.** Las herramientas se compilan en Windows ARM64 y pasan ahí la prueba
 > de instrucciones contra el intérprete de Dolphin (ver [VALIDATION.md][validation]). El paquete
 > se prueba en GitHub con un disco inventado: extrae el disco, recompila el juego, lo instala y
-> lo arranca sin pantalla, y se cierra bien. Todavía no se ha probado con el juego real en una
-> computadora de verdad (ni la ventana, la GPU, el control o el teclado). Si algo falla, el
-> registro `Logs\play.log` (ver más abajo) ayuda a saber por qué.
+> lo arranca sin pantalla, y se cierra bien. Además se probó con el juego real en una laptop con
+> Snapdragon, con DirectX 12: corre a velocidad completa con el cargador conectado (ver
+> «Rendimiento y batería»). Todavía falta confirmar el audio, el control y el teclado en Windows
+> ARM64. Si algo falla, el registro `Logs\play.log` (ver más abajo) ayuda a saber por qué.
 
 ### Cómo usarlo
 
@@ -65,6 +66,29 @@ Todavía no se puede cambiar desde el paquete:
 Los menús del juego se mueven con la palanca, no con la cruceta. Las flechas y la tecla X se
 probaron jugando en Linux; el resto de la tabla sale del código de Dolphin. En Windows ARM64
 todavía no se ha probado.
+
+### Rendimiento y batería
+
+El juego corre a 30 cuadros por segundo, como en la consola. En una laptop con Snapdragon y
+DirectX 12, con el cargador conectado, va a velocidad completa. El paquete ya trae los dos ajustes
+que lo logran (saltar el bucle en el que el juego espera sin hacer nada y no emular la lentitud del
+lector de discos), así que no hay nada que configurar. Las cifras y el porqué están en
+[PERFORMANCE.md][performance].
+
+- **Conecta el cargador.** En batería, con el modo de energía normal de Windows, la ciudad se queda
+  corta: el juego va a alrededor de 0.8 de su velocidad y se siente lento. En **Configuración →
+  Sistema → Energía y batería** elige el modo de energía **Mejor rendimiento** y desactiva el
+  ahorro de batería; todavía no se ha medido cuánto ayuda.
+- **Al entrar o salir de un lugar** puede haber una pequeña caída de cuadros (menos de un segundo):
+  es el juego cargando.
+- **Para cambiar uno de los dos ajustes solo para ti**, crea el archivo
+  `%LOCALAPPDATA%\HarvestMoonMM\GameSettings\G4AEE9.ini` con la misma línea; por ejemplo, para
+  volver a la lentitud original del disco:
+
+  ```
+  [Core]
+  FastDiscSpeed = False
+  ```
 
 ### Dónde guarda las cosas
 
@@ -128,9 +152,11 @@ recompile the game on your computer, from your disc.
 > **Status: experimental.** The tools are built on Windows ARM64 and pass the instruction test
 > against Dolphin's interpreter there (see [VALIDATION.md][validation]). The package is tested
 > on GitHub with a made-up disc: it extracts the disc, recompiles the game, installs it and
-> starts it with nothing drawn, and it closes properly. It has not been tried with the real game
-> on a real computer yet (nor the window, the GPU, the controller or the keyboard). If something
-> fails, the log `Logs\play.log` (see below) helps to find out why.
+> starts it with nothing drawn, and it closes properly. It was also tried with the real game on a
+> laptop with a Snapdragon, with DirectX 12: it runs at full speed with the charger connected (see
+> "Performance and battery"). The audio, the controller and the keyboard on Windows ARM64 still
+> have to be confirmed. If something fails, the log `Logs\play.log` (see below) helps to find out
+> why.
 
 ### How to use it
 
@@ -176,6 +202,29 @@ Dolphin). It cannot be changed from the package yet:
 The game's menus move with the stick, not the D-pad. The arrow keys and the X key were tried
 while playing on Linux; the rest of the table comes from Dolphin's code. On Windows ARM64 it has
 not been tried yet.
+
+### Performance and battery
+
+The game runs at 30 frames per second, like the console. On a laptop with a Snapdragon and
+DirectX 12, with the charger connected, it runs at full speed. The package already carries the two
+settings that achieve it (skipping the loop in which the game waits with nothing to do, and not
+emulating the disc drive's slowness), so there is nothing to configure. The figures and the reason
+are in [PERFORMANCE.md][performance].
+
+- **Connect the charger.** On battery, with Windows' normal power mode, the city falls short: the
+  game runs at about 0.8 of its speed and feels slow. In **Settings → System → Power & battery**
+  choose the **Best performance** power mode and turn battery saver off; how much that helps has
+  not been measured yet.
+- **When entering or leaving a place** there may be a small drop in frames (under a second): it is
+  the game loading.
+- **To change one of the two settings only for yourself**, create the file
+  `%LOCALAPPDATA%\HarvestMoonMM\GameSettings\G4AEE9.ini` with the same line; for example, to go
+  back to the disc's original slowness:
+
+  ```
+  [Core]
+  FastDiscSpeed = False
+  ```
 
 ### Where it keeps things
 
@@ -225,3 +274,4 @@ Everything is free software; the details, and where the source code of each part
 <https://github.com/RodoLy/HMMMGC> under GPL-3.0-or-later.
 
 [validation]: https://github.com/RodoLy/HMMMGC/blob/main/docs/VALIDATION.md
+[performance]: https://github.com/RodoLy/HMMMGC/blob/main/docs/PERFORMANCE.md

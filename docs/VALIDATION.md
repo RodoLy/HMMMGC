@@ -590,8 +590,10 @@ la segunda debe encontrar todo hecho; el camino más largo que hizo medía 253
 caracteres, de los 259 que Windows permite así); y que el juego instalado arranque
 como lo hace el launcher, sin dibujar nada y sin nada del compilador en la `PATH`, siga
 corriendo unos segundos y se cierre con código 0. **No** comprueba el juego real,
-la ventana ni la GPU (Vulkan u OpenGL con el controlador de Snapdragon), el
-control ni el teclado, ni una computadora de verdad.
+la ventana ni la GPU (DirectX 12 o Vulkan con el controlador de Snapdragon), el
+control ni el teclado, ni una computadora de verdad. Lo que sí se probó a mano en
+una laptop con Snapdragon (el juego real, con DirectX 12) está en
+[PERFORMANCE.md](PERFORMANCE.md).
 
 ### Qué NO demuestra
 
@@ -1228,8 +1230,9 @@ way); and that the installed game starts the way the launcher starts it, drawing
 nothing
 and with nothing of the compiler on the `PATH`, keeps running for a few seconds
 and closes with exit code 0. It does **not** check the real game, the window or
-the GPU (Vulkan or OpenGL on the Snapdragon driver), the controller or the
-keyboard, nor a real computer.
+the GPU (DirectX 12 or Vulkan on the Snapdragon driver), the controller or the
+keyboard, nor a real computer. What was tried by hand on a laptop with a
+Snapdragon (the real game, with DirectX 12) is in [PERFORMANCE.md](PERFORMANCE.md).
 
 ### What it does NOT prove
 

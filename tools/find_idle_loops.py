@@ -50,13 +50,18 @@ Which one to name / Cuál nombrar
 --------------------------------
 Several loops may be listed; most wait for a piece of hardware and are short-lived. The one
 to give to `StaticRecompIdlePC` is the one the game spends its time in when it is idle. Find it
-by running the game with `STATICRECOMP_DISPATCH_SAMPLES=1`: at shutdown the runner prints the
-addresses where it spends most of its dispatches, and the idle loop is at the top.
+by running the game with `STATICRECOMP_DISPATCH_SAMPLES=1`: at shutdown the runner prints the 16
+addresses it entered the recompiled code at most often. The idle loop is among them, and it is
+the one that is also in this tool's list (in G4AEE9 the others are functions and a counting
+loop). docs/PERFORMANCE.md tells how this was done and what it gained.
 
 Varios bucles pueden aparecer en la lista; casi todos esperan a una pieza de hardware y duran
 poco. El que se pone en `StaticRecompIdlePC` es en el que el juego pasa su tiempo cuando está
 ocioso. Se encuentra ejecutando el juego con `STATICRECOMP_DISPATCH_SAMPLES=1`: al cerrarlo, el
-runner imprime las direcciones donde gasta más despachos, y el bucle ocioso está arriba.
+runner imprime las 16 direcciones por las que más veces entró al código recompilado. El bucle
+ocioso está entre ellas, y es el que además aparece en la lista de esta herramienta (en G4AEE9
+las demás son funciones y un bucle contador). docs/PERFORMANCE.md cuenta cómo se hizo y cuánto
+ganó.
 
 Usage / Uso:
     python3 tools/find_idle_loops.py                      # orig/G4AEE9/sys/main.dol
