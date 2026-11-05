@@ -100,9 +100,9 @@ Qué significa para Magical Melody (sin haberlo probado):
 
 - La fase 2 de [PLAN.md](PLAN.md) ya no sería escribir un renderizador de GX
   desde cero: el candidato es integrar aurora y reemplazar con ella las
-  funciones del SDK del juego. Para eso hay que identificar esas funciones por
-  firma (pendiente de la fase 0), y el audio y el sistema operativo quedan por
-  escribir.
+  funciones del SDK del juego. Esas funciones ya están identificadas
+  (`docs/FUNCTION_MAP.md`) y lo que falta entre el juego y aurora se midió
+  (sección siguiente); el audio y el sistema operativo quedan por escribir.
 - Según su página, Mario Kart Wii usa aurora con un juego recompilado, no solo
   con una decompilación. La misma página advierte que cada juego pide su propio
   trabajo de runtime.
@@ -126,16 +126,15 @@ Qué significa para Magical Melody (sin haberlo probado):
   `fn_801B3914`, y `fn_801B4138` llama a este cuatro veces. Ningún puntero
   guardado en los datos apunta a ellas (las palabras con sus direcciones son
   entradas de la tabla de excepciones). Así, interpretar listas de GX, si
-  aurora no lo hace, sería trabajo de un solo punto.
+  aurora no lo hiciera, sería trabajo de un solo punto; aurora sí lo hace (ver
+  la sección siguiente).
 
 Qué no se verificó: no se compiló ni se ejecutó aurora ni ninguno de estos
-proyectos. Todo viene de sus README y páginas y de notas de prensa, y los
-estados pueden haber cambiado. Tampoco se sabe si aurora reproduce listas de
-visualización ya armadas: su README no lo dice y GitHub no dejó leer su código.
-Del lado del juego, no se miró qué traen las listas guardadas en sus archivos ni
-si arma listas en memoria mientras corre (`GXBeginDisplayList`, que no se buscó),
-y las llamadas a través de un puntero armado en un registro no se ven leyendo el
-código.
+proyectos. Lo de los proyectos viene de sus README y páginas y de notas de
+prensa, y los estados pueden haber cambiado. El código de aurora se leyó
+después (sección siguiente). Del lado del juego, no se miró qué traen las
+listas guardadas en sus archivos, y las llamadas a través de un puntero armado
+en un registro no se ven leyendo el código.
 
 Fuentes:
 [wiki de Wiicompiled](https://github.com/patchzyy/Wiicompiled/wiki),
@@ -145,6 +144,74 @@ Fuentes:
 [SteamDeckHQ sobre DolRecomp](https://steamdeckhq.com/news/we-may-see-more-gamecube-wii-pc-ports-soon/),
 [Tom's Hardware sobre Mario Kart Wii](https://www.tomshardware.com/video-games/retro-gaming/mario-kart-wii-recompiled-for-pc-using-ai-with-4k-potential-and-uncapped-frame-rates-first-static-recompilation-of-a-wii-game-supports-over-200-tracks-thanks-to-retro-rewind-compatibility)
 y el README de ModernGekko (`lib/ModernGekko/README.md` en la plantilla).
+
+### Lo que falta entre el juego y aurora (análisis estático, 2026-11-05)
+
+La pregunta: si aurora fuera la capa de GX, ¿qué pide el juego que aurora no
+tenga o haga distinto? Se respondió solo leyendo: el código de `main.dol` con
+nuestras herramientas y el código fuente de aurora (commit `377ed36`,
+2026-11-04, clonado solo para leerlo). **No se compiló ni se ejecutó nada**:
+esto dice qué hay que hacer, no que funcione.
+
+**Qué usa el juego de GX.** `tools/find_library_entry_points.py GX` lista las
+funciones de la biblioteca a las que llega el resto del programa: 75 de las
+156, con 354 llamadas en total, y las 75 tienen nombre
+(`docs/FUNCTION_MAP.md`). Están muy concentradas: 63 las llama una sola
+función del juego, 8 dos, 2 tres y `GXBegin` cuatro (`__GXShutdown` no tiene
+llamadas: solo un puntero en los datos, en `0x802AAE8C`, con la forma de un
+registro de reinicio del SDK). `GXSetVtxDesc` (33 llamadas), `GXSetArray`
+(34), `GXSetTevOrder` (29) y las cuatro funciones de entradas y operaciones de
+TEV (23 cada una) salen de una sola función del juego cada una;
+`GXSetVtxAttrFmt` (33) sale de dos. Las de texturas se llaman una o dos veces
+cada una.
+
+**Qué cubre aurora.** Define 271 nombres de GX. De las 75 funciones del juego,
+65 tienen cuerpo (que lo hagan bien no se comprobó), 6 están vacías o solo
+devuelven 0 (`GXSetMisc`, `GXSetDispCopyDst`, `GXSetDispCopyYScale`,
+`GXSetCopyFilter`, `GXSetDispCopyGamma` y `GXInvalidateTexAll`) y 4 no las
+define: `GXSetDrawSyncCallback` (la declara `GXManage.h`, pero no tiene
+definición), `GXSetGPMetric` y `GXClearGPMetric` (contadores de rendimiento de
+la GPU) y `__GXShutdown`.
+
+**Lo que habría que resolver al integrarla.**
+
+| Tema | Qué se vio | Trabajo |
+|---|---|---|
+| Objetos de textura | El juego reserva `GXTexObj` de 32 bytes y `GXTlutObj` de 12 (`GXInitTexObj` escribe hasta el byte `0x1F` e `GXInitTlutObj` hasta el 9). En PC aurora usa 64 y 40 bytes (`include/dolphin/gx/GXStruct.h`). | Siete llamadas en total (`GXInitTexObj`, `GXInitTexObjCI`, `GXInitTexObjLOD`, `GXInitTlutObj`, `GXLoadTlut` una cada una y `GXLoadTexObj` dos). Un adaptador que guarde el objeto de aurora fuera de la memoria del juego, con la dirección del juego como llave. |
+| Arreglos de vértices | `GXSetArray` recibe del juego atributo, dirección y paso; la versión de PC de aurora pide también el tamaño y si el arreglo es little-endian (`include/dolphin/gx/GXGeometry.h`). | 34 llamadas, todas desde `fn_801C9E68`: el tamaño se da en ese único lugar. |
+| Fin de primitiva | En PC `GXEnd` es una función real que hay que llamar (`include/dolphin/gx/GXVert.h`); en el SDK es vacía y el juego no la llama. | `GXBegin` se llama desde 4 lugares: hay que cerrar la primitiva al llegar la cantidad de vértices que anunció. |
+| Vértices escritos directo | Ocho funciones pequeñas del juego (`0x801CAB68`–`0x801CABD4`) escriben bytes o flotantes en la tubería (`0xCC008000`); las llaman seis funciones de dibujo. | Sustituir esas ocho por las de vértices de aurora (`GXPosition…`, `GXColor…`, `GXTexCoord…`). |
+| Listas de visualización | El juego graba listas mientras corre: cuatro funciones suyas empiezan a grabar y cuatro terminan, por dos envoltorios (`fn_801CAC20` llama a `GXBeginDisplayList` y `fn_801CABE8` a `GXEndDisplayList`). Las reproduce por un solo embudo. aurora graba en el búfer que se le da y reproduce escribiendo la lista en su cola de comandos, pero su procesador de comandos ignora una lista dentro de otra («Ignoring nested GX_CMD_CALL_DL», `lib/gx/command_processor.cpp`). | Falta mirar si alguna lista del juego llama a otra. |
+| `GXSetMisc` | Vacía en aurora (`lib/dolphin/gx/GXManage.cpp`). El juego la llama al iniciar los gráficos con `GXSetMisc(2, 0)`, que apaga el guardado del estado alrededor de las listas, y con `GXSetMisc(1, 8)`. aurora guarda y restaura el estado siempre (`dlSaveContext = 1` en `GXInit`). | Implementar al menos el indicador del guardado; si el juego depende del estado que deja una lista al grabarse, se vería en pantalla. |
+| Callbacks | El juego instala un callback de sincronización de dibujo (una llamada al arrancar, por `main`) y otro de retrazado de VI. aurora no define `GXSetDrawSyncCallback` y sus `GXSetDrawSync` y `GXReadDrawSync` están vacías. En `.text` ningún `lis` ni `oris` arma la parte alta de los comandos de testigo (registros BP `0x47` y `0x48`), así que no se sabe qué, si algo, activa el primero. | Un modelo mínimo de interrupciones; es parte del paso de OS. |
+| Punteros y flotantes | Las direcciones que el juego pasa (arreglos, imágenes, listas, matrices, destinos de copia) son del juego, no del anfitrión, y los argumentos flotantes llegan en registros de punto flotante. | Una capa fina que traduzca direcciones y lea esos registros, para las 75 funciones. |
+
+**Conclusión.** No apareció nada que impida usar aurora como capa de GX. El
+trabajo es de tamaño conocido: los ocho temas de la tabla, la mayoría en
+pocas funciones del juego, más definir las 4 funciones que faltan y rellenar
+las 6 vacías según importen. Lo que no se sabe sin ejecutar es si el resultado se
+ve bien; eso se prueba en una PC con GPU (los equipos normales de GitHub
+Actions no tienen).
+
+**Lo que no se verificó.** No se compiló aurora ni nada con ella. No se miró
+si las listas del juego se llaman unas a otras, ni qué comandos de GX usan que
+el procesador de comandos de aurora no maneje. Las llamadas por un registro
+(`bctrl`, `blrl`) no se ven leyendo el código. La lectura de que una función
+de aurora «tiene cuerpo» no dice que lo haga bien.
+
+**Dawn en Windows ARM64.** aurora dibuja con Dawn (WebGPU). Por defecto su
+CMake baja un paquete ya compilado para Windows ARM64 (`dawn-windows-arm64`,
+de las versiones de `encounter/dawn`; que ese archivo exista no se
+comprobó); la alternativa es compilar Dawn desde su código
+(`AURORA_DAWN_PROVIDER=vendor`), mucho más lento. Lo primero pone en la
+prueba código binario de un tercero; lo segundo cuesta tiempo de CI. Es una
+decisión pendiente del proyecto.
+
+Fuentes: el código de [aurora](https://github.com/encounter/aurora) en el commit
+`377ed36`: `include/dolphin/gx/GXStruct.h`, `GXGeometry.h`, `GXVert.h`,
+`GXManage.h`, `lib/dolphin/gx/GXManage.cpp`, `GXDispList.cpp`,
+`GXFrameBuffer.cpp`, `GXTexture.cpp`, `lib/gx/command_processor.cpp` y
+`cmake/AuroraDawnProvider.cmake`.
 
 ### Resultado de la prueba de arranque (2026-11-03)
 
@@ -314,8 +381,9 @@ What this means for Magical Melody (untested):
 
 - Phase 2 of [PLAN.md](PLAN.md) would no longer be writing a GX renderer from
   scratch: the candidate is to integrate aurora and use it to replace the
-  game's SDK functions. That needs those functions identified by signature
-  (pending from phase 0), and the audio and the operating system are left to
+  game's SDK functions. Those functions are already identified
+  (`docs/FUNCTION_MAP.md`) and what is missing between the game and aurora has
+  been measured (next section); the audio and the operating system are left to
   write.
 - According to its page, Mario Kart Wii uses aurora with a recompiled game,
   not only with a decompilation. The same page warns that every game needs its
@@ -339,17 +407,15 @@ What this means for Magical Melody (untested):
   the game, `fn_801CBCEC`, calls it; that one is called from a single place,
   `fn_801B3914`, and `fn_801B4138` calls this one four times. No pointer kept
   in the data points to them (the words holding their addresses are exception
-  table entries). So interpreting GX lists, if aurora does not, would be work
-  for a single point.
+  table entries). So interpreting GX lists, if aurora did not, would be work
+  for a single point; aurora does it (see the next section).
 
 What was not verified: neither aurora nor any of these projects was built or
-run. Everything comes from their READMEs and pages and from press articles,
-and their status may have changed. Neither is it known whether aurora replays
-display lists that are already built: its README does not say, and GitHub did
-not allow reading its code. On the game's side, what the lists stored in its
-files contain was not looked at, nor whether it builds lists in memory while it
-runs (`GXBeginDisplayList`, which was not searched for), and calls through a
-pointer built in a register cannot be seen by reading the code.
+run. What is said of the projects comes from their READMEs and pages and from
+press articles, and their status may have changed. Aurora's code was read
+afterwards (next section). On the game's side, what the lists stored in its
+files contain was not looked at, and calls through a pointer built in a
+register cannot be seen by reading the code.
 
 Sources:
 [Wiicompiled wiki](https://github.com/patchzyy/Wiicompiled/wiki),
@@ -359,6 +425,73 @@ Sources:
 [SteamDeckHQ on DolRecomp](https://steamdeckhq.com/news/we-may-see-more-gamecube-wii-pc-ports-soon/),
 [Tom's Hardware on Mario Kart Wii](https://www.tomshardware.com/video-games/retro-gaming/mario-kart-wii-recompiled-for-pc-using-ai-with-4k-potential-and-uncapped-frame-rates-first-static-recompilation-of-a-wii-game-supports-over-200-tracks-thanks-to-retro-rewind-compatibility)
 and ModernGekko's README (`lib/ModernGekko/README.md` in the template).
+
+### What is missing between the game and aurora (static analysis, 2026-11-05)
+
+The question: if aurora were the GX layer, what does the game ask for that
+aurora does not have or does differently? It was answered by reading alone: the
+code of `main.dol` with our tools and aurora's source code (commit `377ed36`,
+2026-11-04, cloned only to read it). **Nothing was built or run**: this says
+what has to be done, not that it works.
+
+**What the game uses of GX.** `tools/find_library_entry_points.py GX` lists the
+functions of the library that the rest of the program reaches: 75 of the 156,
+with 354 calls in all, and all 75 have a name (`docs/FUNCTION_MAP.md`). They
+are very concentrated: 63 are called by a single function of the game, 8 by
+two, 2 by three and `GXBegin` by four (`__GXShutdown` has no calls: only a
+pointer in the data, at `0x802AAE8C`, shaped like an SDK reset record).
+`GXSetVtxDesc` (33 calls), `GXSetArray` (34), `GXSetTevOrder` (29) and the four
+TEV input and operation functions (23 each) come from a single function of the
+game each; `GXSetVtxAttrFmt` (33) comes from two. The texture ones are called
+once or twice each.
+
+**What aurora covers.** It defines 271 GX names. Of the game's 75 functions,
+65 have a body (that they do their job well was not checked), 6 are empty or
+only return 0 (`GXSetMisc`, `GXSetDispCopyDst`, `GXSetDispCopyYScale`,
+`GXSetCopyFilter`, `GXSetDispCopyGamma` and `GXInvalidateTexAll`) and 4 it does
+not define: `GXSetDrawSyncCallback` (`GXManage.h` declares it, but there is no
+definition), `GXSetGPMetric` and `GXClearGPMetric` (GPU performance counters)
+and `__GXShutdown`.
+
+**What would have to be solved to integrate it.**
+
+| Topic | What was seen | Work |
+|---|---|---|
+| Texture objects | The game reserves a `GXTexObj` of 32 bytes and a `GXTlutObj` of 12 (`GXInitTexObj` writes up to byte `0x1F` and `GXInitTlutObj` up to byte 9). On PC aurora uses 64 and 40 bytes (`include/dolphin/gx/GXStruct.h`). | Seven calls in all (`GXInitTexObj`, `GXInitTexObjCI`, `GXInitTexObjLOD`, `GXInitTlutObj` and `GXLoadTlut` once each, `GXLoadTexObj` twice). An adapter that keeps aurora's object outside the game's memory, with the game's address as the key. |
+| Vertex arrays | `GXSetArray` gets attribute, address and stride from the game; aurora's PC version also asks for the size and whether the array is little-endian (`include/dolphin/gx/GXGeometry.h`). | 34 calls, all from `fn_801C9E68`: the size is given in that one place. |
+| End of a primitive | On PC `GXEnd` is a real function that has to be called (`include/dolphin/gx/GXVert.h`); in the SDK it is empty and the game does not call it. | `GXBegin` is called from 4 places: the primitive has to be closed when the number of vertices it announced is reached. |
+| Vertices written directly | Eight small functions of the game (`0x801CAB68`–`0x801CABD4`) write bytes or floats to the pipe (`0xCC008000`); six drawing functions call them. | Replace those eight with aurora's vertex functions (`GXPosition…`, `GXColor…`, `GXTexCoord…`). |
+| Display lists | The game records lists while it runs: four of its functions start recording and four finish, through two wrappers (`fn_801CAC20` calls `GXBeginDisplayList` and `fn_801CABE8` calls `GXEndDisplayList`). It replays them through a single funnel. Aurora records into the buffer it is given and replays by writing the list to its command queue, but its command processor ignores a list inside another one ("Ignoring nested GX_CMD_CALL_DL", `lib/gx/command_processor.cpp`). | Look at whether any list of the game calls another. |
+| `GXSetMisc` | Empty in aurora (`lib/dolphin/gx/GXManage.cpp`). The game calls it when it starts the graphics with `GXSetMisc(2, 0)`, which turns off saving the state around display lists, and with `GXSetMisc(1, 8)`. Aurora always saves and restores the state (`dlSaveContext = 1` in `GXInit`). | Implement at least the flag for saving; if the game depends on the state a list leaves behind when it is recorded, it would show on screen. |
+| Callbacks | The game installs a draw-sync callback (one call at start-up, through `main`) and a VI retrace callback. Aurora does not define `GXSetDrawSyncCallback` and its `GXSetDrawSync` and `GXReadDrawSync` are empty. In `.text` no `lis` or `oris` builds the high half of the token commands (BP registers `0x47` and `0x48`), so it is not known what, if anything, triggers the first one. | A minimal interrupt model; it belongs to the OS step. |
+| Pointers and floats | The addresses the game passes (arrays, images, lists, matrices, copy destinations) are the game's, not the host's, and float arguments arrive in floating-point registers. | A thin layer that translates addresses and reads those registers, for the 75 functions. |
+
+**Conclusion.** Nothing turned up that stops aurora from being the GX layer.
+The work has a known size: the eight topics of the table, most of them in a
+few functions of the game, plus defining the 4 missing functions and filling
+in the 6 empty ones as they matter. What cannot be known without running it is
+whether the result looks right; that is tested on a PC with a GPU (ordinary
+GitHub Actions runners have none).
+
+**What was not verified.** Aurora was not built, nor anything with it. Whether
+the game's lists call one another was not looked at, nor which GX commands
+they use that aurora's command processor does not handle. Calls through a
+register (`bctrl`, `blrl`) cannot be seen by reading the code. Reading that an
+aurora function "has a body" does not say it does the job well.
+
+**Dawn on Windows ARM64.** Aurora draws with Dawn (WebGPU). By default its
+CMake downloads a prebuilt package for Windows ARM64 (`dawn-windows-arm64`,
+from the releases of `encounter/dawn`; that the file exists was not checked);
+the alternative is building Dawn from its source
+(`AURORA_DAWN_PROVIDER=vendor`), much slower. The first puts a third party's
+binary code into the test; the second costs CI time. It is a decision still
+open for the project.
+
+Sources: [aurora](https://github.com/encounter/aurora)'s code at commit
+`377ed36`: `include/dolphin/gx/GXStruct.h`, `GXGeometry.h`, `GXVert.h`,
+`GXManage.h`, `lib/dolphin/gx/GXManage.cpp`, `GXDispList.cpp`,
+`GXFrameBuffer.cpp`, `GXTexture.cpp`, `lib/gx/command_processor.cpp` and
+`cmake/AuroraDawnProvider.cmake`.
 
 ### Boot test result (2026-11-03)
 

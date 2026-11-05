@@ -34,10 +34,13 @@ aurora, y qué se sabe y qué no, está en
    favor: solo 85 funciones de `main.dol` escriben en la tubería de GX (la
    librería del SDK y ocho funciones de vértices; `tools/find_gx_pipe_writers.py`),
    así que GX se puede reemplazar por funciones, y las listas de visualización
-   pasan por un solo embudo del juego (`tools/find_callers.py`). Falta saber si
-   aurora sabe reproducir listas ya armadas (si no, se interpretan en ese
-   embudo) y si corre sobre DirectX 12 en Windows ARM64. Si el experimento
-   falla, se decide de nuevo con lo aprendido.
+   pasan por un solo embudo del juego (`tools/find_callers.py`). El análisis
+   estático ya midió lo que falta (75 funciones de GX que usa el juego, de
+   las que aurora define 71, y ocho temas de integración; ver
+   [RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)) y no encontró nada que
+   lo impida. Falta compilar aurora y ver si corre sobre DirectX 12 en
+   Windows ARM64 con GPU. Si el experimento falla, se decide de nuevo con lo
+   aprendido.
 4. DVD, CARD y PAD nativos: son los más sencillos, y dan cargas instantáneas,
    guardados en archivos y controles con SDL.
 5. Audio (AX) y sistema operativo (hilos, alarmas, interrupciones, retrazos).
@@ -58,6 +61,10 @@ aurora, y qué se sabe y qué no, está en
       Dolphin y puso 563 nombres más (588 en total). Dio el rango de cada
       biblioteca del SDK, que es la frontera de lo que el runtime reemplaza en
       la fase 2; ver [FUNCTION_MAP.md](FUNCTION_MAP.md).
+- [x] Nombrar las funciones de GX que el juego usa: `tools/find_library_entry_points.py`
+      lista las 75 que alcanza el resto del programa; la firma nombró 49 y
+      las otras 26 se nombraron leyendo su código, cada una con una prueba
+      contra `main.dol` (614 nombres en total).
 - [ ] Afinar los nombres del SDK: usar el archivo del enlazador que trae la
       mitad de la base (para AX, TRK y la biblioteca C) y nombrar `PPCArch` por
       el número de registro especial. No bloquea nada.
@@ -136,8 +143,11 @@ aurora, y qué se sabe y qué no, está en
 **Fase 2 – Runtime propio** (la parte pesada: reemplaza el hardware de Dolphin
 pieza por pieza, en el orden de arriba)
 - [x] Identificar el SDK por firma (hecho en la fase 0).
+- [x] Análisis estático de viabilidad: qué pide el juego de GX y qué tiene
+      aurora ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
 - [ ] Experimento de viabilidad: las llamadas de GX del juego dibujan la
-      pantalla de título con aurora.
+      pantalla de título con aurora. Necesita compilar aurora y una PC con
+      GPU; antes hay que decidir cómo se obtiene Dawn en Windows ARM64.
 - [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). Referencia:
       Dolphin para la semántica de GX; Wiicompiled (Mario Kart Wii) para la
       arquitectura de un recomp.
@@ -247,10 +257,13 @@ is known and what is not, is in
    only 85 functions of `main.dol` store into the GX pipe (the SDK's library
    and eight vertex functions; `tools/find_gx_pipe_writers.py`), so GX can be
    replaced function by function, and display lists go through a single
-   funnel of the game (`tools/find_callers.py`). Still unknown: whether aurora
-   can replay display lists that are already built (if not, they are
-   interpreted in that funnel) and whether it runs on DirectX 12 on Windows
-   ARM64. If the experiment fails, we decide again with what it taught us.
+   funnel of the game (`tools/find_callers.py`). Static analysis has already
+   measured what is missing (75 GX functions that the game uses, of which
+   aurora defines 71, and eight integration topics; see
+   [RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)) and found nothing
+   that rules it out. Still to do: build aurora and see whether it runs on
+   DirectX 12 on Windows ARM64 with a GPU. If the experiment fails, we
+   decide again with what it taught us.
 4. Native DVD, CARD and PAD: the simplest ones, and they bring instant loads,
    save files and SDL input.
 5. Audio (AX) and operating system (threads, alarms, interrupts, retraces).
@@ -271,6 +284,10 @@ is known and what is not, is in
       signature database and named 563 more (588 in total). It gave the range
       of each SDK library, which is the boundary of what the runtime replaces
       in phase 2; see [FUNCTION_MAP.md](FUNCTION_MAP.md).
+- [x] Name the GX functions the game uses: `tools/find_library_entry_points.py`
+      lists the 75 that the rest of the program reaches; the signature named
+      49 and the other 26 were named by reading their code, each with a test
+      against `main.dol` (614 names in total).
 - [ ] Refine the SDK names: use the linker archive that half of the database
       carries (for AX, TRK and the C library) and name `PPCArch` by its
       special-register number. Nothing waits on it.
@@ -350,8 +367,11 @@ is known and what is not, is in
 **Phase 2 – Own runtime** (the heavy part: it replaces Dolphin's hardware piece
 by piece, in the order above)
 - [x] Identify the SDK by signature (done in phase 0).
+- [x] Static feasibility analysis: what the game asks of GX and what aurora has
+      ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
 - [ ] Feasibility experiment: the game's GX calls draw the title screen with
-      aurora.
+      aurora. It needs aurora built and a PC with a GPU; how to get Dawn on
+      Windows ARM64 has to be decided first.
 - [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). Reference:
       Dolphin for GX semantics; Wiicompiled (Mario Kart Wii) for recomp
       architecture.
