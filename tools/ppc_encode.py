@@ -33,9 +33,12 @@ OPCODE_EXTENDED = 31
 OPCODE_LWZ = 32
 OPCODE_LBZ = 34
 OPCODE_STW = 36
+OPCODE_STB = 38
 OPCODE_LHZ = 40
+OPCODE_STH = 44
 OPCODE_LMW = 46
 OPCODE_LFD = 50
+OPCODE_STFS = 52
 OPCODE_STFD = 54
 OPCODE_PSQ_L = 56
 OPCODE_FLOAT_DOUBLE = 63
@@ -101,6 +104,18 @@ def lhz(rd: int, displacement: int, ra: int) -> int:
 
 def stw(rs: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_STW, rs, ra, displacement)
+
+
+def stb(rs: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_STB, rs, ra, displacement)
+
+
+def sth(rs: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_STH, rs, ra, displacement)
+
+
+def stfs(frs: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_STFS, frs, ra, displacement)
 
 
 def lmw(rd: int, displacement: int, ra: int) -> int:
