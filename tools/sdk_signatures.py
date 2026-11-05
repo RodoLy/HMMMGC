@@ -80,7 +80,7 @@ import struct
 import sys
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
@@ -89,6 +89,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dol import Dol  # noqa: E402
 from function_finder import INSTRUCTION_SIZE  # noqa: E402
 from project import MAIN_DOL_PATH, SYMBOLS_PATH  # noqa: E402
+from sdk_libraries import library_of, library_runs  # noqa: E402
 from symbols import Symbol, SymbolTable  # noqa: E402
 
 # ---------------------------------------------------------------------------------------------------
@@ -228,58 +229,6 @@ class SignatureDatabase:
             name = raw_name.split(b"\0", 1)[0].decode("ascii", errors="replace")
             functions_by_checksum[checksum] = KnownFunction(name, size)
         return cls(functions_by_checksum)
-
-
-# ---------------------------------------------------------------------------------------------------
-# Library prefixes / Prefijos de las bibliotecas
-# ---------------------------------------------------------------------------------------------------
-
-# The SDK names the functions of each library with the library's letters in front (OSInit, GXSetViewport,
-# CARDOpen), and the library's private ones with underscores before that (__GXSetDirtyState). The math
-# library has several families of names. DC, IC and LC are the cache functions of the OS library
-# (DCFlushRange, ICInvalidateRange, LCEnable). TRK is MetroTRK, the debugger kernel the SDK links in.
-LIBRARY_BY_PREFIX = {
-    "AI": "AI",
-    "AR": "AR",
-    "ARQ": "ARQ",
-    "AX": "AX",
-    "AXFX": "AXFX",
-    "CARD": "CARD",
-    "C_MTX": "MTX",
-    "DB": "DB",
-    "DC": "OS",
-    "DSP": "DSP",
-    "DVD": "DVD",
-    "EXI": "EXI",
-    "GX": "GX",
-    "IC": "OS",
-    "LC": "OS",
-    "MTX": "MTX",
-    "OS": "OS",
-    "PAD": "PAD",
-    "PSMTX": "MTX",
-    "PSQUAT": "MTX",
-    "PSVEC": "MTX",
-    "QUAT": "MTX",
-    "SI": "SI",
-    "TRK": "TRK",
-    "VEC": "MTX",
-    "VI": "VI",
-}
-# Longest first, so that ARQInit is read as an ARQ function and not as an AR one.
-PREFIXES_LONGEST_FIRST = tuple(sorted(LIBRARY_BY_PREFIX, key=len, reverse=True))
-
-
-def library_of(function_name: str) -> str | None:
-    """The library a function name says it belongs to, or None when it does not say.
-
-    The prefix must be followed by something that is not a lowercase letter, so that an ordinary word
-    such as "Airplane" does not count as an AI function."""
-    name = function_name.lstrip("_")
-    for prefix in PREFIXES_LONGEST_FIRST:
-        if name.startswith(prefix) and not name[len(prefix) :][:1].islower():
-            return LIBRARY_BY_PREFIX[prefix]
-    return None
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -459,38 +408,6 @@ def analyze(dol: Dol, symbols: SymbolTable, database: SignatureDatabase) -> Sign
     functions = [symbol for symbol in symbols if symbol.kind == "function"]
     matches = find_matches(dol, functions, database)
     return SignatureAnalysis(len(functions), matches, classify_matches(matches))
-
-
-# ---------------------------------------------------------------------------------------------------
-# Libraries / Bibliotecas
-# ---------------------------------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class LibraryRun:
-    """A stretch of the program where the named functions all belong to the same library."""
-
-    library: str
-    first_address: int
-    end_address: int
-    function_count: int  # the functions named by signature inside the run
-
-
-def library_runs(named: Iterable[SignatureMatch]) -> list[LibraryRun]:
-    """Where each library sits, from the functions named by signature that say which library they are in.
-
-    Functions whose names say nothing about a library (static helpers) are skipped; they belong to
-    whichever run they fall in. A library can have several runs when another library's function sits
-    between its own."""
-    runs: list[LibraryRun] = []
-    for match in sorted(named, key=lambda match: match.address):
-        if match.library is None:
-            continue
-        if runs and runs[-1].library == match.library:
-            runs[-1] = replace(runs[-1], end_address=match.end, function_count=runs[-1].function_count + 1)
-        else:
-            runs.append(LibraryRun(match.library, match.address, match.end, 1))
-    return runs
 
 
 # ---------------------------------------------------------------------------------------------------

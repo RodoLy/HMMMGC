@@ -65,6 +65,7 @@ from ppc_encode import (  # noqa: E402
     stw,
 )
 from project import SYMBOLS_PATH  # noqa: E402
+from sdk_libraries import library_runs  # noqa: E402
 from sdk_signatures import (  # noqa: E402
     DSY_ENTRY_FORMAT,
     NAMED_VERDICTS,
@@ -79,8 +80,6 @@ from sdk_signatures import (  # noqa: E402
     code_checksum,
     format_report,
     instruction_signature,
-    library_of,
-    library_runs,
     plan_names,
     rotate_left,
 )
@@ -306,35 +305,6 @@ def test_a_file_that_is_not_a_database_is_refused_with_the_reason(tmp_path, cont
     path.write_bytes(content)
     with pytest.raises(ValueError, match=complaint):
         SignatureDatabase.read(path)
-
-
-# ------------------------------------------------------------------------------- library prefixes
-
-
-@pytest.mark.parametrize(
-    ("name", "library"),
-    [
-        ("OSInit", "OS"),
-        ("__OSDispatchInterrupt", "OS"),  # the library's private functions start with underscores
-        ("GXSetViewport", "GX"),
-        ("ARQInit", "ARQ"),  # not AR
-        ("ARStartDMA", "AR"),
-        ("AXFXGetHooks", "AXFX"),  # not AX
-        ("AXInit", "AX"),
-        ("C_MTXLookAt", "MTX"),
-        ("PSMTXMultVec", "MTX"),
-        ("DCFlushRange", "OS"),  # the cache functions are part of the OS library
-        ("TRKNubMainLoop", "TRK"),
-        ("SIGetType", "SI"),
-        ("Airplane", None),  # a word that merely starts with the letters AI
-        ("OnReset", None),
-        ("WriteCallback", None),
-        ("memcpy", None),
-        ("OS", "OS"),
-    ],
-)
-def test_the_library_comes_from_the_prefix_of_the_name(name, library):
-    assert library_of(name) == library
 
 
 # ------------------------------------------------------------------ the neighbours of a short function
