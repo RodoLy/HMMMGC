@@ -180,6 +180,17 @@ def test_the_patches_the_workflow_applies_exist_and_include_the_one_the_package_
     assert "relocatable-port.patch" in applied  # without it moderngekko-port cannot be moved
 
 
+def test_the_workflow_applies_every_patch_after_the_ones_that_its_header_puts_first(package_workflow_text):
+    # Some patches change lines that an earlier patch changed too, and only apply after it. The header
+    # of each says so ("Apply it after ..."), and a patch applied too soon stops the whole build.
+    applied = re.findall(r"patches/moderngekko/([\w.-]+\.patch)", package_workflow_text)
+    for patch in sorted(PATCHES_DIRECTORY.glob("*.patch")):
+        assert patch.name in applied, f"the package workflow does not apply {patch.name}"
+        header = patch.read_text(encoding="utf-8").split("diff --git ", 1)[0]
+        for earlier in re.findall(r"Apply it after\s+([\w.-]+\.patch)", header):
+            assert applied.index(earlier) < applied.index(patch.name), f"{patch.name} goes after {earlier}"
+
+
 def test_the_cache_of_the_programs_is_keyed_by_everything_that_changes_what_is_built(package_workflow_text):
     key = re.search(r"key: windows-arm64-programs-.*hashFiles\((.*?)\)", package_workflow_text).group(1)
     for what in (
