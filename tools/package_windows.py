@@ -93,7 +93,7 @@ LICENSE_FILES = {
 SOURCE_EXCLUDED = ("*.cpp",)
 
 # Files of the package folder itself, from packaging/windows/. The player double-clicks Play.bat,
-# or Play-Keyboard.bat when there is no controller (the launcher does not start a game without one).
+# or Play-Keyboard.bat to open the game with the keyboard, without the launcher.
 BATCH_FILES = ("Play.bat", "Play-Keyboard.bat")
 SCRIPT_FILE = "play.ps1"
 GAME_DEFINITION_FILE = "game.psd1"

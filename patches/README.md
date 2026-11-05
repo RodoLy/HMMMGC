@@ -194,6 +194,40 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-launcher
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `moderngekko/launcher-keyboard-play.patch`
+
+El launcher no deja pulsar **Play** si no hay un control SDL conectado
+(«Connect an SDL-compatible controller before playing»), aunque el juego corre
+sin control con las teclas que Dolphin asigna por omisión. En una computadora
+sin control había que saltarse el launcher y abrir el juego con
+`Play-Keyboard.bat`. El parche:
+
+- hace que **Play** y **Extract and Play** abran la partida en solitario cuando
+  no hay control conectado ni perfil de control guardado: el juego usa el
+  teclado y el launcher lo dice en su línea de estado («No SDL gamepad detected:
+  Play uses the keyboard (netplay needs a gamepad)»);
+- deja igual la partida en red: **Host Netplay** y **Join Netplay** siguen
+  pidiendo un control, con el mismo mensaje de antes, porque el perfil de
+  control nombra los controles de los jugadores;
+- no cambia nada cuando hay un control conectado o un perfil guardado.
+
+**Versiones a las que se aplica:** ModernGekko `edd460a`, la que fija
+`scripts/build_and_run_linux.sh` con ModernGekko-Template `c2553a9`. Se aplica
+a `lib/ModernGekko`, no a `vendor/dolphin`. Va después de
+`skip-assets-hash.patch`, porque los dos cambian `tools/moderngekko_launcher.cpp`.
+
+**Licencia:** GPL-3.0-or-later, como ModernGekko.
+
+**Aplicar** (hay que recompilar el launcher):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # o tu MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/launcher-keyboard-play.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-launcher
+```
+
+**Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
+
 ---
 
 ## English
@@ -383,6 +417,40 @@ change `tools/moderngekko_run.cpp`.
 TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
 git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/windows-graphics-backends.patch"
 ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-launcher
+```
+
+**Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+### `moderngekko/launcher-keyboard-play.patch`
+
+The launcher does not let you press **Play** if no SDL controller is connected
+("Connect an SDL-compatible controller before playing"), even though the game
+runs without a controller, with the keys that Dolphin maps by default. On a
+computer with no controller you had to skip the launcher and open the game with
+`Play-Keyboard.bat`. The patch:
+
+- makes **Play** and **Extract and Play** open the solo game when no controller
+  is connected and no controller profile is saved: the game uses the keyboard
+  and the launcher says so in its status line ("No SDL gamepad detected: Play
+  uses the keyboard (netplay needs a gamepad)");
+- leaves netplay as it was: **Host Netplay** and **Join Netplay** still ask for
+  a controller, with the same message as before, because the controller profile
+  names the controllers of the players;
+- changes nothing when a controller is connected or a profile is saved.
+
+**Applies to:** ModernGekko `edd460a`, the version `scripts/build_and_run_linux.sh`
+pins through ModernGekko-Template `c2553a9`. It applies to `lib/ModernGekko`,
+not to `vendor/dolphin`. It goes after `skip-assets-hash.patch`, because both
+change `tools/moderngekko_launcher.cpp`.
+
+**License:** GPL-3.0-or-later, like ModernGekko.
+
+**Apply** (the launcher has to be rebuilt):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/launcher-keyboard-play.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-launcher
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.

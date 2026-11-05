@@ -144,8 +144,9 @@ portátil, y no hay que instalar nada. El juego no viene incluido: se recompila
 en tu computadora, con tu disco, la primera vez.
 
 - **Para jugar:** sigue [packaging/windows/README.md](../packaging/windows/README.md):
-  extraer el zip, doble clic en `Play.bat` y elegir la imagen del disco (o
-  `Play-Keyboard.bat` si no tienes control).
+  extraer el zip, doble clic en `Play.bat` y elegir la imagen del disco (sin
+  control se juega con el teclado; `Play-Keyboard.bat` abre el juego sin el
+  launcher).
 - **De dónde sale el zip:** de GitHub Actions. En el repositorio: *Actions* →
   *Windows ARM64 package* → *Run workflow*. Al terminar, el zip está en
   *Artifacts* (hace falta iniciar sesión en GitHub), donde se guarda 14 días. No
@@ -325,8 +326,9 @@ nothing has to be installed. The game is not included: it is recompiled on your
 computer, from your disc, the first time.
 
 - **To play:** follow [packaging/windows/README.md](../packaging/windows/README.md):
-  extract the zip, double-click `Play.bat` and choose the disc image (or
-  `Play-Keyboard.bat` if you have no controller).
+  extract the zip, double-click `Play.bat` and choose the disc image (with no
+  controller you play with the keyboard; `Play-Keyboard.bat` opens the game
+  without the launcher).
 - **Where the zip comes from:** GitHub Actions. In the repository: *Actions* →
   *Windows ARM64 package* → *Run workflow*. When it ends, the zip is under
   *Artifacts* (you need to be signed in to GitHub), where it is kept for 14

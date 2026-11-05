@@ -44,12 +44,12 @@
     Prepara el juego pero no abre el launcher. Lo usan las pruebas del paquete.
 
 .PARAMETER Keyboard
-    Open the game itself, without the launcher, to play with the keyboard. The launcher does not
-    let the game start until a controller is connected, and the game does not need one: with no
-    controller set up it reads Dolphin's default keyboard layout.
-    Abre el juego mismo, sin el launcher, para jugar con el teclado. El launcher no deja empezar
-    el juego mientras no haya un control conectado, y el juego no lo necesita: sin ningún control
-    configurado lee la asignación de teclado que trae Dolphin.
+    Open the game itself, without the launcher, to play with the keyboard. With no controller set
+    up the game reads Dolphin's default keyboard layout, which is also what Play does in the
+    launcher when no controller is connected; this skips the launcher.
+    Abre el juego mismo, sin el launcher, para jugar con el teclado. Sin ningún control
+    configurado el juego lee la asignación de teclado que trae Dolphin, que es también lo que hace
+    Play en el launcher cuando no hay un control conectado; esto se salta el launcher.
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
@@ -402,9 +402,10 @@ function Start-Launcher {
 }
 
 # Opens the game without the launcher, which is what the launcher itself does when Play is pressed:
-# it starts the runner with the game and the player's folder. The launcher does not let Play work
-# until a controller is connected, but the runner does not need one, so this is the way to play
-# with the keyboard. What the runner says is shown and kept in the log, like what the tools say.
+# it starts the runner with the game and the player's folder. The runner does not need a controller
+# (with none set up the game reads Dolphin's keyboard layout), so this plays with the keyboard
+# without opening the launcher. What the runner says is shown and kept in the log, like what the
+# tools say.
 # The graphics API is given on purpose, so that the game does not depend on what the runner picks
 # when it is not told: Vulkan in an unpatched ModernGekko, which draws nothing on some computers
 # (see GraphicsBackend in game.psd1).

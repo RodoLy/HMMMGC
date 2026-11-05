@@ -1,0 +1,110 @@
+Let the launcher start a solo game with the keyboard when no gamepad is connected
+Que el launcher inicie una partida en solitario con teclado cuando no hay control
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, the version that scripts/build_and_run_linux.sh pins
+  through ModernGekko-Template c2553a9. Applies to lib/ModernGekko, not to
+  vendor/dolphin.
+  Apply it after skip-assets-hash.patch (both change tools/moderngekko_launcher.cpp).
+  ModernGekko edd460a, la versión que scripts/build_and_run_linux.sh fija con
+  ModernGekko-Template c2553a9. Se aplica a lib/ModernGekko, no a vendor/dolphin.
+  Aplícalo después de skip-assets-hash.patch (los dos cambian
+  tools/moderngekko_launcher.cpp).
+
+License / Licencia:
+  GPL-3.0-or-later, like ModernGekko.
+  GPL-3.0-or-later, igual que ModernGekko.
+
+Read patches/README.md for what it adds and how to apply it.
+Lee patches/README.md para ver qué agrega y cómo aplicarlo.
+
+diff --git a/tools/moderngekko_launcher.cpp b/tools/moderngekko_launcher.cpp
+index 940dda1..50c36fe 100644
+--- a/tools/moderngekko_launcher.cpp
++++ b/tools/moderngekko_launcher.cpp
+@@ -57,6 +57,11 @@ constexpr std::string_view CONTROLLER_PROFILE_NAME = "WiimoteNew.ini";
+ constexpr std::string_view GENERATED_PROFILE_LABEL = "sideways profile";
+ #endif
+ 
++// What the launcher says while no gamepad is connected: a solo game is then played with the
++// keyboard, with the keys that Dolphin maps by default.
++constexpr std::string_view NO_GAMEPAD_STATUS =
++    "No SDL gamepad detected: Play uses the keyboard (netplay needs a gamepad)";
++
+ struct ExtractionState
+ {
+   std::atomic<bool> running{false};
+@@ -672,7 +677,15 @@ int main(int argc, char** argv)
+     controller_status = std::move(message);
+     return true;
+   };
+-  const auto ensure_controller = [&]
++  // What a launch needs from the controller settings. A solo game can be played with the keyboard:
++  // when there is no gamepad profile, the game uses the keys that Dolphin maps by default. Netplay
++  // needs a gamepad profile, because the players' controllers are named in the profile.
++  enum class ControllerNeed
++  {
++    GamepadRequired,
++    KeyboardIsEnough,
++  };
++  const auto ensure_controller = [&](ControllerNeed need)
+   {
+     if (moderngekko::frontend::ControllerConfigExists(user_directory))
+     {
+@@ -692,6 +705,11 @@ int main(int argc, char** argv)
+     }
+     if (controller_index < 0)
+     {
++      if (need == ControllerNeed::KeyboardIsEnough)
++      {
++        controller_status = NO_GAMEPAD_STATUS;
++        return true;
++      }
+       std::lock_guard lock(dialog.mutex);
+       dialog.error = "Connect an SDL-compatible controller before playing";
+       return false;
+@@ -712,7 +730,7 @@ int main(int argc, char** argv)
+       if (controller_index >= 0)
+         select_controller(controller_index);
+       else
+-        controller_status = "No SDL gamepad detected";
++        controller_status = NO_GAMEPAD_STATUS;
+     }
+     else
+     {
+@@ -767,7 +785,7 @@ int main(int argc, char** argv)
+         if (current_metadata && !RequiredGameError(*current_metadata.metadata).empty())
+           current_metadata = {{}, RequiredGameError(*current_metadata.metadata)};
+         extraction.finished_game.reset();
+-        if (ensure_controller())
++        if (ensure_controller(ControllerNeed::KeyboardIsEnough))
+         {
+           launch_mode = LaunchMode::Solo;
+           done = true;
+@@ -827,7 +845,7 @@ int main(int argc, char** argv)
+       }
+       if (ImGui::Button("Play", ImVec2(180 * scale, 42 * scale)))
+       {
+-        if (ensure_controller())
++        if (ensure_controller(ControllerNeed::KeyboardIsEnough))
+         {
+           launch_mode = LaunchMode::Solo;
+           done = true;
+@@ -836,7 +854,7 @@ int main(int argc, char** argv)
+       ImGui::SameLine();
+       if (ImGui::Button("Host Netplay", ImVec2(180 * scale, 42 * scale)))
+       {
+-        if (ensure_controller())
++        if (ensure_controller(ControllerNeed::GamepadRequired))
+         {
+           config.netplay_nickname = netplay_nickname.data();
+           config.netplay_address = netplay_address.data();
+@@ -864,7 +882,7 @@ int main(int argc, char** argv)
+       ImGui::SameLine();
+       if (ImGui::Button("Join Netplay", ImVec2(180 * scale, 42 * scale)))
+       {
+-        if (ensure_controller())
++        if (ensure_controller(ControllerNeed::GamepadRequired))
+         {
+           config.netplay_nickname = netplay_nickname.data();
+           config.netplay_address = netplay_address.data();

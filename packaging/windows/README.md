@@ -33,21 +33,23 @@ recompilan el juego en tu computadora, a partir de tu disco.
 4. Espera. Se prepara el juego para tu computadora: se leen los archivos del disco y el programa
    del juego se recompila. Se hace **una sola vez** y puede tardar varios minutos. No cierres la
    ventana negra.
-5. Se abre el launcher. Conecta antes tu control (ver «Controles») y pulsa **Play**. Si no tienes
-   control, usa `Play-Keyboard.bat` en lugar de `Play.bat`: abre el juego directamente y se juega
-   con el teclado.
+5. Se abre el launcher. Pulsa **Play**. Con un control compatible conectado se usa el control; sin
+   control se juega con el teclado (ver «Controles»). `Play-Keyboard.bat` abre el juego con el
+   teclado sin pasar por el launcher.
 
 Las veces siguientes basta con hacer doble clic en `Play.bat` (o en `Play-Keyboard.bat`).
 
 ### Controles
 
 **Con control.** `Play.bat` abre el launcher, que usa un control compatible con SDL (Xbox,
-PlayStation, Switch Pro, 8BitDo, …) y lo asigna a un control de GameCube. El launcher no deja
-pulsar **Play** mientras no haya un control conectado («Connect an SDL-compatible controller
-before playing»).
+PlayStation, Switch Pro, 8BitDo, …) y lo asigna a un control de GameCube. Si no hay ningún control
+conectado, el launcher lo dice en su línea de estado y **Play** abre el juego con el teclado: solo
+la partida en red (**Host Netplay** y **Join Netplay**) exige un control («Connect an
+SDL-compatible controller before playing»).
 
-**Con teclado.** `Play-Keyboard.bat` abre el juego sin el launcher, con la asignación de
-teclado de Dolphin (el juego corre sobre Dolphin). Todavía no se puede cambiar desde el paquete:
+**Con teclado.** `Play.bat` sin un control conectado, o `Play-Keyboard.bat` (que no abre el
+launcher), abre el juego con la asignación de teclado de Dolphin (el juego corre sobre Dolphin).
+Todavía no se puede cambiar desde el paquete:
 
 | GameCube | Teclado |
 | --- | --- |
@@ -89,7 +91,8 @@ de direcciones del Explorador de archivos): el juego extraído (`games`), el mó
   Windows x64 también OpenGL). Un launcher nuevo empieza con DirectX 12 en Windows ARM64, pero un
   `config.ini` que ya existía conserva su elección (por ejemplo Vulkan, con el que la ventana sale
   negra en la laptop Snapdragon donde se probó): elige DirectX 12 una vez. El launcher abre aunque
-  no haya control; solo **Play** lo pide. Después vuelve a abrir el juego como antes.
+  no haya control, y **Play** también (se juega con el teclado); solo la partida en red lo pide.
+  Después vuelve a abrir el juego como antes.
 - **Jugué con un control y ahora quiero el teclado.** El launcher recuerda el control que usaste y
   `Play-Keyboard.bat` también lo usa. Para volver al teclado, cierra el juego y borra
   `%LOCALAPPDATA%\HarvestMoonMM\config.ini` y `%LOCALAPPDATA%\HarvestMoonMM\Config\GCPadNew.ini`
@@ -141,21 +144,23 @@ recompile the game on your computer, from your disc.
 4. Wait. The game is prepared for your computer: the files of the disc are read and the game's
    program is recompiled. This is done **only once** and can take several minutes. Do not close
    the black window.
-5. The launcher opens. Connect your controller first (see "Controls") and press **Play**. If you
-   have no controller, use `Play-Keyboard.bat` instead of `Play.bat`: it opens the game directly
-   and you play with the keyboard.
+5. The launcher opens. Press **Play**. With a compatible controller connected the controller is
+   used; with none you play with the keyboard (see "Controls"). `Play-Keyboard.bat` opens the game
+   with the keyboard without going through the launcher.
 
 The next times, just double-click `Play.bat` (or `Play-Keyboard.bat`).
 
 ### Controls
 
 **With a controller.** `Play.bat` opens the launcher, which uses an SDL-compatible controller
-(Xbox, PlayStation, Switch Pro, 8BitDo, …) and maps it to a GameCube controller. The launcher does
-not let you press **Play** while no controller is connected ("Connect an SDL-compatible
-controller before playing").
+(Xbox, PlayStation, Switch Pro, 8BitDo, …) and maps it to a GameCube controller. If no controller
+is connected, the launcher says so in its status line and **Play** opens the game with the
+keyboard: only netplay (**Host Netplay** and **Join Netplay**) requires a controller ("Connect an
+SDL-compatible controller before playing").
 
-**With the keyboard.** `Play-Keyboard.bat` opens the game without the launcher, with Dolphin's
-default keyboard layout (the game runs on Dolphin). It cannot be changed from the package yet:
+**With the keyboard.** `Play.bat` with no controller connected, or `Play-Keyboard.bat` (which does
+not open the launcher), opens the game with Dolphin's default keyboard layout (the game runs on
+Dolphin). It cannot be changed from the package yet:
 
 | GameCube | Keyboard |
 | --- | --- |
@@ -196,8 +201,8 @@ and `StaticRecompModules`), your saved games, the settings, and the log of the l
   Windows x64 also OpenGL). A new launcher starts with DirectX 12 on Windows ARM64, but a
   `config.ini` that already existed keeps its choice (for example Vulkan, with which the window
   stays black on the Snapdragon laptop where the package was tried): choose DirectX 12 once. The
-  launcher opens even with no controller; only **Play** asks for one. Then open the game again as
-  before.
+  launcher opens even with no controller, and so does **Play** (you play with the keyboard); only
+  netplay asks for one. Then open the game again as before.
 - **I played with a controller and now I want the keyboard.** The launcher remembers the controller
   you used, and `Play-Keyboard.bat` uses it too. To go back to the keyboard, close the game and
   delete `%LOCALAPPDATA%\HarvestMoonMM\config.ini` and
