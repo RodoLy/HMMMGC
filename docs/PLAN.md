@@ -53,8 +53,14 @@ aurora, y qué se sabe y qué no, está en
       273 tablas de `switch`, validado contra `extabindex` (2 597/2 597).
       Herramientas propias en vez de dtk; ver [FUNCTION_MAP.md](FUNCTION_MAP.md).
 - [x] Nombres con evidencia: arranque de CodeWarrior y los 13 `Init` del SDK.
-- [ ] Identificar el resto del SDK por firma (fronteras de lo que el runtime
-      reemplaza en la fase 2; es el paso 2 del orden de arriba).
+- [x] Identificar el SDK por firma (paso 2 del orden de arriba):
+      `tools/sdk_signatures.py` compara cada función con la base de firmas de
+      Dolphin y puso 563 nombres más (588 en total). Dio el rango de cada
+      biblioteca del SDK, que es la frontera de lo que el runtime reemplaza en
+      la fase 2; ver [FUNCTION_MAP.md](FUNCTION_MAP.md).
+- [ ] Afinar los nombres del SDK: usar el archivo del enlazador que trae la
+      mitad de la base (para AX, TRK y la biblioteca C) y nombrar `PPCArch` por
+      el número de registro especial. No bloquea nada.
 
 **Fase 1 – Recompilación de CPU**
 - [x] Evaluar recompiladores. Recomendación: DolRecomp + ModernGekko
@@ -129,7 +135,7 @@ aurora, y qué se sabe y qué no, está en
 
 **Fase 2 – Runtime propio** (la parte pesada: reemplaza el hardware de Dolphin
 pieza por pieza, en el orden de arriba)
-- [ ] Identificar el SDK por firma (pendiente de la fase 0).
+- [x] Identificar el SDK por firma (hecho en la fase 0).
 - [ ] Experimento de viabilidad: las llamadas de GX del juego dibujan la
       pantalla de título con aurora.
 - [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). Referencia:
@@ -260,8 +266,14 @@ is known and what is not, is in
       273 `switch` tables, validated against `extabindex` (2,597/2,597).
       In-repo tools instead of dtk; see [FUNCTION_MAP.md](FUNCTION_MAP.md).
 - [x] Names with evidence: CodeWarrior startup and the 13 SDK `Init`s.
-- [ ] Identify the rest of the SDK by signature (the boundary of what the
-      runtime replaces in phase 2; it is step 2 of the order above).
+- [x] Identify the SDK by signature (step 2 of the order above):
+      `tools/sdk_signatures.py` compares every function with Dolphin's
+      signature database and named 563 more (588 in total). It gave the range
+      of each SDK library, which is the boundary of what the runtime replaces
+      in phase 2; see [FUNCTION_MAP.md](FUNCTION_MAP.md).
+- [ ] Refine the SDK names: use the linker archive that half of the database
+      carries (for AX, TRK and the C library) and name `PPCArch` by its
+      special-register number. Nothing waits on it.
 
 **Phase 1 – CPU recompilation**
 - [x] Evaluate recompilers. Recommendation: DolRecomp + ModernGekko
@@ -337,7 +349,7 @@ is known and what is not, is in
 
 **Phase 2 – Own runtime** (the heavy part: it replaces Dolphin's hardware piece
 by piece, in the order above)
-- [ ] Identify the SDK by signature (pending from phase 0).
+- [x] Identify the SDK by signature (done in phase 0).
 - [ ] Feasibility experiment: the game's GX calls draw the title screen with
       aurora.
 - [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). Reference:

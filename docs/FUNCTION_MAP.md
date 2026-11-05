@@ -6,6 +6,7 @@ Regenerate and check / Regenerar y comprobar:
 
 ```sh
 python3 tools/analyze.py                      # reads orig/G4AEE9/sys/main.dol, writes config/G4AEE9/symbols.txt
+python3 tools/sdk_signatures.py --database totaldb.dsy   # SDK names by signature (--apply writes them)
 HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 python3 tools/disasm.py OSInit
 ```
@@ -34,7 +35,7 @@ LLVM como puntos de entrada (`tools/export_dolrecomp_map.py`).
 | …destino de algún `bl` | 3 637 |
 | Tablas de `switch` | 274 (4 sin comprobación de límite, ver abajo) |
 | Datos dentro de código | 3 (`_rom_copy_info`, `_bss_init_info`, cadena de TRK) |
-| Funciones con nombre | 25, todas con evidencia |
+| Funciones con nombre | 588, todas con evidencia (25 por lectura del código, 563 por firma del SDK) |
 
 ### Cómo se sabe que es correcto
 
@@ -172,6 +173,119 @@ función (`0x8016F840`), cuyo cuerpo es `OSReport("%s\n", id)`.
 
 Más `OSRegisterVersion` (`0x8016F840`) y `OSReport` (`0x80171504`).
 
+### Nombres del SDK por firma
+
+Casi todas las funciones del SDK no tienen `Init` ni cadena de versión, así
+que la regla anterior no las alcanza. Dolphin trae una base con las firmas de
+10 549 funciones de SDKs de Nintendo, y `tools/sdk_signatures.py` busca en
+ella cada función de `main.dol`:
+
+```sh
+python3 tools/sdk_signatures.py --database totaldb.dsy           # informe; no cambia nada
+python3 tools/sdk_signatures.py --database totaldb.dsy --list    # y una línea por función
+python3 tools/sdk_signatures.py --database totaldb.dsy --apply   # escribe los nombres en symbols.txt
+```
+
+**La firma.** Es la suma de verificación de Dolphin
+(`HashSignatureDB::ComputeCodeChecksum`). De cada instrucción guarda el opcode
+y, según su tipo, los registros o el opcode extendido, pero nunca los valores
+inmediatos ni los destinos de los saltos; por eso la misma función da la misma
+firma en cualquier dirección. Las pruebas usan valores calculados con una copia
+literal del bucle de Dolphin, compilada aparte. Antes de usar el port se
+comparó con esa copia sobre 20 768 secuencias de instrucciones (20 000 al azar
+y 768 hechas para cubrir cada opcode con sus patrones de bits) y no hubo
+ninguna diferencia.
+
+**La base.** Es `Data/Sys/totaldb.dsy` de Dolphin, commit `10f7ac4f`
+(2026-09-16): 1 434 668 bytes y sha256
+`09fb4a167946dbdfee5890c0f027e40b3eacbb6cc5ee9184adeb9d1a81c2c0aa`. No está en
+este repositorio, porque son datos de Dolphin con licencia GPL-2.0-or-later; la
+herramienta la recibe con `--database` o con la variable `HM_MM_SIGNATURE_DB`.
+Las cifras de abajo son las de esa versión.
+
+**En qué se confía.** Una firma igual es una evidencia fuerte y no una prueba,
+así que la herramienta no nombra todo lo que encuentra: clasifica cada
+coincidencia. De las 4 486 funciones, 1 383 tienen una firma que la base conoce:
+
+| Veredicto | Funciones | Qué quiere decir |
+|---|---|---|
+| Fuerte | 443 | Única en el programa, del mismo tamaño que en la base, con nombre de C normal y de al menos `0x60` bytes (24 instrucciones). Se nombra. |
+| Corroborada | 133 | Igual, pero más corta. Su biblioteca (el prefijo `GX`, `OS`, `DVD`...) es la de la coincidencia fuerte que tiene justo antes o justo después. Se nombra. |
+| Firma compartida | 698 | Varias funciones del programa tienen esa firma, así que no dice cuál es cuál. No se nombra ninguna. |
+| Corta sin respaldo | 63 | Única y del mismo tamaño, pero corta y sin una coincidencia fuerte de su biblioteca al lado. No se nombra. |
+| Nombre inutilizable | 32 | El nombre no es un identificador de C (un método de C++, por ejemplo). No se nombra. |
+| Nombre repetido | 9 | Dos funciones distintas del programa recibirían el mismo nombre (funciones `static` de archivos distintos, como `OnReset`). No se nombra ninguna. |
+| Otro tamaño | 5 | La base conoce otro tamaño para esa firma. No se nombra. |
+
+**De dónde sale `0x60`.** Se midió con el código del propio juego, que no es
+del SDK y no debería coincidir con nada. De sus 787 funciones de menos de
+`0x60` bytes, 20 coincidieron por casualidad (la más larga, de `0x58`); de las
+1 856 de `0x60` o más, ninguna. Por eso una coincidencia corta solo vale con el
+respaldo de la biblioteca vecina, y en el código del juego
+(`0x800184C0`–`0x8016EB94`) no quedó ninguna función con nombre.
+
+**Contra qué se comprobó.** Las 13 funciones que ya tenían nombre por la regla
+de las versiones o por lectura del código y que la base conoce (`OSReport`,
+`OSRegisterVersion`, `VIInit`, `PADInit`, `AIInit`, `ARInit`, `ARQInit`,
+`DSPInit`, `CARDInit`, `EXIInit`, `SIInit`, `__init_registers` y
+`__init_data`) reciben el mismo nombre por firma, y ninguna recibe otro. Otras
+dos coinciden con lo que se había deducido por separado: `GXCallDisplayList`
+(`0x80195010`), la única función que manda a la tubería el comando 0x40 de GX,
+y `__OSFPRInit` (`0x8016EDA0`), la que inicializa los registros de punto
+flotante al arrancar. Y las 77 funciones de la librería GX que escriben en la
+tubería (`tools/find_gx_pipe_writers.py`, halladas sin mirar los nombres) caen
+todas dentro del rango GX; las otras ocho son las funciones de vértices del
+juego, en `0x801CAB68`.
+
+**Dónde está cada biblioteca.** El enlazador deja juntas las funciones de una
+biblioteca, así que una cadena de nombres con el mismo prefijo marca su rango.
+Cada rango va del inicio de su primera función con nombre al final de la
+última. Entre dos rangos hay a veces una o dos funciones sin nombre, de una de
+las dos vecinas.
+
+| Biblioteca | Rango | Funciones | Con nombre |
+|---|---|---|---|
+| OS (primera parte) | `0x8016EDA0`–`0x80175778` | 146 | 93 |
+| MTX | `0x8017580C`–`0x801759C8` | 4 | 4 |
+| DVD | `0x801759C8`–`0x80179BB0` | 85 | 49 |
+| VI | `0x80179DF0`–`0x8017BBB0` | 20 | 13 |
+| PAD | `0x8017BF98`–`0x8017D73C` | 18 | 15 |
+| AI | `0x8017D780`–`0x8017E008` | 17 | 11 |
+| AR | `0x8017E04C`–`0x8017FB40` | 8 | 7 |
+| ARQ | `0x8017FB40`–`0x8017FEDC` | 5 | 4 |
+| AX y AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
+| DSP | `0x801877FC`–`0x80188300` | 12 | 9 |
+| CARD | `0x80188338`–`0x8018ED98` | 87 | 60 |
+| GX | `0x8018EDE0`–`0x80195F98` | 156 | 102 |
+| TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
+| Resto de TRK, biblioteca C y soporte del compilador | `0x8019B5F0`–`0x801A7A14` | 188 | 72 |
+| DB | `0x801A7A14`–`0x801A848C` | 12 | 9 |
+| EXI | `0x801A8580`–`0x801A9E68` | 22 | 21 |
+| OS (segunda parte) | `0x801A9FF4`–`0x801AA1B0` | 1 | 1 |
+| SI | `0x801AA420`–`0x801ABC18` | 24 | 23 |
+
+La fila de AX y AXFX es la zona entre `AXInit` y DSP. Casi todas sus firmas
+faltan en la base, pero las pocas que hay la identifican: `do_src1` y
+`do_src2` (AX) tienen nombre, y `AXFXSetHooks` y `HandleReverb` (AXFX) se
+reconocen pero se comparten entre varias funciones, así que no se nombran. La
+fila «Resto de TRK, biblioteca C y soporte del compilador» tiene, con nombre,
+`sprintf`, `qsort`, `memmove`, las funciones matemáticas (`__ieee754_pow`,
+`sin`, `tan`...), `__div2u`, `__construct_array` y, de TRK,
+`CircleBufferReadBytes`.
+
+La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 579 con
+nombre, el 55 %. Fuera de ella el código del juego y su middleware queda sin
+nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 478
+funciones del SDK que siguen sin nombre se reparten así: 212 comparten firma con
+otras, 200 no tienen firma en la base, 51 son cortas sin respaldo, 9 repiten
+nombre, 4 tienen otro tamaño y 2 tienen nombre de C++. AX es el caso más claro
+de las que no están en la base: 72 de sus 87 funciones.
+
+**Lo que no se usa todavía.** La base trae, en la mitad de sus entradas (5 133
+de 10 549), el archivo y el objeto del enlazador (`card.a CARDBios.o`, por
+ejemplo). Daría la biblioteca exacta de cada función, también en la biblioteca C
+y en TRK, y no solo la que dice el prefijo del nombre.
+
 ### Archivos fuente del juego
 
 Los asserts imprimen el nombre del archivo fuente. CodeWarrior enlaza los
@@ -205,8 +319,21 @@ leen o escriben un registro especial (`mfmsr r3; blr`, `mtspr HID0`, `L2CR`,
   memoria baja; el juego nunca los llama.
 - `0x8016F77C` y `0x80174788` son etiquetas de fin de bloques que el SDK
   copia a memoria baja (un `nop` cada una).
-- Las funciones del SDK sin `Init` todavía no tienen nombre; el siguiente
-  paso es identificarlas por firma contra el SDK de noviembre de 2004.
+- Un nombre por firma es una evidencia fuerte, no una prueba. El riesgo que
+  queda es una función del SDK de este juego con la misma forma que otra que
+  el juego no incluye: recibiría el nombre de la otra. El mismo tamaño y que la
+  biblioteca encaje con las vecinas lo hacen poco probable, no imposible.
+  Antes de reemplazar una función hay que mirarla (`tools/disasm.py`,
+  `tools/find_callers.py`).
+- 478 de las 1 057 funciones de la región del SDK siguen sin nombre (ver
+  arriba); AX y AXFX son el hueco más grande.
+- Las funciones de `PPCArch` (desde `0x8016EB94`) son de dos instrucciones que
+  leen o escriben un registro especial. La firma no guarda el número del
+  registro, así que no las distingue y quedan sin nombre. Haría falta una
+  regla aparte que lea ese número.
+- Los nombres ya escritos están en `symbols.txt` y `tools/analyze.py` los
+  conserva al regenerar; la base de Dolphin solo hace falta para repetir o
+  ampliar la búsqueda.
 
 ---
 
@@ -232,7 +359,7 @@ backend DolRecomp finds functions on its own; our map reaches mods as names
 | …target of some `bl` | 3,637 |
 | `switch` tables | 274 (4 without a bounds check, see below) |
 | Data inside code | 3 (`_rom_copy_info`, `_bss_init_info`, TRK string) |
-| Named functions | 25, all with evidence |
+| Named functions | 588, all with evidence (25 from reading the code, 563 from SDK signatures) |
 
 ### How we know it is right
 
@@ -367,6 +494,119 @@ the same function (`0x8016F840`), whose body is `OSReport("%s\n", id)`.
 
 Plus `OSRegisterVersion` (`0x8016F840`) and `OSReport` (`0x80171504`).
 
+### SDK names by signature
+
+Most SDK functions have no `Init` and no version string, so the rule above
+does not reach them. Dolphin ships a database with the signatures of 10,549
+functions of Nintendo SDKs, and `tools/sdk_signatures.py` looks up every
+function of `main.dol` in it:
+
+```sh
+python3 tools/sdk_signatures.py --database totaldb.dsy           # report; changes nothing
+python3 tools/sdk_signatures.py --database totaldb.dsy --list    # and one line per function
+python3 tools/sdk_signatures.py --database totaldb.dsy --apply   # writes the names to symbols.txt
+```
+
+**The signature.** It is Dolphin's checksum
+(`HashSignatureDB::ComputeCodeChecksum`). From each instruction it keeps the
+opcode and, depending on its kind, the registers or the extended opcode, but
+never immediate values or branch targets; that is why the same function has
+the same signature at any address. The tests use values computed with a
+verbatim copy of Dolphin's loop, compiled separately. Before the port was
+used it was compared with that copy on 20,768 sequences of instructions
+(20,000 random ones and 768 built to cover every opcode with its bit
+patterns) and there was no difference.
+
+**The database.** It is Dolphin's `Data/Sys/totaldb.dsy`, commit `10f7ac4f`
+(2026-09-16): 1,434,668 bytes and sha256
+`09fb4a167946dbdfee5890c0f027e40b3eacbb6cc5ee9184adeb9d1a81c2c0aa`. It is not
+in this repository, because it is Dolphin's data under GPL-2.0-or-later; the
+tool takes it with `--database` or the `HM_MM_SIGNATURE_DB` variable. The
+figures below are those of that version.
+
+**What is trusted.** An equal signature is strong evidence and not a proof, so
+the tool does not name everything it finds: it sorts each match. Of the 4,486
+functions, 1,383 have a signature the database knows:
+
+| Verdict | Functions | What it means |
+|---|---|---|
+| Strong | 443 | Unique in the program, the same size as in the database, with a plain C name and at least `0x60` bytes (24 instructions). Named. |
+| Corroborated | 133 | The same, but shorter. Its library (the `GX`, `OS`, `DVD`... prefix) is that of the strong match right before or right after it. Named. |
+| Shared signature | 698 | Several functions of the program have this signature, so it does not say which is which. None is named. |
+| Short, no backing | 63 | Unique and the same size, but short and with no strong match of its library next to it. Not named. |
+| Unusable name | 32 | The name is not a C identifier (a C++ method, for example). Not named. |
+| Repeated name | 9 | Two different functions of the program would get the same name (`static` functions of different files, such as `OnReset`). Neither is named. |
+| Other size | 5 | The database knows another size for this signature. Not named. |
+
+**Where `0x60` comes from.** It was measured on the game's own code, which is
+not SDK and should match nothing. Of its 787 functions shorter than `0x60`
+bytes, 20 matched by accident (the longest `0x58` bytes); of the 1,856 of
+`0x60` or more, none. That is why a short match counts only with the backing
+of the neighbouring library, and why no function of the game's code
+(`0x800184C0`–`0x8016EB94`) was named.
+
+**What it was checked against.** The 13 functions that already had a name from
+the version rule or from reading the code and that the database knows
+(`OSReport`, `OSRegisterVersion`, `VIInit`, `PADInit`, `AIInit`, `ARInit`,
+`ARQInit`, `DSPInit`, `CARDInit`, `EXIInit`, `SIInit`, `__init_registers` and
+`__init_data`) get the same name by signature, and none gets another. Two more
+agree with what had been deduced separately: `GXCallDisplayList`
+(`0x80195010`), the only function that sends GX command 0x40 to the pipe, and
+`__OSFPRInit` (`0x8016EDA0`), the one that initialises the floating-point
+registers at start-up. And the 77 functions of the GX library that write to
+the pipe (`tools/find_gx_pipe_writers.py`, found without looking at names) all
+fall inside the GX range; the other eight are the game's vertex functions, at
+`0x801CAB68`.
+
+**Where each library is.** The linker keeps the functions of a library
+together, so a run of names with the same prefix marks its range. Each range
+goes from the start of its first named function to the end of its last one.
+Between two ranges there are sometimes one or two unnamed functions, which
+belong to one of the two neighbours.
+
+| Library | Range | Functions | Named |
+|---|---|---|---|
+| OS (first part) | `0x8016EDA0`–`0x80175778` | 146 | 93 |
+| MTX | `0x8017580C`–`0x801759C8` | 4 | 4 |
+| DVD | `0x801759C8`–`0x80179BB0` | 85 | 49 |
+| VI | `0x80179DF0`–`0x8017BBB0` | 20 | 13 |
+| PAD | `0x8017BF98`–`0x8017D73C` | 18 | 15 |
+| AI | `0x8017D780`–`0x8017E008` | 17 | 11 |
+| AR | `0x8017E04C`–`0x8017FB40` | 8 | 7 |
+| ARQ | `0x8017FB40`–`0x8017FEDC` | 5 | 4 |
+| AX and AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
+| DSP | `0x801877FC`–`0x80188300` | 12 | 9 |
+| CARD | `0x80188338`–`0x8018ED98` | 87 | 60 |
+| GX | `0x8018EDE0`–`0x80195F98` | 156 | 102 |
+| TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
+| Rest of TRK, C library and compiler support | `0x8019B5F0`–`0x801A7A14` | 188 | 72 |
+| DB | `0x801A7A14`–`0x801A848C` | 12 | 9 |
+| EXI | `0x801A8580`–`0x801A9E68` | 22 | 21 |
+| OS (second part) | `0x801A9FF4`–`0x801AA1B0` | 1 | 1 |
+| SI | `0x801AA420`–`0x801ABC18` | 24 | 23 |
+
+The AX and AXFX row is the zone between `AXInit` and DSP. Most of its
+signatures are missing from the database, but the few there are identify it:
+`do_src1` and `do_src2` (AX) are named, and `AXFXSetHooks` and `HandleReverb`
+(AXFX) are recognised but shared among several functions, so they are not
+named. The row "Rest of TRK, C library and compiler support" has, named,
+`sprintf`, `qsort`, `memmove`, the math functions (`__ieee754_pow`, `sin`,
+`tan`...), `__div2u`, `__construct_array` and, from TRK,
+`CircleBufferReadBytes`.
+
+The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 579 named,
+55 %. Outside it the game's code and its middleware have no names: 2,643
+functions before it and 746 after SI (only `main`). The 478 SDK functions that
+are still unnamed split like this: 212 share a signature with others, 200
+have no signature in the database, 51 are short with no backing, 9 repeat a
+name, 4 have another size and 2 have a C++ name. AX is the clearest case of
+those missing from the database: 72 of its 87 functions.
+
+**What is not used yet.** In half of its entries (5,133 of 10,549) the
+database carries the linker's archive and object (`card.a CARDBios.o`, for
+example). It would give the exact library of each function, in the C library
+and in TRK too, and not only the one the name prefix says.
+
 ### Game source files
 
 Asserts print the source file name. CodeWarrior links objects in order, so
@@ -400,5 +640,18 @@ the per-frame function.
   calls them.
 - `0x8016F77C` and `0x80174788` are end labels of blocks the SDK copies to
   low memory (one `nop` each).
-- SDK functions other than the inits are not named yet; the next step is
-  signature matching against the November 2004 SDK.
+- A name by signature is strong evidence, not a proof. The risk that remains
+  is an SDK function of this game with the same shape as another one the game
+  does not include: it would get the other one's name. The same size and a
+  library that fits its neighbours make that unlikely, not impossible. Before
+  replacing a function, look at it (`tools/disasm.py`,
+  `tools/find_callers.py`).
+- 478 of the 1,057 functions of the SDK region are still unnamed (see
+  above); AX and AXFX are the biggest gap.
+- The `PPCArch` functions (from `0x8016EB94`) are two instructions that read
+  or write a special register. The signature does not keep the register
+  number, so it cannot tell them apart and they stay unnamed. A separate rule
+  that reads that number would be needed.
+- The names already written are in `symbols.txt` and `tools/analyze.py` keeps
+  them when it regenerates; Dolphin's database is only needed to repeat or
+  widen the search.
