@@ -228,6 +228,63 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-launcher
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `moderngekko/close-window-before-config-shutdown.patch`
+
+En Windows, el ejecutable del juego (`moderngekko-run.exe`) termina con el
+código de salida `0xC000041D` («excepción fatal en una devolución de llamada
+del usuario») cuando se cierra el juego, aunque el juego ya se había apagado
+bien: `[staticrecomp] shutdown:` sale en su consola antes del error. En una
+laptop Snapdragon ocurrió en 6 de las 7 mediciones registradas y en la
+ejecución con `Play.bat` que quedó en el registro. Es un fallo del programa y
+no de la laptop. Qué pasa:
+
+- `Runtime::~Runtime()` apaga la configuración de Dolphin
+  (`UICommon::Shutdown()`) y solo después, cuando se destruyen los miembros del
+  objeto, se destruye la ventana del juego;
+- al destruir una ventana que tiene el foco del teclado, Windows le manda
+  `WM_KILLFOCUS`, y el procedimiento de la ventana
+  (`PlatformWin32::WndProc`) responde poniendo la velocidad de emulación en 1.0
+  con `Config::SetCurrent`;
+- sin configuración no queda ninguna capa donde escribir: `Config::GetLayer`
+  devuelve un puntero nulo y `Set` lo usa sin revisarlo. Como el error ocurre
+  dentro de un procedimiento de ventana que Windows llamó desde su núcleo, el
+  código de salida es 0xC000041D y no el de una violación de acceso.
+
+Cómo se encontró: `Measure-Speed.bat` anota lo que Windows registra del fallo.
+Dio el desplazamiento `0x420A8` dentro de `moderngekko-run.exe`. Leído como
+datos, sin correrlo, ese ejecutable tiene ahí la primera instrucción de una
+búsqueda en un `std::map` hecha con un `this` nulo (`Config::Layer::Set`); esa
+función la llama `WndProc` en su caso de mensaje 8 (`WM_KILLFOCUS`), justo
+después de pedir la capa `CurrentRun` a `Config::GetLayer`.
+
+El parche destruye la ventana antes de apagar la configuración, que es el
+orden que ya usa el `main` de `DolphinNoGUI` que trae ModernGekko (destruye la
+ventana justo después de `Core::Shutdown`, con la configuración viva). También
+la destruye antes de apagar la configuración cuando `Init()` de la plataforma
+falla. No cambia nada más del cierre.
+
+**Sin probar con el parche puesto:** hace falta compilar el paquete en GitHub y
+cerrar el juego en la laptop. El criterio es que `Measure-Speed.bat` termine
+con `the game closed with code 0`.
+
+**Versiones a las que se aplica:** ModernGekko `edd460a`, la que fija
+`scripts/build_and_run_linux.sh` con ModernGekko-Template `c2553a9`. Se aplica
+a `lib/ModernGekko`, no a `vendor/dolphin`. Se aplica antes o después de
+`skip-assets-hash.patch`, que también cambia `src/runtime/dolphin_runtime.cpp`,
+en otro lugar.
+
+**Licencia:** GPL-3.0-or-later, como ModernGekko.
+
+**Aplicar** (hay que recompilar el runner):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # o tu MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/close-window-before-config-shutdown.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
+```
+
+**Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
+
 ---
 
 ## English
@@ -451,6 +508,60 @@ change `tools/moderngekko_launcher.cpp`.
 TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
 git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/launcher-keyboard-play.patch"
 ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-launcher
+```
+
+**Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+### `moderngekko/close-window-before-config-shutdown.patch`
+
+On Windows, the game's executable (`moderngekko-run.exe`) ends with exit code
+`0xC000041D` ("fatal exception in a user callback") when the game is closed,
+even though the game had already shut down cleanly: `[staticrecomp] shutdown:`
+appears on its console before the error. On a Snapdragon laptop it happened in
+6 of the 7 recorded measurements and in the `Play.bat` run that was left in the
+log. It is a fault of the program, not of the laptop. What happens:
+
+- `Runtime::~Runtime()` shuts Dolphin's configuration down
+  (`UICommon::Shutdown()`) and only afterwards, when the members of the object
+  are destroyed, is the game window destroyed;
+- when a window that has the keyboard focus is destroyed, Windows sends it
+  `WM_KILLFOCUS`, and the window procedure (`PlatformWin32::WndProc`) answers
+  by setting the emulation speed to 1.0 with `Config::SetCurrent`;
+- with no configuration there is no layer left to write to:
+  `Config::GetLayer` returns a null pointer and `Set` uses it without checking.
+  Because the error happens inside a window procedure that Windows called from
+  its kernel, the exit code is 0xC000041D and not that of an access violation.
+
+How it was found: `Measure-Speed.bat` writes down what Windows records about
+the crash. It gave offset `0x420A8` inside `moderngekko-run.exe`. Read as data,
+without running it, that executable has there the first instruction of a
+`std::map` lookup made with a null `this` (`Config::Layer::Set`); that function
+is called by `WndProc` in its case for message 8 (`WM_KILLFOCUS`), right after
+asking `Config::GetLayer` for the `CurrentRun` layer.
+
+The patch destroys the window before it shuts the configuration down, which is
+the order the `DolphinNoGUI` `main` that ships with ModernGekko already uses (it
+destroys the window right after `Core::Shutdown`, with the configuration still
+alive). It also destroys the window before shutting the configuration down when
+the platform's `Init()` fails. Nothing else about the shutdown changes.
+
+**Not tried with the patch in place:** the package has to be built on GitHub
+and the game closed on the laptop. The criterion is that `Measure-Speed.bat`
+ends with `the game closed with code 0`.
+
+**Applies to:** ModernGekko `edd460a`, the version `scripts/build_and_run_linux.sh`
+pins through ModernGekko-Template `c2553a9`. It applies to `lib/ModernGekko`,
+not to `vendor/dolphin`. It applies before or after `skip-assets-hash.patch`,
+which also changes `src/runtime/dolphin_runtime.cpp`, in another place.
+
+**License:** GPL-3.0-or-later, like ModernGekko.
+
+**Apply** (the runner has to be rebuilt):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/close-window-before-config-shutdown.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.

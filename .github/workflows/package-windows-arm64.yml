@@ -85,7 +85,9 @@ jobs:
       # the portable compiler) and the rest for ModernGekko: so that moderngekko-port finds the module
       # sources beside itself, so that the programs do not read the whole game at every start, so
       # that they offer DirectX on Windows (DirectX 12 is the one that works on a Snapdragon laptop),
-      # and so that the launcher plays with the keyboard when no controller is connected.
+      # so that the launcher plays with the keyboard when no controller is connected, and so that
+      # the game window is closed before the configuration is shut down (otherwise Windows reports a
+      # crash after every clean close).
       # They go in the order of patches/README.md, which is also the order that some of them need.
       - name: Apply the patches
         run: |
@@ -96,7 +98,8 @@ jobs:
             "$GITHUB_WORKSPACE/patches/moderngekko/relocatable-port.patch" \
             "$GITHUB_WORKSPACE/patches/moderngekko/skip-assets-hash.patch" \
             "$GITHUB_WORKSPACE/patches/moderngekko/windows-graphics-backends.patch" \
-            "$GITHUB_WORKSPACE/patches/moderngekko/launcher-keyboard-play.patch"
+            "$GITHUB_WORKSPACE/patches/moderngekko/launcher-keyboard-play.patch" \
+            "$GITHUB_WORKSPACE/patches/moderngekko/close-window-before-config-shutdown.patch"
 
       # What the build makes (the programs, the data they read and the Visual C++ runtime) is kept
       # in a folder of the workspace. The key lists everything that changes what is built: the
@@ -192,7 +195,7 @@ jobs:
             --version "ModernGekko=$(git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko" rev-parse --short=7 HEAD)" \
             --version "Dolphin (RecompCore)=$(git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" rev-parse --short=7 HEAD)" \
             --version "Python=$python_version" \
-            --version "patches=lockstep-verifier, export-lockstep-hook-on-mingw, relocatable-port, skip-assets-hash, windows-graphics-backends, launcher-keyboard-play (folder patches of HMMMGC)"
+            --version "patches=lockstep-verifier, export-lockstep-hook-on-mingw, relocatable-port, skip-assets-hash, windows-graphics-backends, launcher-keyboard-play, close-window-before-config-shutdown (folder patches of HMMMGC)"
           cat "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64/VERSIONS.txt"
           {
             echo "### Package"

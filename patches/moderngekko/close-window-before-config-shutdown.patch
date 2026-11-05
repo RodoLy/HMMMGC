@@ -1,0 +1,58 @@
+Close the game window before the configuration is shut down
+Cerrar la ventana del juego antes de apagar la configuración
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, the version that scripts/build_and_run_linux.sh pins
+  through ModernGekko-Template c2553a9. Applies to lib/ModernGekko, not to
+  vendor/dolphin.
+  It applies before or after skip-assets-hash.patch, which also changes
+  src/runtime/dolphin_runtime.cpp, in another place.
+  ModernGekko edd460a, la versión que scripts/build_and_run_linux.sh fija con
+  ModernGekko-Template c2553a9. Se aplica a lib/ModernGekko, no a vendor/dolphin.
+  Se aplica antes o después de skip-assets-hash.patch, que también cambia
+  src/runtime/dolphin_runtime.cpp, en otro lugar.
+
+License / Licencia:
+  GPL-3.0-or-later, like ModernGekko.
+  GPL-3.0-or-later, igual que ModernGekko.
+
+Read patches/README.md for what it adds and how to apply it.
+Lee patches/README.md para ver qué agrega y cómo aplicarlo.
+
+diff --git a/src/runtime/dolphin_runtime.cpp b/src/runtime/dolphin_runtime.cpp
+index f9b5405..2350aff 100644
+--- a/src/runtime/dolphin_runtime.cpp
++++ b/src/runtime/dolphin_runtime.cpp
+@@ -632,6 +632,9 @@ RuntimeCreateResult Runtime::Create(RuntimeConfig config) {
+       Platform::CreateWaylandPlatform();
+ #endif
+   if (!impl->platform || !impl->platform->Init()) {
++    // A window that was made before Init() failed goes now, while the configuration still exists
++    // (the destructor below says why the order matters).
++    impl->platform.reset();
+     if (impl->ui_initialized)
+       UICommon::Shutdown();
+     return {{},
+@@ -732,10 +735,21 @@ Runtime::~Runtime() {
+   m_impl->state_hook = {};
+   if (m_impl->controllers_initialized)
+     UICommon::ShutdownControllers();
++  // The window has to go while the configuration still exists. Destroying a window that has the
++  // keyboard focus makes Windows send it WM_KILLFOCUS, and the window procedure of the Win32
++  // platform answers by changing a setting (the emulation speed). Once UICommon::Shutdown() has
++  // cleared the configuration there is no layer to change: Config::Set() calls a member function
++  // through a null pointer, Windows reports a fatal exception in a user callback (exit code
++  // 0xC000041D) and a game that had shut down cleanly ends as a crash. Left to m_impl, the window
++  // would be destroyed after this body, which is after UICommon::Shutdown().
++  {
++    std::lock_guard lock(s_runtime_mutex);
++    s_platform = nullptr;
++  }
++  m_impl->platform.reset();
+   if (m_impl->ui_initialized)
+     UICommon::Shutdown();
+   std::lock_guard lock(s_runtime_mutex);
+-  s_platform = nullptr;
+   s_window_title.clear();
+   s_show_fps_in_title = true;
+   s_runtime_active = false;
