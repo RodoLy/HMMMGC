@@ -1,0 +1,273 @@
+Do not hash the whole game every time it is inspected
+No calcular el hash de todo el juego cada vez que se inspecciona
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, the version that scripts/build_and_run_linux.sh pins
+  through ModernGekko-Template c2553a9. Applies to lib/ModernGekko, not to
+  vendor/dolphin.
+  Apply it after relocatable-port.patch (both change tools/moderngekko_port.cpp).
+  ModernGekko edd460a, la versión que scripts/build_and_run_linux.sh fija con
+  ModernGekko-Template c2553a9. Se aplica a lib/ModernGekko, no a vendor/dolphin.
+  Aplícalo después de relocatable-port.patch (los dos cambian
+  tools/moderngekko_port.cpp).
+
+License / Licencia:
+  GPL-3.0-or-later, like ModernGekko.
+  GPL-3.0-or-later, igual que ModernGekko.
+
+Read patches/README.md for what it adds and how to apply it.
+Lee patches/README.md para ver qué agrega y cómo aplicarlo.
+
+diff --git a/include/moderngekko/game.hpp b/include/moderngekko/game.hpp
+index aeafd0e..507a8f9 100644
+--- a/include/moderngekko/game.hpp
++++ b/include/moderngekko/game.hpp
+@@ -35,7 +35,17 @@ struct GameInspectResult
+   explicit operator bool() const { return metadata.has_value(); }
+ };
+ 
+-GameInspectResult InspectGame(const std::filesystem::path& root);
++// What InspectGame does besides recognising the game.
++struct InspectOptions
++{
++  // Hash every file under files/ into GameMetadata::assets_sha256. That reads the whole game (about
++  // 1.4 GB for a GameCube disc): seconds on a fast disk, and much longer when a virus scanner checks
++  // each file as it is read. Only the check that pins a release to its assets and the netplay
++  // compatibility check use the hash. When this is false, assets_sha256 stays empty.
++  bool hash_assets = true;
++};
++
++GameInspectResult InspectGame(const std::filesystem::path& root, InspectOptions options = {});
+ std::optional<std::string> HashFileSha256(const std::filesystem::path& path);
+ std::optional<std::string> HashDirectorySha256(const std::filesystem::path& root);
+ }  // namespace moderngekko
+diff --git a/include/moderngekko/runtime.hpp b/include/moderngekko/runtime.hpp
+index 0adc855..f3be9df 100644
+--- a/include/moderngekko/runtime.hpp
++++ b/include/moderngekko/runtime.hpp
+@@ -70,6 +70,9 @@ struct RuntimeConfig
+   bool headless = false;
+   bool fullscreen = false;
+   bool allow_interpreter = false;
++  // Hash the game's files when the game is inspected at start (see InspectOptions). Only a program
++  // that reads GetGameMetadata().assets_sha256 needs it.
++  bool hash_game_assets = true;
+   bool show_fps_in_title = true;
+   std::optional<std::string> window_title;
+   // Boot straight into a savestate instead of from the title screen.
+diff --git a/src/runtime/dolphin_runtime.cpp b/src/runtime/dolphin_runtime.cpp
+index f9b5405..2d1fec4 100644
+--- a/src/runtime/dolphin_runtime.cpp
++++ b/src/runtime/dolphin_runtime.cpp
+@@ -554,7 +554,8 @@ RuntimeCreateResult Runtime::Create(RuntimeConfig config) {
+         RuntimeError{RuntimeErrorCode::AlreadyActive,
+                      "only one ModernGekko runtime may be active per process"}};
+ 
+-  GameInspectResult inspected = InspectGame(config.game_root);
++  GameInspectResult inspected =
++      InspectGame(config.game_root, {.hash_assets = config.hash_game_assets});
+   if (!inspected)
+     return {{}, RuntimeError{RuntimeErrorCode::InvalidGame, inspected.error}};
+ 
+diff --git a/src/runtime/game.cpp b/src/runtime/game.cpp
+index 85860a5..2e459ab 100644
+--- a/src/runtime/game.cpp
++++ b/src/runtime/game.cpp
+@@ -69,7 +69,7 @@ std::optional<std::string> HashDirectorySha256(const std::filesystem::path& root
+   return Sha256(std::move(manifest));
+ }
+ 
+-GameInspectResult InspectGame(const std::filesystem::path& input_root)
++GameInspectResult InspectGame(const std::filesystem::path& input_root, InspectOptions options)
+ {
+   std::error_code ec;
+   const auto root = std::filesystem::weakly_canonical(input_root, ec);
+@@ -143,10 +143,13 @@ GameInspectResult InspectGame(const std::filesystem::path& input_root)
+       return {{}, "can't hash files/_Main.rel"};
+     metadata.rel_sha256 = *rel_hash;
+   }
+-  const auto assets_hash = HashDirectorySha256(root / "files");
+-  if (!assets_hash)
+-    return {{}, "can't hash the files directory"};
+-  metadata.assets_sha256 = *assets_hash;
++  if (options.hash_assets)
++  {
++    const auto assets_hash = HashDirectorySha256(root / "files");
++    if (!assets_hash)
++      return {{}, "can't hash the files directory"};
++    metadata.assets_sha256 = *assets_hash;
++  }
+   return {std::move(metadata), {}};
+ }
+ }  // namespace moderngekko
+diff --git a/tests/game_inspect_test.cpp b/tests/game_inspect_test.cpp
+index 3b6200c..c7e3e47 100644
+--- a/tests/game_inspect_test.cpp
++++ b/tests/game_inspect_test.cpp
+@@ -33,6 +33,7 @@ int main()
+       .write(reinterpret_cast<const char*>(dol.data()), dol.size());
+ 
+   const auto result = moderngekko::InspectGame(root);
++  const auto without_assets_hash = moderngekko::InspectGame(root, {.hash_assets = false});
+   fs::remove_all(root);
+   if (!result || result.metadata->disc_id != "TEST01" ||
+       result.metadata->game_name != "Synthetic Test Game" ||
+@@ -41,5 +42,13 @@ int main()
+       result.metadata->dol_sha256 !=
+           "ee292f5fc3d0e5cfa32d951bd682a3cd2806c102e4a0a50300a2c480e21bcef6")
+     return 1;
++
++  // The files of the game are hashed unless the caller says not to, and then the rest is the same.
++  if (result.metadata->assets_sha256.empty())
++    return 2;
++  if (!without_assets_hash || !without_assets_hash.metadata->assets_sha256.empty() ||
++      without_assets_hash.metadata->disc_id != result.metadata->disc_id ||
++      without_assets_hash.metadata->dol_sha256 != result.metadata->dol_sha256)
++    return 3;
+   return 0;
+ }
+diff --git a/tools/game_inspection.hpp b/tools/game_inspection.hpp
+new file mode 100644
+index 0000000..0914c53
+--- /dev/null
++++ b/tools/game_inspection.hpp
+@@ -0,0 +1,19 @@
++#pragma once
++
++#include "moderngekko/game.hpp"
++
++namespace moderngekko::frontend {
++// How the launcher and the runner inspect the game they are about to play.
++//
++// Reading every file of the game to hash it takes a long time (see InspectOptions), and the hash is
++// only compared with something when this build pins the game's files to a release
++// (MODERNGEKKO_REQUIRED_ASSETS_SHA256), so only such a build hashes them when the game starts.
++// A netplay session hashes them on its own, when it starts, because the players compare that hash.
++inline InspectOptions GameInspectionOptions() {
++#ifdef MODERNGEKKO_REQUIRED_ASSETS_SHA256
++  return {.hash_assets = true};
++#else
++  return {.hash_assets = false};
++#endif
++}
++} // namespace moderngekko::frontend
+diff --git a/tools/moderngekko_launcher.cpp b/tools/moderngekko_launcher.cpp
+index 7699c3d..940dda1 100644
+--- a/tools/moderngekko_launcher.cpp
++++ b/tools/moderngekko_launcher.cpp
+@@ -1,4 +1,5 @@
+ #include "frontend_config.hpp"
++#include "game_inspection.hpp"
+ #include "dol_patch.hpp"
+ #include "launcher_savestates.hpp"
+ #include "moderngekko/game.hpp"
+@@ -394,7 +395,8 @@ bool ExtractDisc(const fs::path& image, const fs::path& user_directory,
+     if (!ApplyBundledDolPatch(output, release_directory, &changed, &patch_error))
+       return fail("existing extraction patching failed: " + patch_error);
+   }
+-  const auto existing = moderngekko::InspectGame(output);
++  const auto existing =
++      moderngekko::InspectGame(output, moderngekko::frontend::GameInspectionOptions());
+   if (existing && RequiredGameError(*existing.metadata).empty())
+   {
+     std::string error;
+@@ -446,7 +448,8 @@ bool ExtractDisc(const fs::path& image, const fs::path& user_directory,
+     return fail("extracted DOL patching failed: " + dol_patch_error);
+   }
+ 
+-  const auto inspected = moderngekko::InspectGame(staging);
++  const auto inspected =
++      moderngekko::InspectGame(staging, moderngekko::frontend::GameInspectionOptions());
+   if (!inspected)
+   {
+     fs::remove_all(staging, ec);
+@@ -587,7 +590,8 @@ int main(int argc, char** argv)
+   auto current_metadata =
+       ApplyBundledDolPatch(current_game, release_directory, &current_dol_changed,
+                            &current_dol_error) ?
+-          moderngekko::InspectGame(current_game) :
++          moderngekko::InspectGame(current_game,
++                                   moderngekko::frontend::GameInspectionOptions()) :
+           moderngekko::GameInspectResult{{}, current_dol_error};
+   if (current_metadata && !RequiredGameError(*current_metadata.metadata).empty())
+     current_metadata = {{}, RequiredGameError(*current_metadata.metadata)};
+@@ -758,7 +762,8 @@ int main(int argc, char** argv)
+       if (extraction.finished_game)
+       {
+         current_game = *extraction.finished_game;
+-        current_metadata = moderngekko::InspectGame(current_game);
++        current_metadata = moderngekko::InspectGame(
++            current_game, moderngekko::frontend::GameInspectionOptions());
+         if (current_metadata && !RequiredGameError(*current_metadata.metadata).empty())
+           current_metadata = {{}, RequiredGameError(*current_metadata.metadata)};
+         extraction.finished_game.reset();
+diff --git a/tools/moderngekko_port.cpp b/tools/moderngekko_port.cpp
+index 173c297..524a7ea 100644
+--- a/tools/moderngekko_port.cpp
++++ b/tools/moderngekko_port.cpp
+@@ -545,9 +545,16 @@ std::string CachedModuleStatus(const fs::path& output,
+   return "unverified: " + module.string();
+ }
+ 
++// The port tool only needs the disc ID, the name and the hash of the DOL, so it does not read every
++// file of the game to hash it (see InspectOptions).
++moderngekko::GameInspectResult InspectGameToPort(const fs::path& root)
++{
++  return moderngekko::InspectGame(root, {.hash_assets = false});
++}
++
+ int Inspect(const fs::path& root, const fs::path& output)
+ {
+-  const auto result = moderngekko::InspectGame(root);
++  const auto result = InspectGameToPort(root);
+   if (!result)
+   {
+     std::cerr << "invalid extracted game: " << result.error << '\n';
+@@ -584,7 +591,7 @@ fs::path ModuleSourceRoot(const char* argv0)
+ std::optional<fs::path> Build(const char* argv0, const fs::path& root,
+                               BuildOptions options)
+ {
+-  const auto inspected = moderngekko::InspectGame(root);
++  const auto inspected = InspectGameToPort(root);
+   if (!inspected)
+   {
+     std::cerr << "invalid extracted game: " << inspected.error << '\n';
+@@ -861,7 +868,7 @@ int PgoFailure(std::string_view stage, const moderngekko::pgo::Workspace& worksp
+ int PgoRun(const char* argv0, const fs::path& root, BuildOptions options,
+            const PgoRunOptions& pgo_options)
+ {
+-  const auto inspected = moderngekko::InspectGame(root);
++  const auto inspected = InspectGameToPort(root);
+   if (!inspected)
+   {
+     std::cerr << "invalid extracted game: " << inspected.error << '\n';
+diff --git a/tools/moderngekko_run.cpp b/tools/moderngekko_run.cpp
+index d6b3569..461d826 100644
+--- a/tools/moderngekko_run.cpp
++++ b/tools/moderngekko_run.cpp
+@@ -1,5 +1,6 @@
+ #include "cache_affinity.hpp"
+ #include "frontend_config.hpp"
++#include "game_inspection.hpp"
+ #include "dol_patch.hpp"
+ #include "moderngekko/game.hpp"
+ #include "moderngekko/runtime.hpp"
+@@ -134,6 +135,8 @@ int RunMain(int argc, char **argv) {
+   setenv("SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD", "1", 0);
+ #endif
+   moderngekko::RuntimeConfig config;
++  config.hash_game_assets =
++      moderngekko::frontend::GameInspectionOptions().hash_assets;
+   config.user_directory = DefaultUserDirectory();
+   const std::filesystem::path executable_directory =
+       ExecutableDirectory(argv[0]);
+@@ -279,7 +282,8 @@ int RunMain(int argc, char **argv) {
+   if (dol_changed)
+     std::cout << "Applied native DOL patches\n";
+ #endif
+-  const auto inspected = moderngekko::InspectGame(config.game_root);
++  const auto inspected = moderngekko::InspectGame(
++      config.game_root, moderngekko::frontend::GameInspectionOptions());
+   if (!inspected) {
+     std::cerr << "invalid game: " << inspected.error << '\n';
+     return 2;

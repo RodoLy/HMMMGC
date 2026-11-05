@@ -8,7 +8,9 @@
 
 Parches opcionales para componentes de terceros que usa este proyecto.
 `scripts/build_and_run_linux.sh` usa ModernGekko tal cual; nada de aquí se
-aplica solo.
+aplica solo. El workflow que arma el paquete de Windows
+(`.github/workflows/package-windows-arm64.yml`) sí aplica todos, en el orden en
+que aparecen aquí.
 
 ### `moderngekko/lockstep-verifier.patch`
 
@@ -104,13 +106,55 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-port
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `moderngekko/skip-assets-hash.patch`
+
+Cada vez que ModernGekko inspecciona un juego (`InspectGame`) calcula un SHA-256
+de todos los archivos de su carpeta `files/`, que en este juego son unos 1.4 GB.
+Lo hace en cada arranque: el launcher varias veces, el runner dos y
+`moderngekko-port` en cada orden. En un contenedor de la nube una sola
+inspección tardó 13 s; con el parche, 0.02 s. En la laptop Snapdragon donde se
+probó el paquete, el juego tardó unos 70 s en empezar a correr, y parte de ese
+tiempo es esta lectura (no se midió cuánta).
+
+Ese hash solo se usa en dos casos: cuando una compilación fija el juego exacto
+con `MODERNGEKKO_REQUIRED_ASSETS_SHA256`, y cuando se comparan los jugadores de
+una partida en red. El parche:
+
+- agrega a `InspectGame` la opción `InspectOptions::hash_assets` y a
+  `RuntimeConfig` el campo `hash_game_assets`; el valor por omisión es el de
+  siempre (calcular el hash), así que quien use la biblioteca no nota nada;
+- hace que los programas (`tools/game_inspection.hpp`) solo calculen el hash si
+  la compilación define `MODERNGEKKO_REQUIRED_ASSETS_SHA256`, que es la única
+  que lo compara; `moderngekko-port` nunca lo necesita;
+- no cambia la partida en red: la sesión sigue calculándolo al empezar, porque
+  los jugadores comparan ese hash.
+
+**Versiones a las que se aplica:** ModernGekko `edd460a`, la que fija
+`scripts/build_and_run_linux.sh` con ModernGekko-Template `c2553a9`. Se aplica
+a `lib/ModernGekko`, no a `vendor/dolphin`. Va después de
+`relocatable-port.patch`, porque los dos cambian `tools/moderngekko_port.cpp`.
+
+**Licencia:** GPL-3.0-or-later, como ModernGekko.
+
+**Aplicar** (hay que recompilar el runner, `moderngekko-port` y el launcher):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # o tu MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/skip-assets-hash.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-port moderngekko-launcher
+```
+
+**Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
+
 ---
 
 ## English
 
 Optional patches for third-party components this project uses.
 `scripts/build_and_run_linux.sh` uses ModernGekko as it is; nothing here
-applies itself.
+applies itself. The workflow that builds the Windows package
+(`.github/workflows/package-windows-arm64.yml`) does apply all of them, in the
+order they appear here.
 
 ### `moderngekko/lockstep-verifier.patch`
 
@@ -202,6 +246,46 @@ not to `vendor/dolphin`.
 TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
 git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/relocatable-port.patch"
 ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-port
+```
+
+**Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+### `moderngekko/skip-assets-hash.patch`
+
+Every time ModernGekko inspects a game (`InspectGame`) it computes a SHA-256 of
+all the files in its `files/` folder, which for this game are about 1.4 GB. It
+does it at every start: the launcher several times, the runner twice and
+`moderngekko-port` on every command. In a cloud container one inspection took
+13 s; with the patch, 0.02 s. On the Snapdragon laptop where the package was
+tried, the game took about 70 s to start running, and part of that time is this
+reading (how much was not measured).
+
+That hash is only used in two cases: when a build pins the exact game with
+`MODERNGEKKO_REQUIRED_ASSETS_SHA256`, and when the players of a netplay session
+are compared. The patch:
+
+- adds the `InspectOptions::hash_assets` option to `InspectGame` and the
+  `hash_game_assets` field to `RuntimeConfig`; the default is what it always
+  was (compute the hash), so whoever uses the library sees no change;
+- makes the programs (`tools/game_inspection.hpp`) compute the hash only if the
+  build defines `MODERNGEKKO_REQUIRED_ASSETS_SHA256`, the only one that
+  compares it; `moderngekko-port` never needs it;
+- leaves netplay as it was: the session still computes it when it starts,
+  because the players compare that hash.
+
+**Applies to:** ModernGekko `edd460a`, the version `scripts/build_and_run_linux.sh`
+pins through ModernGekko-Template `c2553a9`. It applies to `lib/ModernGekko`,
+not to `vendor/dolphin`. It goes after `relocatable-port.patch`, because both
+change `tools/moderngekko_port.cpp`.
+
+**License:** GPL-3.0-or-later, like ModernGekko.
+
+**Apply** (the runner, `moderngekko-port` and the launcher have to be rebuilt):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/skip-assets-hash.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-port moderngekko-launcher
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.
