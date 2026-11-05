@@ -435,17 +435,19 @@ if ($exitCode -ne 0) { Write-CrashReport $startedAt }
 if ($speeds.Count -gt 0) {
     $summary = $speeds | Measure-Object -Average -Minimum -Maximum
     $slowSamples = @($speeds | Where-Object { $_ -lt $SlowSpeedLimit }).Count
-    Write-SpeedLine ('--- {0} samples; speed lowest {1}, median {2}, average {3}, highest {4}; ' +
+    # The text is built first and shown after: the -f operator belongs to the text, not to Write-SpeedLine.
+    $summaryText = ('--- {0} samples; speed lowest {1}, median {2}, average {3}, highest {4}; ' +
         '{5} of them below {6}') -f `
         $speeds.Count, (Format-GameNumber $summary.Minimum), (Format-GameNumber (Get-Median $speeds)),
         (Format-GameNumber $summary.Average), (Format-GameNumber $summary.Maximum), $slowSamples,
-        (Format-GameNumber $SlowSpeedLimit))
+        (Format-GameNumber $SlowSpeedLimit)
+    Write-SpeedLine $summaryText
 }
 else {
     Write-SpeedLine '--- no samples: the game closed before it started running'
 }
 if ($impossibleReadings -gt 0) {
-    Write-SpeedLine ('--- {0} reading(s) above {1} were left out: the game reports absurd speeds right after ' +
-        'it stood still') -f `
-        $impossibleReadings, (Format-GameNumber $ImpossibleSpeedLimit))
+    $impossibleText = ('--- {0} reading(s) above {1} were left out: the game reports absurd speeds right after ' +
+        'it stood still') -f $impossibleReadings, (Format-GameNumber $ImpossibleSpeedLimit)
+    Write-SpeedLine $impossibleText
 }
