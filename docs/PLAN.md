@@ -53,7 +53,7 @@ aurora, y qué se sabe y qué no, está en
 - [x] Layout del DOL, versión del SDK, archivos fuente, sistema de archivos.
 - [x] Localizar el script de la boda con Jamie.
 - [x] Mapa de funciones (`config/G4AEE9/symbols.txt`): 4 486 funciones,
-      273 tablas de `switch`, validado contra `extabindex` (2 597/2 597).
+      274 tablas de `switch`, validado contra `extabindex` (2 597/2 597).
       Herramientas propias en vez de dtk; ver [FUNCTION_MAP.md](FUNCTION_MAP.md).
 - [x] Nombres con evidencia: arranque de CodeWarrior y los 13 `Init` del SDK.
 - [x] Identificar el SDK por firma (paso 2 del orden de arriba):
@@ -276,7 +276,7 @@ is known and what is not, is in
 - [x] DOL layout, SDK version, source file names, filesystem.
 - [x] Locate the Jamie wedding script.
 - [x] Function map (`config/G4AEE9/symbols.txt`): 4,486 functions,
-      273 `switch` tables, validated against `extabindex` (2,597/2,597).
+      274 `switch` tables, validated against `extabindex` (2,597/2,597).
       In-repo tools instead of dtk; see [FUNCTION_MAP.md](FUNCTION_MAP.md).
 - [x] Names with evidence: CodeWarrior startup and the 13 SDK `Init`s.
 - [x] Identify the SDK by signature (step 2 of the order above):
