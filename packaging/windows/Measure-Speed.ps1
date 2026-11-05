@@ -399,7 +399,8 @@ while (-not $gameProcess.HasExited) {
     $wallSeconds = $clockSeconds - $lastClockSeconds
     $coresInUse = ($processorSeconds - $lastProcessorSeconds) / $wallSeconds
     $threadSeconds = Get-ThreadProcessorTime $gameProcess
-    $busiestThreads = Format-BusiestThreadList $threadSeconds $lastThreadSeconds $wallSeconds
+    $busiestThreads = Format-BusiestThreadList -SecondsNow $threadSeconds -SecondsBefore $lastThreadSeconds `
+        -WallSeconds $wallSeconds
     $lastProcessorSeconds = $processorSeconds
     $lastClockSeconds = $clockSeconds
     $lastThreadSeconds = $threadSeconds
