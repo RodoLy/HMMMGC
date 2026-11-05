@@ -415,28 +415,127 @@ boda y ver que el flag 230 sigue apagado; (3) volver a hablar con Jamie con el
 objeto de la propuesta y ver que no reaparece la cadena ni cambia
 `GET_GAME_VALUE(126)` (`save + 0x2258`, que la cadena deja en 12); (4) con la
 A+, ver fecha, lugar y música al despertar; (5) repetir como jugador de ambos
-sexos.
+sexos. El punto (1) se probó con condiciones escritas a mano (ver la sección
+siguiente); los demás siguen pendientes.
+
+### Prueba en ejecución del mod (2026-11-04)
+
+`jamie_marriage` 0.1.0 se probó dentro del juego recompilado, pero **sin
+jugar la historia**: las condiciones de la boda se escribieron a mano en la
+memoria de un estado guardado. Demuestra qué hace el gancho en esa revisión
+del campo; no demuestra una partida real de principio a fin (ver "Qué no está
+verificado").
+
+**Cómo se hizo** (el material de prueba es desechable y no está en el
+repositorio):
+
+- Un estado de emulación guardado durante el cambio de día, en el estado
+  `0x25`, justo antes de la primera revisión del campo (estado `0x28`). Cada
+  prueba lo carga con el juego en pausa, escribe las condiciones (flag 230 encendido; eventos
+  `0x10C`-`0x10E` consumidos o no) y reanuda. Sin vídeo (`--graphics Null`);
+  con dos instancias a la vez en dos núcleos el juego fue a unas 0,4 veces su
+  velocidad.
+- El cambio de día reescribe el índice de campo (`0x80321D40`) y la revisión
+  veía `27` en vez de `26`: arrancaba el evento `0x37`, no la boda. Un mod
+  auxiliar desechable escribe `26` solo en la **primera** revisión; todo valor
+  posterior del índice lo pone el propio juego.
+- Cada caso se corrió sin el mod (control) y con él. La evidencia es el
+  registro del juego: `state_logger`, una traza desechable de `StartEvent` y
+  la línea del propio mod.
+- En la cadena entera, un guion pulsa A mientras corre un evento. Empieza con
+  `Eve_rm00` (`0x10C`) ya consumido: con los contadores de ese estado guardado
+  se repite, porque su cierre (`fn_800FC528`) lo deja otra vez sin consumir
+  mientras `save + 0x4004 == save + 0x3FC8`.
+
+**Resultados** (índice de campo 26, flag 230 encendido):
+
+| Caso | Sin el mod | Con el mod |
+|---|---|---|
+| Boda sin empezar | Arranca `Eve_rm00` (`0x10C`) | Igual; el flag sigue encendido |
+| Ceremonia ya empezada, primera revisión | Arranca `Eve_EP06` (`0x115`) | Apaga el flag (una línea en el registro) y arranca `Eve_music00` (`0x10B`), no el epílogo |
+| Cadena entera desde la ceremonia | `0x10D` → `0x115` → `0x116` → `0x117`; el cierre de `0x117` pide el estado 2 (llamada en `0x800FC738`), luego el `0x2A` y arranca el título; el estado 3 no aparece | `0x10D` → `0x10B` → estado 6 → estado 0 (juego libre), y ahí se queda con el flag apagado |
+
+En el control salen directamente `EP06`-`EP08`: las condiciones de
+`EP00`-`EP05` (contadores de `save`) no se cumplían en ese estado guardado, ni
+siquiera se llegó a pedirlos.
+
+**Qué se aprendió:**
+
+1. *El gancho actúa en la pasada justa.* La primera revisión tras la
+   ceremonia (estado 4 → `0x28`) ve `0x10D` consumido y el flag encendido, lo
+   apaga, y esa misma revisión se salta la rama de la boda. Los contadores
+   que la cadena reescribe antes de `Eve_EP08` quedaron como estaban:
+   `save + 0x2258` siguió en 6 hasta el final (la cadena lo deja en 12); los
+   otros dos ya valían 0 en ese estado guardado, así que no distinguen.
+2. *Sale una vez la escena de las notas.* Con el flag apagado, el manejador
+   del índice 26 cae en su rama "sin flag". Si no toca ninguno de los dos
+   eventos ligados al contador `save + 0x60` (`0x105` y `0x106`, con las
+   banderas `0xBF`, `0xC0` y `0xC5`), su valor por defecto es
+   `StartEvent(0x10B)` (`Eve_music00`, donde se dice que cinco notas se
+   vuelven un instrumento). Esa escena sale una vez justo después de la
+   ceremonia.
+3. *No hay bucle en el juego.* `StartEvent` nunca deja consumido `0x10B` (ver
+   arriba), así que, si el índice siguiera en 26, la escena se repetiría. No
+   pasa: al terminar un evento el juego restaura el índice con la entrada de la
+   tabla de colocación (`0x8026C000`), que para `0x10B` es el lugar `129`,
+   posición `(10, 28)`, ángulo `270`. `fn_800A232C(129)` devuelve
+   `fn_8002D148()`, un valor que el propio código deja entre 0 y 3
+   (`0x8002D1AC`-`0x8002D1BC`) y por tanto nunca 26. El registro de una
+   sonda desechable lo confirma: el índice valía 26 en la revisión que
+   siguió a la ceremonia (lo restauró el juego, sin forzarlo) y 0 en la que
+   siguió a la escena de las notas. Una versión previa de la prueba forzaba
+   el 26 en **todas** las revisiones y la escena se repetía sin fin (10
+   vueltas vistas): era un artefacto del ayudante, no del juego ni del mod.
+4. *El gancho puede correr más de una vez por revisión* (en la primera, el
+   registro de `state_logger` imprime "field check entered" dos veces) y el
+   mod imprime una sola línea: la segunda pasada ya encuentra el flag
+   apagado, como pide el diseño idempotente de
+   [`mods/README.md`](../mods/README.md).
+5. *Coste.* En 1 200 cuadros de juego libre en la casa (sin vídeo), el
+   contador `fallback` del runtime fue 0 con y sin el mod, y los demás
+   contadores por cuadro coinciden: `native` 554 545 sin el mod y 556 536
+   con él, `hook_fb` 62 740 y 62 704. El bloque `[0x801644C0, 0x801684C0)`
+   que el gancho manda al intérprete no se ejecutó en ese tramo. Solo se
+   midió en la casa y en juego libre.
 
 ### Qué no está verificado
 
-- Nada se ejecutó: ni la cadena, ni el gancho, ni el parche.
-- No se identificó el área 26 ni el lugar donde queda el jugador tras la boda;
-  por la tabla de colocación (`-3`) vuelve a donde estaba al empezar el evento.
+- La prueba usó condiciones escritas a mano sobre un estado guardado, con el
+  índice 26 forzado en la primera revisión. Falta una partida real: la
+  propuesta de verdad (`talk.lsb` encendiendo el flag 230), guardar y cargar con
+  la tarjeta de memoria, una segunda propuesta y los dos sexos del jugador.
+  Tampoco se probó el mod compilado para Windows ARM64.
+- Tras la ceremonia sale una vez la escena de las notas y, por su entrada de
+  la tabla de colocación, el jugador queda en el lugar `129` (posición
+  `(10, 28)`); eso no se observó. La opción A+ podría evitar la escena, pero
+  no se probó.
+- No se identificó el área 26. Para muchos lugares el índice de campo es el
+  número de lugar (en el estado guardado de la prueba, lugar 27 e índice 27;
+  la ceremonia guarda el lugar 26 con la función nativa 70), y otros (por
+  ejemplo el `0x81`) pasan por `fn_8002D148` y dependen de contadores de la
+  partida; qué mapa es el 26 no se sabe. Por la tabla de colocación (`-3`), la
+  ceremonia devuelve al jugador a donde estaba al empezar el evento.
 - No se sabe si el estado 9 avanza un día, ni qué significa exactamente
-  `save + 0xD454` (ver la función nativa 70).
+  `save + 0xD454` (ver la función nativa 70). Tampoco se probó dónde amanece
+  el jugador el día siguiente a la boda: tras la ceremonia la variable de
+  lugar (`0x80321D3C`) vale 26 (antes 27) y el cambio de día la copia a
+  `save + 0xD454`.
 - No se auditaron los demás built-ins que escriben estado (109-112, 133, 151,
   153, 156-160) ni qué cambia una boda normal (`Eve_marry*`) en la partida;
   copiarlo para Jamie sería la forma "completa" de estar casado.
 - Qué activaría `EndingTask` (el "staff roll", estado 3): ningún código
-  estático pide ese estado. Puede ser código sin uso o llegar por un camino
-  que el análisis estático no ve; en ejecución hay que comprobar si tras
-  `Eve_EP08` salen los créditos o solo vuelve el título.
+  estático pide ese estado y en la prueba, tras `Eve_EP08`, no salieron
+  créditos: el juego fue al estado 2 y al título. Puede ser código sin uso o
+  llegar por un camino que el análisis estático no ve.
 - Qué significan `save + 0x2258`, `save + 0x2234` y `save + 0x1BC8`, que la
   cadena reescribe antes de `Eve_EP08`. `0x2258` se lee en unos cien sitios
   del DOL (el estado 0 la compara con 5 y con 6) y los selectores 126 y 129 de
-  `GET_GAME_VALUE` leen `0x2258` y `0x1BC8`; no se sabe qué representan. La
-  opción A impide la escritura, pero no se sabe si una partida que continúa
-  necesitaría otro valor.
+  `GET_GAME_VALUE` leen `0x2258` y `0x1BC8`; `fn_8002D148` lee `0x2234`,
+  `0x224C` y `0x2258` y devuelve un número de 0 a 3 que `fn_800A232C` usa como
+  índice de campo de varios lugares, entre ellos el `0x81`. No se sabe qué
+  representan. La opción A impide la escritura (en la prueba `0x2258` no
+  cambió), pero no se sabe si una partida que continúa necesitaría otro
+  valor.
 
 ### Nombres propuestos
 
@@ -858,28 +957,123 @@ and load after the wedding and check that flag 230 is still clear; (3) talk to
 Jamie again with the proposal item and check the chain does not come back and
 that `GET_GAME_VALUE(126)` (`save + 0x2258`, which the chain leaves at 12) does
 not change; (4) with A+, check the date, place and music on waking up; (5)
-repeat with a player of each gender.
+repeat with a player of each gender. Point (1) was tried under hand-written
+conditions (see the next section); the rest are still pending.
+
+### Run-time test of the mod (2026-11-04)
+
+`jamie_marriage` 0.1.0 was tried inside the recompiled game, but **without
+playing the story**: the conditions of the wedding were written by hand into
+the memory of a saved state. It shows what the hook does in that field check;
+it does not show a real game from start to end (see "What is not verified").
+
+**How it was done** (the test material is throwaway and is not in the
+repository):
+
+- An emulation state saved during the day change, in state `0x25`, right
+  before the first field check (state `0x28`). Each test loads it with the
+  game paused, writes the conditions (flag 230 set; events `0x10C`-`0x10E`
+  consumed or not) and resumes. No video (`--graphics Null`); with two
+  instances running at once on two cores the game ran at about 0.4 times its
+  speed.
+- The day change rewrites the field index (`0x80321D40`) and the check saw
+  `27` instead of `26`: it started event `0x37`, not the wedding. A throwaway
+  helper mod writes `26` at the **first** check only; every later value of the
+  index is the game's own.
+- Each case was run without the mod (control) and with it. The evidence is the
+  game's log: `state_logger`, a throwaway trace of `StartEvent`, and the mod's
+  own line.
+- For the whole chain, a script presses A while an event runs. It starts with
+  `Eve_rm00` (`0x10C`) already consumed: with the counters of that saved state
+  it repeats, because its teardown (`fn_800FC528`) leaves it unconsumed again
+  while `save + 0x4004 == save + 0x3FC8`.
+
+**Results** (field index 26, flag 230 set):
+
+| Case | Without the mod | With the mod |
+|---|---|---|
+| Wedding not started | `Eve_rm00` (`0x10C`) starts | Same; the flag stays set |
+| Ceremony already started, first check | `Eve_EP06` (`0x115`) starts | Clears the flag (one line in the log) and `Eve_music00` (`0x10B`) starts, not the epilogue |
+| Whole chain from the ceremony | `0x10D` → `0x115` → `0x116` → `0x117`; the teardown of `0x117` requests state 2 (call at `0x800FC738`), then `0x2A`, and the title starts; state 3 never appears | `0x10D` → `0x10B` → state 6 → state 0 (free play), where it stays with the flag clear |
+
+In the control, `EP06`-`EP08` come straight away: the conditions of
+`EP00`-`EP05` (counters of the save data) were not met in that saved state,
+and they were not even requested.
+
+**What was learned:**
+
+1. *The hook acts on exactly the right pass.* The first check after the
+   ceremony (state 4 → `0x28`) sees `0x10D` consumed and the flag set, clears
+   it, and that same check skips the wedding branch. The counters the chain
+   rewrites before `Eve_EP08` were left as they were: `save + 0x2258` stayed
+   at 6 to the end (the chain leaves it at 12); the other two were already 0
+   in that saved state, so they do not tell.
+2. *The notes scene plays once.* With the flag clear, the handler of index 26
+   falls into its "no flag" branch. If neither of the two events tied to the
+   counter `save + 0x60` is due (`0x105` and `0x106`, with flags `0xBF`,
+   `0xC0` and `0xC5`), its default is `StartEvent(0x10B)` (`Eve_music00`,
+   where the player is told that five notes turn into an instrument). That
+   scene plays once right after the ceremony.
+3. *There is no loop in the game.* `StartEvent` never leaves `0x10B`
+   consumed (see above), so if the index stayed at 26 the scene would repeat.
+   It does not: when an event ends the game restores the index from the
+   placement table (`0x8026C000`) entry, which for `0x10B` is place `129`,
+   position `(10, 28)`, angle `270`. `fn_800A232C(129)` returns
+   `fn_8002D148()`, a value the code itself keeps between 0 and 3
+   (`0x8002D1AC`-`0x8002D1BC`), so never 26. The log of a throwaway probe
+   confirms it: the index was 26 at the check that followed the ceremony (the
+   game restored it, unforced) and 0 at the one that followed the notes scene.
+   An earlier version of the test forced 26 at **every** check and the scene
+   repeated forever (10 turns seen): that was an artefact of the helper, not
+   of the game or the mod.
+4. *The hook can run more than once per check* (at the first one, the
+   `state_logger` log prints "field check entered" twice) and the mod prints
+   a single line: the second pass already finds the flag clear, as the
+   idempotent design in [`mods/README.md`](../mods/README.md) asks.
+5. *Cost.* In 1,200 frames of free play at the house (no video), the
+   runtime's `fallback` counter was 0 with and without the mod, and the other
+   per-frame counters match: `native` 554,545 without the mod and 556,536
+   with it, `hook_fb` 62,740 and 62,704. The block `[0x801644C0, 0x801684C0)`
+   that the hook sends to the interpreter did not run in that stretch. It was
+   only measured at the house and in free play.
 
 ### What is not verified
 
-- Nothing was run: not the chain, not the hook, not the patch.
-- Area 26 was not identified, nor where the player ends up after the wedding;
-  from the placement table (`-3`) they return to where they were when the
-  event started.
+- The test used hand-written conditions on a saved state, with index 26
+  forced at the first check. A real game is still missing: the actual
+  proposal (`talk.lsb` setting flag 230), saving and loading with the memory
+  card, a second proposal and both genders of the player. The mod built for
+  Windows ARM64 was not tried either.
+- After the ceremony the notes scene plays once and, by its entry in the
+  placement table, the player is left at place `129` (position `(10, 28)`);
+  that was not observed. Option A+ could avoid the scene, but it was not
+  tried.
+- Area 26 was not identified. For many places the field index is the place
+  number (in the saved state of the test, place 27 and index 27; the
+  ceremony stores place 26 with native function 70), and others (for
+  example `0x81`) go through `fn_8002D148` and depend on counters of the
+  save data; which map 26 is, is not known. From the placement table (`-3`),
+  the ceremony returns the player to where they were when the event started.
 - It is not known whether state 9 advances a day, nor what exactly
-  `save + 0xD454` is (see native function 70).
+  `save + 0xD454` is (see native function 70). Nor was it tried where the
+  player wakes up the day after the wedding: after the ceremony the place
+  variable (`0x80321D3C`) holds 26 (it held 27) and the day change copies it
+  to `save + 0xD454`.
 - The other state-writing built-ins (109-112, 133, 151, 153, 156-160) were not
   audited, nor what an ordinary wedding (`Eve_marry*`) changes in the save;
   copying that for Jamie would be the "complete" way of being married.
 - What would start `EndingTask` (the staff roll, state 3): no static code
-  requests that state. It may be unused code or be reached by a path that
-  static analysis does not see; at run time it has to be checked whether the
-  credits appear after `Eve_EP08` or the title simply comes back.
+  requests that state, and in the test no credits appeared after `Eve_EP08`:
+  the game went to state 2 and then to the title. It may be unused code or be
+  reached by a path that static analysis does not see.
 - What `save + 0x2258`, `save + 0x2234` and `save + 0x1BC8` mean; the chain
   rewrites them before `Eve_EP08`. `0x2258` is read in about a hundred places
   in the DOL (state 0 compares it with 5 and 6) and `GET_GAME_VALUE`
-  selectors 126 and 129 read `0x2258` and `0x1BC8`; what they represent is
-  unknown. Option A prevents the write, but it is not known whether a game that
+  selectors 126 and 129 read `0x2258` and `0x1BC8`; `fn_8002D148` reads
+  `0x2234`, `0x224C` and `0x2258` and returns a number from 0 to 3 that
+  `fn_800A232C` uses as the field index of several places, `0x81` among
+  them. What they represent is unknown. Option A prevents the write (in the
+  test `0x2258` did not change), but it is not known whether a game that
   carries on would need a different value.
 
 ### Proposed names

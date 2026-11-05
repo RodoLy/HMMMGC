@@ -241,10 +241,21 @@ pieza por pieza, en el orden de arriba)
 - [x] Localizar la llamada de "fin de juego": no está en los scripts sino en
       código nativo; la cadena completa está en
       [SCRIPTS.md](SCRIPTS.md#qué-termina-el-juego).
-- [ ] Mod de Jamie v1: un hook en `0x80166888` que borra la bandera 230 cuando
-      termina la ceremonia (diseño en [SCRIPTS.md](SCRIPTS.md)). Está escrito
-      en [`mods/jamie_marriage`](../mods/jamie_marriage/mod.c) y compila sin
-      avisos, pero todavía falta probarlo dentro del juego.
+- [x] Mod de Jamie v1: un hook en `0x80166888` que apaga la bandera 230 una
+      vez que la ceremonia empezó (diseño en [SCRIPTS.md](SCRIPTS.md)). Está
+      en [`mods/jamie_marriage`](../mods/jamie_marriage/mod.c), compila sin
+      avisos y se probó dentro del juego con condiciones escritas a mano: sin
+      el mod siguen el epílogo y el título; con él, el juego queda en juego
+      libre ([resultados](SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04)).
+- [ ] Probar el mod de Jamie con una partida real: la propuesta de verdad,
+      guardar y cargar, una segunda propuesta y los dos sexos del jugador.
+      Necesita un guardado cerca de la boda con Jamie.
+- [ ] Mod de Jamie v1.1: que la ceremonia no vaya seguida de la escena de las
+      notas (opción A+ de [SCRIPTS.md](SCRIPTS.md): pasar al estado 9 al
+      terminar la ceremonia; falta comprobar qué hace ese estado).
+- [ ] Convertir la prueba dentro del juego en una herramienta del repositorio
+      (`tools/`): hoy son guiones desechables. Hace falta para repetirla cuando
+      cambie el runtime (pasos 3 a 6 del orden de arriba).
 - [ ] Widescreen y velocidad como mods (o como códigos Gecko para quien use
       Dolphin): localizar las constantes.
 - [ ] Mod de Jamie v2 (contenido): rutina de cónyuge, diálogos, eventos de hijo.
@@ -491,10 +502,22 @@ by piece, in the order above)
       problems).
 - [x] Locate the "end game" call: it is not in the scripts but in native code;
       the whole chain is in [SCRIPTS.md](SCRIPTS.md#what-ends-the-game).
-- [ ] Jamie mod v1: a hook on `0x80166888` that clears flag 230 once the
-      ceremony is over (design in [SCRIPTS.md](SCRIPTS.md)). It is written in
-      [`mods/jamie_marriage`](../mods/jamie_marriage/mod.c) and builds without
-      warnings, but it has still to be tried inside the game.
+- [x] Jamie mod v1: a hook on `0x80166888` that clears flag 230 once the
+      ceremony has started (design in [SCRIPTS.md](SCRIPTS.md)). It is in
+      [`mods/jamie_marriage`](../mods/jamie_marriage/mod.c), builds without
+      warnings and was tried inside the game under hand-written conditions:
+      without the mod the epilogue and the title screen follow; with it the
+      game goes back to free play
+      ([results](SCRIPTS.md#run-time-test-of-the-mod-2026-11-04)).
+- [ ] Try the Jamie mod with a real save: the actual proposal, save and load,
+      a second proposal and both genders of the player. It needs a save close
+      to the wedding with Jamie.
+- [ ] Jamie mod v1.1: do not follow the ceremony with the notes scene (option
+      A+ in [SCRIPTS.md](SCRIPTS.md): go to state 9 when the ceremony ends;
+      what that state does still has to be checked).
+- [ ] Turn the in-game test into a tool of the repository (`tools/`): today it
+      is made of throwaway scripts. It is needed to repeat it whenever the
+      runtime changes (steps 3 to 6 of the order above).
 - [ ] Widescreen and speed as mods (or as Gecko codes for people using
       Dolphin): find the constants.
 - [ ] Jamie mod v2 (content): spouse routine, dialogue, child events.

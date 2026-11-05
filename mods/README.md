@@ -99,7 +99,7 @@ compilar.
 |---|---|---|
 | [`boot_logger`](boot_logger/mod.c) | Listo | Prueba de humo: imprime una línea cada vez que el juego entra a `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` y `main`. No cambia nada. |
 | [`state_logger`](state_logger/mod.c) | Listo | Imprime cada cambio de estado de la máquina de estados del juego (título, día nuevo, eventos, juego libre), cada estado que otro código pide y cada vez que entra la revisión del campo. Sirve para saber cuándo corre un gancho. No cambia nada. |
-| [`jamie_marriage`](jamie_marriage/mod.c) | Escrito, sin probar en el juego | Casarse con Jamie ya no termina el juego: si la ceremonia ya empezó y la bandera 230 sigue encendida, la apaga en la revisión del campo (diseño en [SCRIPTS.md](../docs/SCRIPTS.md)). |
+| [`jamie_marriage`](jamie_marriage/mod.c) | Probado en el juego con condiciones escritas a mano | Casarse con Jamie ya no termina el juego: si la ceremonia ya empezó y la bandera 230 sigue encendida, la apaga en la revisión del campo (diseño en [SCRIPTS.md](../docs/SCRIPTS.md)). Sin el mod, tras la ceremonia sigue el epílogo y el título; con él, el juego queda en juego libre, después de ver una vez la escena de las notas. Falta probarlo con una partida real ([resultados](../docs/SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04)). |
 | `movement` | Planeado | Personaje más rápido y sin resbalar. |
 | `cheats` | Planeado | Trucos activables. |
 
@@ -198,6 +198,6 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
 |---|---|---|
 | [`boot_logger`](boot_logger/mod.c) | Done | Smoke test: prints a line each time the game enters `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` and `main`. Changes nothing. |
 | [`state_logger`](state_logger/mod.c) | Done | Prints every change of the game's state machine (title, new day, events, free play), every state other code asks for, and each time the field check is entered. Useful to learn when a hook will run. Changes nothing. |
-| [`jamie_marriage`](jamie_marriage/mod.c) | Written, not yet tried in the game | Marrying Jamie no longer ends the game: if the ceremony has already started and flag 230 is still set, it clears the flag in the field check (design in [SCRIPTS.md](../docs/SCRIPTS.md)). |
+| [`jamie_marriage`](jamie_marriage/mod.c) | Tried in the game under hand-written conditions | Marrying Jamie no longer ends the game: if the ceremony has already started and flag 230 is still set, it clears the flag in the field check (design in [SCRIPTS.md](../docs/SCRIPTS.md)). Without the mod the ceremony is followed by the epilogue and the title screen; with it the game goes back to free play, after showing the notes scene once. It still has to be tried with a real save ([results](../docs/SCRIPTS.md#run-time-test-of-the-mod-2026-11-04)). |
 | `movement` | Planned | A faster character that does not slide. |
 | `cheats` | Planned | Switchable cheats. |
