@@ -116,12 +116,25 @@ Qué significa para Magical Melody (sin haberlo probado):
   Eso es lo que permite reemplazar GX al nivel de las funciones, como hacen las
   decompilaciones con aurora, en vez de interpretar el flujo de comandos. No es
   una prueba: otras formas de armar la dirección no se buscan.
+- Dato comprobado con `tools/find_callers.py`: las listas de visualización pasan
+  por un solo embudo. La única función que manda a la tubería el comando para
+  llamar una lista (el byte 0x40, seguido de la dirección y el tamaño de la
+  lista) es `fn_80195010`, que es la `GXCallDisplayList` del SDK
+  (`python3 tools/disasm.py fn_80195010` lo muestra). La llama una sola función
+  diminuta del juego, `fn_801CBCEC`; a esa la llama un solo lugar,
+  `fn_801B3914`, y `fn_801B4138` llama a este cuatro veces. Ningún puntero
+  guardado en los datos apunta a ellas (las palabras con sus direcciones son
+  entradas de la tabla de excepciones). Así, interpretar listas de GX, si
+  aurora no lo hace, sería trabajo de un solo punto.
 
 Qué no se verificó: no se compiló ni se ejecutó aurora ni ninguno de estos
 proyectos. Todo viene de sus README y páginas y de notas de prensa, y los
-estados pueden haber cambiado. Tampoco se revisó cómo usa el juego las listas
-de visualización (`GXCallDisplayList`): llegan como bytes crudos de GX y la capa
-nueva tendría que interpretarlos.
+estados pueden haber cambiado. Tampoco se sabe si aurora reproduce listas de
+visualización ya armadas: su README no lo dice y GitHub no dejó leer su código.
+Del lado del juego, no se miró qué traen las listas guardadas en sus archivos ni
+si arma listas en memoria mientras corre (`GXBeginDisplayList`, que no se buscó),
+y las llamadas a través de un puntero armado en un registro no se ven leyendo el
+código.
 
 Fuentes:
 [wiki de Wiicompiled](https://github.com/patchzyy/Wiicompiled/wiki),
@@ -316,12 +329,25 @@ What this means for Magical Melody (untested):
   replacing GX at the level of the functions, as the decompilation ports do
   with aurora, instead of interpreting the command stream. It is not a proof:
   other ways of building the address are not looked for.
+- Fact checked with `tools/find_callers.py`: display lists go through a single
+  funnel. The only function that sends the command for calling a list to the
+  pipe (the byte 0x40, followed by the list's address and size) is
+  `fn_80195010`, which is the SDK's `GXCallDisplayList`
+  (`python3 tools/disasm.py fn_80195010` shows it). One tiny function of the
+  game, `fn_801CBCEC`, calls it; that one is called from a single place,
+  `fn_801B3914`, and `fn_801B4138` calls this one four times. No pointer kept
+  in the data points to them (the words holding their addresses are exception
+  table entries). So interpreting GX lists, if aurora does not, would be work
+  for a single point.
 
 What was not verified: neither aurora nor any of these projects was built or
 run. Everything comes from their READMEs and pages and from press articles,
-and their status may have changed. Neither was it checked how the game uses
-display lists (`GXCallDisplayList`): they arrive as raw GX bytes and the new
-layer would have to interpret them.
+and their status may have changed. Neither is it known whether aurora replays
+display lists that are already built: its README does not say, and GitHub did
+not allow reading its code. On the game's side, what the lists stored in its
+files contain was not looked at, nor whether it builds lists in memory while it
+runs (`GXBeginDisplayList`, which was not searched for), and calls through a
+pointer built in a register cannot be seen by reading the code.
 
 Sources:
 [Wiicompiled wiki](https://github.com/patchzyy/Wiicompiled/wiki),

@@ -33,9 +33,11 @@ aurora, y qué se sabe y qué no, está en
    aurora y dibujar la pantalla de título. Es el mayor riesgo del camino. A
    favor: solo 85 funciones de `main.dol` escriben en la tubería de GX (la
    librería del SDK y ocho funciones de vértices; `tools/find_gx_pipe_writers.py`),
-   así que GX se puede reemplazar por funciones. Falta saber cómo usa el juego
-   las listas de visualización y si aurora corre sobre DirectX 12 en Windows
-   ARM64. Si el experimento falla, se decide de nuevo con lo aprendido.
+   así que GX se puede reemplazar por funciones, y las listas de visualización
+   pasan por un solo embudo del juego (`tools/find_callers.py`). Falta saber si
+   aurora sabe reproducir listas ya armadas (si no, se interpretan en ese
+   embudo) y si corre sobre DirectX 12 en Windows ARM64. Si el experimento
+   falla, se decide de nuevo con lo aprendido.
 4. DVD, CARD y PAD nativos: son los más sencillos, y dan cargas instantáneas,
    guardados en archivos y controles con SDL.
 5. Audio (AX) y sistema operativo (hilos, alarmas, interrupciones, retrazos).
@@ -238,9 +240,11 @@ is known and what is not, is in
    draw the title screen. It is the biggest risk on the way. In its favour:
    only 85 functions of `main.dol` store into the GX pipe (the SDK's library
    and eight vertex functions; `tools/find_gx_pipe_writers.py`), so GX can be
-   replaced function by function. Still unknown: how the game uses display
-   lists and whether aurora runs on DirectX 12 on Windows ARM64. If the
-   experiment fails, we decide again with what it taught us.
+   replaced function by function, and display lists go through a single
+   funnel of the game (`tools/find_callers.py`). Still unknown: whether aurora
+   can replay display lists that are already built (if not, they are
+   interpreted in that funnel) and whether it runs on DirectX 12 on Windows
+   ARM64. If the experiment fails, we decide again with what it taught us.
 4. Native DVD, CARD and PAD: the simplest ones, and they bring instant loads,
    save files and SDL input.
 5. Audio (AX) and operating system (threads, alarms, interrupts, retraces).
