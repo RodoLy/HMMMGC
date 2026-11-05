@@ -20,6 +20,10 @@ shipped is not the game but everything needed to do that without installing anyt
                 the double-click entry points (with the launcher, and with the keyboard),
                 the script that does the work, and the data that says which game this
                 package plays
+    Settings.bat, Settings.ps1, settings-file.ps1
+                the window where the player turns the mods on and off and chooses how fast the
+                character is (it keeps the choice in settings.json in the player's folder, which
+                play.ps1 follows), and the code that both scripts share to read and write it
     Measure-Speed.bat, Measure-Speed.ps1
                 optional: they start the game and write down how fast it runs, to find out
                 why it is slow on a computer
@@ -45,6 +49,10 @@ entrega no es el juego sino todo lo necesario para hacerlo sin instalar nada:
     Play.bat, Play-Keyboard.bat, play.ps1, game.psd1
                 los puntos de entrada con doble clic (con el launcher, y con el teclado), el
                 script que hace el trabajo y los datos que dicen qué juego juega este paquete
+    Settings.bat, Settings.ps1, settings-file.ps1
+                la ventana donde el jugador activa y apaga los mods y elige qué tan rápido es el
+                personaje (guarda la elección en settings.json, en la carpeta del jugador, que
+                play.ps1 sigue), y el código que comparten los dos scripts para leerla y escribirla
     Measure-Speed.bat, Measure-Speed.ps1
                 opcionales: arrancan el juego y anotan qué tan rápido corre, para saber por qué
                 va lento en una computadora
@@ -138,10 +146,20 @@ MOD_HEADERS = (
 BATCH_FILES = ("Play.bat", "Play-Keyboard.bat")
 SCRIPT_FILE = "play.ps1"
 GAME_DEFINITION_FILE = "game.psd1"
+# The settings window (Settings.bat opens Settings.ps1) and the code that it and play.ps1 share to
+# read and write the player's settings.
+SETTINGS_FILES = ("Settings.bat", "Settings.ps1", "settings-file.ps1")
 # Optional: they start the game, like Play-Keyboard.bat, and log its speed (see README.md).
 MEASURING_FILES = ("Measure-Speed.bat", "Measure-Speed.ps1")
 PACKAGE_DOCUMENTS = ("README.md", "THIRD_PARTY_NOTICES.md")
-PACKAGE_FILES = (*BATCH_FILES, SCRIPT_FILE, GAME_DEFINITION_FILE, *MEASURING_FILES, *PACKAGE_DOCUMENTS)
+PACKAGE_FILES = (
+    *BATCH_FILES,
+    SCRIPT_FILE,
+    GAME_DEFINITION_FILE,
+    *SETTINGS_FILES,
+    *MEASURING_FILES,
+    *PACKAGE_DOCUMENTS,
+)
 
 # Parts of each tool that a player's build never uses, left out to keep the download small. A
 # pattern matches the path relative to the tool's folder, in lower case; `*` also crosses folders.

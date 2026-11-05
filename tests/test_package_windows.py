@@ -145,7 +145,14 @@ def inputs(tmp_path) -> package.PackageInputs:
     runtime = write_files(tmp_path / "runtime", ["vcruntime140.dll", "msvcp140.dll"])
     package_files = write_files(tmp_path / "package-files", list(package.PACKAGE_FILES))
     # Scripts are text with lines that end in "\n", as they come out of the repository.
-    for script in (*package.BATCH_FILES, "play.ps1", "game.psd1", *package.MEASURING_FILES):
+    scripts = (
+        *package.BATCH_FILES,
+        "play.ps1",
+        "game.psd1",
+        *package.SETTINGS_FILES,
+        *package.MEASURING_FILES,
+    )
+    for script in scripts:
         (package_files / script).write_text("first line\nsecond line é\n", encoding="utf-8")
     license_file = tmp_path / "LICENSE"
     license_file.write_text("GPL text", encoding="utf-8")
@@ -404,14 +411,14 @@ def test_the_versions_file_lists_each_thing_with_its_version_in_alphabetical_ord
 
 
 def test_batch_files_get_windows_line_ends_and_no_byte_order_mark(package_directory):
-    for name in (*package.BATCH_FILES, "Measure-Speed.bat"):
+    for name in (*package.BATCH_FILES, "Settings.bat", "Measure-Speed.bat"):
         contents = (package_directory / name).read_bytes()
         assert contents == "first line\r\nsecond line é\r\n".encode(), name
 
 
 def test_powershell_files_get_windows_line_ends_and_a_byte_order_mark(package_directory):
     # Windows PowerShell 5.1 reads a script without the mark as ANSI and garbles accented letters.
-    for name in ("play.ps1", "game.psd1", "Measure-Speed.ps1"):
+    for name in ("play.ps1", "game.psd1", "Settings.ps1", "settings-file.ps1", "Measure-Speed.ps1"):
         contents = (package_directory / name).read_bytes()
         assert contents == b"\xef\xbb\xbf" + "first line\r\nsecond line é\r\n".encode()
 

@@ -13,10 +13,15 @@
       2. Recompiles the game's program into a native module: DolRecomp translates it to C and
          the compiler in toolchain\ builds it. This takes several minutes.
       3. Puts the module where the launcher and the runner look for it.
-      4. Builds the mods (small changes to the game, listed in game.psd1) with the same compiler
-         and puts them in the Mods folder of the player's folder, where the runner finds them.
-         This is done on every run and takes seconds. If it fails, the game starts anyway.
+      4. Builds the mods that are turned on (small changes to the game, listed in game.psd1) with
+         the same compiler and puts them in the Mods folder of the player's folder, where the
+         runner finds them. A mod that is turned off is taken out of that folder. This is done on
+         every run and takes seconds. If it fails, the game starts anyway.
       5. Opens the launcher (or, with -Keyboard, the game itself).
+
+    Which mods are on, and how fast the character is, are chosen in Settings.bat, which keeps the
+    choice in settings.json in the player's folder (settings-file.ps1 says what the file holds).
+    With no settings.json every mod is on.
 
     Nothing is installed and no setting of the computer is changed. Everything this script makes
     is in the folder %LOCALAPPDATA%\<UserDirectoryName> (see game.psd1), and a log of the last
@@ -30,10 +35,15 @@
       2. Recompila el programa del juego en un módulo nativo: DolRecomp lo traduce a C y el
          compilador de toolchain\ lo construye. Esto tarda varios minutos.
       3. Pone el módulo donde lo buscan el launcher y el runner.
-      4. Construye los mods (pequeños cambios al juego, listados en game.psd1) con el mismo
-         compilador y los pone en la carpeta Mods de la carpeta del jugador, donde los encuentra
-         el runner. Se hace en cada ejecución y tarda segundos. Si falla, el juego arranca igual.
+      4. Construye los mods que están activos (pequeños cambios al juego, listados en game.psd1)
+         con el mismo compilador y los pone en la carpeta Mods de la carpeta del jugador, donde
+         los encuentra el runner. Un mod apagado se quita de esa carpeta. Se hace en cada
+         ejecución y tarda segundos. Si falla, el juego arranca igual.
       5. Abre el launcher (o, con -Keyboard, el juego mismo).
+
+    Qué mods están activos, y qué tan rápido es el personaje, se eligen en Settings.bat, que guarda
+    la elección en settings.json en la carpeta del jugador (settings-file.ps1 dice qué contiene el
+    archivo). Sin settings.json todos los mods están activos.
 
     No se instala nada ni se cambia ninguna configuración de la computadora. Todo lo que hace este
     script queda en la carpeta %LOCALAPPDATA%\<UserDirectoryName> (ver game.psd1), y el registro
@@ -58,24 +68,28 @@
     Play en el launcher cuando no hay un control conectado; esto se salta el launcher.
 
 .PARAMETER NoMods
-    Play the game as it is on the disc: the mods are not built, and the ones that this package
-    installed earlier are taken out of the player's folder. Run again without it to get them back.
-    Juega el juego como viene en el disco: no se construyen los mods y se quitan de la carpeta
-    del jugador los que este paquete instaló antes. Ejecuta otra vez sin esto para recuperarlos.
+    Play the game as it is on the disc: the mods are not built, the ones that this package
+    installed earlier are taken out of the player's folder, and settings.json is not read. Run
+    again without it to get them back.
+    Juega el juego como viene en el disco: no se construyen los mods, se quitan de la carpeta del
+    jugador los que este paquete instaló antes y no se lee settings.json. Ejecuta otra vez sin esto
+    para recuperarlos.
 
 .PARAMETER PlayerSpeed
     How fast the character walks and runs, in percent of the speed of the original game, from 25
-    to 300: 100 is the original speed and 150 is one and a half times as fast. If it is left out,
+    to 300: 100 is the original speed and 150 is one and a half times as fast. It is for this run
+    only and wins over the speed that Settings.bat saved. If it is left out and nothing was saved,
     the player_speed mod uses its own default, which is 150. Above 200 the character may go
     through thin walls (README.md says what was seen). It is given to the mod through an
     environment variable that only lasts while this script and the game it opens run. It has no
-    effect with -NoMods.
+    effect with -NoMods, or when the settings turn the player_speed mod off.
     Qué tan rápido camina y corre el personaje, en porcentaje de la velocidad del juego original,
-    de 25 a 300: 100 es la velocidad original y 150 es una vez y media más rápido. Si se omite, el
-    mod player_speed usa su propio valor por omisión, que es 150. Por encima de 200 el personaje
-    podría atravesar paredes delgadas (README.md dice lo que se vio). Se le da al mod con una
-    variable de entorno que solo dura mientras corren este script y el juego que abre. No tiene
-    efecto con -NoMods.
+    de 25 a 300: 100 es la velocidad original y 150 es una vez y media más rápido. Vale solo para
+    esta ejecución y le gana a la velocidad que guardó Settings.bat. Si se omite y no se guardó
+    ninguna, el mod player_speed usa su propio valor por omisión, que es 150. Por encima de 200 el
+    personaje podría atravesar paredes delgadas (README.md dice lo que se vio). Se le da al mod con
+    una variable de entorno que solo dura mientras corren este script y el juego que abre. No tiene
+    efecto con -NoMods, ni cuando los ajustes apagan el mod player_speed.
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
@@ -136,6 +150,16 @@ $InstalledModsDirectory = Join-Path $UserDirectory 'Mods'
 # mods\player_speed\mod.c, which reads it when the game starts).
 $PlayerSpeedVariable = 'HM_MM_PLAYER_SPEED_PERCENT'
 
+# The settings that the player chose in Settings.bat (which mods are on, how fast the character is).
+# The code that reads them is shared with the settings window. It is loaded once the package is known
+# to be complete (see the run, at the end), and that is also when $SettingsPath, the path of the
+# settings file, is set: the code is what knows the name of the file.
+$SettingsLibraryPath = Join-Path $PackageDirectory 'settings-file.ps1'
+$SettingsPath = $null
+
+# The mods of this package, as game.psd1 lists them (always a list, even when there are none or one).
+$AllModIds = @($Game.ModIds | Where-Object { $_ })
+
 # Every file whose absence means that the package was not extracted completely.
 $RequiredFiles = @(
     $LauncherPath,
@@ -147,7 +171,8 @@ $RequiredFiles = @(
     (Join-Path $ToolchainDirectory 'ninja\ninja.exe'),
     (Join-Path $ToolchainDirectory 'python\python.exe'),
     (Join-Path $ModsSourceDirectory 'CMakeLists.txt'),
-    $ModSymbolsHeader
+    $ModSymbolsHeader,
+    $SettingsLibraryPath
 )
 
 # Windows stops at 260 characters in a path, and the files of the recompiled module sit in
@@ -179,8 +204,13 @@ $Messages = @{
         PreparingMods       = 'Preparing the mods ...'
         ModsPrepared        = 'Mods ready: {0}.'
         ModsFailed          = 'The mods could not be prepared. The game starts anyway. The details are in {0}'
-        ModsOff             = 'The mods are off: the game is played as it is on the disc.'
+        ModsOff             = 'The mods are off (-NoMods): the game is played as it is on the disc.'
+        ModsTurnedOff       = 'Mods turned off in the settings: {0}.'
+        AllModsTurnedOff    = 'All the mods are turned off in the settings: the game is played as it is on the disc.'
+        SettingsHint        = 'Settings.bat lets you turn the mods on and off and choose how fast the character is.'
+        SettingsProblems    = 'Some values in {0} could not be used and were left at their defaults: {1}'
         PlayerSpeedSet      = 'The character walks and runs at {0}% of the original speed.'
+        PlayerSpeedIgnored  = 'The speed mod is turned off in the settings, so the character moves at the original speed.'
         GamePrepared        = 'The game is ready.'
         OpeningLauncher     = 'Opening the launcher. Press Play in it to start the game.'
         LauncherFailed      = 'The launcher closed with an error (code {0}). The details are in {1}'
@@ -214,8 +244,13 @@ Keyboard (the default layout of Dolphin, which this game runs on):
         PreparingMods       = 'Preparando los mods ...'
         ModsPrepared        = 'Mods listos: {0}.'
         ModsFailed          = 'No se pudieron preparar los mods. El juego arranca igual. Los detalles están en {0}'
-        ModsOff             = 'Los mods están apagados: el juego se juega como viene en el disco.'
+        ModsOff             = 'Los mods están apagados (-NoMods): el juego se juega como viene en el disco.'
+        ModsTurnedOff       = 'Mods apagados en los ajustes: {0}.'
+        AllModsTurnedOff    = 'Todos los mods están apagados en los ajustes: el juego se juega como viene en el disco.'
+        SettingsHint        = 'Con Settings.bat puedes activar y apagar los mods y elegir qué tan rápido es el personaje.'
+        SettingsProblems    = 'Algunos valores de {0} no se pudieron usar y se quedaron en su valor por omisión: {1}'
         PlayerSpeedSet      = 'El personaje camina y corre al {0}% de la velocidad original.'
+        PlayerSpeedIgnored  = 'El mod de velocidad está apagado en los ajustes, así que el personaje se mueve a la velocidad original.'
         GamePrepared        = 'El juego está listo.'
         OpeningLauncher     = 'Abriendo el launcher. Pulsa Play en él para empezar el juego.'
         LauncherFailed      = 'El launcher se cerró con un error (código {0}). Los detalles están en {1}'
@@ -462,18 +497,34 @@ function Install-GameModule {
     return $installedPath
 }
 
-# Builds the mods that game.psd1 lists, with the compiler of the package, and puts each one in the
-# Mods folder of the player's folder as <id>.mgm\mod.dll, where the runner looks for mods. A mod is
-# one small file of C, so this takes seconds, and it is done again on every run: that way the mods
-# are always the ones of this package, built for this computer, even after the package was replaced
-# by a newer one. The build folder is made anew each time because CMake remembers where it found the
-# package and would refuse to build in a folder that was made for a package that has been moved.
+# Reads the settings that the player chose in Settings.bat. Whatever cannot be used is reported and
+# left at its default, so that a typing mistake in settings.json never stops the game from starting.
+# While the player has not saved any settings (there is no file) a line says where to choose them.
+function Get-PlayerSettings {
+    if (-not (Test-Path -LiteralPath $SettingsPath -PathType Leaf)) { Write-Host (Get-Message 'SettingsHint') }
+    $read = Read-PlayerSettings -Path $SettingsPath -ModIds $AllModIds
+    if ($read.Problems.Count -gt 0) {
+        $problems = $read.Problems -join '; '
+        Add-LogLine ('Settings problems: ' + $problems)
+        Write-Host (Get-Message 'SettingsProblems' @($SettingsPath, $problems)) -ForegroundColor Yellow
+    }
+    return $read.Settings
+}
+
+# Builds the given mods, with the compiler of the package, and puts each one in the Mods folder of
+# the player's folder as <id>.mgm\mod.dll, where the runner looks for mods. A mod is one small file
+# of C, so this takes seconds, and it is done again on every run: that way the mods are always the
+# ones of this package, built for this computer, even after the package was replaced by a newer one.
+# The build folder is made anew each time because CMake remembers where it found the package and
+# would refuse to build in a folder that was made for a package that has been moved.
 #
 # The mods are an addition to the game, so a failure here is a warning and not an error: the game
 # starts anyway, and the log says what went wrong. What the tools say goes to the log only.
 function Install-Mods {
-    param([Parameter(Mandatory)] [string] $BuildDirectory)
-    if (-not $Game.ModIds) { return }
+    param(
+        [Parameter(Mandatory)] [string] $BuildDirectory,
+        [Parameter(Mandatory)] [string[]] $ModIds
+    )
     Write-Host (Get-Message 'PreparingMods')
     try {
         if (Test-Path -LiteralPath $BuildDirectory) { Remove-Item -LiteralPath $BuildDirectory -Recurse -Force }
@@ -489,13 +540,13 @@ function Install-Mods {
         $exitCode = Invoke-Program -FilePath $CMakePath -Arguments $configureArguments -Quiet
         if ($exitCode -ne 0) { throw "CMake could not set up the build of the mods (exit code $exitCode)" }
 
-        # Only the mods that are listed: the folder also holds mods that are not part of the game.
-        $buildArguments = @('--build', $BuildDirectory, '--target') + @($Game.ModIds)
+        # Only the mods that are asked for: the folder also holds mods that are not part of the game.
+        $buildArguments = @('--build', $BuildDirectory, '--target') + @($ModIds)
         $exitCode = Invoke-Program -FilePath $CMakePath -Arguments $buildArguments -Quiet
         if ($exitCode -ne 0) { throw "CMake could not build the mods (exit code $exitCode)" }
 
         New-Item -ItemType Directory -Force -Path $InstalledModsDirectory | Out-Null
-        foreach ($modId in $Game.ModIds) {
+        foreach ($modId in $ModIds) {
             $builtMod = Join-Path $BuildDirectory ($modId + '.mgm')
             $installedMod = Join-Path $InstalledModsDirectory ($modId + '.mgm')
             # An older copy goes completely, so that a file the mod no longer has does not stay.
@@ -503,7 +554,7 @@ function Install-Mods {
             Copy-Item -LiteralPath $builtMod -Destination $installedMod -Recurse
             Add-LogLine ('Mod: ' + (Join-Path $installedMod 'mod.dll'))
         }
-        Write-Host (Get-Message 'ModsPrepared' ($Game.ModIds -join ', '))
+        Write-Host (Get-Message 'ModsPrepared' ($ModIds -join ', '))
     }
     catch {
         Add-LogLine ($_ | Out-String)
@@ -511,26 +562,71 @@ function Install-Mods {
     }
 }
 
-# Takes the mods of this package out of the player's folder, so that the game is played as it is on
-# the disc. A mod that the player put there by hand, and game.psd1 does not list, stays.
+# Takes the given mods out of the player's folder, so that the game is played without them. They
+# are always mods of this package (ids from game.psd1): a mod that the player put there by hand
+# stays.
 function Remove-InstalledMods {
-    foreach ($modId in $Game.ModIds) {
+    param([AllowEmptyCollection()] [string[]] $ModIds = @())
+    foreach ($modId in $ModIds) {
         $installedMod = Join-Path $InstalledModsDirectory ($modId + '.mgm')
         if (Test-Path -LiteralPath $installedMod) { Remove-Item -LiteralPath $installedMod -Recurse -Force }
     }
-    Write-Host (Get-Message 'ModsOff')
 }
 
-# Tells the player_speed mod how fast the player asked for the character to be (-PlayerSpeed). The
-# mod reads an environment variable, and both the launcher and the runner start the program they
-# open with the environment of their parent, so the variable reaches the mod whether the game is
-# opened through the launcher or with -Keyboard. Without -PlayerSpeed nothing is set, and the mod
-# uses its own default (or what the player put in the variable by hand).
+# Tells the player_speed mod how fast the character is to be, in percent. The mod reads an
+# environment variable, and both the launcher and the runner start the program they open with the
+# environment of their parent, so the variable reaches the mod whether the game is opened through
+# the launcher or with -Keyboard. With no speed ($null) nothing is set, and the mod uses its own
+# default (or what the player put in the variable by hand). While the mod is off there is nothing to
+# tell, and a speed that was asked for on the command line is reported as without effect.
 function Set-PlayerSpeed {
-    if ($null -eq $PlayerSpeed) { return }
-    [Environment]::SetEnvironmentVariable($PlayerSpeedVariable, [string] $PlayerSpeed, 'Process')
-    Add-LogLine ($PlayerSpeedVariable + '=' + $PlayerSpeed)
-    Write-Host (Get-Message 'PlayerSpeedSet' $PlayerSpeed)
+    param(
+        [Nullable[int]] $Percent,
+        [Parameter(Mandatory)] [bool] $ModIsOn
+    )
+    if (-not $ModIsOn) {
+        if ($null -ne $PlayerSpeed) { Write-Host (Get-Message 'PlayerSpeedIgnored') }
+        return
+    }
+    if ($null -eq $Percent) { return }
+    [Environment]::SetEnvironmentVariable($PlayerSpeedVariable, [string] $Percent, 'Process')
+    Add-LogLine ($PlayerSpeedVariable + '=' + $Percent)
+    Write-Host (Get-Message 'PlayerSpeedSet' $Percent)
+}
+
+# Puts the mods in the state that was asked for. With -NoMods none is installed, and the settings are
+# not read. Otherwise the mods that the settings turn on are built and installed, the ones that they
+# turn off are taken out of the player's folder (so a mod that was on before stops being on), and the
+# speed of the character is given to the speed mod. -PlayerSpeed is for this run only and wins over
+# the speed that was saved.
+function Initialize-Mods {
+    param([Parameter(Mandatory)] [string] $BuildDirectory)
+
+    if ($NoMods) {
+        Remove-InstalledMods -ModIds $AllModIds
+        Write-Host (Get-Message 'ModsOff')
+        return
+    }
+
+    $settings = Get-PlayerSettings
+    $enabledModIds = @(Get-EnabledModIds -Settings $settings)
+    $disabledModIds = @($AllModIds | Where-Object { $enabledModIds -notcontains $_ })
+    Add-LogLine ('Mods turned on in the settings: ' + ($enabledModIds -join ', '))
+
+    # The mods that are off are taken out first, so that they are not in the game even if the
+    # building of the others fails.
+    Remove-InstalledMods -ModIds $disabledModIds
+    if ($enabledModIds.Count -eq 0 -and $disabledModIds.Count -gt 0) {
+        Write-Host (Get-Message 'AllModsTurnedOff')
+    }
+    elseif ($disabledModIds.Count -gt 0) {
+        Write-Host (Get-Message 'ModsTurnedOff' ($disabledModIds -join ', '))
+    }
+    if ($enabledModIds.Count -gt 0) { Install-Mods -BuildDirectory $BuildDirectory -ModIds $enabledModIds }
+
+    $percent = $settings.PlayerSpeedPercent
+    if ($null -ne $PlayerSpeed) { $percent = $PlayerSpeed }
+    Set-PlayerSpeed -Percent $percent -ModIsOn ($enabledModIds -contains $PlayerSpeedModId)
 }
 
 function Start-Launcher {
@@ -566,6 +662,10 @@ try {
     if ($architecture -ne 'Arm64') { throw (Get-Message 'WrongComputer' $architecture) }
     $missingFile = Find-MissingFile
     if ($missingFile) { throw (Get-Message 'IncompletePackage' $missingFile) }
+    # The code of the settings is loaded here, with a dot so that its functions and values become
+    # those of this script, and not at the top: a package without that file gets the message above.
+    . $SettingsLibraryPath
+    $SettingsPath = Get-SettingsPath -UserDirectory $UserDirectory
     if ($PackageDirectory.Length -gt $MaximumPackagePathLength) { Write-Host (Get-Message 'PackagePathIsLong') }
 
     Open-Log
@@ -579,13 +679,7 @@ try {
     $builtModule = New-GameModule -ModulesDirectory $modulesDirectory
     $installedModule = Install-GameModule -ModulePath $builtModule
     Add-LogLine ('Module: ' + $installedModule)
-    if ($NoMods) {
-        Remove-InstalledMods
-    }
-    else {
-        Install-Mods -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
-        Set-PlayerSpeed
-    }
+    Initialize-Mods -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
     Write-Host (Get-Message 'GamePrepared')
 
     if (-not $PrepareOnly) {

@@ -38,7 +38,8 @@ recompilan el juego en tu computadora, a partir de tu disco.
    control se juega con el teclado (ver «Controles»). `Play-Keyboard.bat` abre el juego con el
    teclado sin pasar por el launcher.
 
-Las veces siguientes basta con hacer doble clic en `Play.bat` (o en `Play-Keyboard.bat`).
+Las veces siguientes basta con hacer doble clic en `Play.bat` (o en `Play-Keyboard.bat`). Para
+activar o apagar los mods y elegir qué tan rápido va el personaje, abre `Settings.bat` (ver «Mods»).
 
 ### Controles
 
@@ -105,22 +106,48 @@ Un mod es un pequeño cambio al juego que se carga al arrancarlo. El paquete tra
 | `jamie_marriage` | Casarse con Jamie ya no termina el juego: después de la ceremonia sigues jugando. Sin el mod, a la ceremonia le siguen el epílogo y la pantalla de título; con él se ve una vez la escena de las notas musicales y el juego vuelve a juego libre. |
 | `player_speed` | El personaje camina y corre más rápido: por omisión al 150 % de la velocidad original. Solo actúa en juego libre; en las escenas el personaje se mueve como en el original. La animación no cambia, así que con valores altos los pies podrían verse resbalar. |
 
-`Play.bat` y `Play-Keyboard.bat` construyen los mods en tu computadora cada vez que se ejecutan, con
-el mismo compilador que recompila el juego (tarda unos segundos), y los dejan en
+**Para activar o apagar los mods y elegir la velocidad del personaje**, haz doble clic en
+`Settings.bat`. Se abre una ventana con una casilla por cada mod y, para el personaje más rápido, un
+deslizador y una casilla numérica de 25 % (muy lento) a 300 % (tres veces más rápido), donde 100 % es
+la velocidad del juego original. **Guardar** guarda la elección, **Guardar y jugar** la guarda y abre
+el juego con el teclado, **Guardar y abrir el launcher** la guarda y abre el launcher, y **Valores
+originales** vuelve a todos los mods activos y al 150 %. La elección se aplica la próxima vez que se
+arranca el juego con `Play.bat` o `Play-Keyboard.bat`: un juego que ya está abierto no cambia. Detrás
+de la ventana se queda abierta una ventana negra; es normal. Mientras no hayas guardado nada, todos
+los mods están activos y el personaje va al 150 %.
+
+La elección queda en `%LOCALAPPDATA%\HarvestMoonMM\settings.json`, un archivo que también se puede
+editar a mano con un editor de texto:
+
+```json
+{
+  "mods": { "jamie_marriage": true, "player_speed": true },
+  "playerSpeedPercent": 150
+}
+```
+
+Un mod en `false` se quita de tu carpeta y el juego se juega sin él; uno que no aparece está activo.
+`playerSpeedPercent` es un número entero de 25 a 300. Un valor que no sirve se ignora (y `Play.bat`
+lo avisa) y el resto del archivo se sigue usando; si borras el archivo, vuelven los valores
+originales.
+
+`Play.bat` y `Play-Keyboard.bat` construyen los mods activos en tu computadora cada vez que se
+ejecutan, con el mismo compilador que recompila el juego (tarda unos segundos), y los dejan en
 `%LOCALAPPDATA%\HarvestMoonMM\Mods`. Si no se pueden construir, el juego arranca igual y el motivo
 queda en `Logs\play.log`.
 
-Para jugar sin mods, abre una ventana de comandos en la carpeta del paquete y ejecuta
-`Play.bat -NoMods` (o `Play-Keyboard.bat -NoMods`): quita de tu carpeta los mods del paquete y el
-juego se juega como viene en el disco. Para recuperarlos, ejecuta `Play.bat` sin eso.
+**Desde la línea de comandos** (abre una ventana de comandos en la carpeta del paquete):
 
-Para cambiar qué tan rápido va el personaje, ejecuta `Play.bat -PlayerSpeed 200` (o
-`Play-Keyboard.bat -PlayerSpeed 200`): un número entero de 25 a 300, donde 100 es la velocidad
-del juego original y 150 (lo que se usa si no pones nada) es una vez y media más rápido. Vale
-solo para esa vez que juegas; con `-NoMods` no tiene efecto. Por encima de 200 el personaje
-puede atravesar paredes delgadas: con 400 atravesó la puerta de su casa en las seis pruebas y
-cayó fuera del mapa, con 300 no, pero el resto de las paredes del juego no se probaron
-([MOVEMENT.md][movement-es]).
+- `Play.bat -NoMods` (o `Play-Keyboard.bat -NoMods`) juega sin ningún mod, sin mirar `settings.json`:
+  quita de tu carpeta los mods del paquete y el juego se juega como viene en el disco. Para
+  recuperarlos, ejecuta `Play.bat` sin eso.
+- `Play.bat -PlayerSpeed 200` (o `Play-Keyboard.bat -PlayerSpeed 200`) elige la velocidad solo para
+  esa vez que juegas y le gana a la que guardó `Settings.bat`: un número entero de 25 a 300. No tiene
+  efecto con `-NoMods`, ni si el mod `player_speed` está apagado en los ajustes.
+
+Por encima de 200 el personaje puede atravesar paredes delgadas: con 400 atravesó la puerta de su
+casa en las seis pruebas y cayó fuera del mapa, con 300 no, pero el resto de las paredes del juego no
+se probaron ([MOVEMENT.md][movement-es]).
 
 > **Estado: el mod de Jamie se probó con las condiciones de la boda escritas a mano, no con una
 > partida real** (ver [los resultados][scripts-es]). Si lo pruebas en una partida tuya, copia antes
@@ -131,8 +158,9 @@ cayó fuera del mapa, con 300 no, pero el resto de las paredes del juego no se p
 Todo lo que crea el paquete está en la carpeta `%LOCALAPPDATA%\HarvestMoonMM` (pégala en la barra
 de direcciones del Explorador de archivos): el juego extraído (`games`), el módulo recompilado
 (`modules` y `StaticRecompModules`), los mods (`Mods`, y `mods-build` donde se construyen), tus
-partidas guardadas, la configuración y el registro de la última preparación (`Logs\play.log`). Para
-desinstalar, borra la carpeta del paquete y esa carpeta.
+partidas guardadas, la configuración (incluida tu elección de mods y velocidad, `settings.json`) y el
+registro de la última preparación (`Logs\play.log`). Para desinstalar, borra la carpeta del paquete y
+esa carpeta.
 
 ### Si algo falla
 
@@ -166,6 +194,7 @@ desinstalar, borra la carpeta del paquete y esa carpeta.
 | Carpeta o archivo | Para qué sirve |
 | --- | --- |
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | Lo que haces doble clic (con el launcher, o con el teclado), el script que prepara el juego y los datos del juego. |
+| `Settings.bat`, `Settings.ps1`, `settings-file.ps1` | La ventana donde activas y apagas los mods y eliges la velocidad del personaje (ver «Mods»), y el código que ella y `play.ps1` comparten para guardar y leer tu elección. |
 | `Measure-Speed.bat`, `Measure-Speed.ps1` | Opcionales: abren el juego con el teclado y anotan qué tan rápido corre (ver «Rendimiento y batería»). |
 | `bin\` | El launcher, el runner, DolRecomp (el recompilador) y `moderngekko-port` (lo que los une). `bin\source` trae los pocos archivos de código que hacen falta para construir el módulo del juego y los headers de ModernGekko que incluye un mod. |
 | `mods\` | El código de los mods y el header con los nombres de las funciones del juego con los que están escritos; `play.ps1` los construye e instala. |
@@ -282,21 +311,47 @@ A mod is a small change to the game that is loaded when it starts. The package c
 | `jamie_marriage` | Marrying Jamie no longer ends the game: you keep playing after the ceremony. Without the mod, the ceremony is followed by the epilogue and the title screen; with it, the notes scene is shown once and the game goes back to free play. |
 | `player_speed` | The character walks and runs faster: by default at 150% of the original speed. It only acts in free play; in cutscenes the character moves as in the original. The animation is not changed, so at high values the feet might look as if they slide. |
 
-`Play.bat` and `Play-Keyboard.bat` build the mods on your computer every time they run, with the same
-compiler that recompiles the game (it takes a few seconds), and put them in
+**To turn the mods on and off and choose how fast the character is**, double-click `Settings.bat`.
+A window opens with a check box for each mod and, for the faster character, a slider and a number box
+from 25% (very slow) to 300% (three times as fast), where 100% is the speed of the original game.
+**Save** saves the choice, **Save and play** saves it and opens the game with the keyboard, **Save and
+open the launcher** saves it and opens the launcher, and **Defaults** goes back to every mod on and
+150%. The choice applies the next time the game is started with `Play.bat` or `Play-Keyboard.bat`: a
+game that is already open does not change. A black window stays open behind the settings window; that
+is normal. Until you have saved something, every mod is on and the character goes at 150%.
+
+The choice is kept in `%LOCALAPPDATA%\HarvestMoonMM\settings.json`, a file that can also be edited by
+hand with a text editor:
+
+```json
+{
+  "mods": { "jamie_marriage": true, "player_speed": true },
+  "playerSpeedPercent": 150
+}
+```
+
+A mod set to `false` is taken out of your folder and the game is played without it; a mod that is not
+listed is on. `playerSpeedPercent` is a whole number from 25 to 300. A value that makes no sense is
+ignored (and `Play.bat` says so) and the rest of the file is still used; if you delete the file, the
+defaults come back.
+
+`Play.bat` and `Play-Keyboard.bat` build the mods that are on, on your computer, every time they run,
+with the same compiler that recompiles the game (it takes a few seconds), and put them in
 `%LOCALAPPDATA%\HarvestMoonMM\Mods`. If they cannot be built, the game starts anyway and the reason is
 in `Logs\play.log`.
 
-To play without mods, open a command prompt in the package folder and run `Play.bat -NoMods` (or
-`Play-Keyboard.bat -NoMods`): it takes the package's mods out of your folder and the game is played as
-it is on the disc. To get them back, run `Play.bat` without that.
+**From the command line** (open a command prompt in the package folder):
 
-To change how fast the character goes, run `Play.bat -PlayerSpeed 200` (or
-`Play-Keyboard.bat -PlayerSpeed 200`): a whole number from 25 to 300, where 100 is the speed of the
-original game and 150 (what is used if you give nothing) is one and a half times as fast. It applies
-only to that session; with `-NoMods` it has no effect. Above 200 the character may go through thin
-walls: at 400 it went through the door of its house in all six tries and fell out of the map, at
-300 it did not, but the other walls of the game were not tried ([MOVEMENT.md][movement-en]).
+- `Play.bat -NoMods` (or `Play-Keyboard.bat -NoMods`) plays without any mod, without looking at
+  `settings.json`: it takes the package's mods out of your folder and the game is played as it is on
+  the disc. To get them back, run `Play.bat` without that.
+- `Play.bat -PlayerSpeed 200` (or `Play-Keyboard.bat -PlayerSpeed 200`) chooses the speed only for that
+  session and wins over the one that `Settings.bat` saved: a whole number from 25 to 300. It has no
+  effect with `-NoMods`, or if the `player_speed` mod is turned off in the settings.
+
+Above 200 the character may go through thin walls: at 400 it went through the door of its house in all
+six tries and fell out of the map, at 300 it did not, but the other walls of the game were not tried
+([MOVEMENT.md][movement-en]).
 
 > **Status: the Jamie mod was tried with the conditions of the wedding written by hand, not with a
 > real save game** (see [the results][scripts-en]). If you try it in a game of your own, copy the folder
@@ -307,8 +362,8 @@ walls: at 400 it went through the door of its house in all six tries and fell ou
 Everything the package creates is in the folder `%LOCALAPPDATA%\HarvestMoonMM` (paste that into
 the address bar of File Explorer): the extracted game (`games`), the recompiled module (`modules`
 and `StaticRecompModules`), the mods (`Mods`, and `mods-build` where they are built), your saved
-games, the settings, and the log of the last preparation (`Logs\play.log`). To uninstall, delete the
-package folder and that folder.
+games, the settings (including your choice of mods and speed, `settings.json`), and the log of the
+last preparation (`Logs\play.log`). To uninstall, delete the package folder and that folder.
 
 ### If something fails
 
@@ -342,6 +397,7 @@ package folder and that folder.
 | Folder or file | What it is for |
 | --- | --- |
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | What you double-click (with the launcher, or with the keyboard), the script that prepares the game, and the game's data. |
+| `Settings.bat`, `Settings.ps1`, `settings-file.ps1` | The window where you turn the mods on and off and choose how fast the character is (see "Mods"), and the code that it and `play.ps1` share to save and read your choice. |
 | `Measure-Speed.bat`, `Measure-Speed.ps1` | Optional: they open the game with the keyboard and write down how fast it runs (see "Performance and battery"). |
 | `bin\` | The launcher, the runner, DolRecomp (the recompiler) and `moderngekko-port` (what ties them together). `bin\source` holds the few source files that building the game's module needs, and the ModernGekko headers that a mod includes. |
 | `mods\` | The source of the mods, and the header with the names of the game's functions that they are written with; `play.ps1` builds and installs them. |

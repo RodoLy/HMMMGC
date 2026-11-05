@@ -9,6 +9,7 @@ the two languages, the settings the script reads), and a few rules that Windows 
 workflow that builds the package.
 """
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -53,13 +54,14 @@ def body_of_function(script: str, name: str) -> str:
     return re.search(rf"function {name} \{{(.*?)^\}}", script, re.MULTILINE | re.DOTALL).group(1)
 
 
-def messages_by_language() -> dict[str, set[str]]:
-    """The keys of the messages of play.ps1, for each language.
+def messages_by_language(script_name: str = "play.ps1") -> dict[str, set[str]]:
+    """The keys of the messages of a script (play.ps1 or Settings.ps1), for each language.
 
     A message is `Key = 'text'`, or `Key = @'` and the lines of the text up to `'@` when it has several.
     """
-    script = read_packaging_file("play.ps1")
-    blocks = re.findall(r"^    (\w\w) = @\{\n(.*?)^    \}", script, re.MULTILINE | re.DOTALL)
+    script = read_packaging_file(script_name)
+    table = re.search(r"^\$Messages = @\{\n(.*?)^\}", script, re.MULTILINE | re.DOTALL).group(1)
+    blocks = re.findall(r"^    (\w\w) = @\{\n(.*?)^    \}", table, re.MULTILINE | re.DOTALL)
     return {
         language: set(re.findall(r"^\s+(\w+)\s+= @?'", block, re.MULTILINE)) for language, block in blocks
     }
@@ -169,10 +171,10 @@ def test_the_script_gives_cmake_the_options_that_the_mods_cmake_file_asks_for():
     assert given - asked_for <= {"CMAKE_C_COMPILER"}  # what CMake itself reads
 
 
-def test_the_mods_are_built_in_a_new_folder_each_time_and_only_the_listed_ones():
+def test_the_mods_are_built_in_a_new_folder_each_time_and_only_the_ones_that_are_asked_for():
     body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
     assert body.index("Remove-Item -LiteralPath $BuildDirectory") < body.index("$configureArguments")
-    assert "'--target') + @($Game.ModIds)" in body
+    assert "'--target') + @($ModIds)" in body
 
 
 def test_what_the_tools_say_while_the_mods_are_built_goes_to_the_log_and_not_to_the_console():
@@ -191,14 +193,41 @@ def test_a_failure_while_the_mods_are_built_is_a_warning_and_the_game_starts_any
     assert "exit" not in after_catch
 
 
-def test_playing_without_mods_takes_out_only_the_mods_of_the_package():
-    script = read_packaging_file("play.ps1")
-    body = body_of_function(script, "Remove-InstalledMods")
-    assert "foreach ($modId in $Game.ModIds)" in body
+def test_a_mod_is_taken_out_by_the_name_of_its_folder_and_nothing_else_goes():
+    body = body_of_function(read_packaging_file("play.ps1"), "Remove-InstalledMods")
+    assert "foreach ($modId in $ModIds)" in body
     assert "Join-Path $InstalledModsDirectory ($modId + '.mgm')" in body
-    assert re.search(r"if \(\$NoMods\) \{\s+Remove-InstalledMods\s+\}\s+else \{\s+Install-Mods", script)
+
+
+def test_playing_without_mods_takes_out_all_the_mods_of_the_package_and_does_not_read_the_settings():
+    script = read_packaging_file("play.ps1")
+    body = body_of_function(script, "Initialize-Mods")
+    without_mods, reading, _ = body.partition("$settings = Get-PlayerSettings")
+    assert reading  # the settings are read, but only after the case of -NoMods
+    assert re.search(
+        r"if \(\$NoMods\) \{\s+Remove-InstalledMods -ModIds \$AllModIds\s+.*?\s+return\s+\}",
+        without_mods,
+        re.DOTALL,
+    )
     assert "[switch] $NoMods" in script
     assert ".PARAMETER NoMods" in script
+
+
+def test_the_mods_that_the_settings_turn_off_are_taken_out_before_the_others_are_built():
+    body = body_of_function(read_packaging_file("play.ps1"), "Initialize-Mods")
+    assert "$enabledModIds = @(Get-EnabledModIds -Settings $settings)" in body
+    assert "$disabledModIds = @($AllModIds | Where-Object { $enabledModIds -notcontains $_ })" in body
+    removing = body.index("Remove-InstalledMods -ModIds $disabledModIds")
+    building = body.index("Install-Mods -BuildDirectory $BuildDirectory -ModIds $enabledModIds")
+    assert removing < building
+    # With every mod turned off there is nothing to build (the build is not even asked for).
+    assert "if ($enabledModIds.Count -gt 0) { Install-Mods" in body
+
+
+def test_the_mods_are_set_up_once_the_package_and_the_game_are_ready():
+    script = read_packaging_file("play.ps1")
+    assert len(re.findall(r"^\s+Initialize-Mods ", script, re.MULTILINE)) == 1
+    assert script.index("Install-GameModule -ModulePath") < script.index("    Initialize-Mods ")
 
 
 def test_the_mods_go_where_the_runner_looks_for_them():
@@ -229,12 +258,25 @@ def test_the_speed_the_script_gives_is_what_the_player_speed_mod_reads():
     assert ".PARAMETER PlayerSpeed" in script
 
 
-def test_the_speed_is_given_to_the_mod_only_when_it_was_asked_for_and_the_mods_are_on():
-    script = read_packaging_file("play.ps1")
-    body = body_of_function(script, "Set-PlayerSpeed")
-    assert body.lstrip().startswith("if ($null -eq $PlayerSpeed) { return }")
-    assert "SetEnvironmentVariable($PlayerSpeedVariable, [string] $PlayerSpeed, 'Process')" in body
-    assert re.search(r"else \{\s+Install-Mods [^\n]*\n\s+Set-PlayerSpeed\s+\}", script)
+def test_the_speed_is_given_to_the_mod_only_while_it_is_on_and_a_speed_was_chosen():
+    body = body_of_function(read_packaging_file("play.ps1"), "Set-PlayerSpeed")
+    assert "if (-not $ModIsOn) {" in body
+    assert "if ($null -eq $Percent) { return }" in body
+    assert (
+        body.index("-not $ModIsOn")
+        < body.index("if ($null -eq $Percent)")
+        < body.index("SetEnvironmentVariable")
+    )
+    assert "SetEnvironmentVariable($PlayerSpeedVariable, [string] $Percent, 'Process')" in body
+
+
+def test_the_speed_asked_for_on_the_command_line_wins_over_the_saved_one():
+    body = body_of_function(read_packaging_file("play.ps1"), "Initialize-Mods")
+    saved = body.index("$percent = $settings.PlayerSpeedPercent")
+    asked_for = body.index("if ($null -ne $PlayerSpeed) { $percent = $PlayerSpeed }")
+    assert saved < asked_for < body.index("Set-PlayerSpeed -Percent $percent")
+    # The mod is told only if the settings leave it on.
+    assert "-ModIsOn ($enabledModIds -contains $PlayerSpeedModId)" in body
 
 
 def project_settings() -> dict[str, str]:
@@ -411,7 +453,7 @@ def test_a_batch_file_runs_the_script_that_sits_next_to_it_with_what_it_was_give
     assert "-STA" in command  # the file dialog needs a single-threaded apartment
 
 
-@pytest.mark.parametrize("batch_file", package_windows.BATCH_FILES)
+@pytest.mark.parametrize("batch_file", [*package_windows.BATCH_FILES, "Settings.bat"])
 def test_a_batch_file_waits_for_a_key_only_when_the_script_failed(batch_file):
     lines = [line.strip() for line in read_packaging_file(batch_file).splitlines()]
     assert "if errorlevel 1 (" in lines
@@ -448,3 +490,160 @@ def test_the_graphics_api_in_game_psd1_is_a_name_that_dolphin_knows():
     # The runner gives the name to Dolphin without checking it, so a mistyped one would show only
     # when someone starts the game.
     assert game_definition()["GraphicsBackend"] in DOLPHIN_VIDEO_BACKENDS_ON_WINDOWS
+
+
+# -- The settings: Settings.bat, Settings.ps1 and settings-file.ps1 ----------------------------------------
+
+
+def library_value(name: str) -> str:
+    """The value of `$Name = value` in settings-file.ps1, as written."""
+    match = re.search(rf"^\${name} = (.+?)\s*$", read_packaging_file("settings-file.ps1"), re.MULTILINE)
+    assert match, f"settings-file.ps1 does not set ${name}"
+    return match.group(1)
+
+
+def settings_window_mod_texts() -> dict[str, dict[str, set[str]]]:
+    """What Settings.ps1 says about each mod, per language: mod id -> its fields (Name, Description)."""
+    script = read_packaging_file("Settings.ps1")
+    table = re.search(r"^\$ModTexts = @\{\n(.*?)^\}", script, re.MULTILINE | re.DOTALL).group(1)
+    texts = {}
+    for language, block in re.findall(r"^    (\w\w) = @\{\n(.*?)^    \}", table, re.MULTILINE | re.DOTALL):
+        texts[language] = {
+            mod_id: set(re.findall(r"^\s+(\w+)\s+= '", fields, re.MULTILINE))
+            for mod_id, fields in re.findall(
+                r"^        (\w+)\s+= @\{\n(.*?)^        \}", block, re.MULTILINE | re.DOTALL
+            )
+        }
+    return texts
+
+
+@pytest.mark.parametrize("name", package_windows.SETTINGS_FILES)
+def test_a_settings_file_has_no_tabs_and_no_trailing_spaces(name):
+    for number, line in enumerate(read_packaging_file(name).splitlines(), start=1):
+        assert "\t" not in line, f"{name} line {number} has a tab"
+        assert line == line.rstrip(), f"{name} line {number} has trailing spaces"
+
+
+def test_the_limits_of_the_settings_are_the_ones_the_player_speed_mod_accepts():
+    for setting, definition in (
+        ("PlayerSpeedPercentMinimum", "MINIMUM_SPEED_PERCENT"),
+        ("PlayerSpeedPercentMaximum", "MAXIMUM_SPEED_PERCENT"),
+        ("PlayerSpeedPercentDefault", "DEFAULT_SPEED_PERCENT"),
+    ):
+        assert library_value(setting) == mod_definition("player_speed", definition)
+
+
+def test_the_mod_whose_speed_is_chosen_is_one_that_the_package_builds():
+    assert library_value("PlayerSpeedModId").strip("'") in game_mod_ids()
+
+
+def test_the_example_in_the_settings_code_is_a_file_that_the_code_reads_and_writes():
+    library = read_packaging_file("settings-file.ps1")
+    assert library_value("SettingsFileName") == "'settings.json'"
+    example = json.loads(re.search(r"^ +\{\n.*?^ +\}$", library, re.MULTILINE | re.DOTALL).group(0))
+    assert set(example) == {"mods", "playerSpeedPercent"}
+    assert set(example["mods"]) == set(game_mod_ids())
+    minimum = int(library_value("PlayerSpeedPercentMinimum"))
+    maximum = int(library_value("PlayerSpeedPercentMaximum"))
+    assert minimum <= example["playerSpeedPercent"] <= maximum
+    reading = body_of_function(library, "Read-PlayerSettings")
+    writing = body_of_function(library, "Save-PlayerSettings")
+    for name in example:
+        assert f"Properties['{name}']" in reading
+    assert "[ordered] @{ mods = $Settings.Mods }" in writing
+    assert "$content['playerSpeedPercent']" in writing
+
+
+def test_the_settings_code_never_stops_the_game_for_a_value_it_cannot_use():
+    reading = body_of_function(read_packaging_file("settings-file.ps1"), "Read-PlayerSettings")
+    assert "catch {" in reading  # a file that is not JSON at all is a problem to report
+    assert "$problems.Add(" in reading
+    assert "throw" not in reading
+
+
+def test_the_settings_batch_file_is_plain_ascii_because_cmd_reads_it_in_the_oem_code_page():
+    assert all(byte < 128 for byte in (PACKAGING_DIRECTORY / "Settings.bat").read_bytes())
+
+
+def test_the_settings_batch_file_runs_the_window_that_sits_next_to_it():
+    commands = [
+        line
+        for line in read_packaging_file("Settings.bat").splitlines()
+        if "Settings.ps1" in line and not line.lstrip().startswith("rem")
+    ]
+    assert len(commands) == 1
+    assert '"%~dp0Settings.ps1"' in commands[0]  # the folder of the batch file, wherever it is run from
+    assert "-ExecutionPolicy Bypass" in commands[0]
+    assert "-STA" in commands[0]  # a window needs a single-threaded apartment
+
+
+def test_the_settings_window_asks_for_the_powershell_that_windows_has_and_stops_on_errors():
+    window = read_packaging_file("Settings.ps1")
+    assert "#Requires -Version 5.1" in window
+    assert "#Requires -Version 5.1" in read_packaging_file("settings-file.ps1")
+    assert "Set-StrictMode -Version Latest" in window
+    assert "$ErrorActionPreference = 'Stop'" in window
+
+
+def test_the_settings_window_only_reads_values_that_the_game_definition_has():
+    keys_read = set(re.findall(r"\$Game\.(\w+)", read_packaging_file("Settings.ps1")))
+    assert keys_read
+    assert keys_read <= set(game_definition()) | {"ModIds"}
+
+
+def test_the_settings_window_has_the_same_messages_in_both_languages():
+    languages = messages_by_language("Settings.ps1")
+    assert set(languages) == {"en", "es"}
+    assert languages["en"] == languages["es"]
+
+
+def test_every_message_the_settings_window_asks_for_exists_and_none_is_left_unused():
+    asked_for = set(re.findall(r"Get-Message '(\w+)'", read_packaging_file("Settings.ps1")))
+    defined = messages_by_language("Settings.ps1")["en"]
+    assert asked_for <= defined
+    assert defined <= asked_for
+
+
+def test_the_settings_window_describes_every_mod_of_the_package_in_both_languages():
+    texts = settings_window_mod_texts()
+    assert set(texts) == {"en", "es"}
+    for language, mods in texts.items():
+        assert set(mods) == set(game_mod_ids()), language
+        assert all(fields == {"Name", "Description"} for fields in mods.values()), language
+
+
+def test_the_settings_window_starts_the_games_with_the_batch_files_of_the_package():
+    window = read_packaging_file("Settings.ps1")
+    for batch_file in ("Play-Keyboard.bat", "Play.bat"):
+        assert f"Join-Path $PackageDirectory '{batch_file}'" in window
+        assert batch_file in package_windows.BATCH_FILES
+
+
+def test_the_window_and_the_script_share_the_code_that_reads_the_settings():
+    assert ". (Join-Path $PackageDirectory 'settings-file.ps1')" in read_packaging_file("Settings.ps1")
+    script = read_packaging_file("play.ps1")
+    assert "$SettingsLibraryPath = Join-Path $PackageDirectory 'settings-file.ps1'" in script
+    required = re.search(r"\$RequiredFiles = @\((.*?)^\)", script, re.MULTILINE | re.DOTALL).group(1)
+    assert "$SettingsLibraryPath" in required
+    # It is loaded after the check that says whether it is there (a package without it gets the message
+    # about an incomplete package, not a PowerShell error) and before anything uses it.
+    checked = script.index("$missingFile = Find-MissingFile")
+    loaded = script.index(". $SettingsLibraryPath")
+    used = script.index("Initialize-Mods -BuildDirectory")
+    assert checked < loaded < used
+
+
+def test_the_readme_explains_the_settings_in_both_languages_with_examples_that_are_valid():
+    readme = read_packaging_file("README.md")
+    spanish_part, english_part = readme.split("\n## English\n", 1)
+    for part in (spanish_part, english_part):
+        for name in package_windows.SETTINGS_FILES:
+            assert f"`{name}`" in part, f"{name} is not described in the README"
+        assert "`%LOCALAPPDATA%\\HarvestMoonMM\\settings.json`" in part
+        (example,) = re.findall(r"```json\n(.*?)```", part, re.DOTALL)
+        settings = json.loads(example)
+        assert set(settings["mods"]) == set(game_mod_ids())
+        minimum = int(library_value("PlayerSpeedPercentMinimum"))
+        maximum = int(library_value("PlayerSpeedPercentMaximum"))
+        assert minimum <= settings["playerSpeedPercent"] <= maximum
+        assert f"de {minimum} a {maximum}" in part or f"from {minimum} to {maximum}" in part
