@@ -33,6 +33,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # A mod is a shared library called "mod" inside a folder "<mod id>.mgm";
 # ModernGekko finds those folders in its Mods directory.
+#
+# Every mod has the same file name, so on Windows the import libraries that the linker
+# writes beside a DLL (libmod.dll.a) would all have the same name too, and Ninja stops with
+# "multiple rules generate libmod.dll.a". Each mod's import library goes to a folder of its
+# own, outside the <mod id>.mgm folder that gets installed: nothing loads an import library.
 function(add_game_mod mod_id)
     add_library(${mod_id} SHARED ${ARGN})
     target_include_directories(${mod_id} PRIVATE
@@ -48,7 +53,8 @@ function(add_game_mod mod_id)
         PREFIX ""
         OUTPUT_NAME "mod"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${mod_id}.mgm"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${mod_id}.mgm")
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${mod_id}.mgm"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/import-libraries/${mod_id}")
 endfunction()
 
 add_game_mod(boot_logger boot_logger/mod.c)
