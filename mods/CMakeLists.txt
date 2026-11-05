@@ -53,3 +53,4 @@ endfunction()
 
 add_game_mod(boot_logger boot_logger/mod.c)
 add_game_mod(state_logger state_logger/mod.c)
+add_game_mod(jamie_marriage jamie_marriage/mod.c)
