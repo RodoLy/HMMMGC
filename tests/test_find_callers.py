@@ -212,22 +212,42 @@ needs_game_files = pytest.mark.skipif(
 )
 
 
+# The chain of functions that sends every display list to the graphics chip. They are given by address
+# and not by name: the names of the game's functions change as more of the program gets named.
+GX_CALL_DISPLAY_LIST = 0x80195010  # the SDK function that sends the command byte 0x40
+DISPLAY_LIST_WRAPPER = 0x801CBCEC  # a tiny function of the game that calls it
+DISPLAY_LIST_CALLER = 0x801B3914  # the only place that calls the wrapper
+DISPLAY_LIST_DRAWER = 0x801B4138  # the function that calls that place four times
+
+
 @needs_game_files
 def test_every_display_list_the_game_draws_goes_through_one_chain_of_functions():
     """The figures quoted in docs/RECOMPILER_EVALUATION.md and docs/PLAN.md."""
     symbols = SymbolTable.read(SYMBOLS_PATH)
     call_map = build_call_map(Dol(Path(DOL_PATH)), symbols)
 
-    def callers_of(name: str) -> list[tuple[str, list[int]]]:
-        sites = call_map.call_sites[symbols.by_name(name).address]
+    def callers_of(function_address: int) -> list[tuple[int, list[int]]]:
+        sites = call_map.call_sites[function_address]
         return [
-            (group.caller.name, [site.address for site in group.sites]) for group in group_by_caller(sites)
+            (group.caller.address, [site.address for site in group.sites]) for group in group_by_caller(sites)
         ]
 
-    # fn_80195010 is the SDK's GXCallDisplayList: the only function that sends the command byte 0x40.
-    assert callers_of("fn_80195010") == [("fn_801CBCEC", [0x801CBCF8])]
-    assert callers_of("fn_801CBCEC") == [("fn_801B3914", [0x801B39F8])]
-    assert callers_of("fn_801B3914") == [("fn_801B4138", [0x801B41B4, 0x801B41D4, 0x801B41F4, 0x801B4214])]
+    assert callers_of(GX_CALL_DISPLAY_LIST) == [(DISPLAY_LIST_WRAPPER, [0x801CBCF8])]
+    assert callers_of(DISPLAY_LIST_WRAPPER) == [(DISPLAY_LIST_CALLER, [0x801B39F8])]
+    assert callers_of(DISPLAY_LIST_CALLER) == [
+        (DISPLAY_LIST_DRAWER, [0x801B41B4, 0x801B41D4, 0x801B41F4, 0x801B4214])
+    ]
     # Nobody keeps a pointer to them: the words that hold their addresses are exception table entries.
-    for name in ("fn_80195010", "fn_801CBCEC", "fn_801B3914"):
-        assert symbols.by_name(name).address not in call_map.pointer_words
+    for function_address in (GX_CALL_DISPLAY_LIST, DISPLAY_LIST_WRAPPER, DISPLAY_LIST_CALLER):
+        assert function_address not in call_map.pointer_words
+
+
+@needs_game_files
+def test_the_function_that_sends_the_display_list_command_is_the_sdks_gx_call_display_list():
+    """Two independent ways of naming it agree: what the function does, and its code in the SDK database.
+
+    The first found it as the only function that writes the command byte 0x40 to the pipe. The second
+    (tools/sdk_signatures.py) matched its code against Dolphin's database of SDK functions.
+    """
+    symbols = SymbolTable.read(SYMBOLS_PATH)
+    assert symbols.by_name("GXCallDisplayList").address == GX_CALL_DISPLAY_LIST

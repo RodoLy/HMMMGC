@@ -8,7 +8,7 @@ Why this matters / Por qué importa
 Replacing a function of the game (a mod's patch, or a function of the Nintendo SDK that our own
 runtime will provide) is only as safe as the answer to "who uses it?". This tool answers it from the
 program itself: every call to the function, every tail call, every pointer to it kept in the data,
-and, going up, the same for each caller. For example, the SDK's GXCallDisplayList (fn_80195010) has
+and, going up, the same for each caller. For example, the SDK's GXCallDisplayList (0x80195010) has
 one caller, which has one caller, which is called from four places of a single function: every
 display list the game draws goes through one point (docs/RECOMPILER_EVALUATION.md).
 
@@ -16,7 +16,7 @@ Reemplazar una función del juego (un parche de un mod, o una función del SDK d
 nuestro propio runtime) solo es tan seguro como la respuesta a "¿quién la usa?". Esta herramienta la
 responde desde el propio programa: cada llamada a la función, cada llamada final, cada puntero a ella
 guardado en los datos y, hacia arriba, lo mismo para cada quien la llama. Por ejemplo, GXCallDisplayList
-del SDK (fn_80195010) tiene una sola llamadora, que tiene una sola llamadora, que se llama desde cuatro
+del SDK (0x80195010) tiene una sola llamadora, que tiene una sola llamadora, que se llama desde cuatro
 lugares de una misma función: todas las listas de visualización que dibuja el juego pasan por un punto
 (docs/RECOMPILER_EVALUATION.md).
 
@@ -46,7 +46,7 @@ No se encuentran las llamadas a través de un puntero armado en un registro (`bc
 el código no se sabe a dónde van. Si la función aparece entre los punteros, alguien podría llamarla así.
 
 Usage / Uso:
-    python3 tools/find_callers.py fn_80195010
+    python3 tools/find_callers.py GXCallDisplayList
     python3 tools/find_callers.py 0x80195010 --depth 4
     python3 tools/find_callers.py OSInit --dol other/main.dol --symbols other/symbols.txt
 """

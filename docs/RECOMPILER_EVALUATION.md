@@ -119,9 +119,10 @@ Qué significa para Magical Melody (sin haberlo probado):
 - Dato comprobado con `tools/find_callers.py`: las listas de visualización pasan
   por un solo embudo. La única función que manda a la tubería el comando para
   llamar una lista (el byte 0x40, seguido de la dirección y el tamaño de la
-  lista) es `fn_80195010`, que es la `GXCallDisplayList` del SDK
-  (`python3 tools/disasm.py fn_80195010` lo muestra). La llama una sola función
-  diminuta del juego, `fn_801CBCEC`; a esa la llama un solo lugar,
+  lista) es `GXCallDisplayList` del SDK (0x80195010; la base de firmas del
+  SDK confirma el nombre, ver `docs/FUNCTION_MAP.md`;
+  `python3 tools/disasm.py GXCallDisplayList` la muestra). La llama una sola
+  función diminuta del juego, `fn_801CBCEC`; a esa la llama un solo lugar,
   `fn_801B3914`, y `fn_801B4138` llama a este cuatro veces. Ningún puntero
   guardado en los datos apunta a ellas (las palabras con sus direcciones son
   entradas de la tabla de excepciones). Así, interpretar listas de GX, si
@@ -332,9 +333,10 @@ What this means for Magical Melody (untested):
 - Fact checked with `tools/find_callers.py`: display lists go through a single
   funnel. The only function that sends the command for calling a list to the
   pipe (the byte 0x40, followed by the list's address and size) is
-  `fn_80195010`, which is the SDK's `GXCallDisplayList`
-  (`python3 tools/disasm.py fn_80195010` shows it). One tiny function of the
-  game, `fn_801CBCEC`, calls it; that one is called from a single place,
+  the SDK's `GXCallDisplayList` (0x80195010; the SDK signature database
+  confirms the name, see `docs/FUNCTION_MAP.md`;
+  `python3 tools/disasm.py GXCallDisplayList` shows it). One tiny function of
+  the game, `fn_801CBCEC`, calls it; that one is called from a single place,
   `fn_801B3914`, and `fn_801B4138` calls this one four times. No pointer kept
   in the data points to them (the words holding their addresses are exception
   table entries). So interpreting GX lists, if aurora does not, would be work

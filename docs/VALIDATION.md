@@ -632,7 +632,7 @@ una laptop con Snapdragon (el juego real, con DirectX 12) está en
   de modo que el redondeo del anfitrión se queda en «al más cercano». Al juego
   no le afecta mientras no pida otro: el ejecutable escribe el FPSCR en cinco
   instrucciones (cuatro `mtfsf` y un `mtfsb1`) que inicializan los registros de
-  punto flotante al arrancar (`fn_8016EDA0`), restauran un contexto, cambian
+  punto flotante al arrancar (`__OSFPRInit`), restauran un contexto, cambian
   bits de excepciones a partir de un valor leído con `mffs` o encienden el bit
   NI (`mtfsb1 29`, en `OSInit`; el tiempo de ejecución emula ese bit por
   software), y por lo que vi ninguna elige un redondeo propio. No lo he
@@ -1270,7 +1270,7 @@ Snapdragon (the real game, with DirectX 12) is in [PERFORMANCE.md](PERFORMANCE.m
   "to nearest". The game is not affected as long as it does not ask for
   another: the executable writes the FPSCR in five instructions (four `mtfsf`
   and one `mtfsb1`) that initialise the floating-point registers at start-up
-  (`fn_8016EDA0`), restore a context, change exception bits starting from a
+  (`__OSFPRInit`), restore a context, change exception bits starting from a
   value read with `mffs`, or set the NI bit (`mtfsb1 29`, in `OSInit`; the
   runtime emulates that bit in software), and as far as I saw none picks a
   rounding of its own. I have not checked it with the game running.
