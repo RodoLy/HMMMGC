@@ -37,6 +37,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+from find_gx_pipe_writers import find_pipe_writers  # noqa: E402
+
 from dol import Dol, write_dol  # noqa: E402
 from ppc_encode import (  # noqa: E402
     BLR,
@@ -674,15 +676,58 @@ def test_the_figures_quoted_in_the_function_map(real_analysis):
     assert len(analysis.with_verdict(Verdict.STRONG)) == 443
     assert len(analysis.with_verdict(Verdict.CORROBORATED)) == 133
     assert len(analysis.with_verdict(Verdict.SHARED_CHECKSUM)) == 698
+    assert len(analysis.with_verdict(Verdict.SHORT_UNCORROBORATED)) == 63
+    assert len(analysis.with_verdict(Verdict.UNUSABLE_NAME)) == 32
+    assert len(analysis.with_verdict(Verdict.SHARED_NAME)) == 9
+    assert len(analysis.with_verdict(Verdict.SIZE_DIFFERS)) == 5
+
+
+# The library ranges in docs/FUNCTION_MAP.md: library, start of its first function, end of its last one.
+# They come out in the order the linker placed the libraries.
+DOCUMENTED_LIBRARY_RUNS = [
+    ("OS", 0x8016EDA0, 0x80175778),
+    ("MTX", 0x8017580C, 0x801759C8),
+    ("DVD", 0x801759C8, 0x80179BB0),
+    ("VI", 0x80179DF0, 0x8017BBB0),
+    ("PAD", 0x8017BF98, 0x8017D73C),
+    ("AI", 0x8017D780, 0x8017E008),
+    ("AR", 0x8017E04C, 0x8017FB40),
+    ("ARQ", 0x8017FB40, 0x8017FEDC),
+    ("DSP", 0x801877FC, 0x80188300),
+    ("CARD", 0x80188338, 0x8018ED98),
+    ("GX", 0x8018EDE0, 0x80195F98),
+    ("TRK", 0x80195F98, 0x8019B5F0),
+    ("DB", 0x801A7A14, 0x801A848C),
+    ("EXI", 0x801A8580, 0x801A9E68),
+    ("OS", 0x801A9FF4, 0x801AA1B0),
+    ("SI", 0x801AA420, 0x801ABC18),
+]
 
 
 @needs_game_and_database
-def test_the_libraries_come_out_in_the_order_the_linker_placed_them(real_analysis):
+def test_the_library_ranges_are_the_ones_the_function_map_quotes(real_analysis):
     _symbols, analysis = real_analysis
     runs = library_runs(analysis.named)
-    assert [run.library for run in runs] == [
-        *["OS", "MTX", "DVD", "VI", "PAD", "AI", "AR", "ARQ", "DSP", "CARD", "GX", "TRK"],
-        *["DB", "EXI", "OS", "SI"],
+    assert [(run.library, run.first_address, run.end_address) for run in runs] == DOCUMENTED_LIBRARY_RUNS
+
+
+# The game's own functions that build vertices store to the pipe too; they sit long after the SDK.
+GAME_VERTEX_FUNCTIONS = [0x801CAB68, 0x801CAB74, 0x801CAB80, 0x801CAB8C, 0x801CAB98, 0x801CABA8]
+GAME_VERTEX_FUNCTIONS += [0x801CABC0, 0x801CABD4]
+
+
+@needs_game_and_database
+def test_every_gx_library_function_that_writes_to_the_pipe_is_inside_the_gx_range(real_analysis):
+    """Two methods that never look at each other agree.
+
+    The signatures say where the GX library is. The stores to the graphics chip's write-gather pipe
+    (tools/find_gx_pipe_writers.py) say who draws, whatever the names are.
+    """
+    symbols, analysis = real_analysis
+    gx = next(run for run in library_runs(analysis.named) if run.library == "GX")
+    writers = find_pipe_writers(Dol(Path(DOL_PATH)), symbols).writers
+    outside = [
+        writer.address for writer in writers if not gx.first_address <= writer.address < gx.end_address
     ]
-    gx = next(run for run in runs if run.library == "GX")
-    assert (gx.first_address, gx.end_address) == (0x8018EDE0, 0x80195F98)
+    assert len(writers) - len(outside) == 77
+    assert outside == GAME_VERTEX_FUNCTIONS
