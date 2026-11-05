@@ -13,6 +13,14 @@
  * begins, so by the time the next field check runs, the ceremony is over), the flag is cleared and the
  * epilogue never starts. The wedding itself still plays, and the game goes on from there.
  *
+ * A side effect, seen when the mod was tried in the game: with the flag clear, the same field check falls
+ * into the branch of its area-26 handler for "no ending flag", whose default is the musical notes scene
+ * (event 0x10B, Eve_music00, where the player is told that five notes turn into an instrument; two events
+ * tied to a counter of the save data, 0x105 and 0x106, come first when they are due). So that scene plays
+ * once right after the ceremony and then the game returns to free play. It does not loop, because when an
+ * event ends the game puts the player back using that event's placement entry, whose field index is not
+ * 26 (docs/SCRIPTS.md, "Prueba en ejecución del mod").
+ *
  * It is safe to run more than once for the same check, which can happen (see mods/README.md): clearing
  * a flag that is already clear changes nothing. It also covers a second proposal to Jamie, because the
  * proposal sets the flag again and the next field check clears it again.
@@ -28,6 +36,15 @@
  * partida: si la ceremonia de la boda ya empezó (el juego marca un evento como iniciado en el momento en
  * que arranca, así que cuando corre la siguiente revisión del campo la ceremonia ya terminó), apaga la
  * bandera y el epílogo nunca arranca. La boda se juega igual y el juego sigue desde ahí.
+ *
+ * Un efecto secundario, visto al probar el mod en el juego: con la bandera apagada, la misma revisión del
+ * campo cae en la rama de su manejador del área 26 para «sin bandera de final», cuyo valor por defecto es
+ * la escena de las notas musicales (evento 0x10B, Eve_music00, donde se le dice al jugador que cinco notas
+ * se vuelven un instrumento; antes van dos eventos ligados a un contador de la partida, 0x105 y 0x106,
+ * cuando les toca). Así que esa escena sale una vez justo después de la ceremonia y luego el juego vuelve
+ * a juego libre. No se repite en bucle, porque al terminar un evento el juego devuelve al jugador con la
+ * entrada de colocación de ese evento, cuyo índice de campo no es 26 (docs/SCRIPTS.md, «Prueba en
+ * ejecución del mod»).
  *
  * Es seguro que corra más de una vez por la misma revisión, cosa que puede pasar (ver mods/README.md):
  * apagar una bandera que ya está apagada no cambia nada. También cubre una segunda propuesta a Jamie,
