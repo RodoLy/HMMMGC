@@ -106,10 +106,22 @@ Qué significa para Magical Melody (sin haberlo probado):
 - Según su página, Mario Kart Wii usa aurora con un juego recompilado, no solo
   con una decompilación. La misma página advierte que cada juego pide su propio
   trabajo de runtime.
+- Dato comprobado en `main.dol` con `tools/find_gx_pipe_writers.py`: solo 85
+  funciones escriben directo en la tubería de comandos de GX (0xCC008000), y
+  todas son la librería GX del SDK (77 funciones entre 0x8018EF00 y
+  0x80195740) u ocho funciones pequeñas y vecinas (0x801CAB68–0x801CABD4) que
+  mandan un byte, cuatro bytes, dos flotantes o tres flotantes, como las
+  funciones de vértices del SDK. El código propio del juego no escribe en la
+  tubería con el patrón habitual (`lis 0xCC01` y un almacenamiento en −0x8000).
+  Eso es lo que permite reemplazar GX al nivel de las funciones, como hacen las
+  decompilaciones con aurora, en vez de interpretar el flujo de comandos. No es
+  una prueba: otras formas de armar la dirección no se buscan.
 
 Qué no se verificó: no se compiló ni se ejecutó aurora ni ninguno de estos
 proyectos. Todo viene de sus README y páginas y de notas de prensa, y los
-estados pueden haber cambiado.
+estados pueden haber cambiado. Tampoco se revisó cómo usa el juego las listas
+de visualización (`GXCallDisplayList`): llegan como bytes crudos de GX y la capa
+nueva tendría que interpretarlos.
 
 Fuentes:
 [wiki de Wiicompiled](https://github.com/patchzyy/Wiicompiled/wiki),
@@ -294,10 +306,22 @@ What this means for Magical Melody (untested):
 - According to its page, Mario Kart Wii uses aurora with a recompiled game,
   not only with a decompilation. The same page warns that every game needs its
   own runtime work.
+- Fact checked on `main.dol` with `tools/find_gx_pipe_writers.py`: only 85
+  functions store straight into the GX command pipe (0xCC008000), and all of
+  them are either the SDK's GX library (77 functions between 0x8018EF00 and
+  0x80195740) or eight small neighbouring functions (0x801CAB68-0x801CABD4)
+  that send one byte, four bytes, two floats or three floats, like the SDK's
+  vertex functions. The game's own code does not store into the pipe with the
+  usual pattern (`lis 0xCC01` and a store at -0x8000). That is what allows
+  replacing GX at the level of the functions, as the decompilation ports do
+  with aurora, instead of interpreting the command stream. It is not a proof:
+  other ways of building the address are not looked for.
 
 What was not verified: neither aurora nor any of these projects was built or
 run. Everything comes from their READMEs and pages and from press articles,
-and their status may have changed.
+and their status may have changed. Neither was it checked how the game uses
+display lists (`GXCallDisplayList`): they arrive as raw GX bytes and the new
+layer would have to interpret them.
 
 Sources:
 [Wiicompiled wiki](https://github.com/patchzyy/Wiicompiled/wiki),
