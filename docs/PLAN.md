@@ -242,8 +242,9 @@ pieza por pieza, en el orden de arriba)
       código nativo; la cadena completa está en
       [SCRIPTS.md](SCRIPTS.md#qué-termina-el-juego).
 - [ ] Mod de Jamie v1: un hook en `0x80166888` que borra la bandera 230 cuando
-      termina la ceremonia (diseño en [SCRIPTS.md](SCRIPTS.md); sin probar
-      todavía dentro del juego).
+      termina la ceremonia (diseño en [SCRIPTS.md](SCRIPTS.md)). Está escrito
+      en [`mods/jamie_marriage`](../mods/jamie_marriage/mod.c) y compila sin
+      avisos, pero todavía falta probarlo dentro del juego.
 - [ ] Widescreen y velocidad como mods (o como códigos Gecko para quien use
       Dolphin): localizar las constantes.
 - [ ] Mod de Jamie v2 (contenido): rutina de cónyuge, diálogos, eventos de hijo.
@@ -491,8 +492,9 @@ by piece, in the order above)
 - [x] Locate the "end game" call: it is not in the scripts but in native code;
       the whole chain is in [SCRIPTS.md](SCRIPTS.md#what-ends-the-game).
 - [ ] Jamie mod v1: a hook on `0x80166888` that clears flag 230 once the
-      ceremony is over (design in [SCRIPTS.md](SCRIPTS.md); not tried inside
-      the game yet).
+      ceremony is over (design in [SCRIPTS.md](SCRIPTS.md)). It is written in
+      [`mods/jamie_marriage`](../mods/jamie_marriage/mod.c) and builds without
+      warnings, but it has still to be tried inside the game.
 - [ ] Widescreen and speed as mods (or as Gecko codes for people using
       Dolphin): find the constants.
 - [ ] Jamie mod v2 (content): spouse routine, dialogue, child events.
