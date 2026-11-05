@@ -91,3 +91,40 @@ def test_a_config_that_already_is_light_gets_no_hint(tmp_path):
     result = call_script_function("use_light_resolution_without_gpu", user_directory)
 
     assert result.stdout == ""
+
+
+# ------------------------------------------------------------------ the settings of the game
+
+PROJECT_SETTINGS = SCRIPT.parent.parent / "config" / "G4AEE9" / "game_settings.ini"
+
+
+def test_first_run_gives_the_game_the_projects_settings(tmp_path):
+    user_directory = tmp_path / "moderngekko"
+
+    result = call_script_function("install_game_settings", user_directory)
+
+    user_settings = user_directory / "GameSettings" / "G4AEE9.ini"
+    assert user_settings.read_text() == PROJECT_SETTINGS.read_text()
+    assert str(user_settings) in result.stdout
+
+
+def test_settings_the_user_already_has_are_never_changed_and_only_mentioned(tmp_path):
+    user_directory = tmp_path / "moderngekko"
+    (user_directory / "GameSettings").mkdir(parents=True)
+    chosen_settings = "[Core]\nFastDiscSpeed = False\n"
+    (user_directory / "GameSettings" / "G4AEE9.ini").write_text(chosen_settings)
+
+    result = call_script_function("install_game_settings", user_directory)
+
+    assert (user_directory / "GameSettings" / "G4AEE9.ini").read_text() == chosen_settings
+    assert "delete it" in result.stdout
+
+
+def test_settings_that_already_are_the_projects_get_no_hint(tmp_path):
+    user_directory = tmp_path / "moderngekko"
+    (user_directory / "GameSettings").mkdir(parents=True)
+    (user_directory / "GameSettings" / "G4AEE9.ini").write_text(PROJECT_SETTINGS.read_text())
+
+    result = call_script_function("install_game_settings", user_directory)
+
+    assert result.stdout == ""
