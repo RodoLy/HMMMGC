@@ -157,9 +157,12 @@ function Show-ErrorBox {
         [System.Windows.Forms.MessageBoxIcon]::Error)
 }
 
+# A label of text that wraps at $Width. The text may be empty: the line that says what the last click
+# did starts empty, and PowerShell refuses an empty string for a mandatory parameter unless this
+# says that it is allowed.
 function New-TextLabel {
     param(
-        [Parameter(Mandatory)] [string] $Text,
+        [Parameter(Mandatory)] [AllowEmptyString()] [string] $Text,
         [Parameter(Mandatory)] [int] $Width,
         [switch] $Bold,
         [switch] $Muted,

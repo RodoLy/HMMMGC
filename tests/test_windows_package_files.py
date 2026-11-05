@@ -604,6 +604,18 @@ def test_every_message_the_settings_window_asks_for_exists_and_none_is_left_unus
     assert defined <= asked_for
 
 
+def test_the_settings_window_can_make_a_label_with_no_text():
+    # The line that says what the last click did starts empty, and PowerShell refuses an empty string
+    # for a mandatory parameter ("Cannot bind argument to parameter 'Text' because it is an empty
+    # string") unless the parameter allows it. The first run of the window on Windows failed this way.
+    window = read_packaging_file("Settings.ps1")
+    assert "[Parameter(Mandatory)] [AllowEmptyString()] [string] $Text," in body_of_function(
+        window, "New-TextLabel"
+    )
+    assert "$StatusLabel = New-TextLabel -Text $StatusText" in window
+    assert "$StatusText = ''" in window
+
+
 def test_the_settings_window_describes_every_mod_of_the_package_in_both_languages():
     texts = settings_window_mod_texts()
     assert set(texts) == {"en", "es"}
