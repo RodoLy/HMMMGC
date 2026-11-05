@@ -146,6 +146,54 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-port mode
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `moderngekko/windows-graphics-backends.patch`
+
+El launcher y el runner de ModernGekko solo ofrecen Vulkan y OpenGL como API
+gráfica, y usan Vulkan por omisión. Dolphin en Windows también trae DirectX 11
+(`D3D`) y DirectX 12 (`D3D12`), y en Windows ARM64 no compila su backend de
+OpenGL. En la laptop Snapdragon donde se probó el paquete, con Vulkan la ventana
+del juego se queda en negro (Dolphin escribe `Failed to submit command buffer:
+VK_ERROR_INITIALIZATION_FAILED`) y con DirectX 12 el juego corre; sin este
+parche no había cómo elegirlo desde el launcher ni desde `config.ini`. El parche:
+
+- agrega a `tools/frontend_config.cpp` la función `GraphicsBackendsFor`, que dice
+  qué APIs gráficas ofrece cada plataforma y cuál va primero, que es la que se
+  usa por omisión: en Windows ARM64, DirectX 12, DirectX 11 y Vulkan; en Windows
+  x64, Vulkan, DirectX 11, DirectX 12 y OpenGL (Vulkan sigue por omisión, como
+  antes, porque no hay evidencia de que falle ahí); en lo demás (Linux), Vulkan
+  y OpenGL, como siempre;
+- hace que el menú del launcher y `config.ini` ofrezcan y acepten esas APIs, por
+  su nombre en Dolphin (`D3D12`, `D3D`, `Vulkan`, `OGL`), por el texto del menú
+  o por un alias común (`dx12`, `dx11`, `d3d11`), sin importar mayúsculas,
+  espacios, guiones ni guiones bajos. Una API que la plataforma no tiene (por
+  ejemplo `OpenGL` en Windows ARM64) se rechaza con un mensaje que lista las que
+  sí tiene, en vez de pedirle a Dolphin un backend que no existe, caso en el que
+  Dolphin se queda con el suyo sin avisar;
+- hace que el runner use `DefaultGraphicsBackend()` cuando nadie le dice qué API
+  usar. `--graphics` sigue pasando el nombre tal cual a Dolphin.
+
+En Linux no cambia nada: Vulkan sigue por omisión y un `config.ini` con una API
+desconocida sigue dando `graphics backend must be Vulkan or OpenGL`. Un
+`config.ini` que ya existe conserva su `backend=` (por ejemplo `Vulkan`): hay que
+elegir otra API en el launcher o editar el archivo.
+
+**Versiones a las que se aplica:** ModernGekko `edd460a`, la que fija
+`scripts/build_and_run_linux.sh` con ModernGekko-Template `c2553a9`. Se aplica
+a `lib/ModernGekko`, no a `vendor/dolphin`. Va después de
+`skip-assets-hash.patch`, porque los dos cambian `tools/moderngekko_run.cpp`.
+
+**Licencia:** GPL-3.0-or-later, como ModernGekko.
+
+**Aplicar** (hay que recompilar el runner y el launcher):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # o tu MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/windows-graphics-backends.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-launcher
+```
+
+**Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
+
 ---
 
 ## English
@@ -286,6 +334,55 @@ change `tools/moderngekko_port.cpp`.
 TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
 git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/skip-assets-hash.patch"
 ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-port moderngekko-launcher
+```
+
+**Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+### `moderngekko/windows-graphics-backends.patch`
+
+ModernGekko's launcher and runner only offer Vulkan and OpenGL as the graphics
+API, and use Vulkan by default. Dolphin on Windows also has DirectX 11 (`D3D`)
+and DirectX 12 (`D3D12`), and on Windows ARM64 it does not build its OpenGL
+backend. On the Snapdragon laptop where the package was tried, with Vulkan the
+game window stays black (Dolphin writes `Failed to submit command buffer:
+VK_ERROR_INITIALIZATION_FAILED`) and with DirectX 12 the game runs; without this
+patch there was no way to choose it from the launcher or from `config.ini`. The
+patch:
+
+- adds the `GraphicsBackendsFor` function to `tools/frontend_config.cpp`, which
+  says which graphics APIs each platform offers and which one goes first, the one
+  used by default: on Windows ARM64, DirectX 12, DirectX 11 and Vulkan; on
+  Windows x64, Vulkan, DirectX 11, DirectX 12 and OpenGL (Vulkan stays the
+  default, as it was, because there is no evidence that it fails there); on
+  everything else (Linux), Vulkan and OpenGL, as always;
+- makes the launcher menu and `config.ini` offer and accept those APIs, by their
+  name in Dolphin (`D3D12`, `D3D`, `Vulkan`, `OGL`), by the text of the menu or
+  by a common alias (`dx12`, `dx11`, `d3d11`), whatever the case, spaces, hyphens
+  or underscores. An API that the platform does not have (for example `OpenGL` on
+  Windows ARM64) is rejected with a message that lists the ones it does have,
+  instead of asking Dolphin for a backend that does not exist, in which case
+  Dolphin keeps its own without saying so;
+- makes the runner use `DefaultGraphicsBackend()` when nobody says which API to
+  use. `--graphics` still passes the name as it is to Dolphin.
+
+Nothing changes on Linux: Vulkan stays the default and a `config.ini` with an
+unknown API still gives `graphics backend must be Vulkan or OpenGL`. A
+`config.ini` that already exists keeps its `backend=` (for example `Vulkan`):
+choose another API in the launcher or edit the file.
+
+**Applies to:** ModernGekko `edd460a`, the version `scripts/build_and_run_linux.sh`
+pins through ModernGekko-Template `c2553a9`. It applies to `lib/ModernGekko`,
+not to `vendor/dolphin`. It goes after `skip-assets-hash.patch`, because both
+change `tools/moderngekko_run.cpp`.
+
+**License:** GPL-3.0-or-later, like ModernGekko.
+
+**Apply** (the runner and the launcher have to be rebuilt):
+
+```bash
+TEMPLATE=~/ModernGekko-Template   # or your MODERNGEKKO_TEMPLATE
+git -C "$TEMPLATE/lib/ModernGekko" apply "$PWD/patches/moderngekko/windows-graphics-backends.patch"
+ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run moderngekko-launcher
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.

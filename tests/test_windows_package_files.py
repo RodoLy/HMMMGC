@@ -223,8 +223,9 @@ DOLPHIN_VIDEO_BACKENDS_ON_WINDOWS = {"D3D12", "D3D", "Vulkan"}
 
 
 def test_the_keyboard_start_gives_the_runner_the_graphics_api_that_game_psd1_names():
-    # Left alone the runner uses Vulkan, which draws nothing on the Snapdragon laptop of the first
-    # real test, so the script says which API to use.
+    # What the runner picks when it is not told depends on the patches it was built with (Vulkan in
+    # an unpatched one, which draws nothing on the Snapdragon laptop of the first real test), so the
+    # script says which API to use.
     start = body_of_function(read_packaging_file("play.ps1"), "Start-GameWithKeyboard")
     assert "'--graphics', $Game.GraphicsBackend" in start
 

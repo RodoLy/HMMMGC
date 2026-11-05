@@ -27,15 +27,17 @@
     UserDirectoryName = 'HarvestMoonMM'
 
     # The graphics API that play.ps1 gives to the runner when it opens the game itself (-Keyboard).
-    # DirectX 12 is used because Vulkan, which the runner picks when it is not told otherwise, does
-    # not work on the Snapdragon laptop where the package was tried: the game window stays black and
-    # the log says "Failed to submit command buffer". The names are the ones of Dolphin's video
-    # backends: D3D12, D3D (DirectX 11), Vulkan.
+    # DirectX 12 is used because Vulkan does not work on the Snapdragon laptop where the package was
+    # tried: the game window stays black and the log says "Failed to submit command buffer". It is
+    # given even though the runner of the package already picks it by default on Windows on ARM
+    # (patches/moderngekko/windows-graphics-backends.patch), so that this does not depend on that
+    # default. The names are the ones of Dolphin's video backends: D3D12, D3D (DirectX 11), Vulkan.
     # La API gráfica que play.ps1 le da al runner cuando abre el juego mismo (-Keyboard). Se usa
-    # DirectX 12 porque Vulkan, que el runner elige si no se le dice otra cosa, no funciona en la
-    # laptop Snapdragon donde se probó el paquete: la ventana del juego se queda en negro y el
-    # registro dice "Failed to submit command buffer". Los nombres son los de los motores de video
-    # de Dolphin: D3D12, D3D (DirectX 11), Vulkan.
+    # DirectX 12 porque Vulkan no funciona en la laptop Snapdragon donde se probó el paquete: la
+    # ventana del juego se queda en negro y el registro dice "Failed to submit command buffer". Se
+    # la da aunque el runner del paquete ya la elige por omisión en Windows ARM
+    # (patches/moderngekko/windows-graphics-backends.patch), para no depender de ese valor. Los
+    # nombres son los de los motores de video de Dolphin: D3D12, D3D (DirectX 11), Vulkan.
     GraphicsBackend   = 'D3D12'
 
     # The kinds of disc image that the launcher can read (Dolphin's disc reader opens them all).

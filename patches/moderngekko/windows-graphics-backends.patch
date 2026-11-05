@@ -1,0 +1,361 @@
+Offer DirectX on Windows, and use DirectX 12 by default on Windows on ARM
+Ofrecer DirectX en Windows y usar DirectX 12 por defecto en Windows ARM
+
+Applies to / Se aplica a:
+  ModernGekko edd460a, the version that scripts/build_and_run_linux.sh pins
+  through ModernGekko-Template c2553a9. Applies to lib/ModernGekko, not to
+  vendor/dolphin.
+  Apply it after skip-assets-hash.patch (both change tools/moderngekko_run.cpp).
+  ModernGekko edd460a, la versión que scripts/build_and_run_linux.sh fija con
+  ModernGekko-Template c2553a9. Se aplica a lib/ModernGekko, no a vendor/dolphin.
+  Aplícalo después de skip-assets-hash.patch (los dos cambian
+  tools/moderngekko_run.cpp).
+
+License / Licencia:
+  GPL-3.0-or-later, like ModernGekko.
+  GPL-3.0-or-later, igual que ModernGekko.
+
+Read patches/README.md for what it adds and how to apply it.
+Lee patches/README.md para ver qué agrega y cómo aplicarlo.
+
+diff --git a/tests/frontend_config_test.cpp b/tests/frontend_config_test.cpp
+index 6bb9e0e..0111aa5 100644
+--- a/tests/frontend_config_test.cpp
++++ b/tests/frontend_config_test.cpp
+@@ -1,10 +1,13 @@
+ #include "frontend_config.hpp"
+ 
++#include <algorithm>
++#include <cctype>
+ #include <chrono>
+ #include <filesystem>
+ #include <fstream>
+ #include <iterator>
+ #include <string>
++#include <vector>
+ 
+ #ifdef MODERNGEKKO_GAMECUBE_CONTROLLERS
+ constexpr const char *CONTROLLER_CONFIG_NAME = "GCPadNew.ini";
+@@ -29,12 +32,16 @@ int main() {
+   const auto loaded = moderngekko::frontend::LoadConfig(directory, false);
+   if (!loaded || loaded.dolphin_scale != 3 || loaded.show_fps_in_title ||
+       loaded.controller != controller ||
+-      loaded.graphics_backend != "Vulkan") {
++      loaded.graphics_backend !=
++          moderngekko::frontend::DefaultGraphicsBackend()) {
+     return 2;
+   }
+ 
+   moderngekko::frontend::ConfigResult netplay_config = loaded;
+-  netplay_config.graphics_backend = "OpenGL";
++  // The last graphics API of the list: not the default one, whatever the platform.
++  const auto &last_backend =
++      moderngekko::frontend::SupportedGraphicsBackends().back();
++  netplay_config.graphics_backend = last_backend.text;
+   netplay_config.fullscreen = true;
+   netplay_config.controllers = {controller, "SDL/1/Second Controller"};
+   netplay_config.controller = controller;
+@@ -52,7 +59,7 @@ int main() {
+       netplay_loaded.netplay_address != "192.168.1.50" ||
+       netplay_loaded.netplay_port != 34567 ||
+       netplay_loaded.netplay_buffer != "auto" ||
+-      netplay_loaded.graphics_backend != "OGL" ||
++      netplay_loaded.graphics_backend != last_backend.value ||
+       !netplay_loaded.fullscreen) {
+     return 7;
+   }
+@@ -69,6 +76,98 @@ int main() {
+   invalid_netplay.graphics_backend = "Direct3D 9";
+   if (moderngekko::frontend::SaveConfig(directory, invalid_netplay, &error))
+     return 13;
++
++  // Which graphics APIs each platform offers, and which one is the default.
++  using moderngekko::frontend::GraphicsPlatform;
++  const auto values_for = [](GraphicsPlatform platform) {
++    std::vector<std::string> values;
++    for (const auto &backend : moderngekko::frontend::GraphicsBackendsFor(platform))
++      values.emplace_back(backend.value);
++    return values;
++  };
++  using Names = std::vector<std::string>;
++  if (values_for(GraphicsPlatform::Windows) != Names{"Vulkan", "D3D", "D3D12", "OGL"})
++    return 20;
++  if (values_for(GraphicsPlatform::WindowsOnArm) != Names{"D3D12", "D3D", "Vulkan"})
++    return 21;
++  if (values_for(GraphicsPlatform::Other) != Names{"Vulkan", "OGL"})
++    return 22;
++  if (std::string(moderngekko::frontend::DefaultGraphicsBackend()) !=
++      moderngekko::frontend::SupportedGraphicsBackends().front().value)
++    return 23;
++  if (values_for(moderngekko::frontend::CurrentGraphicsPlatform()).front() !=
++      moderngekko::frontend::DefaultGraphicsBackend())
++    return 24;
++
++  // Every API of this platform can be written the way its menu shows it, the way Dolphin names it,
++  // in lower case, and with the spaces left out, and it is saved under Dolphin's name.
++  const auto saved_as = [&](const std::string &written) {
++    auto config = netplay_config;
++    config.graphics_backend = written;
++    if (!moderngekko::frontend::SaveConfig(directory, config, &error))
++      return std::string("<rejected>");
++    return moderngekko::frontend::LoadConfig(directory, false).graphics_backend;
++  };
++  for (const auto &backend : moderngekko::frontend::SupportedGraphicsBackends()) {
++    std::string lower_case = backend.text;
++    std::ranges::transform(lower_case, lower_case.begin(), [](unsigned char c) {
++      return static_cast<char>(std::tolower(c));
++    });
++    std::string without_spaces = backend.text;
++    std::erase(without_spaces, ' ');
++    for (const std::string &written :
++         {std::string(backend.text), std::string(backend.value), lower_case, without_spaces}) {
++      if (saved_as(written) != backend.value)
++        return 25;
++    }
++  }
++  // The names that people write for the graphics APIs, for every platform: DirectX only where
++  // there is DirectX, and OpenGL only where Dolphin has it, instead of a program that asks Dolphin
++  // for a backend that it does not have.
++  const auto normalized = [](const char *name, GraphicsPlatform platform) {
++    const std::string value = moderngekko::frontend::NormalizeGraphicsBackend(name, platform);
++    return value.empty() ? std::string("<none>") : value;
++  };
++  for (const auto platform : {GraphicsPlatform::Windows, GraphicsPlatform::WindowsOnArm}) {
++    if (normalized("DirectX 12", platform) != "D3D12" || normalized("d3d12", platform) != "D3D12" ||
++        normalized(" DX12 ", platform) != "D3D12" || normalized("directx-12", platform) != "D3D12" ||
++        normalized("DirectX 11", platform) != "D3D" || normalized("d3d11", platform) != "D3D" ||
++        normalized("D3D", platform) != "D3D" || normalized("dx11", platform) != "D3D" ||
++        normalized("VULKAN", platform) != "Vulkan")
++      return 26;
++  }
++  if (normalized("OpenGL", GraphicsPlatform::Windows) != "OGL" ||
++      normalized("ogl", GraphicsPlatform::Windows) != "OGL")
++    return 31;
++  if (normalized("OpenGL", GraphicsPlatform::WindowsOnArm) != "<none>" ||
++      normalized("ogl", GraphicsPlatform::WindowsOnArm) != "<none>")
++    return 32;
++  for (const char *name : {"DirectX 12", "d3d12", "dx12", "DirectX 11", "d3d11", "D3D", "dx11"}) {
++    if (normalized(name, GraphicsPlatform::Other) != "<none>")
++      return 33;
++  }
++  if (normalized("OpenGL", GraphicsPlatform::Other) != "OGL" ||
++      normalized("vulkan", GraphicsPlatform::Other) != "Vulkan")
++    return 34;
++  // A backend that no platform has is always rejected, in the file and in the settings.
++  if (saved_as("Direct3D 9") != "<rejected>")
++    return 27;
++  {
++    std::ofstream output(directory / "config.ini", std::ios::trunc);
++    output << "[Video]\nresolution=1920x1080\nbackend=Direct3D 9\n";
++  }
++  const auto unknown_backend = moderngekko::frontend::LoadConfig(directory, false);
++  if (unknown_backend || !unknown_backend.error.contains("graphics backend must be") ||
++      !unknown_backend.error.contains("Vulkan"))
++    return 28;
++  // The same file is rejected by the old wording on Linux, so nothing that reads it changes there.
++  if (moderngekko::frontend::CurrentGraphicsPlatform() == GraphicsPlatform::Other &&
++      unknown_backend.error != "graphics backend must be Vulkan or OpenGL")
++    return 29;
++  // The settings are written again for the checks that follow.
++  if (!moderngekko::frontend::SaveConfig(directory, netplay_config, &error))
++    return 30;
++
+   if (!moderngekko::frontend::GenerateControllerConfig(
+           directory, netplay_config.controllers, &error))
+     return 3;
+diff --git a/tools/frontend_config.cpp b/tools/frontend_config.cpp
+index 03740d4..1f83627 100644
+--- a/tools/frontend_config.cpp
++++ b/tools/frontend_config.cpp
+@@ -34,13 +34,38 @@ bool ValidNetplayAddress(std::string_view value) {
+   });
+ }
+ 
+-std::string NormalizeGraphicsBackend(std::string value) {
+-  const std::string lower = Lower(Trim(std::move(value)));
+-  if (lower == "vulkan")
+-    return "Vulkan";
+-  if (lower == "opengl" || lower == "ogl")
+-    return "OGL";
+-  return {};
++// The name of a graphics API without case, spaces, hyphens or underscores, so that "DirectX 12",
++// "directx-12" and "D3D12" can be compared.
++std::string CompactName(std::string_view value) {
++  std::string compact;
++  for (const unsigned char c : value) {
++    if (c != ' ' && c != '-' && c != '_')
++      compact.push_back(static_cast<char>(std::tolower(c)));
++  }
++  return compact;
++}
++
++// Other names that people write for a graphics API, and the API they mean.
++struct GraphicsBackendAlias {
++  const char *name;
++  const char *value;
++};
++constexpr GraphicsBackendAlias kGraphicsBackendAliases[] = {
++    {"dx12", "D3D12"},
++    {"dx11", "D3D"},
++    {"d3d11", "D3D"},
++};
++
++// "DirectX 12, DirectX 11 or Vulkan": the graphics APIs that config.ini accepts, for a message.
++std::string SupportedGraphicsBackendNames() {
++  const std::vector<GraphicsBackendOption> &backends = SupportedGraphicsBackends();
++  std::string names;
++  for (std::size_t i = 0; i < backends.size(); ++i) {
++    if (i > 0)
++      names += (i + 1 == backends.size()) ? " or " : ", ";
++    names += backends[i].text;
++  }
++  return names;
+ }
+ 
+ bool ParseBoolean(const std::string &value, bool *result) {
+@@ -83,14 +108,70 @@ const std::vector<ResolutionOption> &SupportedResolutions() {
+   return resolutions;
+ }
+ 
++std::vector<GraphicsBackendOption> GraphicsBackendsFor(GraphicsPlatform platform) {
++  const GraphicsBackendOption direct3d12 = {"DirectX 12", "D3D12"};
++  const GraphicsBackendOption direct3d11 = {"DirectX 11", "D3D"};
++  const GraphicsBackendOption vulkan = {"Vulkan", "Vulkan"};
++  const GraphicsBackendOption opengl = {"OpenGL", "OGL"};
++  switch (platform) {
++  case GraphicsPlatform::WindowsOnArm:
++    // DirectX 12 comes first because it is the one that works on the Snapdragon laptop where this
++    // was tried: the game runs with it, while with Vulkan its window stays black.
++    // Dolphin does not build its OpenGL backend for Windows on ARM.
++    return {direct3d12, direct3d11, vulkan};
++  case GraphicsPlatform::Windows:
++    // Vulkan stays the default, as it was; DirectX is there for the computers where it fails.
++    return {vulkan, direct3d11, direct3d12, opengl};
++  case GraphicsPlatform::Other:
++    break;
++  }
++  return {vulkan, opengl};
++}
++
++GraphicsPlatform CurrentGraphicsPlatform() {
++#if defined(_WIN32) && (defined(_M_ARM64) || defined(__aarch64__))
++  return GraphicsPlatform::WindowsOnArm;
++#elif defined(_WIN32)
++  return GraphicsPlatform::Windows;
++#else
++  return GraphicsPlatform::Other;
++#endif
++}
++
+ const std::vector<GraphicsBackendOption> &SupportedGraphicsBackends() {
+-  static const std::vector<GraphicsBackendOption> backends = {
+-      {"Vulkan", "Vulkan"},
+-      {"OpenGL", "OGL"},
+-  };
++  static const std::vector<GraphicsBackendOption> backends =
++      GraphicsBackendsFor(CurrentGraphicsPlatform());
+   return backends;
+ }
+ 
++const char *DefaultGraphicsBackend() {
++  return SupportedGraphicsBackends().front().value;
++}
++
++std::string NormalizeGraphicsBackend(std::string_view name,
++                                     GraphicsPlatform platform) {
++  const std::string compact_name = CompactName(Trim(std::string(name)));
++  const std::vector<GraphicsBackendOption> backends =
++      GraphicsBackendsFor(platform);
++  for (const GraphicsBackendOption &backend : backends) {
++    if (compact_name == CompactName(backend.text) ||
++        compact_name == CompactName(backend.value))
++      return backend.value;
++  }
++  for (const GraphicsBackendAlias &alias : kGraphicsBackendAliases) {
++    if (compact_name != alias.name)
++      continue;
++    // An alias is a name for an API that the platform may not have.
++    const bool platform_has_it = std::ranges::any_of(
++        backends, [&](const GraphicsBackendOption &backend) {
++          return std::string_view(backend.value) == alias.value;
++        });
++    if (platform_has_it)
++      return alias.value;
++  }
++  return {};
++}
++
+ ConfigResult LoadConfig(const fs::path &user_directory,
+                         bool create_if_missing) {
+   const fs::path path = user_directory / "config.ini";
+@@ -122,9 +203,11 @@ ConfigResult LoadConfig(const fs::path &user_directory,
+     if (key == "resolution")
+       config.resolution = value;
+     else if (key == "backend" || key == "graphics_backend") {
+-      config.graphics_backend = NormalizeGraphicsBackend(raw_value);
++      config.graphics_backend =
++          NormalizeGraphicsBackend(raw_value, CurrentGraphicsPlatform());
+       if (config.graphics_backend.empty())
+-        return {.error = "graphics backend must be Vulkan or OpenGL"};
++        return {.error = "graphics backend must be " +
++                         SupportedGraphicsBackendNames()};
+     }
+     else if (key == "controller")
+       config.controller = raw_value;
+@@ -209,7 +292,7 @@ ConfigResult LoadConfig(const fs::path &user_directory,
+ bool SaveConfig(const fs::path &user_directory, const ConfigResult &config,
+                 std::string *error) {
+   const std::string graphics_backend =
+-      NormalizeGraphicsBackend(config.graphics_backend);
++      NormalizeGraphicsBackend(config.graphics_backend, CurrentGraphicsPlatform());
+   if (config.resolution.empty() || graphics_backend.empty() ||
+       config.netplay_nickname.empty() ||
+       config.netplay_nickname.size() > 30 ||
+diff --git a/tools/frontend_config.hpp b/tools/frontend_config.hpp
+index 3b18d05..bb9c9d3 100644
+--- a/tools/frontend_config.hpp
++++ b/tools/frontend_config.hpp
+@@ -18,10 +18,29 @@ struct GraphicsBackendOption {
+   const char *value;
+ };
+ 
++// The platform a program was built for, as far as the choice of graphics APIs goes.
++enum class GraphicsPlatform {
++  Other,        // Linux, and whatever else is not Windows
++  Windows,
++  WindowsOnArm, // Dolphin leaves some of its graphics backends out of this one
++};
++
++// The graphics APIs that Dolphin has on a platform, the preferred one first. `value` is the name
++// that Dolphin gives the backend, and the one that config.ini and --graphics take.
++std::vector<GraphicsBackendOption> GraphicsBackendsFor(GraphicsPlatform platform);
++// The platform this program was built for.
++GraphicsPlatform CurrentGraphicsPlatform();
++// The graphics API that is used when neither config.ini nor the command line names one.
++const char *DefaultGraphicsBackend();
++// The name that Dolphin gives the graphics API that `name` stands for on a platform (the text of
++// its menu, Dolphin's own name or a common alias, in any case and with or without spaces), or an
++// empty string if that platform has no such API.
++std::string NormalizeGraphicsBackend(std::string_view name, GraphicsPlatform platform);
++
+ struct ConfigResult {
+   int dolphin_scale = 0;
+   std::string resolution;
+-  std::string graphics_backend = "Vulkan";
++  std::string graphics_backend = DefaultGraphicsBackend();
+   std::string controller;
+   std::vector<std::string> controllers;
+   bool show_fps_in_title = true;
+diff --git a/tools/moderngekko_run.cpp b/tools/moderngekko_run.cpp
+index 461d826..b3d42a1 100644
+--- a/tools/moderngekko_run.cpp
++++ b/tools/moderngekko_run.cpp
+@@ -339,7 +339,7 @@ int RunMain(int argc, char **argv) {
+ 
+ #if defined(__linux__) || defined(_WIN32)
+   if (!config.headless && config.graphics.backend.empty())
+-    config.graphics.backend = "Vulkan";
++    config.graphics.backend = moderngekko::frontend::DefaultGraphicsBackend();
+ #endif
+ 
+   if (netplay_role) {

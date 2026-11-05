@@ -83,7 +83,8 @@ jobs:
 
       # Two patches for Dolphin's code (the lockstep verifier, and a fix so that it also works with
       # the portable compiler) and the rest for ModernGekko: so that moderngekko-port finds the module
-      # sources beside itself, and so that the programs do not read the whole game at every start.
+      # sources beside itself, so that the programs do not read the whole game at every start, and so
+      # that they offer DirectX on Windows (DirectX 12 is the one that works on a Snapdragon laptop).
       # They go in the order of patches/README.md, which is also the order that some of them need.
       - name: Apply the patches
         run: |
@@ -92,7 +93,8 @@ jobs:
             "$GITHUB_WORKSPACE/patches/moderngekko/export-lockstep-hook-on-mingw.patch"
           git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko" apply \
             "$GITHUB_WORKSPACE/patches/moderngekko/relocatable-port.patch" \
-            "$GITHUB_WORKSPACE/patches/moderngekko/skip-assets-hash.patch"
+            "$GITHUB_WORKSPACE/patches/moderngekko/skip-assets-hash.patch" \
+            "$GITHUB_WORKSPACE/patches/moderngekko/windows-graphics-backends.patch"
 
       # What the build makes (the programs, the data they read and the Visual C++ runtime) is kept
       # in a folder of the workspace. The key lists everything that changes what is built: the
@@ -188,7 +190,7 @@ jobs:
             --version "ModernGekko=$(git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko" rev-parse --short=7 HEAD)" \
             --version "Dolphin (RecompCore)=$(git -C "$TEMPLATE_DIRECTORY/lib/ModernGekko/vendor/dolphin" rev-parse --short=7 HEAD)" \
             --version "Python=$python_version" \
-            --version "patches=lockstep-verifier, export-lockstep-hook-on-mingw, relocatable-port, skip-assets-hash (folder patches of HMMMGC)"
+            --version "patches=lockstep-verifier, export-lockstep-hook-on-mingw, relocatable-port, skip-assets-hash, windows-graphics-backends (folder patches of HMMMGC)"
           cat "$DIST_DIRECTORY/HarvestMoonMM-windows-arm64/VERSIONS.txt"
           {
             echo "### Package"

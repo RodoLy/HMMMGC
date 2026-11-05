@@ -85,8 +85,11 @@ de direcciones del Explorador de archivos): el juego extraído (`games`), el mó
   en un reporte de errores, no contiene datos del juego. Si el error habla de rutas demasiado
   largas, mueve el paquete a una carpeta más corta.
 - **El juego no abre o la imagen sale negra.** Actualiza el controlador de video y, en el
-  launcher, cambia el **Graphics backend** (Vulkan u OpenGL). El launcher abre aunque no haya
-  control; solo **Play** lo pide. Después vuelve a abrir el juego como antes.
+  launcher, cambia el **Graphics backend** (en Windows ARM64: DirectX 12, DirectX 11 o Vulkan; en
+  Windows x64 también OpenGL). Un launcher nuevo empieza con DirectX 12 en Windows ARM64, pero un
+  `config.ini` que ya existía conserva su elección (por ejemplo Vulkan, con el que la ventana sale
+  negra en la laptop Snapdragon donde se probó): elige DirectX 12 una vez. El launcher abre aunque
+  no haya control; solo **Play** lo pide. Después vuelve a abrir el juego como antes.
 - **Jugué con un control y ahora quiero el teclado.** El launcher recuerda el control que usaste y
   `Play-Keyboard.bat` también lo usa. Para volver al teclado, cierra el juego y borra
   `%LOCALAPPDATA%\HarvestMoonMM\config.ini` y `%LOCALAPPDATA%\HarvestMoonMM\Config\GCPadNew.ini`
@@ -189,8 +192,12 @@ and `StaticRecompModules`), your saved games, the settings, and the log of the l
   a bug report, it holds no game data. If the error talks about paths that are too long, move the
   package to a shorter folder.
 - **The game does not open or the picture is black.** Update the video driver and, in the
-  launcher, change the **Graphics backend** (Vulkan or OpenGL). The launcher opens even with no
-  controller; only **Play** asks for one. Then open the game again as before.
+  launcher, change the **Graphics backend** (on Windows ARM64: DirectX 12, DirectX 11 or Vulkan; on
+  Windows x64 also OpenGL). A new launcher starts with DirectX 12 on Windows ARM64, but a
+  `config.ini` that already existed keeps its choice (for example Vulkan, with which the window
+  stays black on the Snapdragon laptop where the package was tried): choose DirectX 12 once. The
+  launcher opens even with no controller; only **Play** asks for one. Then open the game again as
+  before.
 - **I played with a controller and now I want the keyboard.** The launcher remembers the controller
   you used, and `Play-Keyboard.bat` uses it too. To go back to the keyboard, close the game and
   delete `%LOCALAPPDATA%\HarvestMoonMM\config.ini` and
