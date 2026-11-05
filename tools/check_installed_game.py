@@ -13,6 +13,12 @@ It is how the workflow of the Windows package checks, with a made-up game and no
 module `play.ps1` installed is found, loads and starts. Run with only the folders of Windows on
 the path, it also shows that the module needs no DLL of the compiler that built it.
 
+With `--expect-mod ID` (repeat it for several mods) it also checks that the runner loaded each of
+those mods. The runner says `mod loaded: <id> <version>` for every mod it loads and `mod rejected:
+<where>: <why>` for one it cannot, and play.ps1 puts its mods in the player's folder, where the
+runner looks for them. So it shows that a mod built by the compiler of the package is one that the
+runner can load.
+
 Cuando el jugador pulsa Play, el launcher arranca `moderngekko-run` con el juego extraído y la
 carpeta del jugador, y nada más. El runner busca entonces el módulo recompilado del juego en
 `<la carpeta del jugador>/StaticRecompModules`, donde lo puso `play.ps1`. Esta herramienta hace lo
@@ -25,16 +31,25 @@ módulo que instaló `play.ps1` se encuentra, se carga y arranca. Corrida con so
 Windows en la `PATH`, muestra además que el módulo no necesita ninguna DLL del compilador que lo
 construyó.
 
+Con `--expect-mod ID` (repítelo para varios mods) comprueba además que el runner cargó cada uno de
+esos mods. El runner dice `mod loaded: <id> <versión>` por cada mod que carga y `mod rejected:
+<dónde>: <por qué>` por uno que no puede, y play.ps1 pone sus mods en la carpeta del jugador, donde
+el runner los busca. Así muestra que un mod construido con el compilador del paquete es uno que el
+runner sabe cargar.
+
 Usage / Uso:
     python3 tools/check_installed_game.py --runner bin/moderngekko-run \\
-        --game GAME_FOLDER --user-dir PLAYER_FOLDER --work-directory WORK_FOLDER
+        --game GAME_FOLDER --user-dir PLAYER_FOLDER --work-directory WORK_FOLDER \\
+        [--expect-mod jamie_marriage]
 """
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -48,6 +63,10 @@ DEFAULT_START_TIMEOUT_SECONDS = 180.0
 DEFAULT_SECONDS_RUNNING = 10.0
 SHUTDOWN_TIMEOUT_SECONDS = 60.0
 LOG_LINES_SHOWN_ON_FAILURE = 40
+# What the runner writes for each mod it loads ("mod loaded: jamie_marriage 0.1.0"), and for each one it
+# cannot ("mod rejected: <where>: <why>").
+MOD_LOADED_LINE = re.compile(r"mod loaded: (\S+) ")
+MOD_REJECTED_LINE_START = "mod rejected:"
 
 
 class GameCheckError(Exception):
@@ -127,6 +146,23 @@ def close_the_game(client: AutomationClient, runner_process: subprocess.Popen, l
         raise failure_with_log(f"the game closed with exit code {exit_code}", log_path)
 
 
+def check_mods_were_loaded(expected_mods: Sequence[str], log_path: Path) -> None:
+    """Each of `expected_mods` must be one that the runner says it loaded; a failure quotes the rejections."""
+    if not expected_mods:
+        return
+    log_text = read_program_output(log_path) if log_path.is_file() else ""
+    loaded_mods = set(MOD_LOADED_LINE.findall(log_text))
+    not_loaded = [mod_id for mod_id in expected_mods if mod_id not in loaded_mods]
+    if not_loaded:
+        rejections = [line for line in log_text.splitlines() if line.startswith(MOD_REJECTED_LINE_START)]
+        said = "\n".join(rejections) if rejections else "(it did not reject any mod either)"
+        raise GameCheckError(
+            f"the runner did not load the mod {', '.join(not_loaded)}; "
+            f"it loaded: {', '.join(sorted(loaded_mods)) or 'none'}. What it said about mods:\n{said}\n"
+            f"The end of {log_path}:\n{end_of_log(log_path)}"
+        )
+
+
 def check_installed_game(
     runner: Path,
     game: Path,
@@ -134,8 +170,12 @@ def check_installed_game(
     work_directory: Path,
     start_timeout_seconds: float = DEFAULT_START_TIMEOUT_SECONDS,
     seconds_running: float = DEFAULT_SECONDS_RUNNING,
+    expected_mods: Sequence[str] = (),
 ) -> None:
-    """Start the game, check that it runs for `seconds_running` and closes; raise GameCheckError if not."""
+    """Start the game, check that it runs for `seconds_running` and closes; raise GameCheckError if not.
+
+    With `expected_mods`, the runner must also have loaded each of those mods from the player's folder.
+    """
     # The folder is made anew, so that the status of an earlier run cannot be taken for this one's.
     shutil.rmtree(work_directory, ignore_errors=True)
     automation_directory = work_directory / "automation"
@@ -158,6 +198,8 @@ def check_installed_game(
             if runner_process.poll() is None:
                 runner_process.kill()
                 runner_process.wait()
+    # The runner has finished, so its log is complete.
+    check_mods_were_loaded(expected_mods, log_path)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,6 +234,13 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_SECONDS_RUNNING,
         help=f"seconds the game must stay running before it is closed (default: {DEFAULT_SECONDS_RUNNING:g})",
     )
+    parser.add_argument(
+        "--expect-mod",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="a mod that the runner must load from the player's folder; repeat it for several",
+    )
     arguments = parser.parse_args(argv)
     try:
         check_installed_game(
@@ -201,11 +250,14 @@ def main(argv: list[str] | None = None) -> int:
             arguments.work_directory,
             arguments.start_timeout,
             arguments.seconds_running,
+            arguments.expect_mod,
         )
     except GameCheckError as problem:
         print(f"error: {problem}", file=sys.stderr)
         return 1
     print(f"The game started from the module in {arguments.user_dir}, ran and closed normally.")
+    if arguments.expect_mod:
+        print(f"It loaded the mods: {', '.join(arguments.expect_mod)}.")
     return 0
 
 

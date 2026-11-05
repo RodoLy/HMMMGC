@@ -139,6 +139,12 @@ def runs_and_quits(exit_code_after_stop: int = 0) -> str:
     return RUNS_AND_QUITS % {"exit_code_after_stop": exit_code_after_stop}
 
 
+def runs_and_quits_saying(*lines: str) -> str:
+    """A game that runs and closes normally, after saying `lines` on its error output as it starts."""
+    start_up = "".join(f"    print({line!r}, file=sys.stderr, flush=True)\n" for line in lines)
+    return runs_and_quits().replace(FAKE_RUNNER_PRELUDE, FAKE_RUNNER_PRELUDE + start_up, 1)
+
+
 def assert_the_runner_was_stopped(folders: dict[str, Path]) -> None:
     """The check must not leave a game running behind it, whatever went wrong."""
     process_number = int((folders["work_directory"] / "automation" / "process_number.txt").read_text())
@@ -227,6 +233,55 @@ def test_a_runner_that_is_not_there_is_reported(folders, tmp_path):
         check_installed_game.check_installed_game(missing, **folders, seconds_running=0.1)
 
 
+# -- The mods the runner is expected to load -----------------------------------------------------------------
+
+
+def test_a_game_that_loads_the_expected_mod_passes(folders, tmp_path):
+    runner = runs_and_quits_saying("mod loaded: jamie_marriage 0.1.0")
+    run_with(runner, folders, tmp_path, expected_mods=["jamie_marriage"])
+
+
+def test_no_mod_is_needed_when_none_is_expected(folders, tmp_path):
+    run_with(runs_and_quits_saying("mod rejected: somewhere: it did not load"), folders, tmp_path)
+
+
+def test_every_expected_mod_must_be_loaded_and_the_message_says_what_was(folders, tmp_path):
+    runner = runs_and_quits_saying("mod loaded: jamie_marriage 0.1.0")
+    with pytest.raises(GameCheckError) as problem:
+        run_with(runner, folders, tmp_path, expected_mods=["jamie_marriage", "cheats"])
+    message = str(problem.value)
+    assert "did not load the mod cheats; it loaded: jamie_marriage." in message
+
+
+def test_a_mod_the_runner_rejects_is_reported_with_the_reason_it_gave(folders, tmp_path):
+    rejection = "mod rejected: C:/player/Mods/jamie_marriage.mgm/mod.dll: could not load the library"
+    with pytest.raises(GameCheckError) as problem:
+        run_with(runs_and_quits_saying(rejection), folders, tmp_path, expected_mods=["jamie_marriage"])
+    message = str(problem.value)
+    assert "did not load the mod jamie_marriage; it loaded: none." in message
+    assert rejection in message
+
+
+def test_a_runner_that_says_nothing_about_the_mod_is_reported_as_having_rejected_nothing_either(
+    folders, tmp_path
+):
+    with pytest.raises(GameCheckError, match=r"did not reject any mod either"):
+        run_with(runs_and_quits(), folders, tmp_path, expected_mods=["jamie_marriage"])
+
+
+def test_a_mod_with_a_name_that_starts_like_the_expected_one_is_not_taken_for_it(folders, tmp_path):
+    runner = runs_and_quits_saying("mod loaded: jamie_marriage_extra 1.0.0")
+    with pytest.raises(GameCheckError, match="did not load the mod jamie_marriage;"):
+        run_with(runner, folders, tmp_path, expected_mods=["jamie_marriage"])
+
+
+def test_a_game_that_crashes_is_reported_as_a_crash_before_the_mods_are_looked_at(folders, tmp_path):
+    with pytest.raises(GameCheckError, match="exited with code 3 while the game was running"):
+        run_with(
+            CRASHES_AFTER_STARTING, folders, tmp_path, seconds_running=2, expected_mods=["jamie_marriage"]
+        )
+
+
 # -- The command line --------------------------------------------------------------------------------------
 
 
@@ -250,3 +305,21 @@ def test_the_command_line_of_a_game_that_fails_exits_with_one_and_says_why(folde
     runner = write_script(tmp_path / "moderngekko-run", EXITS_AT_ONCE)
     assert check_installed_game.main(command_line(runner, folders)) == 1
     assert "error: moderngekko-run exited with code 1" in capsys.readouterr().err
+
+
+def test_the_command_line_checks_each_mod_it_is_told_to_expect(folders, tmp_path, capsys):
+    runner = write_script(
+        tmp_path / "moderngekko-run",
+        runs_and_quits_saying("mod loaded: jamie_marriage 0.1.0", "mod loaded: cheats 1.2.3"),
+    )
+    extra = ["--expect-mod", "jamie_marriage", "--expect-mod", "cheats"]
+    assert check_installed_game.main(command_line(runner, folders) + extra) == 0
+    assert "It loaded the mods: jamie_marriage, cheats." in capsys.readouterr().out
+
+
+def test_the_command_line_of_a_game_that_does_not_load_the_expected_mod_exits_with_one(
+    folders, tmp_path, capsys
+):
+    runner = write_script(tmp_path / "moderngekko-run", runs_and_quits())
+    assert check_installed_game.main(command_line(runner, folders) + ["--expect-mod", "jamie_marriage"]) == 1
+    assert "error: the runner did not load the mod jamie_marriage" in capsys.readouterr().err
