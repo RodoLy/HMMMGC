@@ -212,7 +212,11 @@ pieza por pieza, en el orden de arriba)
       Primer paso: separar lo que cuenta cuadros de lo que lee el reloj (la
       cadencia real ya está medida).
 - [ ] Saltar timers de pantallas de carga.
-- [ ] Velocidad, aceleración y fricción del jugador en archivo de config.
+- [ ] Velocidad del jugador en un archivo de configuración. Hoy se elige con
+      `-PlayerSpeed` de `play.ps1` (o con la variable
+      `HM_MM_PLAYER_SPEED_PERCENT`), ver [MOVEMENT.md](MOVEMENT.md). La
+      fricción no hace falta: al soltar el stick el personaje se detiene en
+      unos 4 cuadros caminando y unos 9 corriendo.
 - [ ] Selector de idioma (el disco ya trae ES/FR/DE/IT).
 - [ ] Mod de Jamie integrado (ver pista B).
 
@@ -263,8 +267,17 @@ pieza por pieza, en el orden de arriba)
 - [ ] Convertir la prueba dentro del juego en una herramienta del repositorio
       (`tools/`): hoy son guiones desechables. Hace falta para repetirla cuando
       cambie el runtime (pasos 3 a 6 del orden de arriba).
-- [ ] Widescreen y velocidad como mods (o como códigos Gecko para quien use
-      Dolphin): localizar las constantes.
+- [x] Velocidad del personaje como mod: [`mods/player_speed`](../mods/player_speed/mod.c)
+      engancha la actualización del jugador y multiplica la velocidad
+      horizontal (150 % por defecto, de 25 % a 300 %), solo en juego libre.
+      Se midió dentro del juego recompilado: en una caminata de 15 cuadros la
+      distancia fue exactamente proporcional al factor con 100, 150 y 200 %.
+      Con 400 % el personaje atravesó la puerta de su casa, por eso el máximo
+      es 300 %. Cómo se mueve el personaje y los resultados están en
+      [MOVEMENT.md](MOVEMENT.md). Falta probarlo en Windows (es el paquete el
+      que lo compila).
+- [ ] Widescreen como mod (o como códigos Gecko para quien use Dolphin):
+      localizar las constantes.
 - [ ] Mod de Jamie v2 (contenido): rutina de cónyuge, diálogos, eventos de hijo.
 
 ### Convenciones
@@ -482,7 +495,11 @@ by piece, in the order above)
       something. First step: tell what counts frames from what reads the
       clock (the real cadence is already measured).
 - [ ] Skip loading-screen timers.
-- [ ] Player speed, acceleration and friction in a config file.
+- [ ] Player speed in a config file. Today it is chosen with `-PlayerSpeed`
+      of `play.ps1` (or with the variable `HM_MM_PLAYER_SPEED_PERCENT`), see
+      [MOVEMENT.md](MOVEMENT.md). Friction is not needed: when the stick is
+      released the character stops in about 4 frames when walking and about
+      9 when running.
 - [ ] Language selector (disc already ships ES/FR/DE/IT).
 - [ ] Jamie mod integrated (see track B).
 
@@ -532,8 +549,17 @@ by piece, in the order above)
 - [ ] Turn the in-game test into a tool of the repository (`tools/`): today it
       is made of throwaway scripts. It is needed to repeat it whenever the
       runtime changes (steps 3 to 6 of the order above).
-- [ ] Widescreen and speed as mods (or as Gecko codes for people using
-      Dolphin): find the constants.
+- [x] Player speed as a mod: [`mods/player_speed`](../mods/player_speed/mod.c)
+      hooks the player's update and multiplies the horizontal velocity (150 %
+      by default, from 25 % to 300 %), only in free play. It was measured
+      inside the recompiled game: in a 15-frame walk the distance was exactly
+      proportional to the factor at 100, 150 and 200 %. At 400 % the character
+      went through the door of its house, which is why the maximum is 300 %.
+      How the character moves and the results are in
+      [MOVEMENT.md](MOVEMENT.md). It has not been tried on Windows yet (the
+      package is what builds it there).
+- [ ] Widescreen as a mod (or as Gecko codes for people using Dolphin): find
+      the constants.
 - [ ] Jamie mod v2 (content): spouse routine, dialogue, child events.
 
 ### Conventions

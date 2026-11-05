@@ -44,7 +44,7 @@ tu disco ──► moderngekko-port build ──► dolrecomp (PPC → C) ──
 |---|---|
 | Nombres de funciones en mods | `tools/export_mod_symbols.py` escribe `build/G4AEE9_symbols.h` con una macro `DOLRECOMP_SYMBOL_<nombre>` por función, el mismo header que genera DolRecomp con `--map`; los mods la usan en lugar de direcciones: `RECOMP_PATCH(DOLRECOMP_SYMBOL_OSInit, ...)`. |
 | Mod de Jamie | Paquete `.mgm` con `RECOMP_PATCH` o `RECOMP_HOOK` sobre la función que dispara el final (por encontrar en el intérprete `lsrun`). |
-| Velocidad y fricción del personaje | `.mgm` con hooks sobre la función de movimiento del jugador. |
+| Velocidad del personaje | `.mgm` con un gancho en la actualización del jugador (`mods/player_speed`, ver [MOVEMENT.md](MOVEMENT.md)). |
 | Cheats y calidad de vida | `.mgm`; varios a la vez, ordenados por dependencias. |
 | 4K | Resolución interna del núcleo de Dolphin. |
 | Widescreen / ultrawide | Primero el ajuste de Dolphin; el HUD bien anclado y el ultrawide real, como mod. |
@@ -69,7 +69,7 @@ convendría proponer `--map` al proyecto.
 ```
 config/G4AEE9/symbols.txt     mapa (ya existe)
 mods/jamie_marriage/          mod .mgm del final de Jamie
-mods/movement/                velocidad y fricción
+mods/player_speed/            velocidad del personaje
 mods/cheats/                  cheats
 config/G4AEE9/GCPadNew.ini    controles por defecto (ModernGekko no trae UI)
 ```
@@ -93,8 +93,9 @@ succeeds. Everything here comes from reading their code.
 - **Where our work goes:** `tools/export_mod_symbols.py` turns our symbols
   into `DOLRECOMP_SYMBOL_<name>` constants for mods (`build/G4AEE9_symbols.h`,
   the same header DolRecomp writes with `--map`), so a mod says
-  `RECOMP_PATCH(DOLRECOMP_SYMBOL_OSInit, ...)`; the Jamie mod, movement
-  speed/friction, cheats and QoL are `.mgm` packages; 4K and basic
+  `RECOMP_PATCH(DOLRECOMP_SYMBOL_OSInit, ...)`; the Jamie mod, the player's
+  speed (see [MOVEMENT.md](MOVEMENT.md)), cheats and QoL are `.mgm`
+  packages; 4K and basic
   widescreen come from the Dolphin core, with proper HUD anchoring and
   ultrawide as mods; mod support is built in.
 - **No `--map` needed in moderngekko-port:** it builds the DolRecomp command
@@ -106,6 +107,6 @@ succeeds. Everything here comes from reading their code.
   function no longer forces a module rebuild. Only the LLVM backend uses
   map addresses (as entry points and, from `02e27ac` on, partition points);
   if we ever switch to it, proposing `--map` upstream becomes worthwhile.
-- **Proposed layout:** `mods/jamie_marriage/`, `mods/movement/`,
+- **Proposed layout:** `mods/jamie_marriage/`, `mods/player_speed/`,
   `mods/cheats/`, and a default `config/G4AEE9/GCPadNew.ini`, since
   ModernGekko has no input configuration UI.

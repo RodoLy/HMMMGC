@@ -44,7 +44,7 @@ Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 - Widescreen y ultra-panorámico, resolución hasta 4K.
 - 120 fps.
 - Cargas instantáneas.
-- Personaje más rápido y sin el deslizamiento al caminar (configurable).
+- Personaje más rápido (configurable).
 - Mod de Jamie: casarse con Jamie ya no termina el juego.
 - Menú de cheats y mejoras de calidad de vida.
 - Soporte para mods (reemplazo de assets y hooks de código).
@@ -156,7 +156,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 - Widescreen and ultrawide, up to 4K.
 - 120 fps.
 - Instant loading.
-- Faster character movement without the sliding feel (configurable).
+- Faster character movement (configurable).
 - Jamie mod: marrying Jamie no longer ends the game.
 - Cheat menu and quality-of-life improvements.
 - Mod support (asset replacement and code hooks).
