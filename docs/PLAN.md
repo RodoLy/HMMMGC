@@ -286,6 +286,17 @@ pieza por pieza, en el orden de arriba)
       Jamie en la casa con eso, o si hay que agregarlo como personaje de la
       casa (posición, horario, diálogos de cónyuge, que pueden tener que
       tomarse prestados de otra pareja). Es el mod de Jamie v2.
+      **Paso 1 hecho** (`jamie_marriage` 0.2.0): el código que inicia la boda
+      de las otras veinte parejas (`fn_80166888`, desde `0x801672B8`) hace
+      siete escrituras en la partida: la pareja (`save+0x22B8`), la bandera
+      0, el bit 3 de los bits del personaje (`save+0x5564 + 3·n`), dos copias
+      (`0x2234`→`0xD514`, `0x224C`→`0xD520`) y `0x1BC8 = 0`. El mod las hace
+      con Jamie (personaje 2) al apagar la bandera 230. Probado dentro del
+      juego: tras la revisión del campo sale la nota musical de la boda
+      ("Your life together starts today"). Falta el paso 2: en la prueba,
+      con la casa inicial, la pareja no apareció en la casa, ni Jamie ni una
+      pareja normal; hay que probar con la casa nivel 3 (lo que exige el
+      juego para casarse).
 - [ ] Avance rápido de las escenas mientras se mantiene una tecla (la barra
       espaciadora): un mod que acelere los eventos y la asignación de la
       tecla (hoy Espacio no está asignada en la distribución de teclado de
@@ -679,6 +690,17 @@ by piece, in the order above)
       house, or whether Jamie has to be added as a character of the house
       (position, schedule, spouse dialogue, which may have to be borrowed from
       another partner). This is Jamie mod v2.
+      **Step 1 done** (`jamie_marriage` 0.2.0): the code that starts the
+      wedding of the other twenty partners (`fn_80166888`, from `0x801672B8`)
+      makes seven writes in the save data: the spouse (`save+0x22B8`), flag 0,
+      bit 3 of the character's bits (`save+0x5564 + 3·n`), two copies
+      (`0x2234`→`0xD514`, `0x224C`→`0xD520`) and `0x1BC8 = 0`. The mod makes
+      them for Jamie (character 2) when it clears flag 230. Tried in the game:
+      after the field check the wedding's musical note comes
+      ("Your life together starts today"). Step 2 is left: in the test, with
+      the starting house, the spouse did not appear in the house, neither
+      Jamie nor an ordinary partner; it has to be tried with the level 3 house
+      (which the game requires for marrying).
 - [ ] Fast-forward the scenes while a key is held (the space bar): a mod that
       speeds up the events and the key assignment (today Space is not mapped
       in Dolphin's keyboard layout). It is turned on and adjusted from the
