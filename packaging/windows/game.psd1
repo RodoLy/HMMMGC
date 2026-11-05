@@ -51,5 +51,5 @@
     # Los mods que play.ps1 construye e instala. Cada uno es una carpeta de mods\ con el mismo nombre,
     # definida en mods\CMakeLists.txt; los otros mods de esa carpeta solo imprimen lo que hace el juego
     # y son para quien escribe mods. Ejecutar play.ps1 con -NoMods juega sin ninguno de estos.
-    ModIds            = @('jamie_marriage')
+    ModIds            = @('jamie_marriage', 'player_speed')
 }

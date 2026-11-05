@@ -208,6 +208,35 @@ def test_the_mods_go_where_the_runner_looks_for_them():
     assert "($modId + '.mgm')" in script
 
 
+def mod_definition(mod_id: str, name: str) -> str:
+    """The value in `#define NAME value` of the source of a mod, as written."""
+    source = (package_windows.MODS_DIRECTORY / mod_id / "mod.c").read_text(encoding="utf-8")
+    match = re.search(rf"^#define {name}\s+(.+?)\s*$", source, re.MULTILINE)
+    assert match, f"{mod_id} does not define {name}"
+    return match.group(1)
+
+
+def test_the_speed_the_script_gives_is_what_the_player_speed_mod_reads():
+    script = read_packaging_file("play.ps1")
+    variable = mod_definition("player_speed", "SPEED_PERCENT_VARIABLE").strip('"')
+    assert f"$PlayerSpeedVariable = '{variable}'" in script
+    # The limits that the script checks are the ones the mod accepts, so the mod never has to ignore a value.
+    minimum = mod_definition("player_speed", "MINIMUM_SPEED_PERCENT")
+    maximum = mod_definition("player_speed", "MAXIMUM_SPEED_PERCENT")
+    assert f"[ValidateRange({minimum}, {maximum})]" in script
+    assert int(minimum) <= int(mod_definition("player_speed", "DEFAULT_SPEED_PERCENT")) <= int(maximum)
+    assert "[Nullable[int]] $PlayerSpeed" in script
+    assert ".PARAMETER PlayerSpeed" in script
+
+
+def test_the_speed_is_given_to_the_mod_only_when_it_was_asked_for_and_the_mods_are_on():
+    script = read_packaging_file("play.ps1")
+    body = body_of_function(script, "Set-PlayerSpeed")
+    assert body.lstrip().startswith("if ($null -eq $PlayerSpeed) { return }")
+    assert "SetEnvironmentVariable($PlayerSpeedVariable, [string] $PlayerSpeed, 'Process')" in body
+    assert re.search(r"else \{\s+Install-Mods [^\n]*\n\s+Set-PlayerSpeed\s+\}", script)
+
+
 def project_settings() -> dict[str, str]:
     """The `Name = value` lines of the project's settings file, with the section each is in."""
     settings = {}

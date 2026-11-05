@@ -62,6 +62,20 @@
     installed earlier are taken out of the player's folder. Run again without it to get them back.
     Juega el juego como viene en el disco: no se construyen los mods y se quitan de la carpeta
     del jugador los que este paquete instaló antes. Ejecuta otra vez sin esto para recuperarlos.
+
+.PARAMETER PlayerSpeed
+    How fast the character walks and runs, in percent of the speed of the original game, from 25
+    to 300: 100 is the original speed and 150 is one and a half times as fast. If it is left out,
+    the player_speed mod uses its own default, which is 150. Above 200 the character may go
+    through thin walls (README.md says what was seen). It is given to the mod through an
+    environment variable that only lasts while this script and the game it opens run. It has no
+    effect with -NoMods.
+    Qué tan rápido camina y corre el personaje, en porcentaje de la velocidad del juego original,
+    de 25 a 300: 100 es la velocidad original y 150 es una vez y media más rápido. Si se omite, el
+    mod player_speed usa su propio valor por omisión, que es 150. Por encima de 200 el personaje
+    podría atravesar paredes delgadas (README.md dice lo que se vio). Se le da al mod con una
+    variable de entorno que solo dura mientras corren este script y el juego que abre. No tiene
+    efecto con -NoMods.
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
@@ -79,7 +93,10 @@ param(
 
     [switch] $Keyboard,
 
-    [switch] $NoMods
+    [switch] $NoMods,
+
+    [ValidateRange(25, 300)]
+    [Nullable[int]] $PlayerSpeed
 )
 
 Set-StrictMode -Version Latest
@@ -114,6 +131,10 @@ $ModsSourceDirectory = Join-Path $PackageDirectory 'mods'
 $ModSymbolsHeader = Join-Path $ModsSourceDirectory ('generated\' + $Game.GameId + '_symbols.h')
 $ModernGekkoSourceDirectory = Join-Path $ProgramsDirectory 'source'
 $InstalledModsDirectory = Join-Path $UserDirectory 'Mods'
+
+# The environment variable through which the player_speed mod is told how fast the character is (see
+# mods\player_speed\mod.c, which reads it when the game starts).
+$PlayerSpeedVariable = 'HM_MM_PLAYER_SPEED_PERCENT'
 
 # Every file whose absence means that the package was not extracted completely.
 $RequiredFiles = @(
@@ -159,6 +180,7 @@ $Messages = @{
         ModsPrepared        = 'Mods ready: {0}.'
         ModsFailed          = 'The mods could not be prepared. The game starts anyway. The details are in {0}'
         ModsOff             = 'The mods are off: the game is played as it is on the disc.'
+        PlayerSpeedSet      = 'The character walks and runs at {0}% of the original speed.'
         GamePrepared        = 'The game is ready.'
         OpeningLauncher     = 'Opening the launcher. Press Play in it to start the game.'
         LauncherFailed      = 'The launcher closed with an error (code {0}). The details are in {1}'
@@ -193,6 +215,7 @@ Keyboard (the default layout of Dolphin, which this game runs on):
         ModsPrepared        = 'Mods listos: {0}.'
         ModsFailed          = 'No se pudieron preparar los mods. El juego arranca igual. Los detalles están en {0}'
         ModsOff             = 'Los mods están apagados: el juego se juega como viene en el disco.'
+        PlayerSpeedSet      = 'El personaje camina y corre al {0}% de la velocidad original.'
         GamePrepared        = 'El juego está listo.'
         OpeningLauncher     = 'Abriendo el launcher. Pulsa Play en él para empezar el juego.'
         LauncherFailed      = 'El launcher se cerró con un error (código {0}). Los detalles están en {1}'
@@ -498,6 +521,18 @@ function Remove-InstalledMods {
     Write-Host (Get-Message 'ModsOff')
 }
 
+# Tells the player_speed mod how fast the player asked for the character to be (-PlayerSpeed). The
+# mod reads an environment variable, and both the launcher and the runner start the program they
+# open with the environment of their parent, so the variable reaches the mod whether the game is
+# opened through the launcher or with -Keyboard. Without -PlayerSpeed nothing is set, and the mod
+# uses its own default (or what the player put in the variable by hand).
+function Set-PlayerSpeed {
+    if ($null -eq $PlayerSpeed) { return }
+    [Environment]::SetEnvironmentVariable($PlayerSpeedVariable, [string] $PlayerSpeed, 'Process')
+    Add-LogLine ($PlayerSpeedVariable + '=' + $PlayerSpeed)
+    Write-Host (Get-Message 'PlayerSpeedSet' $PlayerSpeed)
+}
+
 function Start-Launcher {
     Write-Host (Get-Message 'OpeningLauncher')
     & $LauncherPath
@@ -549,6 +584,7 @@ try {
     }
     else {
         Install-Mods -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
+        Set-PlayerSpeed
     }
     Write-Host (Get-Message 'GamePrepared')
 

@@ -98,11 +98,12 @@ lector de discos), así que no hay nada que configurar. Las cifras y el porqué 
 
 ### Mods
 
-Un mod es un pequeño cambio al juego que se carga al arrancarlo. El paquete trae uno:
+Un mod es un pequeño cambio al juego que se carga al arrancarlo. El paquete trae dos:
 
 | Mod | Qué hace |
 | --- | --- |
 | `jamie_marriage` | Casarse con Jamie ya no termina el juego: después de la ceremonia sigues jugando. Sin el mod, a la ceremonia le siguen el epílogo y la pantalla de título; con él se ve una vez la escena de las notas musicales y el juego vuelve a juego libre. |
+| `player_speed` | El personaje camina y corre más rápido: por omisión al 150 % de la velocidad original. Solo actúa en juego libre; en las escenas el personaje se mueve como en el original. La animación no cambia, así que con valores altos los pies podrían verse resbalar. |
 
 `Play.bat` y `Play-Keyboard.bat` construyen los mods en tu computadora cada vez que se ejecutan, con
 el mismo compilador que recompila el juego (tarda unos segundos), y los dejan en
@@ -112,6 +113,14 @@ queda en `Logs\play.log`.
 Para jugar sin mods, abre una ventana de comandos en la carpeta del paquete y ejecuta
 `Play.bat -NoMods` (o `Play-Keyboard.bat -NoMods`): quita de tu carpeta los mods del paquete y el
 juego se juega como viene en el disco. Para recuperarlos, ejecuta `Play.bat` sin eso.
+
+Para cambiar qué tan rápido va el personaje, ejecuta `Play.bat -PlayerSpeed 200` (o
+`Play-Keyboard.bat -PlayerSpeed 200`): un número entero de 25 a 300, donde 100 es la velocidad
+del juego original y 150 (lo que se usa si no pones nada) es una vez y media más rápido. Vale
+solo para esa vez que juegas; con `-NoMods` no tiene efecto. Por encima de 200 el personaje
+puede atravesar paredes delgadas: con 400 atravesó la puerta de su casa en las seis pruebas y
+cayó fuera del mapa, con 300 no, pero el resto de las paredes del juego no se probaron
+([MOVEMENT.md][movement-es]).
 
 > **Estado: el mod de Jamie se probó con las condiciones de la boda escritas a mano, no con una
 > partida real** (ver [los resultados][scripts-es]). Si lo pruebas en una partida tuya, copia antes
@@ -266,11 +275,12 @@ are in [PERFORMANCE.md][performance].
 
 ### Mods
 
-A mod is a small change to the game that is loaded when it starts. The package carries one:
+A mod is a small change to the game that is loaded when it starts. The package carries two:
 
 | Mod | What it does |
 | --- | --- |
 | `jamie_marriage` | Marrying Jamie no longer ends the game: you keep playing after the ceremony. Without the mod, the ceremony is followed by the epilogue and the title screen; with it, the notes scene is shown once and the game goes back to free play. |
+| `player_speed` | The character walks and runs faster: by default at 150% of the original speed. It only acts in free play; in cutscenes the character moves as in the original. The animation is not changed, so at high values the feet might look as if they slide. |
 
 `Play.bat` and `Play-Keyboard.bat` build the mods on your computer every time they run, with the same
 compiler that recompiles the game (it takes a few seconds), and put them in
@@ -280,6 +290,13 @@ in `Logs\play.log`.
 To play without mods, open a command prompt in the package folder and run `Play.bat -NoMods` (or
 `Play-Keyboard.bat -NoMods`): it takes the package's mods out of your folder and the game is played as
 it is on the disc. To get them back, run `Play.bat` without that.
+
+To change how fast the character goes, run `Play.bat -PlayerSpeed 200` (or
+`Play-Keyboard.bat -PlayerSpeed 200`): a whole number from 25 to 300, where 100 is the speed of the
+original game and 150 (what is used if you give nothing) is one and a half times as fast. It applies
+only to that session; with `-NoMods` it has no effect. Above 200 the character may go through thin
+walls: at 400 it went through the door of its house in all six tries and fell out of the map, at
+300 it did not, but the other walls of the game were not tried ([MOVEMENT.md][movement-en]).
 
 > **Status: the Jamie mod was tried with the conditions of the wedding written by hand, not with a
 > real save game** (see [the results][scripts-en]). If you try it in a game of your own, copy the folder
@@ -341,3 +358,5 @@ Everything is free software; the details, and where the source code of each part
 [performance]: https://github.com/RodoLy/HMMMGC/blob/main/docs/PERFORMANCE.md
 [scripts-es]: https://github.com/RodoLy/HMMMGC/blob/main/docs/SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04
 [scripts-en]: https://github.com/RodoLy/HMMMGC/blob/main/docs/SCRIPTS.md#run-time-test-of-the-mod-2026-11-04
+[movement-es]: https://github.com/RodoLy/HMMMGC/blob/main/docs/MOVEMENT.md#pruebas
+[movement-en]: https://github.com/RodoLy/HMMMGC/blob/main/docs/MOVEMENT.md#tests
