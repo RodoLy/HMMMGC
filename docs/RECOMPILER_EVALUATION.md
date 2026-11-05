@@ -1,6 +1,7 @@
 # Recompiler evaluation / Evaluación de recompiladores
 
-Reviewed on 2026-11-03 / Revisado el 2026-11-03.
+Reviewed on 2026-11-03; the runtime landscape was added on 2026-11-04 /
+Revisado el 2026-11-03; el panorama de runtimes se agregó el 2026-11-04.
 
 [Español](#español) · [English](#english)
 
@@ -57,6 +58,67 @@ Riesgos:
 - El proyecto quedaría bajo GPL-3.0.
 - ModernGekko descarga varios cientos de MB de dependencias de Dolphin.
 - Los controles se configuran con un `.ini` de Dolphin a mano (no tiene UI).
+
+### Cómo resuelven el runtime otros recomps de GameCube y Wii (2026-11-04)
+
+Un recompilador como DolRecomp solo traduce el código del juego. Todo lo que
+rodea a ese código (gráficos, audio, controles, disco, tarjeta de memoria,
+sistema operativo) lo pone un runtime, y hay dos familias:
+
+1. **Runtime derivado de Dolphin (lo que usamos hoy).** ModernGekko conserva
+   el hardware emulado del núcleo de Dolphin y le quita solo la CPU. Es el
+   camino más corto a un juego jugable. El código del juego corre como código
+   nativo, pero el hardware que lo rodea sigue siendo código de Dolphin.
+2. **Runtime propio.** No se emula el hardware: se enganchan las funciones del
+   SDK de Nintendo que usa el juego (GX, PAD, DVD, CARD, OS, AX...) y se
+   sustituyen por versiones para PC. Es lo que N64Recomp hace con RT64.
+
+| Proyecto | Qué es | Cómo resuelve el runtime | Estado según su propia página |
+|---|---|---|---|
+| Mario Kart Wii (patchzyy, Wiicompiled) | Recompilación estática; el autor la presenta como la primera de un juego de Wii | "Sin emulador, sin intérprete, sin JIT". Gráficos sobre aurora, controles con SDL; Dolphin solo de referencia y como fuente de unos datos del DSP | No terminado: compatibilidad, render, red y rendimiento en trabajo; la interpolación de cuadros es experimental. Otro juego necesitaría su propio trabajo de runtime |
+| Twilight Princess (Dusklight) | Port a partir de la decompilación (código fuente), no recompilación | "Powered by Aurora" | Soporta todos los discos comerciales salvo la versión coreana de Wii |
+| Wind Waker (sp00nznet/ww) | Recompilación estática a C | Backend D3D11 propio para GX, mezclador de audio propio y reemplazos propios de OS, DVD, VI, CARD e hilos; todo marcado "en progreso" | Temprano: todavía no pasa de la pantalla de título |
+| Recomps de ModernGekko (Super Mario Sunshine, Brawl, Melee, Luigi's Mansion, Kirby Wii, 007) | Recompilaciones de la comunidad | Runtime derivado de Dolphin, como el nuestro | No se verificó qué tan completos están |
+| DolRecomp | Solo recompilador de CPU; no trae runtime | Sus autores dicen que planean un runtime y un renderizador propios, como N64Recomp con RT64 | Lanzamiento temprano, según SteamDeckHQ |
+
+**Aurora** ([encounter/aurora](https://github.com/encounter/aurora), licencia
+MIT) es una capa de compatibilidad de GameCube y Wii a nivel de código fuente.
+Nació para Metaforce (la decompilación de Metroid Prime) y está pensada para
+proyectos de decompilación. Según su README cubre:
+
+- GX sobre WebGPU con Dawn (D3D12, Vulkan y Metal), widescreen, escalado de
+  resolución y paquetes de texturas compatibles con Dolphin.
+- PAD con `SDL_Gamepad` (adaptadores de GameCube, giroscopio, teclado y ratón).
+- DVD con `nod`: todos los formatos de disco, RVZ incluido.
+- CARD compatible con los `.gci` y `.raw` de Dolphin.
+- Interfaces de depuración con Dear ImGui y de usuario con RmlUi.
+
+No menciona VI, OS (hilos, interrupciones) ni AX (audio): eso lo pondría cada
+proyecto.
+
+Qué significa para Magical Melody (sin haberlo probado):
+
+- La fase 2 de [PLAN.md](PLAN.md) ya no sería escribir un renderizador de GX
+  desde cero: el candidato es integrar aurora y reemplazar con ella las
+  funciones del SDK del juego. Para eso hay que identificar esas funciones por
+  firma (pendiente de la fase 0), y el audio y el sistema operativo quedan por
+  escribir.
+- Según su página, Mario Kart Wii usa aurora con un juego recompilado, no solo
+  con una decompilación. La misma página advierte que cada juego pide su propio
+  trabajo de runtime.
+
+Qué no se verificó: no se compiló ni se ejecutó aurora ni ninguno de estos
+proyectos. Todo viene de sus README y páginas y de notas de prensa, y los
+estados pueden haber cambiado.
+
+Fuentes:
+[wiki de Wiicompiled](https://github.com/patchzyy/Wiicompiled/wiki),
+[aurora](https://github.com/encounter/aurora),
+[Dusklight](https://github.com/TwilitRealm/dusklight),
+[README del recomp de Wind Waker](https://raw.githubusercontent.com/sp00nznet/ww/HEAD/README.md),
+[SteamDeckHQ sobre DolRecomp](https://steamdeckhq.com/news/we-may-see-more-gamecube-wii-pc-ports-soon/),
+[Tom's Hardware sobre Mario Kart Wii](https://www.tomshardware.com/video-games/retro-gaming/mario-kart-wii-recompiled-for-pc-using-ai-with-4k-potential-and-uncapped-frame-rates-first-static-recompilation-of-a-wii-game-supports-over-200-tracks-thanks-to-retro-rewind-compatibility)
+y el README de ModernGekko (`lib/ModernGekko/README.md` en la plantilla).
 
 ### Resultado de la prueba de arranque (2026-11-03)
 
@@ -184,6 +246,67 @@ and 007 Agent Under Fire (how complete they are was not checked), and
 Magical Melody now boots on this stack (see below); the project
 would be GPL-3.0; ModernGekko pulls several hundred MB of Dolphin
 dependencies; input is configured through a hand-written Dolphin `.ini`.
+
+### How other GameCube and Wii recomps provide their runtime (2026-11-04)
+
+A recompiler such as DolRecomp only translates the game's code. Everything
+around that code (graphics, audio, input, disc, memory card, operating system)
+comes from a runtime, and there are two families:
+
+1. **Dolphin-derived runtime (what we use today).** ModernGekko keeps the
+   emulated hardware of Dolphin's core and removes only the CPU. It is the
+   shortest way to a playable game. The game's code runs as native code, but
+   the hardware around it is still Dolphin's code.
+2. **Own runtime.** The hardware is not emulated: the Nintendo SDK functions
+   that the game uses (GX, PAD, DVD, CARD, OS, AX...) are hooked and replaced
+   with PC versions. This is what N64Recomp does with RT64.
+
+| Project | What it is | How it provides the runtime | Status according to its own page |
+|---|---|---|---|
+| Mario Kart Wii (patchzyy, Wiicompiled) | Static recompilation; the author presents it as the first one of a Wii game | "No emulator, no interpreter, no JIT". Graphics on aurora, input with SDL; Dolphin only as a reference and as the source of some DSP data | Not finished: compatibility, rendering, networking and performance are in progress; frame interpolation is experimental. Another game would need its own runtime work |
+| Twilight Princess (Dusklight) | A port built from the decompilation (source code), not a recompilation | "Powered by Aurora" | Supports every commercial disc except the Korean Wii release |
+| Wind Waker (sp00nznet/ww) | Static recompilation to C | Its own D3D11 backend for GX, its own audio mixer and its own replacements for OS, DVD, VI, CARD and threads; all marked "in progress" | Early: it does not get past the title screen yet |
+| ModernGekko recomps (Super Mario Sunshine, Brawl, Melee, Luigi's Mansion, Kirby Wii, 007) | Community recompilations | Dolphin-derived runtime, like ours | How complete they are was not checked |
+| DolRecomp | CPU recompiler only; ships no runtime | Its authors say they plan their own runtime and renderer, like N64Recomp with RT64 | Early release, according to SteamDeckHQ |
+
+**Aurora** ([encounter/aurora](https://github.com/encounter/aurora), MIT
+license) is a source-level compatibility layer for GameCube and Wii. It was
+born for Metaforce (the Metroid Prime decompilation) and is meant for
+decompilation projects. According to its README it covers:
+
+- GX on WebGPU with Dawn (D3D12, Vulkan and Metal), widescreen, resolution
+  scaling and Dolphin-compatible texture packs.
+- PAD with `SDL_Gamepad` (GameCube adapters, gyro, keyboard and mouse).
+- DVD with `nod`: every disc image format, RVZ included.
+- CARD compatible with Dolphin's `.gci` and `.raw` files.
+- Dear ImGui for debug interfaces and RmlUi for user interfaces.
+
+It does not mention VI, OS (threads, interrupts) or AX (audio): each project
+would provide those.
+
+What this means for Magical Melody (untested):
+
+- Phase 2 of [PLAN.md](PLAN.md) would no longer be writing a GX renderer from
+  scratch: the candidate is to integrate aurora and use it to replace the
+  game's SDK functions. That needs those functions identified by signature
+  (pending from phase 0), and the audio and the operating system are left to
+  write.
+- According to its page, Mario Kart Wii uses aurora with a recompiled game,
+  not only with a decompilation. The same page warns that every game needs its
+  own runtime work.
+
+What was not verified: neither aurora nor any of these projects was built or
+run. Everything comes from their READMEs and pages and from press articles,
+and their status may have changed.
+
+Sources:
+[Wiicompiled wiki](https://github.com/patchzyy/Wiicompiled/wiki),
+[aurora](https://github.com/encounter/aurora),
+[Dusklight](https://github.com/TwilitRealm/dusklight),
+[Wind Waker recomp README](https://raw.githubusercontent.com/sp00nznet/ww/HEAD/README.md),
+[SteamDeckHQ on DolRecomp](https://steamdeckhq.com/news/we-may-see-more-gamecube-wii-pc-ports-soon/),
+[Tom's Hardware on Mario Kart Wii](https://www.tomshardware.com/video-games/retro-gaming/mario-kart-wii-recompiled-for-pc-using-ai-with-4k-potential-and-uncapped-frame-rates-first-static-recompilation-of-a-wii-game-supports-over-200-tracks-thanks-to-retro-rewind-compatibility)
+and ModernGekko's README (`lib/ModernGekko/README.md` in the template).
 
 ### Boot test result (2026-11-03)
 
