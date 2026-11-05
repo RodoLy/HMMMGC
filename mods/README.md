@@ -98,6 +98,15 @@ compilar.
   llamadas ni acumulen. Un *patch* reemplaza la función y regresa al que
   llamó, así que no debería repetirse, pero todavía no hay un mod con *patch*
   que lo confirme dentro del juego.
+- **Un hook puede no correr nunca si la función se llama desde su mismo
+  bloque.** Un hook de entrada en `fn_8001AC20`, que el juego ejecuta en cada
+  cuadro, no corrió ni una vez en 1 200 cuadros; su único llamador,
+  `fn_80019AA4`, está en el mismo bloque de 16 KB (`tools/find_callers.py` lo
+  muestra). Un hook en `fn_80049D28`, a la que se llama desde otro bloque,
+  corrió en cada llamada. La causa no está comprobada (lo más probable es que
+  el despachador solo consulte los mods cuando entra a un bloque desde fuera).
+  Antes de escribir un mod, mira quién llama a la función; si todos sus
+  llamadores están en su bloque, engancha otra función.
 
 ### Mods del proyecto
 
@@ -106,7 +115,7 @@ compilar.
 | [`boot_logger`](boot_logger/mod.c) | Listo | Prueba de humo: imprime una línea cada vez que el juego entra a `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` y `main`. No cambia nada. |
 | [`state_logger`](state_logger/mod.c) | Listo | Imprime cada cambio de estado de la máquina de estados del juego (título, día nuevo, eventos, juego libre), cada estado que otro código pide y cada vez que entra la revisión del campo. Sirve para saber cuándo corre un gancho. No cambia nada. |
 | [`jamie_marriage`](jamie_marriage/mod.c) | Probado en el juego con condiciones escritas a mano | Casarse con Jamie ya no termina el juego: si la ceremonia ya empezó y la bandera 230 sigue encendida, la apaga en la revisión del campo (diseño en [SCRIPTS.md](../docs/SCRIPTS.md)). Sin el mod, tras la ceremonia sigue el epílogo y el título; con él, el juego queda en juego libre, después de ver una vez la escena de las notas. Falta probarlo con una partida real ([resultados](../docs/SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04)). |
-| `movement` | Planeado | Personaje más rápido y sin resbalar. |
+| [`player_speed`](player_speed/mod.c) | Probado en el juego, en la nube; falta Windows | El personaje camina y corre más rápido: engancha la actualización del jugador (`fn_80049D28`) y multiplica la velocidad horizontal que el juego guardó el cuadro anterior, solo en juego libre. Por omisión al 150 % de la velocidad original; `HM_MM_PLAYER_SPEED_PERCENT` (de 25 a 300) lo cambia, y en el paquete de Windows `play.ps1 -PlayerSpeed`. Con 400 el personaje atravesó la puerta de su casa; por encima de 200 queda bajo el propio riesgo del jugador. No cambia la animación. Cómo se mueve el personaje: [MOVEMENT.md](../docs/MOVEMENT.md). |
 | `cheats` | Planeado | Trucos activables. |
 
 ---
@@ -203,6 +212,14 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
   write the same value; never count calls or accumulate. A *patch* replaces
   the function and returns to the caller, so it should not repeat, but there
   is not yet a mod with a *patch* that confirms this inside the game.
+- **A hook may never run if the function is called from its own block.** An
+  entry hook on `fn_8001AC20`, which the game runs every frame, did not run
+  once in 1,200 frames; its only caller, `fn_80019AA4`, is in the same 16 KB
+  block (`tools/find_callers.py` shows it). A hook on `fn_80049D28`, which is
+  called from another block, ran on every call. The cause is not confirmed
+  (most likely the dispatcher only asks the mods when it enters a block from
+  outside). Before writing a mod, look at who calls the function; if all its
+  callers are in its block, hook another function.
 
 ### The project's mods
 
@@ -211,5 +228,5 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
 | [`boot_logger`](boot_logger/mod.c) | Done | Smoke test: prints a line each time the game enters `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` and `main`. Changes nothing. |
 | [`state_logger`](state_logger/mod.c) | Done | Prints every change of the game's state machine (title, new day, events, free play), every state other code asks for, and each time the field check is entered. Useful to learn when a hook will run. Changes nothing. |
 | [`jamie_marriage`](jamie_marriage/mod.c) | Tried in the game under hand-written conditions | Marrying Jamie no longer ends the game: if the ceremony has already started and flag 230 is still set, it clears the flag in the field check (design in [SCRIPTS.md](../docs/SCRIPTS.md)). Without the mod the ceremony is followed by the epilogue and the title screen; with it the game goes back to free play, after showing the notes scene once. It still has to be tried with a real save ([results](../docs/SCRIPTS.md#run-time-test-of-the-mod-2026-11-04)). |
-| `movement` | Planned | A faster character that does not slide. |
+| [`player_speed`](player_speed/mod.c) | Tried in the game, in the cloud; Windows still to do | The character walks and runs faster: it hooks the player's update (`fn_80049D28`) and multiplies the horizontal velocity that the game stored one frame earlier, only in free play. By default at 150% of the original speed; `HM_MM_PLAYER_SPEED_PERCENT` (25 to 300) changes it, and in the Windows package so does `play.ps1 -PlayerSpeed`. At 400 the character went through the door of its house; above 200 it is at the player's own risk. It does not change the animation. How the character moves: [MOVEMENT.md](../docs/MOVEMENT.md). |
 | `cheats` | Planned | Switchable cheats. |
