@@ -7,6 +7,7 @@ Regenerate and check / Regenerar y comprobar:
 ```sh
 python3 tools/analyze.py                      # reads orig/G4AEE9/sys/main.dol, writes config/G4AEE9/symbols.txt
 python3 tools/sdk_signatures.py --database totaldb.dsy   # SDK names by signature (--apply writes them)
+python3 tools/find_library_entry_points.py GX            # functions of an SDK library that the game reaches
 HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 python3 tools/disasm.py OSInit
 ```
@@ -35,7 +36,7 @@ LLVM como puntos de entrada (`tools/export_dolrecomp_map.py`).
 | …destino de algún `bl` | 3 637 |
 | Tablas de `switch` | 274 (4 sin comprobación de límite, ver abajo) |
 | Datos dentro de código | 3 (`_rom_copy_info`, `_bss_init_info`, cadena de TRK) |
-| Funciones con nombre | 588, todas con evidencia (25 por lectura del código, 563 por firma del SDK) |
+| Funciones con nombre | 614, todas con evidencia (51 por lectura del código, 563 por firma del SDK) |
 
 ### Cómo se sabe que es correcto
 
@@ -56,7 +57,10 @@ Cada punto es una prueba en `tests/test_function_map.py`:
    las dos direcciones.
 
 Además, `tests/test_function_finder.py` y `tests/test_sdk_names.py`
-reproducen cada caso difícil con DOLs sintéticos, sin datos del juego.
+reproducen cada caso difícil con DOLs sintéticos, sin datos del juego. Los
+nombres que salieron de leer el código de GX tienen su propia prueba contra el
+`main.dol` real, `tests/test_gx_function_names.py` (ver «Nombres de GX por
+lectura del código»).
 
 ### Cómo funciona
 
@@ -256,7 +260,7 @@ las dos vecinas.
 | AX y AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
 | DSP | `0x801877FC`–`0x80188300` | 12 | 9 |
 | CARD | `0x80188338`–`0x8018ED98` | 87 | 60 |
-| GX | `0x8018EDE0`–`0x80195F98` | 156 | 102 |
+| GX | `0x8018EDE0`–`0x80195F98` | 156 | 128 |
 | TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
 | Resto de TRK, biblioteca C y soporte del compilador | `0x8019B5F0`–`0x801A7A14` | 188 | 72 |
 | DB | `0x801A7A14`–`0x801A848C` | 12 | 9 |
@@ -273,11 +277,11 @@ fila «Resto de TRK, biblioteca C y soporte del compilador» tiene, con nombre,
 `sin`, `tan`...), `__div2u`, `__construct_array` y, de TRK,
 `CircleBufferReadBytes`.
 
-La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 579 con
-nombre, el 55 %. Fuera de ella el código del juego y su middleware queda sin
-nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 478
-funciones del SDK que siguen sin nombre se reparten así: 212 comparten firma con
-otras, 200 no tienen firma en la base, 51 son cortas sin respaldo, 9 repiten
+La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 605 con
+nombre, el 57 %. Fuera de ella el código del juego y su middleware queda sin
+nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 452
+funciones del SDK que siguen sin nombre se reparten así: 198 comparten firma con
+otras, 188 no tienen firma en la base, 51 son cortas sin respaldo, 9 repiten
 nombre, 4 tienen otro tamaño y 2 tienen nombre de C++. AX es el caso más claro
 de las que no están en la base: 72 de sus 87 funciones.
 
@@ -285,6 +289,94 @@ de las que no están en la base: 72 de sus 87 funciones.
 de 10 549), el archivo y el objeto del enlazador (`card.a CARDBios.o`, por
 ejemplo). Daría la biblioteca exacta de cada función, también en la biblioteca C
 y en TRK, y no solo la que dice el prefijo del nombre.
+
+### Nombres de GX por lectura del código
+
+Quedaban sin nombre 26 funciones de GX que el juego llama desde fuera de la
+biblioteca. Se encontraron con `tools/find_library_entry_points.py`, que lista
+los puntos de entrada de una biblioteca del SDK: las funciones suyas a las que
+llega el resto del programa con un `bl`, con una llamada final (un `b` que
+sale de la llamadora) o con un puntero guardado en los datos.
+
+```sh
+python3 tools/find_library_entry_points.py GX
+python3 tools/find_library_entry_points.py AX --range 0x8017FEDC-0x801877FC   # un tramo dado a mano
+```
+
+GX tiene 156 funciones en un solo tramo (`0x8018EDE0`–`0x80195F98`) y el juego
+alcanza 75 de ellas. 49 ya tenían nombre, por firma o por las reglas de antes;
+las otras 26 son las de esta sección. Con ellas las 75 tienen nombre. Dos
+límites de la herramienta, que explica su encabezado: las llamadas por un
+registro (`bctrl`, `blrl`) no se ven leyendo el código, y el tramo de la
+biblioteca es tan ancho como los nombres que lo dicen.
+
+**Por qué la firma no bastó.** 14 de las 26 comparten firma con una hermana que
+solo se distingue por un valor inmediato, como el número de un registro o un
+desplazamiento (`GXSetTevColorIn` y `GXSetTevAlphaIn`, `GXSetColorUpdate` y
+`GXSetAlphaUpdate`...). La suma de verificación ignora los inmediatos y la base
+guarda un solo nombre por suma, así que su candidato es el de una hermana o el
+de una función de otra biblioteca. En 8 de esas 14 el nombre del candidato era
+el de otra función: `0x80191A3C` aparecía como `AIRegisterDMACallback` (7
+funciones del programa comparten esa firma), `0x80191E58` como `GXSetLineWidth`
+(es `GXSetPointSize`) y `0x80192C40` como `nlVector3::Set` (10 la comparten).
+Eso es lo que evita la tabla de veredictos al no nombrar las firmas
+compartidas. Las otras 12 no están en la base.
+
+**Cómo se identificó cada una.** Con datos de su código que solo tiene una
+función de GX:
+
+- *El registro de hardware que escribe*, visto como una constante. Un registro
+  XF se escribe con el comando `0x10` (`0x1009` es el número de canales,
+  `0x103F` el de generadores de coordenadas de textura) y uno BP con el comando
+  `0x61` (`0xEE`–`0xF2` es la niebla, `0xE0` y `0xE1` los colores de TEV). Los
+  números son los de Dolphin (`BPMemory.h`, `XFMemory.h`).
+- *La posición que lee o escribe dentro del bloque de estado de la biblioteca*
+  (`GXData`), vista como el desplazamiento de un `lwz` o un `stw`. El código
+  llega al bloque por un puntero guardado en los datos (`lwz r6, -0x4CB0(r2)`:
+  la palabra `0x80325AD0`, que apunta a `0x80315CE0`). Por ejemplo, `+0x130` y
+  `+0x170` son los ajustes de las etapas de TEV de color y de alfa, `+0x1D0` el
+  modo del motor de píxeles, `+0x204` el modo general y `+0x5A8` «se está
+  grabando una lista de visualización».
+- *El campo de bits que inserta* con `rlwimi` (giro, primer bit, último bit).
+- *Las funciones del SDK que llama.*
+
+| Dirección | Nombre | Hechos de su código |
+|---|---|---|
+| `0x801912B0` | `GXSetArray` | Cambia el atributo `0x19` (normal, binormal y tangente) por `0x0A` (normal) y manda la dirección y el paso del arreglo a los registros `0xA0+n` y `0xB0+n` del procesador de comandos. |
+| `0x80191584` | `GXSetNumTexGens` | Escribe el registro XF `0x103F` y un campo de 4 bits en `+0x204`. |
+| `0x801915C0` | `GXSetMisc` | Un `switch` sobre el tipo de ajuste. Un caso guarda un valor y marca el estado como sucio (`+0x5AC`); los otros fijan «las listas guardan el estado» (`+0x5A9`) y «abortar la espera de la copia» (`+0x5AA`). |
+| `0x801918D0` | `GXPixModeSync` | Manda por el comando `0x61` la palabra que hay en `+0x1DC`. |
+| `0x801918F4` | `GXTexModeSync` | Manda por el comando `0x61` la constante `0x63000000`. |
+| `0x80191A3C` | `GXSetDrawSyncCallback` | Con las interrupciones apagadas (`OSDisableInterrupts`, `OSRestoreInterrupts`) cambia la variable `-0x6BE8(r13)` y devuelve el valor anterior. Esa variable la lee `GXTokenInterruptHandler`. |
+| `0x80191E58` | `GXSetPointSize` | Inserta el ancho en los bits 8–15 y el desfase en los bits 19–21 del registro BP de tamaño de línea y de punto (`+0x7C`). `GXSetLineWidth`, que tiene la misma forma, escribe los bits 0–7 y 16–18. |
+| `0x801920A4` | `GXSetDispCopySrc` | Registros BP `0x49` y `0x4A` (esquina y tamaño del origen de la copia); guarda el origen en `+0x1E0` y `+0x1E4`, que lee `GXCopyDisp`. |
+| `0x80192120` | `GXSetTexCopySrc` | La misma forma, pero guarda en `+0x1F0` y `+0x1F4`, que lee `GXCopyTex`. |
+| `0x80192C40` | `GXInitLightPos` | Guarda tres flotantes en `+0x28`, `+0x2C` y `+0x30` del objeto de luz. |
+| `0x80192CD8` | `GXSetChanAmbColor` | Registro XF `0x100A` (color ambiente 0); guarda el color en `+0xA8` y `+0xAC`. |
+| `0x80192DC0` | `GXSetChanMatColor` | Registro XF `0x100C` (color del material 0); guarda el color en `+0xB0` y `+0xB4`. |
+| `0x80192EA8` | `GXSetNumChans` | Registro XF `0x1009` y un campo de 3 bits en `+0x204`. |
+| `0x80192EE4` | `GXSetChanCtrl` | Registros XF `0x100E`, `0x1010` y `0x1011` (control de los canales de color y de alfa). |
+| `0x80192F94` | `GXGetTexBufferSize` | Tamaño de mosaico por formato: `0x40` bytes para el formato 6 (RGBA8) y para el `0x16` (Z24X8), `0x20` para el resto; un `switch` limitado a los formatos hasta `0x3C`. No escribe en el hardware. |
+| `0x8019427C` | `GXSetTevColorIn` | Cuatro campos de 4 bits en el arreglo de ajustes de color de las etapas de TEV (`+0x130`). |
+| `0x801942C0` | `GXSetTevAlphaIn` | Cuatro campos de 3 bits en el arreglo de ajustes de alfa (`+0x170`). |
+| `0x80194304` | `GXSetTevColorOp` | Tres campos (dos de 1 bit y uno de 2) en el arreglo de color (`+0x130`). |
+| `0x8019436C` | `GXSetTevAlphaOp` | Los mismos tres campos, en el arreglo de alfa (`+0x170`). |
+| `0x801943D4` | `GXSetTevColor` | Registros BP `0xE0` y `0xE1` (los registros de color de TEV) por el comando `0x61`. |
+| `0x80194848` | `GXSetFog` | Los cinco registros BP de la niebla, `0xEE` a `0xF2`. |
+| `0x80194BD4` | `GXSetColorUpdate` | Un bit (el 3) de `+0x1D0`, el modo del motor de píxeles. |
+| `0x80194C00` | `GXSetAlphaUpdate` | Un bit (el 4) de `+0x1D0`. |
+| `0x80194E80` | `GXBeginDisplayList` | Arma un FIFO con el búfer de la lista y lo activa (`GXSetCPUFifo`); marca «grabando» (`+0x5A8`) y, si la lista guarda el estado (`+0x5A9`), copia antes `0x5B0` bytes del bloque. |
+| `0x80194F4C` | `GXEndDisplayList` | Vacía (`GXFlush`), vuelve al FIFO anterior (`GXSetCPUFifo`), restaura el estado si la lista lo guardó, quita la marca `+0x5A8` y devuelve el tamaño grabado. |
+| `0x8019553C` | `GXSetViewportJitter` | Guarda los seis valores del viewport en `+0x4F4` a `+0x508` y deja que `__GXSetViewport` los mande. |
+
+**Qué comprueba la prueba.** `tests/test_gx_function_names.py` guarda esta tabla
+y comprueba, contra el `main.dol` real: que cada dirección tiene el nombre y el
+tamaño de la tabla y que su código tiene los hechos; que ninguna otra de las
+156 funciones de GX los tiene (una fila que sirviera para dos funciones no
+identificaría a ninguna); y dos cruces de datos: `GXSetDrawSyncCallback`
+escribe la variable que lee `GXTokenInterruptHandler`, y `GXSetDispCopySrc` y
+`GXSetTexCopySrc` escriben el estado que leen `GXCopyDisp` y `GXCopyTex`, cada
+una el suyo.
 
 ### Archivos fuente del juego
 
@@ -325,7 +417,12 @@ leen o escriben un registro especial (`mfmsr r3; blr`, `mtspr HID0`, `L2CR`,
   biblioteca encaje con las vecinas lo hacen poco probable, no imposible.
   Antes de reemplazar una función hay que mirarla (`tools/disasm.py`,
   `tools/find_callers.py`).
-- 478 de las 1 057 funciones de la región del SDK siguen sin nombre (ver
+- Un nombre por lectura del código es una deducción. Las pruebas demuestran
+  que los hechos de la tabla (registro, desplazamiento, campo de bits)
+  pertenecen a una sola función de GX; que ese comportamiento sea el de,
+  por ejemplo, `GXSetPointSize` sale de conocer el SDK y de los registros que
+  describe Dolphin, no de una base de firmas ni del código fuente del SDK.
+- 452 de las 1 057 funciones de la región del SDK siguen sin nombre (ver
   arriba); AX y AXFX son el hueco más grande.
 - Las funciones de `PPCArch` (desde `0x8016EB94`) son de dos instrucciones que
   leen o escriben un registro especial. La firma no guarda el número del
@@ -359,7 +456,7 @@ backend DolRecomp finds functions on its own; our map reaches mods as names
 | …target of some `bl` | 3,637 |
 | `switch` tables | 274 (4 without a bounds check, see below) |
 | Data inside code | 3 (`_rom_copy_info`, `_bss_init_info`, TRK string) |
-| Named functions | 588, all with evidence (25 from reading the code, 563 from SDK signatures) |
+| Named functions | 614, all with evidence (51 from reading the code, 563 from SDK signatures) |
 
 ### How we know it is right
 
@@ -379,7 +476,10 @@ Each point is a test in `tests/test_function_map.py`:
 6. **The startup tables list exactly the DOL's sections**, both ways.
 
 `tests/test_function_finder.py` and `tests/test_sdk_names.py` also
-reproduce every hard case with synthetic DOLs, no game data needed.
+reproduce every hard case with synthetic DOLs, no game data needed. The
+names that came from reading the GX code have their own test against the real
+`main.dol`, `tests/test_gx_function_names.py` (see "GX names by reading the
+code").
 
 ### How it works
 
@@ -577,7 +677,7 @@ belong to one of the two neighbours.
 | AX and AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
 | DSP | `0x801877FC`–`0x80188300` | 12 | 9 |
 | CARD | `0x80188338`–`0x8018ED98` | 87 | 60 |
-| GX | `0x8018EDE0`–`0x80195F98` | 156 | 102 |
+| GX | `0x8018EDE0`–`0x80195F98` | 156 | 128 |
 | TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
 | Rest of TRK, C library and compiler support | `0x8019B5F0`–`0x801A7A14` | 188 | 72 |
 | DB | `0x801A7A14`–`0x801A848C` | 12 | 9 |
@@ -594,10 +694,10 @@ named. The row "Rest of TRK, C library and compiler support" has, named,
 `tan`...), `__div2u`, `__construct_array` and, from TRK,
 `CircleBufferReadBytes`.
 
-The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 579 named,
-55 %. Outside it the game's code and its middleware have no names: 2,643
-functions before it and 746 after SI (only `main`). The 478 SDK functions that
-are still unnamed split like this: 212 share a signature with others, 200
+The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 605 named,
+57 %. Outside it the game's code and its middleware have no names: 2,643
+functions before it and 746 after SI (only `main`). The 452 SDK functions that
+are still unnamed split like this: 198 share a signature with others, 188
 have no signature in the database, 51 are short with no backing, 9 repeat a
 name, 4 have another size and 2 have a C++ name. AX is the clearest case of
 those missing from the database: 72 of its 87 functions.
@@ -606,6 +706,94 @@ those missing from the database: 72 of its 87 functions.
 database carries the linker's archive and object (`card.a CARDBios.o`, for
 example). It would give the exact library of each function, in the C library
 and in TRK too, and not only the one the name prefix says.
+
+### GX names by reading the code
+
+26 functions of GX that the game calls from outside the library were still
+unnamed. They were found with `tools/find_library_entry_points.py`, which
+lists the entry points of an SDK library: its functions that the rest of the
+program reaches with a `bl`, with a tail call (a `b` that leaves the caller)
+or with a pointer kept in the data.
+
+```sh
+python3 tools/find_library_entry_points.py GX
+python3 tools/find_library_entry_points.py AX --range 0x8017FEDC-0x801877FC   # a stretch given by hand
+```
+
+GX has 156 functions in a single stretch (`0x8018EDE0`–`0x80195F98`) and the
+game reaches 75 of them. 49 already had a name, by signature or by the earlier
+rules; the other 26 are the ones in this section. With them all 75 have a
+name. Two limits of the tool, which its header explains: calls through a
+register (`bctrl`, `blrl`) cannot be seen by reading the code, and the
+library's stretch is only as wide as the names that say it.
+
+**Why the signature was not enough.** 14 of the 26 share a signature with a
+sibling that differs only in an immediate value, such as a register number or
+an offset (`GXSetTevColorIn` and `GXSetTevAlphaIn`, `GXSetColorUpdate` and
+`GXSetAlphaUpdate`...). The checksum ignores immediates and the database keeps
+a single name per checksum, so its candidate is a sibling's, or the name of a
+function of another library. In 8 of those 14 the candidate's name belonged to
+another function: `0x80191A3C` showed up as `AIRegisterDMACallback` (7
+functions of the program share that signature), `0x80191E58` as
+`GXSetLineWidth` (it is `GXSetPointSize`) and `0x80192C40` as `nlVector3::Set`
+(10 share it). That is what the table of verdicts avoids by not naming shared
+signatures. The other 12 are not in the database.
+
+**How each one was identified.** With facts in its code that only one function
+of GX has:
+
+- *The hardware register it writes*, seen as a constant. An XF register is
+  written with command `0x10` (`0x1009` is the number of channels, `0x103F`
+  the number of texture coordinate generators) and a BP register with command
+  `0x61` (`0xEE`–`0xF2` is fog, `0xE0` and `0xE1` the TEV colors). The numbers
+  are Dolphin's (`BPMemory.h`, `XFMemory.h`).
+- *The position it reads or writes inside the library's state block*
+  (`GXData`), seen as the displacement of a `lwz` or a `stw`. The code reaches
+  the block through a pointer kept in the data (`lwz r6, -0x4CB0(r2)`: the word
+  `0x80325AD0`, which points to `0x80315CE0`). For example, `+0x130` and
+  `+0x170` are the settings of the TEV color and alpha stages, `+0x1D0` the
+  pixel engine mode, `+0x204` the general mode and `+0x5A8` "a display list is
+  being recorded".
+- *The bit field it inserts* with `rlwimi` (rotation, first bit, last bit).
+- *The SDK functions it calls.*
+
+| Address | Name | Facts in its code |
+|---|---|---|
+| `0x801912B0` | `GXSetArray` | Turns attribute `0x19` (normal, binormal and tangent) into `0x0A` (normal) and sends the array's address and stride to the command processor registers `0xA0+n` and `0xB0+n`. |
+| `0x80191584` | `GXSetNumTexGens` | Writes XF register `0x103F` and a 4-bit field at `+0x204`. |
+| `0x801915C0` | `GXSetMisc` | A `switch` on the kind of setting. One case stores a value and marks the state dirty (`+0x5AC`); the others set "display lists save the state" (`+0x5A9`) and "abort waiting for the copy" (`+0x5AA`). |
+| `0x801918D0` | `GXPixModeSync` | Sends the word at `+0x1DC` with command `0x61`. |
+| `0x801918F4` | `GXTexModeSync` | Sends the constant `0x63000000` with command `0x61`. |
+| `0x80191A3C` | `GXSetDrawSyncCallback` | With interrupts off (`OSDisableInterrupts`, `OSRestoreInterrupts`) it swaps the variable `-0x6BE8(r13)` and returns the old value. `GXTokenInterruptHandler` reads that variable. |
+| `0x80191E58` | `GXSetPointSize` | Inserts the width in bits 8–15 and the offset in bits 19–21 of the BP line and point size register (`+0x7C`). `GXSetLineWidth`, which has the same shape, writes bits 0–7 and 16–18. |
+| `0x801920A4` | `GXSetDispCopySrc` | BP registers `0x49` and `0x4A` (corner and size of the copy source); it keeps the source at `+0x1E0` and `+0x1E4`, which `GXCopyDisp` reads. |
+| `0x80192120` | `GXSetTexCopySrc` | The same shape, but it keeps it at `+0x1F0` and `+0x1F4`, which `GXCopyTex` reads. |
+| `0x80192C40` | `GXInitLightPos` | Stores three floats at `+0x28`, `+0x2C` and `+0x30` of the light object. |
+| `0x80192CD8` | `GXSetChanAmbColor` | XF register `0x100A` (ambient color 0); keeps the color at `+0xA8` and `+0xAC`. |
+| `0x80192DC0` | `GXSetChanMatColor` | XF register `0x100C` (material color 0); keeps the color at `+0xB0` and `+0xB4`. |
+| `0x80192EA8` | `GXSetNumChans` | XF register `0x1009` and a 3-bit field at `+0x204`. |
+| `0x80192EE4` | `GXSetChanCtrl` | XF registers `0x100E`, `0x1010` and `0x1011` (control of the color and alpha channels). |
+| `0x80192F94` | `GXGetTexBufferSize` | Tile size by format: `0x40` bytes for format 6 (RGBA8) and for `0x16` (Z24X8), `0x20` for the rest; a `switch` limited to formats up to `0x3C`. It writes nothing to the hardware. |
+| `0x8019427C` | `GXSetTevColorIn` | Four 4-bit fields in the array of color settings of the TEV stages (`+0x130`). |
+| `0x801942C0` | `GXSetTevAlphaIn` | Four 3-bit fields in the array of alpha settings (`+0x170`). |
+| `0x80194304` | `GXSetTevColorOp` | Three fields (two of 1 bit and one of 2) in the color array (`+0x130`). |
+| `0x8019436C` | `GXSetTevAlphaOp` | The same three fields, in the alpha array (`+0x170`). |
+| `0x801943D4` | `GXSetTevColor` | BP registers `0xE0` and `0xE1` (the TEV color registers) with command `0x61`. |
+| `0x80194848` | `GXSetFog` | The five BP fog registers, `0xEE` to `0xF2`. |
+| `0x80194BD4` | `GXSetColorUpdate` | One bit (bit 3) of `+0x1D0`, the pixel engine mode. |
+| `0x80194C00` | `GXSetAlphaUpdate` | One bit (bit 4) of `+0x1D0`. |
+| `0x80194E80` | `GXBeginDisplayList` | Builds a FIFO over the list's buffer and activates it (`GXSetCPUFifo`); marks "recording" (`+0x5A8`) and, if the list saves the state (`+0x5A9`), first copies `0x5B0` bytes of the block. |
+| `0x80194F4C` | `GXEndDisplayList` | Flushes (`GXFlush`), goes back to the previous FIFO (`GXSetCPUFifo`), restores the state if the list saved it, clears the `+0x5A8` mark and returns the recorded size. |
+| `0x8019553C` | `GXSetViewportJitter` | Keeps the six viewport values at `+0x4F4` to `+0x508` and lets `__GXSetViewport` send them. |
+
+**What the test checks.** `tests/test_gx_function_names.py` holds this table
+and checks, against the real `main.dol`: that each address has the table's
+name and size and that its code has the facts; that no other of the 156
+functions of GX has them (a row that fitted two functions would not identify
+either); and two data cross-checks: `GXSetDrawSyncCallback` writes the variable
+that `GXTokenInterruptHandler` reads, and `GXSetDispCopySrc` and
+`GXSetTexCopySrc` write the state that `GXCopyDisp` and `GXCopyTex` read, each
+one its own.
 
 ### Game source files
 
@@ -646,7 +834,12 @@ the per-frame function.
   library that fits its neighbours make that unlikely, not impossible. Before
   replacing a function, look at it (`tools/disasm.py`,
   `tools/find_callers.py`).
-- 478 of the 1,057 functions of the SDK region are still unnamed (see
+- A name from reading the code is a deduction. The tests show that the facts
+  in the table (register, offset, bit field) belong to one function of GX
+  only; that this behaviour is that of, say, `GXSetPointSize` comes from
+  knowing the SDK and the registers Dolphin describes, not from a signature
+  database or from the SDK's source code.
+- 452 of the 1,057 functions of the SDK region are still unnamed (see
   above); AX and AXFX are the biggest gap.
 - The `PPCArch` functions (from `0x8016EB94`) are two instructions that read
   or write a special register. The signature does not keep the register
