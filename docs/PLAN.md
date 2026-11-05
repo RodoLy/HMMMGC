@@ -276,9 +276,16 @@ pieza por pieza, en el orden de arriba)
       Necesita un guardado cerca de la boda con Jamie, que hoy no existe: se
       está armando uno con la propia rutina de guardado del juego, para que el
       jugador lo pruebe en su laptop.
-- [ ] Comprobar si Jamie vive en la casa como cónyuge después de la boda. Hoy
-      el mod solo evita que el juego termine; falta observar los días
-      siguientes. Si no aparece, es parte del mod v2.
+- [ ] **Jamie vive en la casa como cónyuge** después de la boda, igual que
+      cualquier otra pareja del juego (lo pidió el jugador el 2026-11-05). El
+      juego original no lo hace: con Jamie la boda termina la partida, así que
+      no hay rutina de cónyuge para Jamie. Pasos: (1) ver qué guarda el juego
+      cuando te casas con otra pareja (bandera 161, id de la pareja en
+      `save+0x22B8`, valor 137, bandera 0, la cama doble) y escribir eso
+      mismo para Jamie al terminar la ceremonia; (2) ver si el juego pone a
+      Jamie en la casa con eso, o si hay que agregarlo como personaje de la
+      casa (posición, horario, diálogos de cónyuge, que pueden tener que
+      tomarse prestados de otra pareja). Es el mod de Jamie v2.
 - [ ] Avance rápido de las escenas mientras se mantiene una tecla (la barra
       espaciadora): un mod que acelere los eventos y la asignación de la
       tecla (hoy Espacio no está asignada en la distribución de teclado de
@@ -662,9 +669,16 @@ by piece, in the order above)
       a second proposal and both genders of the player. It needs a save close
       to the wedding with Jamie, which does not exist today: one is being made
       with the game's own save routine, for the player to try on their laptop.
-- [ ] Check whether Jamie lives in the house as a spouse after the wedding.
-      Today the mod only keeps the game from ending; the following days still
-      have to be observed. If she does not appear, it is part of mod v2.
+- [ ] **Jamie lives in the house as a spouse** after the wedding, like any
+      other partner of the game (asked for by the player on 2026-11-05). The
+      original game does not do it: with Jamie the wedding ends the game, so
+      there is no spouse routine for Jamie. Steps: (1) see what the game saves
+      when you marry another partner (flag 161, the partner's id at
+      `save+0x22B8`, value 137, flag 0, the double bed) and write the same for
+      Jamie when the ceremony ends; (2) see whether that puts Jamie in the
+      house, or whether Jamie has to be added as a character of the house
+      (position, schedule, spouse dialogue, which may have to be borrowed from
+      another partner). This is Jamie mod v2.
 - [ ] Fast-forward the scenes while a key is held (the space bar): a mod that
       speeds up the events and the key assignment (today Space is not mapped
       in Dolphin's keyboard layout). It is turned on and adjusted from the
