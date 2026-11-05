@@ -96,12 +96,34 @@ lector de discos), así que no hay nada que configurar. Las cifras y el porqué 
   FastDiscSpeed = False
   ```
 
+### Mods
+
+Un mod es un pequeño cambio al juego que se carga al arrancarlo. El paquete trae uno:
+
+| Mod | Qué hace |
+| --- | --- |
+| `jamie_marriage` | Casarse con Jamie ya no termina el juego: después de la ceremonia sigues jugando. Sin el mod, a la ceremonia le siguen el epílogo y la pantalla de título; con él se ve una vez la escena de las notas musicales y el juego vuelve a juego libre. |
+
+`Play.bat` y `Play-Keyboard.bat` construyen los mods en tu computadora cada vez que se ejecutan, con
+el mismo compilador que recompila el juego (tarda unos segundos), y los dejan en
+`%LOCALAPPDATA%\HarvestMoonMM\Mods`. Si no se pueden construir, el juego arranca igual y el motivo
+queda en `Logs\play.log`.
+
+Para jugar sin mods, abre una ventana de comandos en la carpeta del paquete y ejecuta
+`Play.bat -NoMods` (o `Play-Keyboard.bat -NoMods`): quita de tu carpeta los mods del paquete y el
+juego se juega como viene en el disco. Para recuperarlos, ejecuta `Play.bat` sin eso.
+
+> **Estado: el mod de Jamie se probó con las condiciones de la boda escritas a mano, no con una
+> partida real** (ver [los resultados][scripts-es]). Si lo pruebas en una partida tuya, copia antes
+> la carpeta `%LOCALAPPDATA%\HarvestMoonMM\GC`, que es donde está tu partida guardada.
+
 ### Dónde guarda las cosas
 
 Todo lo que crea el paquete está en la carpeta `%LOCALAPPDATA%\HarvestMoonMM` (pégala en la barra
 de direcciones del Explorador de archivos): el juego extraído (`games`), el módulo recompilado
-(`modules` y `StaticRecompModules`), tus partidas guardadas, la configuración y el registro de la
-última preparación (`Logs\play.log`). Para desinstalar, borra la carpeta del paquete y esa carpeta.
+(`modules` y `StaticRecompModules`), los mods (`Mods`, y `mods-build` donde se construyen), tus
+partidas guardadas, la configuración y el registro de la última preparación (`Logs\play.log`). Para
+desinstalar, borra la carpeta del paquete y esa carpeta.
 
 ### Si algo falla
 
@@ -116,6 +138,8 @@ de direcciones del Explorador de archivos): el juego extraído (`games`), el mó
 - **La preparación falla.** Abre `%LOCALAPPDATA%\HarvestMoonMM\Logs\play.log`. Si lo compartes
   en un reporte de errores, no contiene datos del juego. Si el error habla de rutas demasiado
   largas, mueve el paquete a una carpeta más corta.
+- **Dice «No se pudieron preparar los mods».** El juego arranca igual, sin ellos (o con la copia que
+  quedó de la vez anterior). `Logs\play.log` tiene lo que dijeron CMake y el compilador.
 - **El juego no abre o la imagen sale negra.** Actualiza el controlador de video y, en el
   launcher, cambia el **Graphics backend** (en Windows ARM64: DirectX 12, DirectX 11 o Vulkan; en
   Windows x64 también OpenGL). Un launcher nuevo empieza con DirectX 12 en Windows ARM64, pero un
@@ -135,7 +159,7 @@ de direcciones del Explorador de archivos): el juego extraído (`games`), el mó
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | Lo que haces doble clic (con el launcher, o con el teclado), el script que prepara el juego y los datos del juego. |
 | `Measure-Speed.bat`, `Measure-Speed.ps1` | Opcionales: abren el juego con el teclado y anotan qué tan rápido corre (ver «Rendimiento y batería»). |
 | `bin\` | El launcher, el runner, DolRecomp (el recompilador) y `moderngekko-port` (lo que los une). `bin\source` trae los pocos archivos de código que hacen falta para construir el módulo del juego y los headers de ModernGekko que incluye un mod. |
-| `mods\` | El código de los mods y el header con los nombres de las funciones del juego con los que están escritos. |
+| `mods\` | El código de los mods y el header con los nombres de las funciones del juego con los que están escritos; `play.ps1` los construye e instala. |
 | `toolchain\` | El compilador de C portátil (llvm-mingw), CMake, Ninja y Python, que construyen el módulo. No se instala nada en Windows. |
 | `licenses\`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `VERSIONS.txt` | Licencias, componentes de terceros y las versiones exactas con las que se hizo este paquete. |
 
@@ -240,12 +264,34 @@ are in [PERFORMANCE.md][performance].
   FastDiscSpeed = False
   ```
 
+### Mods
+
+A mod is a small change to the game that is loaded when it starts. The package carries one:
+
+| Mod | What it does |
+| --- | --- |
+| `jamie_marriage` | Marrying Jamie no longer ends the game: you keep playing after the ceremony. Without the mod, the ceremony is followed by the epilogue and the title screen; with it, the notes scene is shown once and the game goes back to free play. |
+
+`Play.bat` and `Play-Keyboard.bat` build the mods on your computer every time they run, with the same
+compiler that recompiles the game (it takes a few seconds), and put them in
+`%LOCALAPPDATA%\HarvestMoonMM\Mods`. If they cannot be built, the game starts anyway and the reason is
+in `Logs\play.log`.
+
+To play without mods, open a command prompt in the package folder and run `Play.bat -NoMods` (or
+`Play-Keyboard.bat -NoMods`): it takes the package's mods out of your folder and the game is played as
+it is on the disc. To get them back, run `Play.bat` without that.
+
+> **Status: the Jamie mod was tried with the conditions of the wedding written by hand, not with a
+> real save game** (see [the results][scripts-en]). If you try it in a game of your own, copy the folder
+> `%LOCALAPPDATA%\HarvestMoonMM\GC` first: that is where your saved game is.
+
 ### Where it keeps things
 
 Everything the package creates is in the folder `%LOCALAPPDATA%\HarvestMoonMM` (paste that into
 the address bar of File Explorer): the extracted game (`games`), the recompiled module (`modules`
-and `StaticRecompModules`), your saved games, the settings, and the log of the last preparation
-(`Logs\play.log`). To uninstall, delete the package folder and that folder.
+and `StaticRecompModules`), the mods (`Mods`, and `mods-build` where they are built), your saved
+games, the settings, and the log of the last preparation (`Logs\play.log`). To uninstall, delete the
+package folder and that folder.
 
 ### If something fails
 
@@ -259,6 +305,8 @@ and `StaticRecompModules`), your saved games, the settings, and the log of the l
 - **The preparation fails.** Open `%LOCALAPPDATA%\HarvestMoonMM\Logs\play.log`. If you share it in
   a bug report, it holds no game data. If the error talks about paths that are too long, move the
   package to a shorter folder.
+- **It says "The mods could not be prepared".** The game starts anyway, without them (or with the copy
+  left from the previous time). `Logs\play.log` has what CMake and the compiler said.
 - **The game does not open or the picture is black.** Update the video driver and, in the
   launcher, change the **Graphics backend** (on Windows ARM64: DirectX 12, DirectX 11 or Vulkan; on
   Windows x64 also OpenGL). A new launcher starts with DirectX 12 on Windows ARM64, but a
@@ -279,7 +327,7 @@ and `StaticRecompModules`), your saved games, the settings, and the log of the l
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | What you double-click (with the launcher, or with the keyboard), the script that prepares the game, and the game's data. |
 | `Measure-Speed.bat`, `Measure-Speed.ps1` | Optional: they open the game with the keyboard and write down how fast it runs (see "Performance and battery"). |
 | `bin\` | The launcher, the runner, DolRecomp (the recompiler) and `moderngekko-port` (what ties them together). `bin\source` holds the few source files that building the game's module needs, and the ModernGekko headers that a mod includes. |
-| `mods\` | The source of the mods, and the header with the names of the game's functions that they are written with. |
+| `mods\` | The source of the mods, and the header with the names of the game's functions that they are written with; `play.ps1` builds and installs them. |
 | `toolchain\` | The portable C compiler (llvm-mingw), CMake, Ninja and Python, which build the module. Nothing is installed in Windows. |
 | `licenses\`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `VERSIONS.txt` | Licenses, third-party components, and the exact versions this package was made with. |
 
@@ -291,3 +339,5 @@ Everything is free software; the details, and where the source code of each part
 
 [validation]: https://github.com/RodoLy/HMMMGC/blob/main/docs/VALIDATION.md
 [performance]: https://github.com/RodoLy/HMMMGC/blob/main/docs/PERFORMANCE.md
+[scripts-es]: https://github.com/RodoLy/HMMMGC/blob/main/docs/SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04
+[scripts-en]: https://github.com/RodoLy/HMMMGC/blob/main/docs/SCRIPTS.md#run-time-test-of-the-mod-2026-11-04

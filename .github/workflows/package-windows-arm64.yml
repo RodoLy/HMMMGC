@@ -275,8 +275,9 @@ jobs:
 
       # What a player does, from the disc image on: Windows PowerShell 5.1, which is the one every
       # Windows has, runs play.ps1 on a disc image of the made-up game that the test above left. It
-      # extracts it, recompiles it and installs the module. Run a second time, it must find
-      # everything done.
+      # extracts it, recompiles it, installs the module, and builds and installs the mods (play.ps1
+      # only warns when the mods cannot be built, so the files are looked for below). Run a second
+      # time, it must find everything done.
       #
       # Nobody is at this machine to answer a window, and play.ps1 opens one to ask for a disc image
       # when it has none and finds no extracted game. So each run has a time limit, and the second
@@ -341,7 +342,11 @@ jobs:
           $longestPath = Get-ChildItem -LiteralPath $userFolder -Recurse -Force -ErrorAction SilentlyContinue |
               ForEach-Object { $_.FullName.Length } | Measure-Object -Maximum
           Write-Host "The longest path made in $userFolder has $($longestPath.Maximum) characters"
-          foreach ($expected in $extractedProgram, 'StaticRecompModules\gG4AEE9_recomp.dll', 'Logs\play.log') {
+          # The mods that game.psd1 lists are built in every run, by the compiler of the package.
+          $modIds = (Import-PowerShellDataFile (Join-Path $package 'game.psd1')).ModIds
+          $modFiles = @($modIds | ForEach-Object { "Mods\$_.mgm\mod.dll" })
+          $expectedFiles = @($extractedProgram, 'StaticRecompModules\gG4AEE9_recomp.dll', 'Logs\play.log') + $modFiles
+          foreach ($expected in $expectedFiles) {
               $path = Join-Path $userFolder $expected
               Write-Host "${expected}: $(Test-Path -LiteralPath $path)"
               if (-not (Test-Path -LiteralPath $path)) { $problems += "$expected was not made" }
@@ -349,9 +354,12 @@ jobs:
           if ($problems) { $problems | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
 
       # What the launcher does when the player presses Play: it starts the runner with the extracted
-      # game and the player's folder, and the runner finds the module that play.ps1 installed. Nothing
-      # is drawn. Only the folders of Windows are on the path, as on a player's computer, so the module
-      # must not need anything of the compiler that built it. It needs the play test to have succeeded.
+      # game and the player's folder, and the runner finds the module and the mods that play.ps1
+      # installed. Nothing is drawn. Only the folders of Windows are on the path, as on a player's
+      # computer, so the module and the mods must not need anything of the compiler that built them.
+      # The runner must say that it loaded every mod of game.psd1: a mod that the compiler of the
+      # package built is one that the runner, which another compiler built, can load. It needs the play
+      # test to have succeeded.
       - name: Test that the installed game starts and closes
         id: start
         if: steps.play.outcome == 'success'
@@ -362,12 +370,15 @@ jobs:
           $package = Join-Path $env:TEST_PACKAGE_DIRECTORY 'HarvestMoonMM-windows-arm64'
           $userFolder = Join-Path $env:LOCALAPPDATA 'HarvestMoonMM'
           $runnerPython = (Get-Command python).Source
+          $modIds = (Import-PowerShellDataFile (Join-Path $package 'game.psd1')).ModIds
+          $expectedMods = @($modIds | ForEach-Object { '--expect-mod'; $_ })
           $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
           & $runnerPython tools/check_installed_game.py `
             --runner (Join-Path $package 'bin\moderngekko-run.exe') `
             --game (Join-Path $userFolder 'games\G4AEE9') `
             --user-dir $userFolder `
-            --work-directory (Join-Path $env:TEST_WORK_DIRECTORY 'installed_game')
+            --work-directory (Join-Path $env:TEST_WORK_DIRECTORY 'installed_game') `
+            @expectedMods
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # The logs of a failure are worth reading at once; the same files are kept as an artifact.

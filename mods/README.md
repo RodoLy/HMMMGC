@@ -26,8 +26,14 @@ scripts/build_and_run_linux.sh        # abre el juego con los mods instalados
 (`MODERNGEKKO_USER_DIR` cambia esa carpeta). Para probar un mod sin instalarlo,
 `moderngekko-run` acepta `--mods build/mods`.
 
-Un mod instalado es una carpeta `<id>.mgm/` con un `mod.so` dentro. Para borrar
-un mod, borra su carpeta.
+Un mod instalado es una carpeta `<id>.mgm/` con un `mod.so` dentro (`mod.dll` en
+Windows). Para borrar un mod, borra su carpeta.
+
+En el paquete de Windows no hace falta nada de esto: `play.ps1` construye con
+el compilador del paquete los mods que enumera `ModIds` en `game.psd1` y los
+instala en `%LOCALAPPDATA%\HarvestMoonMM\Mods` (ver
+[`packaging/windows/README.md`](../packaging/windows/README.md)). Un mod nuevo
+entra al paquete cuando se agrega a `CMakeLists.txt` y a `ModIds`.
 
 ### Cómo está hecho un mod
 
@@ -127,8 +133,14 @@ scripts/build_and_run_linux.sh        # start the game with the installed mods
 (`MODERNGEKKO_USER_DIR` moves that folder). To try a mod without installing
 it, `moderngekko-run` accepts `--mods build/mods`.
 
-An installed mod is a folder `<id>.mgm/` with a `mod.so` inside. To remove a
-mod, delete its folder.
+An installed mod is a folder `<id>.mgm/` with a `mod.so` inside (`mod.dll` on
+Windows). To remove a mod, delete its folder.
+
+None of this is needed in the Windows package: `play.ps1` builds, with the
+package's compiler, the mods that `ModIds` lists in `game.psd1` and installs
+them in `%LOCALAPPDATA%\HarvestMoonMM\Mods` (see
+[`packaging/windows/README.md`](../packaging/windows/README.md)). A new mod
+joins the package when it is added to `CMakeLists.txt` and to `ModIds`.
 
 ### How a mod is built
 

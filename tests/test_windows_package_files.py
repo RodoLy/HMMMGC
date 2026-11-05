@@ -31,6 +31,16 @@ def game_definition() -> dict[str, str]:
     return dict(re.findall(r"^\s*(\w+)\s*=\s*'([^']*)'", read_packaging_file("game.psd1"), re.MULTILINE))
 
 
+def game_mod_ids() -> list[str]:
+    """The names in `ModIds = @('a', 'b')` of game.psd1: the mods that play.ps1 builds."""
+    listed = re.search(r"ModIds\s*=\s*@\((.*?)\)", read_packaging_file("game.psd1"))
+    return re.findall(r"'([^']*)'", listed.group(1))
+
+
+def mods_cmake_file() -> str:
+    return (package_windows.MODS_DIRECTORY / "CMakeLists.txt").read_text(encoding="utf-8")
+
+
 def branding() -> dict[str, str]:
     """The values that branding.cmake gives to the cache: `set(NAME "value" CACHE ...)` lines."""
     return dict(
@@ -119,6 +129,85 @@ def test_every_function_the_mods_name_is_in_the_header_the_package_gets():
     assert used <= defined
 
 
+def test_the_mods_the_package_builds_are_listed_and_have_their_source_and_their_cmake_target():
+    mod_ids = game_mod_ids()
+    assert mod_ids
+    assert len(set(mod_ids)) == len(mod_ids)
+    for mod_id in mod_ids:
+        assert re.fullmatch(r"[a-z][a-z0-9_]*", mod_id), f"{mod_id} is not a name for a folder and a target"
+        source = package_windows.MODS_DIRECTORY / mod_id / "mod.c"
+        assert source.is_file(), f"{source} is missing"
+        target_line = rf"^add_game_mod\({mod_id} "
+        assert re.search(target_line, mods_cmake_file(), re.MULTILINE), f"{mod_id} is not a CMake target"
+
+
+def test_every_mod_the_package_builds_is_for_the_game_the_package_plays():
+    for mod_id in game_mod_ids():
+        source = (package_windows.MODS_DIRECTORY / mod_id / "mod.c").read_text(encoding="utf-8")
+        assert "HM_MM_GAME_ID" in source, f"{mod_id} does not say which game it is for"
+    header = (package_windows.MODS_DIRECTORY / "include" / "hm_mm_mod.h").read_text(encoding="utf-8")
+    assert f'#define HM_MM_GAME_ID "{game_definition()["GameId"]}"' in header
+
+
+def test_the_script_looks_for_the_mods_where_the_assembler_puts_them():
+    script = read_packaging_file("play.ps1")
+    assert f"Join-Path $PackageDirectory '{package_windows.MODS_FOLDER_IN_PACKAGE}'" in script
+    # The script builds the name of the header from the game's ID, so the ID is not written in it.
+    generated = package_windows.MOD_SYMBOLS_HEADER.replace("/", "\\")
+    generated = generated.replace(game_definition()["GameId"], "' + $Game.GameId + '")
+    assert f"Join-Path $ModsSourceDirectory ('{generated}')" in script
+    # The headers of ModernGekko are in bin\source, laid out as in its source tree (include/moderngekko).
+    assert "Join-Path $ProgramsDirectory 'source'" in script
+    assert {header.rsplit("/", 1)[0] for header in package_windows.MOD_HEADERS} == {"include/moderngekko"}
+
+
+def test_the_script_gives_cmake_the_options_that_the_mods_cmake_file_asks_for():
+    asked_for = set(re.findall(r"^set\((\w+) \"\" CACHE", mods_cmake_file(), re.MULTILINE))
+    given = set(re.findall(r'"-D(\w+)=', body_of_function(read_packaging_file("play.ps1"), "Install-Mods")))
+    assert asked_for == {"MODERNGEKKO_SOURCE_DIR", "MOD_SYMBOL_HEADER"}
+    assert asked_for <= given
+    assert given - asked_for <= {"CMAKE_C_COMPILER"}  # what CMake itself reads
+
+
+def test_the_mods_are_built_in_a_new_folder_each_time_and_only_the_listed_ones():
+    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
+    assert body.index("Remove-Item -LiteralPath $BuildDirectory") < body.index("$configureArguments")
+    assert "'--target') + @($Game.ModIds)" in body
+
+
+def test_what_the_tools_say_while_the_mods_are_built_goes_to_the_log_and_not_to_the_console():
+    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
+    calls = re.findall(r"Invoke-Program [^\n]*", body)
+    assert len(calls) == 2  # setting up the build, and building
+    assert all(call.endswith("-Quiet") for call in calls)
+
+
+def test_a_failure_while_the_mods_are_built_is_a_warning_and_the_game_starts_anyway():
+    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
+    before_catch, catch, after_catch = body.partition("catch {")
+    assert catch
+    assert "Get-Message 'ModsFailed' $LogPath" in after_catch
+    assert "throw" not in after_catch  # the failure is not passed on to the script, which would end it
+    assert "exit" not in after_catch
+
+
+def test_playing_without_mods_takes_out_only_the_mods_of_the_package():
+    script = read_packaging_file("play.ps1")
+    body = body_of_function(script, "Remove-InstalledMods")
+    assert "foreach ($modId in $Game.ModIds)" in body
+    assert "Join-Path $InstalledModsDirectory ($modId + '.mgm')" in body
+    assert re.search(r"if \(\$NoMods\) \{\s+Remove-InstalledMods\s+\}\s+else \{\s+Install-Mods", script)
+    assert "[switch] $NoMods" in script
+    assert ".PARAMETER NoMods" in script
+
+
+def test_the_mods_go_where_the_runner_looks_for_them():
+    # moderngekko-run reads <the player's folder>/Mods, and in it <mod id>.mgm/mod.dll.
+    script = read_packaging_file("play.ps1")
+    assert "$InstalledModsDirectory = Join-Path $UserDirectory 'Mods'" in script
+    assert "($modId + '.mgm')" in script
+
+
 def project_settings() -> dict[str, str]:
     """The `Name = value` lines of the project's settings file, with the section each is in."""
     settings = {}
@@ -165,7 +254,8 @@ def test_the_branding_sets_only_options_of_moderngekko():
 def test_the_script_reads_only_settings_that_game_psd1_has():
     used = set(re.findall(r"\$Game\.(\w+)", read_packaging_file("play.ps1")))
     assert used
-    assert used <= set(game_definition()) | {"DiscExtensions"}  # a list, so not among the text values
+    lists = {"DiscExtensions", "ModIds"}  # they are not among the text values
+    assert used <= set(game_definition()) | lists
 
 
 def test_both_languages_have_the_same_messages():

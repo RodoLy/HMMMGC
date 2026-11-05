@@ -586,9 +586,10 @@ arranquen con solo las carpetas de Windows en la `PATH`; esta misma prueba por
 instrucción, con el compilador del paquete; `play.ps1` dos veces, con Windows
 PowerShell 5.1 y con las rutas largas desactivadas, como en la mayoría de las
 computadoras (la primera lee el disco, lo extrae, recompila e instala el módulo;
-la segunda debe encontrar todo hecho; el camino más largo que hizo medía 253
-caracteres, de los 259 que Windows permite así); y que el juego instalado arranque
-como lo hace el launcher, sin dibujar nada y sin nada del compilador en la `PATH`, siga
+la segunda debe encontrar todo hecho; las dos construyen e instalan los mods de
+`game.psd1`; el camino más largo que hizo medía 253 caracteres, de los 259 que
+Windows permite así); y que el juego instalado arranque como lo hace el launcher,
+sin dibujar nada y sin nada del compilador en la `PATH`, cargue esos mods, siga
 corriendo unos segundos y se cierre con código 0. **No** comprueba el juego real,
 la ventana ni la GPU (DirectX 12 o Vulkan con el controlador de Snapdragon), el
 control ni el teclado, ni una computadora de verdad. Lo que sí se probó a mano en
@@ -1225,11 +1226,11 @@ the folders of Windows on the `PATH`; this same instruction-level test, with the
 package's compiler; `play.ps1` twice, with Windows PowerShell 5.1 and with long
 paths turned off, as on most computers (the first run reads the disc, extracts
 it, recompiles it and installs the module; the second must find everything done;
-the longest path it made had 253 characters, of the 259 that Windows allows that
-way); and that the installed game starts the way the launcher starts it, drawing
-nothing
-and with nothing of the compiler on the `PATH`, keeps running for a few seconds
-and closes with exit code 0. It does **not** check the real game, the window or
+both build and install the mods of `game.psd1`; the longest path it made had 253
+characters, of the 259 that Windows allows that way); and that the installed game
+starts the way the launcher starts it, drawing nothing and with nothing of the
+compiler on the `PATH`, loads those mods, keeps running for a few seconds and
+closes with exit code 0. It does **not** check the real game, the window or
 the GPU (DirectX 12 or Vulkan on the Snapdragon driver), the controller or the
 keyboard, nor a real computer. What was tried by hand on a laptop with a
 Snapdragon (the real game, with DirectX 12) is in [PERFORMANCE.md](PERFORMANCE.md).

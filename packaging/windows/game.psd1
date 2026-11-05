@@ -44,4 +44,12 @@
     # Los tipos de imagen de disco que el launcher puede leer (el lector de discos de Dolphin
     # los abre todos).
     DiscExtensions    = @('.iso', '.gcm', '.rvz', '.wbfs', '.ciso', '.gcz', '.wia', '.tgc')
+
+    # The mods that play.ps1 builds and installs. Each is a folder of mods\ with the same name, defined
+    # in mods\CMakeLists.txt; the other mods in that folder only print what the game does, and are for
+    # people who write mods. Running play.ps1 with -NoMods plays without any of these.
+    # Los mods que play.ps1 construye e instala. Cada uno es una carpeta de mods\ con el mismo nombre,
+    # definida en mods\CMakeLists.txt; los otros mods de esa carpeta solo imprimen lo que hace el juego
+    # y son para quien escribe mods. Ejecutar play.ps1 con -NoMods juega sin ninguno de estos.
+    ModIds            = @('jamie_marriage')
 }

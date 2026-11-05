@@ -7,27 +7,33 @@
 
 .DESCRIPTION
     The game is not in this package. It is recompiled here, on this computer, from the disc image
-    that the player owns, so the first run does three things and later runs skip what is done:
+    that the player owns, so the first run does these things and later runs skip what is done:
 
       1. Reads the disc image and extracts the game's files (the launcher does it).
       2. Recompiles the game's program into a native module: DolRecomp translates it to C and
          the compiler in toolchain\ builds it. This takes several minutes.
-      3. Puts the module where the launcher and the runner look for it, and opens the launcher
-         (or, with -Keyboard, the game itself).
+      3. Puts the module where the launcher and the runner look for it.
+      4. Builds the mods (small changes to the game, listed in game.psd1) with the same compiler
+         and puts them in the Mods folder of the player's folder, where the runner finds them.
+         This is done on every run and takes seconds. If it fails, the game starts anyway.
+      5. Opens the launcher (or, with -Keyboard, the game itself).
 
     Nothing is installed and no setting of the computer is changed. Everything this script makes
     is in the folder %LOCALAPPDATA%\<UserDirectoryName> (see game.psd1), and a log of the last
     run is in its Logs folder.
 
     El juego no está en este paquete. Se recompila aquí, en esta computadora, con la imagen del
-    disco que el jugador tiene, así que la primera ejecución hace tres cosas y las siguientes
+    disco que el jugador tiene, así que la primera ejecución hace estas cosas y las siguientes
     omiten lo que ya está hecho:
 
       1. Lee la imagen del disco y extrae los archivos del juego (lo hace el launcher).
       2. Recompila el programa del juego en un módulo nativo: DolRecomp lo traduce a C y el
          compilador de toolchain\ lo construye. Esto tarda varios minutos.
-      3. Pone el módulo donde lo buscan el launcher y el runner, y abre el launcher (o, con
-         -Keyboard, el juego mismo).
+      3. Pone el módulo donde lo buscan el launcher y el runner.
+      4. Construye los mods (pequeños cambios al juego, listados en game.psd1) con el mismo
+         compilador y los pone en la carpeta Mods de la carpeta del jugador, donde los encuentra
+         el runner. Se hace en cada ejecución y tarda segundos. Si falla, el juego arranca igual.
+      5. Abre el launcher (o, con -Keyboard, el juego mismo).
 
     No se instala nada ni se cambia ninguna configuración de la computadora. Todo lo que hace este
     script queda en la carpeta %LOCALAPPDATA%\<UserDirectoryName> (ver game.psd1), y el registro
@@ -50,6 +56,12 @@
     Abre el juego mismo, sin el launcher, para jugar con el teclado. Sin ningún control
     configurado el juego lee la asignación de teclado que trae Dolphin, que es también lo que hace
     Play en el launcher cuando no hay un control conectado; esto se salta el launcher.
+
+.PARAMETER NoMods
+    Play the game as it is on the disc: the mods are not built, and the ones that this package
+    installed earlier are taken out of the player's folder. Run again without it to get them back.
+    Juega el juego como viene en el disco: no se construyen los mods y se quitan de la carpeta
+    del jugador los que este paquete instaló antes. Ejecuta otra vez sin esto para recuperarlos.
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
@@ -65,7 +77,9 @@ param(
 
     [switch] $PrepareOnly,
 
-    [switch] $Keyboard
+    [switch] $Keyboard,
+
+    [switch] $NoMods
 )
 
 Set-StrictMode -Version Latest
@@ -89,16 +103,30 @@ $ExtractedGameProgram = Join-Path $ExtractedGameDirectory 'sys\main.dol'
 $InstalledModulesDirectory = Join-Path $UserDirectory 'StaticRecompModules'
 $LogPath = Join-Path $UserDirectory 'Logs\play.log'
 
+$ClangPath = Join-Path $ToolchainDirectory 'llvm-mingw\bin\clang.exe'
+$CMakePath = Join-Path $ToolchainDirectory 'cmake\bin\cmake.exe'
+
+# The mods (see ModIds in game.psd1). Their source and the header that names the game's functions
+# are in the package, the headers of ModernGekko that they include are in bin\source, and the built
+# mods go to the Mods folder of the player's folder, which is one of the two places where the runner
+# looks for mods.
+$ModsSourceDirectory = Join-Path $PackageDirectory 'mods'
+$ModSymbolsHeader = Join-Path $ModsSourceDirectory ('generated\' + $Game.GameId + '_symbols.h')
+$ModernGekkoSourceDirectory = Join-Path $ProgramsDirectory 'source'
+$InstalledModsDirectory = Join-Path $UserDirectory 'Mods'
+
 # Every file whose absence means that the package was not extracted completely.
 $RequiredFiles = @(
     $LauncherPath,
     $PortToolPath,
     $RunnerPath,
     (Join-Path $ProgramsDirectory 'dolrecomp.exe'),
-    (Join-Path $ToolchainDirectory 'llvm-mingw\bin\clang.exe'),
-    (Join-Path $ToolchainDirectory 'cmake\bin\cmake.exe'),
+    $ClangPath,
+    $CMakePath,
     (Join-Path $ToolchainDirectory 'ninja\ninja.exe'),
-    (Join-Path $ToolchainDirectory 'python\python.exe')
+    (Join-Path $ToolchainDirectory 'python\python.exe'),
+    (Join-Path $ModsSourceDirectory 'CMakeLists.txt'),
+    $ModSymbolsHeader
 )
 
 # Windows stops at 260 characters in a path, and the files of the recompiled module sit in
@@ -127,6 +155,10 @@ $Messages = @{
         ExtractionFailed    = 'The disc image could not be read (see the messages above). This package plays the USA release of {0}, disc ID {1}.'
         Recompiling         = 'Preparing the game for this computer. This is done only once and can take several minutes. Do not close this window.'
         RecompilationFailed = 'The game could not be prepared. The details are in {0}'
+        PreparingMods       = 'Preparing the mods ...'
+        ModsPrepared        = 'Mods ready: {0}.'
+        ModsFailed          = 'The mods could not be prepared. The game starts anyway. The details are in {0}'
+        ModsOff             = 'The mods are off: the game is played as it is on the disc.'
         GamePrepared        = 'The game is ready.'
         OpeningLauncher     = 'Opening the launcher. Press Play in it to start the game.'
         LauncherFailed      = 'The launcher closed with an error (code {0}). The details are in {1}'
@@ -157,6 +189,10 @@ Keyboard (the default layout of Dolphin, which this game runs on):
         ExtractionFailed    = 'No se pudo leer la imagen de disco (mira los mensajes de arriba). Este paquete juega la versión USA de {0}, ID de disco {1}.'
         Recompiling         = 'Preparando el juego para esta computadora. Se hace una sola vez y puede tardar varios minutos. No cierres esta ventana.'
         RecompilationFailed = 'No se pudo preparar el juego. Los detalles están en {0}'
+        PreparingMods       = 'Preparando los mods ...'
+        ModsPrepared        = 'Mods listos: {0}.'
+        ModsFailed          = 'No se pudieron preparar los mods. El juego arranca igual. Los detalles están en {0}'
+        ModsOff             = 'Los mods están apagados: el juego se juega como viene en el disco.'
         GamePrepared        = 'El juego está listo.'
         OpeningLauncher     = 'Abriendo el launcher. Pulsa Play en él para empezar el juego.'
         LauncherFailed      = 'El launcher se cerró con un error (código {0}). Los detalles están en {1}'
@@ -215,11 +251,16 @@ function Close-Log {
 
 # -- Running the programs of the package -------------------------------------------------------------
 
-# Shows one line of a program's output and keeps it in the log. The lines of the build that look
-# like "[12/345] Building ..." become a progress bar, because there are thousands of them.
+# Shows one line of a program's output and keeps it in the log (with -Quiet it only keeps it). The
+# lines of the build that look like "[12/345] Building ..." become a progress bar, because there are
+# thousands of them.
 function Write-ProgramLine {
-    param([string] $Line)
+    param(
+        [string] $Line,
+        [switch] $Quiet
+    )
     Add-LogLine $Line
+    if ($Quiet) { return }
     if ($Line -match '^\[(\d+)/(\d+)\] ') {
         $percent = [int] (100 * [int] $Matches[1] / [int] $Matches[2])
         $status = $Line.Substring(0, [Math]::Min($Line.Length, 90))
@@ -240,18 +281,21 @@ function ConvertTo-ProgramText {
     return [string] $Output
 }
 
-# Runs a program, shows what it says, and returns its exit code. What a program writes as
-# warnings on its error output is not an error of this script, so errors do not stop it here.
+# Runs a program, shows what it says (with -Quiet it only goes to the log), and returns its exit
+# code. What a program writes as warnings on its error output is not an error of this script, so
+# errors do not stop it here.
 function Invoke-Program {
     param(
         [Parameter(Mandatory)] [string] $FilePath,
-        [string[]] $Arguments = @()
+        [string[]] $Arguments = @(),
+        [switch] $Quiet
     )
     Add-LogLine ('> ' + $FilePath + ' ' + ($Arguments -join ' '))
     $previousPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-ProgramLine (ConvertTo-ProgramText $_) }
+        & $FilePath @Arguments 2>&1 |
+            ForEach-Object { Write-ProgramLine (ConvertTo-ProgramText $_) -Quiet:$Quiet }
         return $LASTEXITCODE
     }
     finally {
@@ -365,18 +409,18 @@ function Export-Disc {
 # Recompiles the game's program and returns the path of the module. The tool keeps what it builds
 # and builds nothing when the program, the tools and the settings are the same as the last time.
 function New-GameModule {
+    param([Parameter(Mandatory)] [string] $ModulesDirectory)
     Write-Host (Get-Message 'Recompiling')
-    $modulesDirectory = Get-ModulesDirectory
     $arguments = @(
         'build', $ExtractedGameDirectory,
         '--backend', 'c',
         '--toolchain', 'clang',
-        '--output', $modulesDirectory
+        '--output', $ModulesDirectory
     )
     $exitCode = Invoke-Program -FilePath $PortToolPath -Arguments $arguments
     if ($exitCode -ne 0) { throw (Get-Message 'RecompilationFailed' $LogPath) }
     # The tool writes the path of the module it considers current into this file.
-    $activeModuleFile = Join-Path (Join-Path $modulesDirectory $Game.GameId) 'active-module.txt'
+    $activeModuleFile = Join-Path (Join-Path $ModulesDirectory $Game.GameId) 'active-module.txt'
     $modulePath = (Get-Content -LiteralPath $activeModuleFile -Encoding UTF8 -TotalCount 1).Trim()
     if (-not (Test-Path -LiteralPath $modulePath -PathType Leaf)) {
         throw (Get-Message 'RecompilationFailed' $LogPath)
@@ -393,6 +437,65 @@ function Install-GameModule {
         ((Get-FileHash -LiteralPath $installedPath).Hash -eq (Get-FileHash -LiteralPath $ModulePath).Hash)
     if (-not $isInstalled) { Copy-Item -LiteralPath $ModulePath -Destination $installedPath -Force }
     return $installedPath
+}
+
+# Builds the mods that game.psd1 lists, with the compiler of the package, and puts each one in the
+# Mods folder of the player's folder as <id>.mgm\mod.dll, where the runner looks for mods. A mod is
+# one small file of C, so this takes seconds, and it is done again on every run: that way the mods
+# are always the ones of this package, built for this computer, even after the package was replaced
+# by a newer one. The build folder is made anew each time because CMake remembers where it found the
+# package and would refuse to build in a folder that was made for a package that has been moved.
+#
+# The mods are an addition to the game, so a failure here is a warning and not an error: the game
+# starts anyway, and the log says what went wrong. What the tools say goes to the log only.
+function Install-Mods {
+    param([Parameter(Mandatory)] [string] $BuildDirectory)
+    if (-not $Game.ModIds) { return }
+    Write-Host (Get-Message 'PreparingMods')
+    try {
+        if (Test-Path -LiteralPath $BuildDirectory) { Remove-Item -LiteralPath $BuildDirectory -Recurse -Force }
+        $configureArguments = @(
+            '-S', $ModsSourceDirectory,
+            '-B', $BuildDirectory,
+            '-G', 'Ninja',
+            '-DCMAKE_BUILD_TYPE=Release',
+            "-DCMAKE_C_COMPILER=$ClangPath",
+            "-DMODERNGEKKO_SOURCE_DIR=$ModernGekkoSourceDirectory",
+            "-DMOD_SYMBOL_HEADER=$ModSymbolsHeader"
+        )
+        $exitCode = Invoke-Program -FilePath $CMakePath -Arguments $configureArguments -Quiet
+        if ($exitCode -ne 0) { throw "CMake could not set up the build of the mods (exit code $exitCode)" }
+
+        # Only the mods that are listed: the folder also holds mods that are not part of the game.
+        $buildArguments = @('--build', $BuildDirectory, '--target') + @($Game.ModIds)
+        $exitCode = Invoke-Program -FilePath $CMakePath -Arguments $buildArguments -Quiet
+        if ($exitCode -ne 0) { throw "CMake could not build the mods (exit code $exitCode)" }
+
+        New-Item -ItemType Directory -Force -Path $InstalledModsDirectory | Out-Null
+        foreach ($modId in $Game.ModIds) {
+            $builtMod = Join-Path $BuildDirectory ($modId + '.mgm')
+            $installedMod = Join-Path $InstalledModsDirectory ($modId + '.mgm')
+            # An older copy goes completely, so that a file the mod no longer has does not stay.
+            if (Test-Path -LiteralPath $installedMod) { Remove-Item -LiteralPath $installedMod -Recurse -Force }
+            Copy-Item -LiteralPath $builtMod -Destination $installedMod -Recurse
+            Add-LogLine ('Mod: ' + (Join-Path $installedMod 'mod.dll'))
+        }
+        Write-Host (Get-Message 'ModsPrepared' ($Game.ModIds -join ', '))
+    }
+    catch {
+        Add-LogLine ($_ | Out-String)
+        Write-Host (Get-Message 'ModsFailed' $LogPath) -ForegroundColor Yellow
+    }
+}
+
+# Takes the mods of this package out of the player's folder, so that the game is played as it is on
+# the disc. A mod that the player put there by hand, and game.psd1 does not list, stays.
+function Remove-InstalledMods {
+    foreach ($modId in $Game.ModIds) {
+        $installedMod = Join-Path $InstalledModsDirectory ($modId + '.mgm')
+        if (Test-Path -LiteralPath $installedMod) { Remove-Item -LiteralPath $installedMod -Recurse -Force }
+    }
+    Write-Host (Get-Message 'ModsOff')
 }
 
 function Start-Launcher {
@@ -436,9 +539,17 @@ try {
     $discToExtract = Get-DiscToExtract -RequestedDisc $Disc
     if ($discToExtract) { Export-Disc -DiscPath $discToExtract }
 
-    $builtModule = New-GameModule
+    # The mods are built beside the modules, in the same folder or in the short one that replaces it.
+    $modulesDirectory = Get-ModulesDirectory
+    $builtModule = New-GameModule -ModulesDirectory $modulesDirectory
     $installedModule = Install-GameModule -ModulePath $builtModule
     Add-LogLine ('Module: ' + $installedModule)
+    if ($NoMods) {
+        Remove-InstalledMods
+    }
+    else {
+        Install-Mods -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
+    }
     Write-Host (Get-Message 'GamePrepared')
 
     if (-not $PrepareOnly) {

@@ -247,9 +247,16 @@ pieza por pieza, en el orden de arriba)
       avisos y se probó dentro del juego con condiciones escritas a mano: sin
       el mod siguen el epílogo y el título; con él, el juego queda en juego
       libre ([resultados](SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04)).
+- [ ] Mods en el paquete de Windows: `play.ps1` construye los de `game.psd1`
+      (`ModIds`) con el compilador del paquete, los instala en la carpeta del
+      jugador y no impide jugar si fallan; `-NoMods` juega sin ellos. Está
+      escrito y el código de los mods se compiló en la nube para Windows (con
+      MinGW-w64), pero falta probarlo con el compilador del paquete: en la
+      laptop y en el flujo de GitHub, que ahora comprueba que el runner cargue
+      cada mod.
 - [ ] Probar el mod de Jamie con una partida real: la propuesta de verdad,
       guardar y cargar, una segunda propuesta y los dos sexos del jugador.
-      Necesita un guardado cerca de la boda con Jamie.
+      Necesita un guardado cerca de la boda con Jamie, que hoy no existe.
 - [ ] Mod de Jamie v1.1: que la ceremonia no vaya seguida de la escena de las
       notas (opción A+ de [SCRIPTS.md](SCRIPTS.md): pasar al estado 9 al
       terminar la ceremonia; falta comprobar qué hace ese estado).
@@ -509,9 +516,16 @@ by piece, in the order above)
       without the mod the epilogue and the title screen follow; with it the
       game goes back to free play
       ([results](SCRIPTS.md#run-time-test-of-the-mod-2026-11-04)).
+- [ ] Mods in the Windows package: `play.ps1` builds those of `game.psd1`
+      (`ModIds`) with the package's compiler, installs them in the player's
+      folder and does not stop the game if they fail; `-NoMods` plays without
+      them. It is written and the mods' code was compiled for Windows in the
+      cloud (with MinGW-w64), but it has not been tried with the package's
+      compiler yet: on the laptop and in the GitHub workflow, which now checks
+      that the runner loads each mod.
 - [ ] Try the Jamie mod with a real save: the actual proposal, save and load,
       a second proposal and both genders of the player. It needs a save close
-      to the wedding with Jamie.
+      to the wedding with Jamie, which does not exist today.
 - [ ] Jamie mod v1.1: do not follow the ceremony with the notes scene (option
       A+ in [SCRIPTS.md](SCRIPTS.md): go to state 9 when the ceremony ends;
       what that state does still has to be checked).
