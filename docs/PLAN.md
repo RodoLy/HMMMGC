@@ -8,7 +8,10 @@
 
 Prioridad: **la recompilación va primero** (pista A). La pista B (mods del
 juego) empieza ya con el mod de Jamie, porque funciona sobre el juego
-recompilado; todo lo que la pista A descubre le sirve.
+recompilado; todo lo que la pista A descubre le sirve. La pista C (launcher)
+es la cara del proyecto: la aplicación con la que el jugador carga su juego,
+activa mods y juega, como en otras recompilaciones. Avanza en paralelo; hoy
+son scripts de PowerShell sueltos.
 
 **Decisión (2026-11-05, corregida el mismo día): la pista A sigue.** El
 jugador pidió quitar Dolphin solo si otra recompilación de GameCube o Wii ya
@@ -251,16 +254,36 @@ pieza por pieza, en el orden de arriba)
       avisos y se probó dentro del juego con condiciones escritas a mano: sin
       el mod siguen el epílogo y el título; con él, el juego queda en juego
       libre ([resultados](SCRIPTS.md#prueba-en-ejecución-del-mod-2026-11-04)).
-- [ ] Mods en el paquete de Windows: `play.ps1` construye los de `game.psd1`
-      (`ModIds`) con el compilador del paquete, los instala en la carpeta del
-      jugador y no impide jugar si fallan; `-NoMods` juega sin ellos. Está
-      escrito y el código de los mods se compiló en la nube para Windows (con
-      MinGW-w64), pero falta probarlo con el compilador del paquete: en la
-      laptop y en el flujo de GitHub, que ahora comprueba que el runner cargue
-      cada mod.
+- [ ] Mods en el paquete de Windows: `play.ps1` construye los activos de
+      `game.psd1` (`ModIds`) con el compilador del paquete, los instala en la
+      carpeta del jugador y no impide jugar si fallan; `-NoMods` juega sin
+      ellos. Se probó en la laptop con Windows ARM64 (2026-11-05, con los
+      archivos nuevos copiados sobre el paquete): el compilador del paquete
+      construyó los dos mods y el runner los cargó (`mod loaded:` en
+      `Logs\play.log`). Falta el flujo de GitHub, que comprueba que el runner
+      cargue cada mod y no se ha vuelto a ejecutar (cuesta unos 30 minutos).
+- [ ] Ventana de ajustes provisional (`Settings.bat`): una casilla por mod y
+      la velocidad del personaje de 25 % a 300 % con deslizador, con botones
+      para guardar y jugar. Guarda `settings.json` en la carpeta del jugador y
+      `play.ps1` lo sigue (`-PlayerSpeed` gana solo esa vez; `-NoMods` lo
+      ignora). Es un puente: la pista C lo reemplaza por el launcher y conserva
+      el mismo archivo. Se escribió sin poder ejecutar PowerShell en el
+      contenedor (las pruebas comparan los archivos entre sí y un analizador
+      revisa la sintaxis); la primera ejecución en la laptop encontró un error
+      de texto vacío en una etiqueta, ya corregido. Falta confirmarla allí.
 - [ ] Probar el mod de Jamie con una partida real: la propuesta de verdad,
       guardar y cargar, una segunda propuesta y los dos sexos del jugador.
-      Necesita un guardado cerca de la boda con Jamie, que hoy no existe.
+      Necesita un guardado cerca de la boda con Jamie, que hoy no existe: se
+      está armando uno con la propia rutina de guardado del juego, para que el
+      jugador lo pruebe en su laptop.
+- [ ] Comprobar si Jamie vive en la casa como cónyuge después de la boda. Hoy
+      el mod solo evita que el juego termine; falta observar los días
+      siguientes. Si no aparece, es parte del mod v2.
+- [ ] Avance rápido de las escenas mientras se mantiene una tecla (la barra
+      espaciadora): un mod que acelere los eventos y la asignación de la
+      tecla (hoy Espacio no está asignada en la distribución de teclado de
+      Dolphin). Se activa y se ajusta desde la ventana de ajustes y, después,
+      desde el launcher.
 - [ ] Mod de Jamie v1.1: que la ceremonia no vaya seguida de la escena de las
       notas (opción A+ de [SCRIPTS.md](SCRIPTS.md): pasar al estado 9 al
       terminar la ceremonia; falta comprobar qué hace ese estado).
@@ -274,11 +297,91 @@ pieza por pieza, en el orden de arriba)
       distancia fue exactamente proporcional al factor con 100, 150 y 200 %.
       Con 400 % el personaje atravesó la puerta de su casa, por eso el máximo
       es 300 %. Cómo se mueve el personaje y los resultados están en
-      [MOVEMENT.md](MOVEMENT.md). Falta probarlo en Windows (es el paquete el
-      que lo compila).
+      [MOVEMENT.md](MOVEMENT.md). Probado en la laptop con Windows ARM64
+      (2026-11-05): funciona, según el jugador.
 - [ ] Widescreen como mod (o como códigos Gecko para quien use Dolphin):
       localizar las constantes.
 - [ ] Mod de Jamie v2 (contenido): rutina de cónyuge, diálogos, eventos de hijo.
+
+### Pista C – Launcher y experiencia del jugador (en paralelo)
+
+**Meta (la pidió el jugador el 2026-11-05):** una aplicación de verdad, como las
+de otras recompilaciones (por ejemplo Zelda64Recomp): una ventana propia donde
+se carga el juego, se activan los mods y se ajusta todo, en lugar de los
+`.bat` y `.ps1` sueltos de hoy.
+
+**Decisión: no se escribe un launcher desde cero.** ModernGekko ya trae uno
+(`tools/moderngekko_launcher.cpp`, en C++ con SDL3 y Dear ImGui) con selección
+de la imagen del disco y extracción, controles, API gráfica, resolución,
+pantalla completa y partida en red; el nuestro (`HarvestMoonMM.exe`) sale de
+él. Lo que le falta es justo lo que hoy hace `play.ps1`: recompilar el juego y
+manejar los mods. La interfaz no depende del núcleo de Dolphin (solo la lectura
+del disco usa hoy su `DiscIO`, que cambia con el paso 4 de la pista A), así que
+sobrevive al cambio de runtime. Se prefiere un parche mínimo que enlace código
+propio de este repositorio (`launcher/`) a un parche grande sobre un código
+ajeno; el clon de ModernGekko no se toca.
+
+- [ ] C0. Diseño: pantallas (Juego, Mods, Controles, Ajustes, Acerca de y
+      licencias), textos en español e inglés, y un solo archivo `settings.json`
+      con el formato de hoy, para que el paso de la ventana provisional al
+      launcher no le cambie nada al jugador.
+- [ ] C1. «Cargar juego» dentro del launcher: elegir la imagen del disco
+      (el botón de explorar ya existe), comprobar el ID `G4AEE9`, extraer y
+      **recompilar mostrando el progreso y el registro en la propia ventana**
+      (el launcher ejecuta `moderngekko-port` y el compilador del paquete como
+      procesos hijos y muestra su salida), recordar el disco, y dar mensajes de
+      error claros. Reemplaza `Play.bat`, `Play-Keyboard.bat` y `play.ps1`.
+- [ ] C2. Pestaña Mods: lista con casilla, descripción y opciones de cada mod
+      (la velocidad del personaje con deslizador de 25 % a 300 %, el avance
+      rápido de escenas), instalar un mod de la comunidad (`.mgm`)
+      arrastrándolo y quitarlo. Reemplaza `Settings.ps1`.
+- [ ] C3. Mods ya construidos: que el flujo de GitHub compile los mods
+      oficiales con los mismos headers que el runner y los traiga listos en el
+      paquete. El jugador deja de necesitar compilador para los mods y el
+      inicio es más rápido; el compilador queda solo para recompilar el juego
+      desde su disco, que es lo único que depende de sus datos. (Cambia la
+      decisión de construirlos en la computadora del jugador, que permite
+      probar un mod nuevo en la laptop sin reconstruir todo el paquete, unos
+      30 minutos de GitHub.)
+- [ ] C4. Controles (lo pidió el jugador el 2026-11-05): asignación
+      automática según el tipo de control y una pestaña para reasignar todo.
+      Hoy el launcher genera para cualquier control SDL un mismo perfil de
+      GameCube fijo (`GCPadNew.ini`, un botón de SDL por cada botón del juego;
+      se puede volver a generar, pero no cambiar botón por botón) y el
+      teclado usa la asignación fija de Dolphin. Lo que se hará:
+      - Reconocer el tipo de control con SDL (Xbox, PlayStation, Switch
+        Pro y Joy-Con, 8BitDo, teclado) y escoger la distribución que le
+        corresponde: en un control de Nintendo los botones A y B están en la
+        posición contraria a la de uno de Xbox, y los gatillos L y R de
+        GameCube son analógicos.
+      - Asignar solo al conectar un control (y avisar al conectar o
+        desconectar), recordar la elección de cada control por su
+        identificador y volver al teclado si no hay ninguno.
+      - Una pestaña para reasignar cada botón y cada eje de GameCube («pulsa
+        el botón que quieres»), con vista en vivo del control, zonas muertas y
+        sensibilidad de las palancas, perfiles con nombre y un botón para
+        volver a la asignación automática.
+      - Lo mismo para el teclado, incluida la tecla del avance rápido de
+        escenas (la barra espaciadora).
+      Reemplaza la asignación fija de teclado de Dolphin y el perfil generado.
+- [ ] C5. Pestaña Ajustes: API gráfica, resolución, pantalla completa,
+      relación de aspecto y widescreen, 60 cuadros por segundo y velocidad de
+      carga, a medida que existan como mods o ajustes; idioma de la interfaz.
+- [ ] C6. Un solo programa: `HarvestMoonMM.exe` es lo único que el jugador
+      abre; el paquete queda con ese programa, `bin\`, `mods\` y `toolchain\`,
+      sin `.bat` ni `.ps1`.
+- [ ] C7. Distribución: avisos de Windows (hoy hay que desbloquear el zip; una
+      firma digital los quitaría) y actualización desde el propio launcher.
+- [ ] C8. Pruebas: de la lógica (archivo de ajustes, lista de mods, avance de la
+      recompilación) en el flujo de pruebas, y de la interfaz con capturas de
+      pantalla. SDL3 con el renderizador por software corre en Linux con una
+      pantalla virtual (Xvfb), como ya se hace con el juego, así que gran parte
+      se puede comprobar en el contenedor sin gastar minutos de GitHub; lo que
+      depende de Windows ARM64 (compilador, DirectX 12) se prueba en la laptop.
+
+**Mientras tanto (el puente):** `Settings.bat` y `play.ps1` siguen funcionando y
+comparten el archivo `settings.json`; lo que el jugador elija hoy lo conserva
+el launcher.
 
 ### Convenciones
 
@@ -292,7 +395,10 @@ cambio en inglés, documentación bilingüe y nunca datos del juego.
 
 Priority: **the recompilation comes first** (track A). Track B (game mods)
 starts now with the Jamie mod, because it works on the recompiled game;
-everything track A discovers feeds into it.
+everything track A discovers feeds into it. Track C (launcher) is the face of
+the project: the application with which the player loads their game, turns
+mods on and plays, as in other recompilations. It moves in parallel; today it
+is loose PowerShell scripts.
 
 **Decision (2026-11-05, corrected the same day): track A goes on.** The
 player asked to remove Dolphin only if another GameCube or Wii recompilation
@@ -533,16 +639,36 @@ by piece, in the order above)
       without the mod the epilogue and the title screen follow; with it the
       game goes back to free play
       ([results](SCRIPTS.md#run-time-test-of-the-mod-2026-11-04)).
-- [ ] Mods in the Windows package: `play.ps1` builds those of `game.psd1`
-      (`ModIds`) with the package's compiler, installs them in the player's
-      folder and does not stop the game if they fail; `-NoMods` plays without
-      them. It is written and the mods' code was compiled for Windows in the
-      cloud (with MinGW-w64), but it has not been tried with the package's
-      compiler yet: on the laptop and in the GitHub workflow, which now checks
-      that the runner loads each mod.
+- [ ] Mods in the Windows package: `play.ps1` builds the active ones of
+      `game.psd1` (`ModIds`) with the package's compiler, installs them in the
+      player's folder and does not stop the game if they fail; `-NoMods` plays
+      without them. It was tried on the laptop with Windows ARM64 (2026-11-05,
+      with the new files copied over the package): the package's compiler
+      built both mods and the runner loaded them (`mod loaded:` in
+      `Logs\play.log`). What is left is the GitHub workflow, which checks that
+      the runner loads each mod and has not been run again (it takes about 30
+      minutes).
+- [ ] Provisional settings window (`Settings.bat`): a check box for each mod
+      and the character speed from 25 % to 300 % with a slider, with buttons
+      to save and play. It keeps `settings.json` in the player's folder and
+      `play.ps1` follows it (`-PlayerSpeed` wins for that one run; `-NoMods`
+      ignores it). It is a bridge: track C replaces it with the launcher and
+      keeps the same file. It was written without being able to run PowerShell
+      in the container (the tests compare the files with each other and a
+      parser checks the syntax); the first run on the laptop found an error
+      with an empty text in a label, already fixed. It still has to be
+      confirmed there.
 - [ ] Try the Jamie mod with a real save: the actual proposal, save and load,
       a second proposal and both genders of the player. It needs a save close
-      to the wedding with Jamie, which does not exist today.
+      to the wedding with Jamie, which does not exist today: one is being made
+      with the game's own save routine, for the player to try on their laptop.
+- [ ] Check whether Jamie lives in the house as a spouse after the wedding.
+      Today the mod only keeps the game from ending; the following days still
+      have to be observed. If she does not appear, it is part of mod v2.
+- [ ] Fast-forward the scenes while a key is held (the space bar): a mod that
+      speeds up the events and the key assignment (today Space is not mapped
+      in Dolphin's keyboard layout). It is turned on and adjusted from the
+      settings window and, later, from the launcher.
 - [ ] Jamie mod v1.1: do not follow the ceremony with the notes scene (option
       A+ in [SCRIPTS.md](SCRIPTS.md): go to state 9 when the ceremony ends;
       what that state does still has to be checked).
@@ -556,11 +682,92 @@ by piece, in the order above)
       proportional to the factor at 100, 150 and 200 %. At 400 % the character
       went through the door of its house, which is why the maximum is 300 %.
       How the character moves and the results are in
-      [MOVEMENT.md](MOVEMENT.md). It has not been tried on Windows yet (the
-      package is what builds it there).
+      [MOVEMENT.md](MOVEMENT.md). Tried on the laptop with Windows ARM64
+      (2026-11-05): it works, according to the player.
 - [ ] Widescreen as a mod (or as Gecko codes for people using Dolphin): find
       the constants.
 - [ ] Jamie mod v2 (content): spouse routine, dialogue, child events.
+
+### Track C – Launcher and player experience (in parallel)
+
+**Goal (asked for by the player on 2026-11-05):** a real application, like those
+of other recompilations (for example Zelda64Recomp): a window of its own where
+the game is loaded, mods are turned on and everything is adjusted, instead of
+today's loose `.bat` and `.ps1` files.
+
+**Decision: a launcher is not written from scratch.** ModernGekko already
+brings one (`tools/moderngekko_launcher.cpp`, in C++ with SDL3 and Dear ImGui)
+with disc image selection and extraction, controls, graphics API, resolution,
+fullscreen and netplay; ours (`HarvestMoonMM.exe`) comes from it. What it lacks
+is exactly what `play.ps1` does today: recompiling the game and handling the
+mods. The interface does not depend on the Dolphin core (only the disc reading
+uses its `DiscIO` today, which changes with step 4 of track A), so it survives
+the change of runtime. A minimal patch that links code of our own in this
+repository (`launcher/`) is preferred to a big patch on somebody else's code;
+the ModernGekko clone is not touched.
+
+- [ ] C0. Design: screens (Game, Mods, Controls, Settings, About and licenses),
+      texts in Spanish and English, and a single `settings.json` file with
+      today's format, so that going from the provisional window to the
+      launcher changes nothing for the player.
+- [ ] C1. "Load game" inside the launcher: choose the disc image (the browse
+      button already exists), check the ID `G4AEE9`, extract and **recompile
+      showing the progress and the log in the window itself** (the launcher
+      runs `moderngekko-port` and the package's compiler as child processes
+      and shows their output), remember the disc, and give clear error
+      messages. It replaces `Play.bat`, `Play-Keyboard.bat` and `play.ps1`.
+- [ ] C2. Mods tab: a list with a check box, description and options for each
+      mod (the character speed with a slider from 25 % to 300 %, the scene
+      fast-forward), install a community mod (`.mgm`) by dragging it in, and
+      remove it. It replaces `Settings.ps1`.
+- [ ] C3. Prebuilt mods: the GitHub workflow compiles the official mods with
+      the same headers as the runner and ships them ready in the package. The
+      player no longer needs a compiler for the mods and starting is faster;
+      the compiler is left only for recompiling the game from their disc, the
+      only thing that depends on their data. (It changes the decision to build
+      them on the player's computer, which lets a new mod be tried on the
+      laptop without rebuilding the whole package, about 30 minutes of GitHub.)
+- [ ] C4. Controls (asked for by the player on 2026-11-05): automatic
+      assignment according to the type of controller, and a tab to remap
+      everything. Today the launcher generates for any SDL controller the same
+      fixed GameCube profile (`GCPadNew.ini`, one SDL button for each button of
+      the game; it can be generated again, but not changed button by button)
+      and the keyboard uses Dolphin's fixed assignment. What will be done:
+      - Recognise the type of controller with SDL (Xbox, PlayStation, Switch
+        Pro and Joy-Con, 8BitDo, keyboard) and pick the layout that suits it:
+        on a Nintendo controller the A and B buttons are in the opposite
+        position to those of an Xbox one, and the GameCube L and R triggers
+        are analog.
+      - Assign only when a controller is connected (and say so when one is
+        connected or disconnected), remember the choice for each controller by
+        its identifier, and go back to the keyboard if there is none.
+      - A tab to remap each GameCube button and axis ("press the button you
+        want"), with a live view of the controller, dead zones and stick
+        sensitivity, named profiles and a button to go back to the automatic
+        assignment.
+      - The same for the keyboard, including the scene fast-forward key (the
+        space bar).
+      It replaces Dolphin's fixed keyboard assignment and the generated
+      profile.
+- [ ] C5. Settings tab: graphics API, resolution, fullscreen, aspect ratio and
+      widescreen, 60 frames per second and load speed, as they come to exist as
+      mods or settings; language of the interface.
+- [ ] C6. A single program: `HarvestMoonMM.exe` is the only thing the player
+      opens; the package is left with that program, `bin\`, `mods\` and
+      `toolchain\`, with no `.bat` or `.ps1`.
+- [ ] C7. Distribution: Windows warnings (today the zip has to be unblocked; a
+      digital signature would remove them) and updating from the launcher
+      itself.
+- [ ] C8. Tests: of the logic (settings file, list of mods, progress of the
+      recompilation) in the test workflow, and of the interface with
+      screenshots. SDL3 with the software renderer runs on Linux with a
+      virtual screen (Xvfb), as we already do with the game, so much of it can
+      be checked in the container without spending GitHub minutes; what
+      depends on Windows ARM64 (compiler, DirectX 12) is tried on the laptop.
+
+**Meanwhile (the bridge):** `Settings.bat` and `play.ps1` keep working and
+share the `settings.json` file; whatever the player chooses today is kept by
+the launcher.
 
 ### Conventions
 
