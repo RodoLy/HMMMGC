@@ -6,9 +6,40 @@
 
 ## Español
 
-Prioridad: **la recompilación va primero** (pista A). La pista B (mods sobre
-los scripts del disco) queda para después; todo lo que la pista A descubre
-le sirve.
+Prioridad: **la recompilación va primero** (pista A). La pista B (mods del
+juego) empieza ya con el mod de Jamie, porque funciona sobre el juego
+recompilado; todo lo que la pista A descubre le sirve.
+
+**Meta: un port totalmente nativo, sin código de Dolphin.** Hoy es un híbrido:
+el código del juego ya corre recompilado como código nativo en Windows ARM64,
+pero el hardware que lo rodea (video, audio, disco, controles, tarjeta de
+memoria, temporizadores) sigue siendo el núcleo de Dolphin que trae
+ModernGekko.
+
+**Decisión (2026-11-04): el runtime final será propio y se apoyará en
+[aurora](https://github.com/encounter/aurora)** para GX, controles, disco y
+tarjeta de memoria; el audio y el sistema operativo los escribimos nosotros.
+No se escribe un renderizador de GX desde cero ni se espera a que DolRecomp
+traiga su propio runtime. ModernGekko queda como la base que ya funciona y
+como referencia para comparar mientras se reemplaza pieza por pieza. Por qué
+aurora, y qué se sabe y qué no, está en
+[RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md). El orden:
+
+1. Mod de Jamie v1: es pequeño y prueba el mecanismo de ganchos y parches que
+   usarán las piezas nuevas.
+2. Identificar el SDK por firma (fase 0): sin saber qué funciones son de GX,
+   OS, DVD, CARD, PAD y AX no se puede reemplazar nada.
+3. Experimento de viabilidad con aurora: llevar las llamadas de GX del juego a
+   aurora y dibujar la pantalla de título. Es el mayor riesgo del camino. A
+   favor: solo 85 funciones de `main.dol` escriben en la tubería de GX (la
+   librería del SDK y ocho funciones de vértices; `tools/find_gx_pipe_writers.py`),
+   así que GX se puede reemplazar por funciones. Falta saber cómo usa el juego
+   las listas de visualización y si aurora corre sobre DirectX 12 en Windows
+   ARM64. Si el experimento falla, se decide de nuevo con lo aprendido.
+4. DVD, CARD y PAD nativos: son los más sencillos, y dan cargas instantáneas,
+   guardados en archivos y controles con SDL.
+5. Audio (AX) y sistema operativo (hilos, alarmas, interrupciones, retrazos).
+6. Quitar el núcleo de Dolphin del runtime.
 
 ### Pista A – Recompilación (port nativo)
 
@@ -21,7 +52,7 @@ le sirve.
       Herramientas propias en vez de dtk; ver [FUNCTION_MAP.md](FUNCTION_MAP.md).
 - [x] Nombres con evidencia: arranque de CodeWarrior y los 13 `Init` del SDK.
 - [ ] Identificar el resto del SDK por firma (fronteras de lo que el runtime
-      reemplaza en la fase 2).
+      reemplaza en la fase 2; es el paso 2 del orden de arriba).
 
 **Fase 1 – Recompilación de CPU**
 - [x] Evaluar recompiladores. Recomendación: DolRecomp + ModernGekko
@@ -90,22 +121,37 @@ le sirve.
       el mismo header que DolRecomp con `--map` (idéntico byte por byte).
       Con el backend de C el mapa no cambia el código, así que
       `moderngekko-port` no necesita cambios.
-- Si se adopta ModernGekko, la fase 2 se reduce mucho: video, audio, disco y
-  controles ya vienen del núcleo de Dolphin.
+- Con ModernGekko el juego ya es jugable sin la fase 2, porque video, audio,
+  disco y controles vienen del núcleo de Dolphin; la fase 2 es lo que falta
+  para la meta de un port nativo.
 
-**Fase 2 – Runtime** (la parte pesada)
-- [ ] Renderizador GX sobre OpenGL/Vulkan. Referencia: Dolphin para la
-      semántica de GX; Wiicompiled para la arquitectura de un recomp.
-- [ ] Audio AX → SDL/miniaudio.
-- [ ] PAD → SDL gamepad y teclado.
-- [ ] CARD → archivos de guardado en disco.
+**Fase 2 – Runtime propio** (la parte pesada: reemplaza el hardware de Dolphin
+pieza por pieza, en el orden de arriba)
+- [ ] Identificar el SDK por firma (pendiente de la fase 0).
+- [ ] Experimento de viabilidad: las llamadas de GX del juego dibujan la
+      pantalla de título con aurora.
+- [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). Referencia:
+      Dolphin para la semántica de GX; Wiicompiled (Mario Kart Wii) para la
+      arquitectura de un recomp.
 - [ ] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
       instantáneas).
-- [ ] Hito 1.0: jugable de principio a fin a 480p 4:3.
+- [ ] CARD → archivos de guardado en disco (aurora lee los `.gci` y `.raw` de
+      Dolphin).
+- [ ] PAD → SDL gamepad y teclado.
+- [ ] Audio AX → SDL/miniaudio.
+- [ ] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
+      el núcleo de Dolphin.
+- [ ] Quitar el núcleo de Dolphin del runtime; mientras dure la migración,
+      comparar contra él (verificador lockstep, capturas de pantalla).
+- [ ] Hito 1.0: jugable de principio a fin a 480p 4:3 sin código de Dolphin.
 
 **Fase 3 – Mejoras**
-- [ ] Resolución interna arbitraria (4K).
-- [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado.
+- [ ] Resolución interna arbitraria (4K). Con ModernGekko es el ajuste de
+      resolución interna de Dolphin (sin probar todavía en el paquete); con
+      aurora, su escalado de resolución.
+- [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado. Aurora
+      trae widescreen y escalado, pero el HUD bien anclado y el culling siguen
+      siendo trabajo nuestro (un mod).
 - [ ] 120 fps. El juego calcula todo por cuadro y presenta 30 por segundo,
       con dos retrazas de video por cuadro (medido en una laptop: 29.97 cuadros
       y 59.94 retrazas por segundo), así que subir la cadencia no es un ajuste:
@@ -133,12 +179,15 @@ le sirve.
       corre el gancho de Jamie). Los *patch* (reemplazar una función) existen
       en la API, pero ningún mod los ha probado todavía dentro del juego.
 - [ ] Carpeta de reemplazo de assets para mods.
+- [ ] Capa de mods en el runtime propio (ganchos y parches por nombre, como los
+      de ModernGekko): el mod de Jamie y los demás se escriben una vez y
+      tienen que seguir funcionando cuando el runtime cambie.
 
 **Fase 5 – Release**
 - [ ] Instalador que toma la ISO/RVZ del usuario, verifica hash y extrae.
 - [ ] Builds Windows/Linux. Sin assets del juego en el repo ni en el release.
 
-### Pista B – Mods en Dolphin (después de la recomp)
+### Pista B – Mods del juego (en paralelo; con ModernGekko son paquetes `.mgm`)
 
 - [x] Documentar el formato `.lsb`: [SCRIPTS.md](SCRIPTS.md) y `tools/lsb.py`
       (desensamblador y verificador; los 291 scripts del disco se leen sin
@@ -149,7 +198,8 @@ le sirve.
 - [ ] Mod de Jamie v1: un hook en `0x80166888` que borra la bandera 230 cuando
       termina la ceremonia (diseño en [SCRIPTS.md](SCRIPTS.md); sin probar
       todavía dentro del juego).
-- [ ] Widescreen y velocidad como códigos Gecko (localizar constantes).
+- [ ] Widescreen y velocidad como mods (o como códigos Gecko para quien use
+      Dolphin): localizar las constantes.
 - [ ] Mod de Jamie v2 (contenido): rutina de cónyuge, diálogos, eventos de hijo.
 
 ### Convenciones
@@ -162,8 +212,39 @@ cambio en inglés, documentación bilingüe y nunca datos del juego.
 
 ## English
 
-Priority: **the recompilation comes first** (track A). Track B (mods on the
-disc's scripts) comes later; everything track A discovers feeds into it.
+Priority: **the recompilation comes first** (track A). Track B (game mods)
+starts now with the Jamie mod, because it works on the recompiled game;
+everything track A discovers feeds into it.
+
+**Goal: a fully native port, with no Dolphin code.** Today it is a hybrid: the
+game's code already runs recompiled as native code on Windows ARM64, but the
+hardware around it (video, audio, disc, input, memory card, timers) is still
+the Dolphin core that ModernGekko brings.
+
+**Decision (2026-11-04): the final runtime will be our own and will rest on
+[aurora](https://github.com/encounter/aurora)** for GX, input, disc and memory
+card; we write the audio and the operating system ourselves. A GX renderer is
+not written from scratch and we do not wait for DolRecomp to bring its own
+runtime. ModernGekko stays as the base that already works and as the reference
+to compare against while it is replaced piece by piece. Why aurora, and what
+is known and what is not, is in
+[RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md). The order:
+
+1. Jamie mod v1: it is small and it tests the hook and patch mechanism that
+   the new pieces will use.
+2. Identify the SDK by signature (phase 0): without knowing which functions
+   belong to GX, OS, DVD, CARD, PAD and AX nothing can be replaced.
+3. Feasibility experiment with aurora: take the game's GX calls to aurora and
+   draw the title screen. It is the biggest risk on the way. In its favour:
+   only 85 functions of `main.dol` store into the GX pipe (the SDK's library
+   and eight vertex functions; `tools/find_gx_pipe_writers.py`), so GX can be
+   replaced function by function. Still unknown: how the game uses display
+   lists and whether aurora runs on DirectX 12 on Windows ARM64. If the
+   experiment fails, we decide again with what it taught us.
+4. Native DVD, CARD and PAD: the simplest ones, and they bring instant loads,
+   save files and SDL input.
+5. Audio (AX) and operating system (threads, alarms, interrupts, retraces).
+6. Remove the Dolphin core from the runtime.
 
 ### Track A – Recompilation (native port)
 
@@ -176,7 +257,7 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       In-repo tools instead of dtk; see [FUNCTION_MAP.md](FUNCTION_MAP.md).
 - [x] Names with evidence: CodeWarrior startup and the 13 SDK `Init`s.
 - [ ] Identify the rest of the SDK by signature (the boundary of what the
-      runtime replaces in phase 2).
+      runtime replaces in phase 2; it is step 2 of the order above).
 
 **Phase 1 – CPU recompilation**
 - [x] Evaluate recompilers. Recommendation: DolRecomp + ModernGekko
@@ -246,21 +327,36 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       same header DolRecomp writes with `--map` (byte-identical). With the C
       backend the map does not change the code, so `moderngekko-port` needs
       no changes.
-- If ModernGekko is adopted, phase 2 shrinks a lot: video, audio, disc and
-  input already come from the Dolphin core.
+- With ModernGekko the game is already playable without phase 2, because
+  video, audio, disc and input come from the Dolphin core; phase 2 is what is
+  left for the goal of a native port.
 
-**Phase 2 – Runtime** (the heavy part)
-- [ ] GX renderer on OpenGL/Vulkan. Reference: Dolphin for GX semantics,
-      Wiicompiled for recomp architecture.
-- [ ] AX audio → SDL/miniaudio.
-- [ ] PAD → SDL gamepad and keyboard.
-- [ ] CARD → save files on disk.
+**Phase 2 – Own runtime** (the heavy part: it replaces Dolphin's hardware piece
+by piece, in the order above)
+- [ ] Identify the SDK by signature (pending from phase 0).
+- [ ] Feasibility experiment: the game's GX calls draw the title screen with
+      aurora.
+- [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). Reference:
+      Dolphin for GX semantics; Wiicompiled (Mario Kart Wii) for recomp
+      architecture.
 - [ ] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
-- [ ] Milestone 1.0: playable start to finish at 480p 4:3.
+- [ ] CARD → save files on disk (aurora reads Dolphin's `.gci` and `.raw`
+      files).
+- [ ] PAD → SDL gamepad and keyboard.
+- [ ] AX audio → SDL/miniaudio.
+- [ ] Operating system: threads, alarms, interrupts and video retraces without
+      the Dolphin core.
+- [ ] Remove the Dolphin core from the runtime; while the migration lasts,
+      compare against it (lockstep verifier, screenshots).
+- [ ] Milestone 1.0: playable start to finish at 480p 4:3 with no Dolphin code.
 
 **Phase 3 – Enhancements**
-- [ ] Arbitrary internal resolution (4K).
-- [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD.
+- [ ] Arbitrary internal resolution (4K). With ModernGekko it is Dolphin's
+      internal-resolution setting (not tried in the package yet); with aurora,
+      its resolution scaling.
+- [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD. Aurora
+      brings widescreen and scaling, but a well-anchored HUD and culling remain
+      our work (a mod).
 - [ ] 120 fps. The game computes everything per frame and presents 30 a
       second, with two video retraces per frame (measured on a laptop: 29.97
       frames and 59.94 retraces a second), so raising the rate is not a
@@ -287,12 +383,15 @@ disc's scripts) comes later; everything track A discovers feeds into it.
       tells when the Jamie hook will run). *Patches* (replacing a function)
       exist in the API, but no mod has tried one inside the game yet.
 - [ ] Asset-override folder for mods.
+- [ ] Mod layer in the own runtime (hooks and patches by name, like
+      ModernGekko's): the Jamie mod and the others are written once and have
+      to keep working when the runtime changes.
 
 **Phase 5 – Release**
 - [ ] Installer that takes the user's ISO/RVZ, verifies the hash and extracts.
 - [ ] Windows/Linux builds. No game assets in the repo or the release.
 
-### Track B – Dolphin mods (after the recomp)
+### Track B – Game mods (in parallel; with ModernGekko they are `.mgm` packages)
 
 - [x] Document the `.lsb` format: [SCRIPTS.md](SCRIPTS.md) and `tools/lsb.py`
       (disassembler and checker; all 291 scripts on the disc parse without
@@ -302,7 +401,8 @@ disc's scripts) comes later; everything track A discovers feeds into it.
 - [ ] Jamie mod v1: a hook on `0x80166888` that clears flag 230 once the
       ceremony is over (design in [SCRIPTS.md](SCRIPTS.md); not tried inside
       the game yet).
-- [ ] Widescreen and speed as Gecko codes (find the constants).
+- [ ] Widescreen and speed as mods (or as Gecko codes for people using
+      Dolphin): find the constants.
 - [ ] Jamie mod v2 (content): spouse routine, dialogue, child events.
 
 ### Conventions
