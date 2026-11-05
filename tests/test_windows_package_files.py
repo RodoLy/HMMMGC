@@ -93,6 +93,35 @@ def test_the_assembler_packs_the_settings_of_the_game_the_package_plays():
     assert game_definition()["LauncherName"] == package_windows.DEFAULT_LAUNCHER_NAME
 
 
+def test_the_project_has_a_settings_file_for_the_game_the_package_plays():
+    assert package_windows.GAME_SETTINGS_FILE.is_file()
+    assert package_windows.GAME_SETTINGS_FILE.parent.name == game_definition()["GameId"]
+
+
+def project_settings() -> dict[str, str]:
+    """The `Name = value` lines of the project's settings file, with the section each is in."""
+    settings = {}
+    section = ""
+    for line in package_windows.GAME_SETTINGS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+        elif line and not line.startswith("#"):
+            name, _, value = line.partition("=")
+            settings[f"{section}.{name.strip()}"] = value.strip()
+    return settings
+
+
+def test_the_projects_settings_are_in_the_core_section_where_dolphin_reads_them():
+    assert set(project_settings()) == {"Core.StaticRecompIdlePC", "Core.FastDiscSpeed"}
+
+
+def test_the_idle_loop_is_an_address_of_the_games_code():
+    address = int(project_settings()["Core.StaticRecompIdlePC"], 16)
+    assert 0x80003100 <= address < 0x81800000  # main memory, from where the code starts
+    assert address % 4 == 0  # an instruction
+
+
 def test_the_game_id_has_the_six_characters_of_a_disc_id():
     assert re.fullmatch(r"[A-Z0-9]{6}", game_definition()["GameId"])
 

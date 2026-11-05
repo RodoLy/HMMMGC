@@ -7,8 +7,9 @@ The game is recompiled on the player's own laptop, from the player's own disc, s
 shipped is not the game but everything needed to do that without installing anything:
 
     bin/        the launcher, the runner, the recompiler (DolRecomp) and the tool that drives
-                it (moderngekko-port), with the files they read at run time; `bin/source/`
-                holds the few source folders that building a game module needs
+                it (moderngekko-port), with the files they read at run time (Dolphin's own
+                settings for the game, followed by this project's); `bin/source/` holds the
+                few source folders that building a game module needs
     toolchain/  the portable C compiler (llvm-mingw), CMake, Ninja and Python that build it
     licenses/   the license texts of the programs in bin/
     Play.bat, Play-Keyboard.bat, play.ps1, game.psd1
@@ -25,9 +26,9 @@ El juego se recompila en la laptop del jugador, con el disco del jugador, así q
 entrega no es el juego sino todo lo necesario para hacerlo sin instalar nada:
 
     bin/        el launcher, el runner, el recompilador (DolRecomp) y la herramienta que lo
-                maneja (moderngekko-port), con los archivos que leen al ejecutarse; `bin/source/`
-                tiene las pocas carpetas de código que hacen falta para construir el módulo
-                de un juego
+                maneja (moderngekko-port), con los archivos que leen al ejecutarse (los ajustes
+                de Dolphin para el juego, seguidos de los de este proyecto); `bin/source/` tiene
+                las pocas carpetas de código que hacen falta para construir el módulo de un juego
     toolchain/  el compilador de C portátil (llvm-mingw), CMake, Ninja y Python que lo construyen
     licenses/   los textos de las licencias de los programas de bin/
     Play.bat, Play-Keyboard.bat, play.ps1, game.psd1
@@ -71,6 +72,12 @@ LICENSE_FILE = Path(__file__).resolve().parent.parent / "LICENSE"
 PROGRAMS = ("moderngekko-port", "moderngekko-run", "dolrecomp")
 RUN_TIME_DATA_FOLDER = "Sys"  # Dolphin's data folder, which the runner reads from beside itself
 GAME_ID_OF_THE_PACKAGE_SETTINGS = "G4AEE9"
+# This project's Dolphin settings for the game (skip the idle loop, fast disc). They go after the ones
+# Dolphin already has for it, in Sys/GameSettings/, which is where the runner reads them from.
+GAME_SETTINGS_FILE = (
+    Path(__file__).resolve().parent.parent / "config" / GAME_ID_OF_THE_PACKAGE_SETTINGS / "game_settings.ini"
+)
+GAME_SETTINGS_IN_SYS = f"GameSettings/{GAME_ID_OF_THE_PACKAGE_SETTINGS}.ini"
 
 # What building a game module reads from ModernGekko's source tree, relative to it. They go to
 # bin/source/ with the same layout, where moderngekko-port looks for them (see
@@ -186,6 +193,7 @@ class PackageInputs:
     runtime_directory: Path | None = None  # the Visual C++ runtime DLLs the programs need
     package_files_directory: Path = PACKAGE_FILES_DIRECTORY
     license_file: Path = LICENSE_FILE
+    game_settings_file: Path = GAME_SETTINGS_FILE
     versions: dict[str, str] = field(default_factory=dict)  # what was packaged, for VERSIONS.txt
 
 
@@ -261,6 +269,32 @@ def add_programs(inputs: PackageInputs, bin_directory: Path) -> None:
             shutil.copy2(library, bin_directory / library.name)
 
 
+def with_project_settings(dolphin_settings: str, project_settings: str) -> str:
+    """Dolphin's settings for the game followed by this project's, as the text of one INI file.
+
+    Dolphin reads a section that appears twice as one section, and a later line wins over an earlier one.
+    Putting the project's settings at the end therefore leaves Dolphin's content as it is and lets the
+    project's settings win where both say something.
+    """
+    parts = ["\n".join(part.splitlines()).strip("\n") for part in (dolphin_settings, project_settings)]
+    return "\n\n".join(part for part in parts if part) + "\n"
+
+
+def add_game_settings(inputs: PackageInputs, bin_directory: Path) -> None:
+    """Put the project's settings after Dolphin's own in bin/Sys/GameSettings/<game id>.ini.
+
+    The runner reads the settings of a game from that file, beside itself, so the game starts with them
+    and nobody has to edit a file. add_programs must have copied Sys/ already.
+    """
+    require_file(inputs.game_settings_file, "the project's settings for the game")
+    target = bin_directory / RUN_TIME_DATA_FOLDER / GAME_SETTINGS_IN_SYS
+    dolphin_settings = target.read_text(encoding="utf-8-sig") if target.is_file() else ""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    write_text(
+        target, with_project_settings(dolphin_settings, inputs.game_settings_file.read_text(encoding="utf-8"))
+    )
+
+
 def add_module_sources(inputs: PackageInputs, bin_directory: Path) -> None:
     """The source folders moderngekko-port reads to build a game module, laid out as in the source tree."""
     destination = bin_directory / "source"
@@ -324,6 +358,7 @@ def assemble_package(inputs: PackageInputs, output_directory: Path) -> Path:
         shutil.rmtree(root)
     bin_directory = root / "bin"
     add_programs(inputs, bin_directory)
+    add_game_settings(inputs, bin_directory)
     add_module_sources(inputs, bin_directory)
     add_licenses(inputs, root)
     add_toolchain(inputs, root)
@@ -380,6 +415,12 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         "--license-file", type=Path, default=LICENSE_FILE, help="the project's license (default: LICENSE)"
     )
     parser.add_argument(
+        "--game-settings-file",
+        type=Path,
+        default=GAME_SETTINGS_FILE,
+        help="the project's Dolphin settings for the game (default: config/<game id>/game_settings.ini)",
+    )
+    parser.add_argument(
         "--launcher-name", default=DEFAULT_LAUNCHER_NAME, help="the launcher's file name, without .exe"
     )
     parser.add_argument("--zip", type=Path, help="also write the package as this zip file")
@@ -412,6 +453,7 @@ def main(argv: list[str] | None = None) -> int:
         runtime_directory=arguments.runtime_directory,
         package_files_directory=arguments.package_files_directory,
         license_file=arguments.license_file,
+        game_settings_file=arguments.game_settings_file,
         versions=versions,
     )
     try:

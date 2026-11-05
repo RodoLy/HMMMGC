@@ -47,6 +47,7 @@ from ppc_encode import (  # noqa: E402
     ori,
     stw,
 )
+from project import CONFIG_DIRECTORY  # noqa: E402
 
 TEXT = 0x80004000
 NO_OPERATION = ori(0, 0, 0)
@@ -205,16 +206,22 @@ needs_game_files = pytest.mark.skipif(
     reason="set HM_MM_DOL to your extracted main.dol",
 )
 
-# The loop of the operating system's idle thread in G4AEE9, the address that the runner is told to skip
-# (StaticRecompIdlePC).
-REAL_IDLE_LOOP = 0x80174D98
+
+def idle_loop_the_game_is_told_to_skip() -> int:
+    """The address of StaticRecompIdlePC in the settings that the game is started with."""
+    for line in (CONFIG_DIRECTORY / "game_settings.ini").read_text(encoding="utf-8").splitlines():
+        name, _, value = line.partition("=")
+        if name.strip() == "StaticRecompIdlePC":
+            return int(value.strip(), 16)
+    raise AssertionError("config/G4AEE9/game_settings.ini does not set StaticRecompIdlePC")
 
 
 @needs_game_files
-def test_the_real_idle_loop_of_the_game_is_found():
+def test_the_loop_the_game_is_told_to_skip_is_the_idle_loop_of_the_operating_system():
+    address = idle_loop_the_game_is_told_to_skip()
     loops = {loop.address: loop for loop in find_busy_wait_loops(Dol(Path(DOL_PATH)))}
-    assert REAL_IDLE_LOOP in loops
-    first, compare, branch = loops[REAL_IDLE_LOOP].instructions
+    assert address in loops
+    first, compare, branch = loops[address].instructions
     assert first.word == lwz(0, RUN_QUEUE_BITS_OFFSET, SMALL_DATA_BASE)
     assert compare.word == cmplwi(0, 0)
-    assert branch.branch_target() == REAL_IDLE_LOOP
+    assert branch.branch_target() == address

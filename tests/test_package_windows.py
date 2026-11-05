@@ -21,6 +21,8 @@ import fetch_windows_toolchain  # noqa: E402
 import package_windows as package  # noqa: E402
 
 LAUNCHER_NAME = "HarvestMoonMM"
+# What the made-up settings file of the project holds: a comment and one setting.
+PROJECT_SETTINGS = "# the project's settings\n[Core]\nFastDiscSpeed = True\n"
 
 
 def write_files(root: Path, relative_paths: list[str]) -> Path:
@@ -124,6 +126,8 @@ def inputs(tmp_path) -> package.PackageInputs:
         (package_files / script).write_text("first line\nsecond line é\n", encoding="utf-8")
     license_file = tmp_path / "LICENSE"
     license_file.write_text("GPL text", encoding="utf-8")
+    game_settings_file = tmp_path / "game_settings.ini"
+    game_settings_file.write_text(PROJECT_SETTINGS, encoding="utf-8")
     return package.PackageInputs(
         build_directory=build,
         source_directory=source,
@@ -135,6 +139,7 @@ def inputs(tmp_path) -> package.PackageInputs:
         runtime_directory=runtime,
         package_files_directory=package_files,
         license_file=license_file,
+        game_settings_file=game_settings_file,
         versions={"llvm-mingw": "20261020", "ModernGekko": "edd460a"},
     )
 
@@ -195,6 +200,29 @@ def test_only_the_sources_that_a_module_build_reads_are_packaged(package_directo
     assert "vendor/dolphin/GXRuntime/tests/not_needed_either.c" not in names
     assert "vendor/dolphin/Data/Sys/GameSettings/GALE01.ini" not in names  # another game's settings
     assert "vendor/dolphin/Source/Core/Core/PowerPC/StaticRecomp/StaticRecompCore.cpp" not in names
+
+
+def test_the_projects_settings_for_the_game_follow_the_ones_dolphin_has(package_directory):
+    settings = (package_directory / "bin" / "Sys" / "GameSettings" / "G4AEE9.ini").read_text(encoding="utf-8")
+    assert (
+        settings == "Sys/GameSettings/G4AEE9.ini\n\n# the project's settings\n[Core]\nFastDiscSpeed = True\n"
+    )
+
+
+def test_the_settings_the_module_build_reads_stay_as_dolphin_has_them(package_directory):
+    # moderngekko-port reads its list of patches from this copy; the runner's settings are not its business.
+    copy = package_directory / "bin" / "source" / "vendor" / "dolphin" / "Data" / "Sys" / "GameSettings"
+    assert (copy / "G4AEE9.ini").read_text(
+        encoding="utf-8"
+    ) == "vendor/dolphin/Data/Sys/GameSettings/G4AEE9.ini"
+
+
+def test_the_settings_of_other_games_in_dolphins_data_are_not_touched(inputs, tmp_path):
+    other_game = inputs.build_directory / "Sys" / "GameSettings" / "GALE01.ini"
+    other_game.write_text("[Core]\nCPUCore = 1\n", encoding="utf-8")
+    package_directory = package.assemble_package(inputs, tmp_path / "out")
+    packaged = package_directory / "bin" / "Sys" / "GameSettings" / "GALE01.ini"
+    assert packaged.read_text(encoding="utf-8") == "[Core]\nCPUCore = 1\n"
 
 
 def test_each_tool_of_the_toolchain_goes_in_its_own_folder(package_directory):
@@ -347,6 +375,12 @@ def test_a_build_folder_without_dolphins_data_is_refused(inputs, tmp_path):
         package.assemble_package(inputs, tmp_path / "out")
 
 
+def test_a_missing_settings_file_of_the_project_is_named_in_the_error(inputs, tmp_path):
+    inputs.game_settings_file.unlink()
+    with pytest.raises(package.PackageError, match="settings for the game"):
+        package.assemble_package(inputs, tmp_path / "out")
+
+
 def test_a_missing_source_folder_is_named_in_the_error(inputs, tmp_path):
     shutil.rmtree(inputs.source_directory / "vendor/dolphin/module-template")
     with pytest.raises(package.PackageError, match="vendor/dolphin/module-template"):
@@ -396,6 +430,23 @@ def test_a_star_in_a_pattern_also_crosses_folders():
     assert package.is_excluded("Lib/json/__pycache__/decoder.pyc", ["*/__pycache__/*"])
 
 
+# -- Joining the settings -----------------------------------------------------------------------------
+
+
+def test_the_projects_settings_go_after_dolphins_and_the_result_ends_in_one_line_end():
+    joined = package.with_project_settings("[ActionReplay]\n$Code\n", "[Core]\nFastDiscSpeed = True\n\n\n")
+    assert joined == "[ActionReplay]\n$Code\n\n[Core]\nFastDiscSpeed = True\n"
+
+
+def test_windows_line_ends_in_either_part_become_plain_line_ends():
+    joined = package.with_project_settings("[A]\r\nx = 1\r\n", "[B]\r\ny = 2\r\n")
+    assert joined == "[A]\nx = 1\n\n[B]\ny = 2\n"
+
+
+def test_nothing_is_added_before_the_projects_settings_when_dolphin_has_none():
+    assert package.with_project_settings("", "[Core]\nx = 1\n") == "[Core]\nx = 1\n"
+
+
 # -- The zip -----------------------------------------------------------------------------------------
 
 
@@ -415,6 +466,7 @@ def command_line(inputs, tmp_path, *extra) -> list[str]:
     return [
         "--package-files-directory", str(inputs.package_files_directory),
         "--license-file", str(inputs.license_file),
+        "--game-settings-file", str(inputs.game_settings_file),
         "--build-directory", str(inputs.build_directory),
         "--source-directory", str(inputs.source_directory),
         "--llvm-mingw-directory", str(inputs.llvm_mingw_directory),
