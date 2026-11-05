@@ -434,8 +434,8 @@ def real_gx_entry_points() -> dict[int, EntryPoint]:
 def test_the_game_reaches_75_of_the_156_functions_of_the_gx_library():
     """The figures quoted in docs/RECOMPILER_EVALUATION.md and docs/PLAN.md.
 
-    How many of the 75 are named changes as more of the SDK gets named; when it does, update the documents
-    together with this test."""
+    All 75 have a name: 49 from the signature database and 26 from reading their code
+    (tests/test_gx_function_names.py)."""
     symbols = SymbolTable.read(SYMBOLS_PATH)
     stretches = stretches_of_library(symbols, "GX")
     call_map = build_call_map(Dol(Path(DOL_PATH)), symbols)
@@ -446,7 +446,7 @@ def test_the_game_reaches_75_of_the_156_functions_of_the_gx_library():
     assert len(functions_in(symbols, stretches)) == 156
     assert len(entry_points) == 75
     named_count = sum(1 for entry_point in entry_points if entry_point.is_named)
-    assert (named_count, len(entry_points) - named_count) == (49, 26)
+    assert (named_count, len(entry_points) - named_count) == (75, 0)
 
 
 @needs_game_files
@@ -458,9 +458,9 @@ def test_the_vertex_setup_functions_are_called_from_very_few_places(real_gx_entr
     }
     assert calls_and_callers[0x801908C8] == (33, 1)  # GXSetVtxDesc
     assert calls_and_callers[0x80190D4C] == (33, 2)  # GXSetVtxAttrFmt
-    # GXSetArray, which has no name yet. It is called 35 times; one of them is GXInit's helper, inside the
-    # library, so it does not count. The other 34 are all in one function of the game.
-    assert calls_and_callers[0x801912B0] == (34, 1)
+    # GXSetArray is called 35 times; one of them is GXInit's helper, inside the library, so it does not
+    # count. The other 34 are all in one function of the game.
+    assert calls_and_callers[0x801912B0] == (34, 1)  # GXSetArray
 
 
 @needs_game_files
