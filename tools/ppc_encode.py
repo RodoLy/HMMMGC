@@ -20,6 +20,7 @@ import struct
 
 # Primary opcodes (the top six bits of the word).
 OPCODE_CMPLI = 10
+OPCODE_CMPI = 11
 OPCODE_ADDIC = 12
 OPCODE_ADDI = 14
 OPCODE_ADDIS = 15
@@ -27,9 +28,12 @@ OPCODE_BC = 16
 OPCODE_B = 18
 OPCODE_RLWINM = 21
 OPCODE_ORI = 24
+OPCODE_ANDI_RECORD = 28
 OPCODE_EXTENDED = 31
 OPCODE_LWZ = 32
+OPCODE_LBZ = 34
 OPCODE_STW = 36
+OPCODE_LHZ = 40
 OPCODE_LMW = 46
 OPCODE_LFD = 50
 OPCODE_STFD = 54
@@ -38,6 +42,7 @@ OPCODE_FLOAT_DOUBLE = 63
 
 # Extended opcodes (bits 21-30) of the primary opcodes above.
 EXTENDED_LWZX = 23
+EXTENDED_CMPL = 32
 EXTENDED_MFMSR = 83
 EXTENDED_MTMSR = 146
 EXTENDED_MTCRF = 144
@@ -47,8 +52,11 @@ EXTENDED_MTFSF = 711
 EXTENDED_NEG = 104
 
 SPR_CTR = 9
+BO_IF_FALSE = 4  # branch if the condition-register bit is clear
 BO_IF_TRUE = 12  # branch if the condition-register bit is set
+BO_DECREMENT_COUNT_IF_NOT_ZERO = 16  # bdnz: count down CTR and branch while it is not zero
 CR0_GREATER_THAN = 1  # bit number, within the condition register, of cr0's "greater than"
+CR0_EQUAL = 2
 
 BLR = 0x4E800020
 BCTR = 0x4E800420
@@ -83,6 +91,14 @@ def lwz(rd: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_LWZ, rd, ra, displacement)
 
 
+def lbz(rd: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_LBZ, rd, ra, displacement)
+
+
+def lhz(rd: int, displacement: int, ra: int) -> int:
+    return _d_form(OPCODE_LHZ, rd, ra, displacement)
+
+
 def stw(rs: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_STW, rs, ra, displacement)
 
@@ -99,8 +115,21 @@ def stfd(frs: int, displacement: int, ra: int) -> int:
     return _d_form(OPCODE_STFD, frs, ra, displacement)
 
 
+def cmpwi(ra: int, value: int) -> int:
+    return _d_form(OPCODE_CMPI, 0, ra, value)  # cr0
+
+
 def cmplwi(ra: int, value: int) -> int:
     return _d_form(OPCODE_CMPLI, 0, ra, value)  # cr0
+
+
+def cmplw(ra: int, rb: int) -> int:
+    return (OPCODE_EXTENDED << 26) | (ra << 16) | (rb << 11) | (EXTENDED_CMPL << 1)  # cr0
+
+
+def andi_record(ra: int, rs: int, value: int) -> int:
+    """andi. rA, rS, value: the result goes to rA, and cr0 says how it compares with zero."""
+    return _d_form(OPCODE_ANDI_RECORD, rs, ra, value)
 
 
 def psq_l(frd: int, displacement: int, ra: int) -> int:
@@ -184,13 +213,29 @@ def bl(from_address: int, to_address: int) -> int:
     return b(from_address, to_address) | 1
 
 
-def bgt(from_address: int, to_address: int) -> int:
+def _conditional_branch(from_address: int, to_address: int, branch_options: int, condition_bit: int) -> int:
     return (
         (OPCODE_BC << 26)
-        | (BO_IF_TRUE << 21)
-        | (CR0_GREATER_THAN << 16)
+        | (branch_options << 21)
+        | (condition_bit << 16)
         | ((to_address - from_address) & 0xFFFC)
     )
+
+
+def bgt(from_address: int, to_address: int) -> int:
+    return _conditional_branch(from_address, to_address, BO_IF_TRUE, CR0_GREATER_THAN)
+
+
+def beq(from_address: int, to_address: int) -> int:
+    return _conditional_branch(from_address, to_address, BO_IF_TRUE, CR0_EQUAL)
+
+
+def bne(from_address: int, to_address: int) -> int:
+    return _conditional_branch(from_address, to_address, BO_IF_FALSE, CR0_EQUAL)
+
+
+def bdnz(from_address: int, to_address: int) -> int:
+    return _conditional_branch(from_address, to_address, BO_DECREMENT_COUNT_IF_NOT_ZERO, 0)
 
 
 def high_adjusted(address: int) -> int:
