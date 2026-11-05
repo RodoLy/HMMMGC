@@ -16,6 +16,9 @@ shipped is not the game but everything needed to do that without installing anyt
                 the double-click entry points (with the launcher, and with the keyboard),
                 the script that does the work, and the data that says which game this
                 package plays
+    Measure-Speed.bat, Measure-Speed.ps1
+                optional: they start the game and write down how fast it runs, to find out
+                why it is slow on a computer
 
 The inputs are folders that the workflow has already built or unpacked; this script only
 decides what goes where and what stays out, which is why it can be tested on any machine. The
@@ -34,6 +37,9 @@ entrega no es el juego sino todo lo necesario para hacerlo sin instalar nada:
     Play.bat, Play-Keyboard.bat, play.ps1, game.psd1
                 los puntos de entrada con doble clic (con el launcher, y con el teclado), el
                 script que hace el trabajo y los datos que dicen qué juego juega este paquete
+    Measure-Speed.bat, Measure-Speed.ps1
+                opcionales: arrancan el juego y anotan qué tan rápido corre, para saber por qué
+                va lento en una computadora
 
 Las entradas son carpetas que el workflow ya construyó o descomprimió; este script solo decide
 qué va dónde y qué se queda fuera, por eso se puede probar en cualquier máquina. El paquete no
@@ -104,8 +110,10 @@ SOURCE_EXCLUDED = ("*.cpp",)
 BATCH_FILES = ("Play.bat", "Play-Keyboard.bat")
 SCRIPT_FILE = "play.ps1"
 GAME_DEFINITION_FILE = "game.psd1"
+# Optional: they start the game, like Play-Keyboard.bat, and log its speed (see README.md).
+MEASURING_FILES = ("Measure-Speed.bat", "Measure-Speed.ps1")
 PACKAGE_DOCUMENTS = ("README.md", "THIRD_PARTY_NOTICES.md")
-PACKAGE_FILES = (*BATCH_FILES, SCRIPT_FILE, GAME_DEFINITION_FILE, *PACKAGE_DOCUMENTS)
+PACKAGE_FILES = (*BATCH_FILES, SCRIPT_FILE, GAME_DEFINITION_FILE, *MEASURING_FILES, *PACKAGE_DOCUMENTS)
 
 # Parts of each tool that a player's build never uses, left out to keep the download small. A
 # pattern matches the path relative to the tool's folder, in lower case; `*` also crosses folders.

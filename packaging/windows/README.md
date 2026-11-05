@@ -81,6 +81,12 @@ lector de discos), así que no hay nada que configurar. Las cifras y el porqué 
   ahorro de batería; todavía no se ha medido cuánto ayuda.
 - **Al entrar o salir de un lugar** puede haber una pequeña caída de cuadros (menos de un segundo):
   es el juego cargando.
+- **Para medir cómo corre en tu computadora**, ejecuta `Play-Keyboard.bat` una vez y luego
+  `Measure-Speed.bat`. Abre el juego y, cada pocos segundos, anota en
+  `%LOCALAPPDATA%\HarvestMoonMM\Logs\speed.log` la velocidad (1.00 es la completa), cuánto procesador
+  usa cada hilo, el reloj del procesador, si la computadora está en batería y el modo de energía de
+  Windows; al cerrar el juego agrega un resumen. No contiene datos del juego, pero si el juego falla
+  puede traer rutas de tu computadora: revísalo antes de compartirlo.
 - **Para cambiar uno de los dos ajustes solo para ti**, crea el archivo
   `%LOCALAPPDATA%\HarvestMoonMM\GameSettings\G4AEE9.ini` con la misma línea; por ejemplo, para
   volver a la lentitud original del disco:
@@ -127,6 +133,7 @@ de direcciones del Explorador de archivos): el juego extraído (`games`), el mó
 | Carpeta o archivo | Para qué sirve |
 | --- | --- |
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | Lo que haces doble clic (con el launcher, o con el teclado), el script que prepara el juego y los datos del juego. |
+| `Measure-Speed.bat`, `Measure-Speed.ps1` | Opcionales: abren el juego con el teclado y anotan qué tan rápido corre (ver «Rendimiento y batería»). |
 | `bin\` | El launcher, el runner, DolRecomp (el recompilador) y `moderngekko-port` (lo que los une). `bin\source` trae los pocos archivos de código que hacen falta para construir el módulo del juego. |
 | `toolchain\` | El compilador de C portátil (llvm-mingw), CMake, Ninja y Python, que construyen el módulo. No se instala nada en Windows. |
 | `licenses\`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `VERSIONS.txt` | Licencias, componentes de terceros y las versiones exactas con las que se hizo este paquete. |
@@ -217,6 +224,12 @@ are in [PERFORMANCE.md][performance].
   not been measured yet.
 - **When entering or leaving a place** there may be a small drop in frames (under a second): it is
   the game loading.
+- **To measure how it runs on your computer**, run `Play-Keyboard.bat` once and then
+  `Measure-Speed.bat`. It opens the game and, every few seconds, writes to
+  `%LOCALAPPDATA%\HarvestMoonMM\Logs\speed.log` the speed (1.00 is full speed), how much processor
+  each thread uses, the processor's clock, whether the computer is on battery and Windows' power
+  mode; when the game is closed it adds a summary. It holds no game data, but if the game crashes it
+  can carry paths of your computer: check it before sharing it.
 - **To change one of the two settings only for yourself**, create the file
   `%LOCALAPPDATA%\HarvestMoonMM\GameSettings\G4AEE9.ini` with the same line; for example, to go
   back to the disc's original slowness:
@@ -263,6 +276,7 @@ and `StaticRecompModules`), your saved games, the settings, and the log of the l
 | Folder or file | What it is for |
 | --- | --- |
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | What you double-click (with the launcher, or with the keyboard), the script that prepares the game, and the game's data. |
+| `Measure-Speed.bat`, `Measure-Speed.ps1` | Optional: they open the game with the keyboard and write down how fast it runs (see "Performance and battery"). |
 | `bin\` | The launcher, the runner, DolRecomp (the recompiler) and `moderngekko-port` (what ties them together). `bin\source` holds the few source files that building the game's module needs. |
 | `toolchain\` | The portable C compiler (llvm-mingw), CMake, Ninja and Python, which build the module. Nothing is installed in Windows. |
 | `licenses\`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `VERSIONS.txt` | Licenses, third-party components, and the exact versions this package was made with. |

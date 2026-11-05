@@ -198,6 +198,51 @@ def test_the_modules_directory_limit_matches_the_length_the_build_needs():
     assert limit + 201 <= 260
 
 
+# -- The speed meter: Measure-Speed.bat and Measure-Speed.ps1 ---------------------------------------
+
+
+@pytest.mark.parametrize("name", package_windows.MEASURING_FILES)
+def test_a_speed_meter_file_has_no_tabs_and_no_trailing_spaces(name):
+    for number, line in enumerate(read_packaging_file(name).splitlines(), start=1):
+        assert "\t" not in line, f"{name} line {number} has a tab"
+        assert line == line.rstrip(), f"{name} line {number} has trailing spaces"
+
+
+def test_the_speed_meter_batch_file_is_plain_ascii_because_cmd_reads_it_in_the_oem_code_page():
+    assert all(byte < 128 for byte in (PACKAGING_DIRECTORY / "Measure-Speed.bat").read_bytes())
+
+
+def test_the_speed_meter_batch_file_runs_the_script_that_sits_next_to_it():
+    commands = [
+        line
+        for line in read_packaging_file("Measure-Speed.bat").splitlines()
+        if "Measure-Speed.ps1" in line and not line.lstrip().startswith("rem")
+    ]
+    assert len(commands) == 1
+    assert '"%~dp0Measure-Speed.ps1"' in commands[0]  # the folder of the batch file, wherever it is run from
+    assert "-ExecutionPolicy Bypass" in commands[0]
+
+
+def test_the_speed_meter_asks_for_the_powershell_that_windows_has_and_stops_on_errors():
+    script = read_packaging_file("Measure-Speed.ps1")
+    assert "#Requires -Version 5.1" in script
+    assert "Set-StrictMode -Version Latest" in script
+    assert "$ErrorActionPreference = 'Stop'" in script
+
+
+def test_the_speed_meter_only_reads_values_that_the_game_definition_has():
+    keys_read = set(re.findall(r"\$Game\.(\w+)", read_packaging_file("Measure-Speed.ps1")))
+    assert keys_read
+    assert keys_read <= set(game_definition())
+
+
+def test_the_speed_meter_starts_the_runner_with_the_graphics_the_keyboard_batch_file_uses():
+    # Measuring with other graphics than the ones that are played with would measure something else.
+    assert "'--graphics', $Game.GraphicsBackend" in read_packaging_file("Measure-Speed.ps1")
+    keyboard_start = body_of_function(read_packaging_file("play.ps1"), "Start-GameWithKeyboard")
+    assert "$Game.GraphicsBackend" in keyboard_start
+
+
 # -- The batch files: Play.bat and Play-Keyboard.bat -------------------------------------------------
 
 
