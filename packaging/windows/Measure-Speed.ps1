@@ -177,7 +177,7 @@ function Write-SpeedLine {
 
 # The status of the game as a table of names and values, or $null while the file cannot be read
 # (the game rewrites it all the time, so it can be locked for a moment).
-function Read-GameStatus {
+function Read-GameStatusFile {
     try { $lines = Get-Content -LiteralPath $StatusPath -ErrorAction Stop }
     catch { return $null }
     $status = @{}
@@ -232,10 +232,12 @@ function Get-PowerMode {
 # run slower. A dash if Windows does not say.
 function Get-ProcessorClockText {
     try {
-        $clock = Get-CimInstance -ClassName Win32_PerfFormattedData_Counters_ProcessorInformation `
+        $processorInformation = Get-CimInstance -ClassName Win32_PerfFormattedData_Counters_ProcessorInformation `
             -Filter "Name = '_Total'" -ErrorAction Stop | Select-Object -First 1
-        if ($null -eq $clock) { return '-' }
-        return '{0} MHz ({1} %)' -f $clock.ProcessorFrequency, $clock.PercentProcessorPerformance
+        if ($null -eq $processorInformation) { return '-' }
+        $frequencyInMegahertz = $processorInformation.ProcessorFrequency
+        $percentOfTopSpeed = $processorInformation.PercentProcessorPerformance
+        return '{0} MHz ({1} %)' -f $frequencyInMegahertz, $percentOfTopSpeed
     }
     catch { return '-' }
 }
@@ -384,7 +386,7 @@ $impossibleReadings = 0
 
 while (-not $gameProcess.HasExited) {
     Start-Sleep -Seconds $SecondsBetweenSamples
-    $status = Read-GameStatus
+    $status = Read-GameStatusFile
     if ($null -eq $status -or $status['state'] -ne 'running' -or $status['booted'] -ne '1') { continue }
 
     # The game can close between the check of the loop and here, and then its times cannot be read.
