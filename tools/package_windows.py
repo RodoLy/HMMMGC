@@ -9,7 +9,11 @@ shipped is not the game but everything needed to do that without installing anyt
     bin/        the launcher, the runner, the recompiler (DolRecomp) and the tool that drives
                 it (moderngekko-port), with the files they read at run time (Dolphin's own
                 settings for the game, followed by this project's); `bin/source/` holds the
-                few source folders that building a game module needs
+                few source folders that building a game module needs, and the headers that a
+                mod includes
+    mods/       the source of the mods, and the header with the names of the game's functions
+                that they are written with (made from the project's symbols); play.ps1 builds
+                them on the player's computer and installs them in the player's folder
     toolchain/  the portable C compiler (llvm-mingw), CMake, Ninja and Python that build it
     licenses/   the license texts of the programs in bin/
     Play.bat, Play-Keyboard.bat, play.ps1, game.psd1
@@ -32,6 +36,10 @@ entrega no es el juego sino todo lo necesario para hacerlo sin instalar nada:
                 maneja (moderngekko-port), con los archivos que leen al ejecutarse (los ajustes
                 de Dolphin para el juego, seguidos de los de este proyecto); `bin/source/` tiene
                 las pocas carpetas de código que hacen falta para construir el módulo de un juego
+                y los headers que incluye un mod
+    mods/       el código de los mods y el header con los nombres de las funciones del juego con
+                los que están escritos (hecho con los símbolos del proyecto); play.ps1 los
+                construye en la computadora del jugador y los instala en la carpeta del jugador
     toolchain/  el compilador de C portátil (llvm-mingw), CMake, Ninja y Python que lo construyen
     licenses/   los textos de las licencias de los programas de bin/
     Play.bat, Play-Keyboard.bat, play.ps1, game.psd1
@@ -65,7 +73,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from export_mod_symbols import mod_symbol_header  # noqa: E402
 from fetch_windows_toolchain import TOOLS as PINNED_TOOLS  # noqa: E402
+from project import SYMBOLS_PATH  # noqa: E402
+from symbols import SymbolTable  # noqa: E402
 from textfiles import write_text  # noqa: E402
 
 PACKAGE_FOLDER_NAME = "HarvestMoonMM-windows-arm64"
@@ -104,6 +115,23 @@ LICENSE_FILES = {
 }
 # The ABI folder is shared with Dolphin's own build, whose C++ sources a module never compiles.
 SOURCE_EXCLUDED = ("*.cpp",)
+
+# The mods are shipped as source and built on the player's computer, like the game module, so that
+# they are compiled against the very headers of the ModernGekko that made the runner. The folder
+# mods/ of the repository goes to mods/ of the package (without its README, which is for whoever
+# writes mods), and the header that names the game's functions goes into it, made from the
+# project's symbols. mods/CMakeLists.txt is given that header and bin/source/ (see play.ps1).
+MODS_DIRECTORY = Path(__file__).resolve().parent.parent / "mods"
+MODS_FOLDER_IN_PACKAGE = "mods"
+MODS_EXCLUDED = ("readme.md",)
+MOD_SYMBOLS_HEADER = f"generated/{GAME_ID_OF_THE_PACKAGE_SETTINGS}_symbols.h"
+# The headers of ModernGekko that a mod includes (mod_abi.h includes the other two), in its source
+# tree and in bin/source/, which mods/CMakeLists.txt is given as the ModernGekko source folder.
+MOD_HEADERS = (
+    "include/moderngekko/mod_abi.h",
+    "include/moderngekko/cpu_state.h",
+    "include/moderngekko/cpu_abi_version.h",
+)
 
 # Files of the package folder itself, from packaging/windows/. The player double-clicks Play.bat,
 # or Play-Keyboard.bat to open the game with the keyboard, without the launcher.
@@ -202,6 +230,8 @@ class PackageInputs:
     package_files_directory: Path = PACKAGE_FILES_DIRECTORY
     license_file: Path = LICENSE_FILE
     game_settings_file: Path = GAME_SETTINGS_FILE
+    mods_directory: Path = MODS_DIRECTORY
+    symbols_file: Path = SYMBOLS_PATH  # the names of the game's functions, for the mods
     versions: dict[str, str] = field(default_factory=dict)  # what was packaged, for VERSIONS.txt
 
 
@@ -303,6 +333,14 @@ def add_game_settings(inputs: PackageInputs, bin_directory: Path) -> None:
     )
 
 
+def copy_source_file(inputs: PackageInputs, relative_path: str, destination: Path) -> None:
+    """Copy one file of ModernGekko's source tree to the same relative path under `destination`."""
+    source = inputs.source_directory / relative_path
+    require_file(source, f"source file {relative_path}")
+    (destination / relative_path).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination / relative_path)
+
+
 def add_module_sources(inputs: PackageInputs, bin_directory: Path) -> None:
     """The source folders moderngekko-port reads to build a game module, laid out as in the source tree."""
     destination = bin_directory / "source"
@@ -310,9 +348,36 @@ def add_module_sources(inputs: PackageInputs, bin_directory: Path) -> None:
         require_directory(inputs.source_directory / folder, f"source folder {folder}")
         copy_tree(inputs.source_directory / folder, destination / folder, SOURCE_EXCLUDED)
     for file in SOURCE_FILES:
-        require_file(inputs.source_directory / file, f"source file {file}")
-        (destination / file).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(inputs.source_directory / file, destination / file)
+        copy_source_file(inputs, file, destination)
+
+
+def mod_symbols_header(symbols_file: Path) -> str:
+    """The text of the header that names the game's functions, made from the project's symbols.
+
+    A mod that needs a function the header does not have would stop building on the player's computer,
+    where there is nobody to fix it, so a file with no functions or with lines that could not be read
+    is refused here.
+    """
+    require_file(symbols_file, "the game's symbols")
+    table = SymbolTable.read(symbols_file)
+    if table.unparsed_lines:
+        line_number, line = table.unparsed_lines[0]
+        raise PackageError(f"{symbols_file}:{line_number} could not be read: {line}")
+    if not any(symbol.kind == "function" for symbol in table):
+        raise PackageError(f"no functions found in {symbols_file}")
+    return mod_symbol_header(table)
+
+
+def add_mods(inputs: PackageInputs, root: Path, bin_directory: Path) -> None:
+    """The mods as source, with what building them needs: the header of the game's names and ModernGekko's."""
+    require_directory(inputs.mods_directory, "the mods' source folder")
+    mods = root / MODS_FOLDER_IN_PACKAGE
+    copy_tree(inputs.mods_directory, mods, MODS_EXCLUDED)
+    symbols_header = mods / MOD_SYMBOLS_HEADER
+    symbols_header.parent.mkdir(parents=True, exist_ok=True)
+    write_text(symbols_header, mod_symbols_header(inputs.symbols_file))
+    for header in MOD_HEADERS:
+        copy_source_file(inputs, header, bin_directory / "source")
 
 
 def add_licenses(inputs: PackageInputs, root: Path) -> None:
@@ -368,6 +433,7 @@ def assemble_package(inputs: PackageInputs, output_directory: Path) -> Path:
     add_programs(inputs, bin_directory)
     add_game_settings(inputs, bin_directory)
     add_module_sources(inputs, bin_directory)
+    add_mods(inputs, root, bin_directory)
     add_licenses(inputs, root)
     add_toolchain(inputs, root)
     add_package_files(inputs, root)
@@ -429,6 +495,18 @@ def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
         help="the project's Dolphin settings for the game (default: config/<game id>/game_settings.ini)",
     )
     parser.add_argument(
+        "--mods-directory",
+        type=Path,
+        default=MODS_DIRECTORY,
+        help="the source of the mods (default: mods/)",
+    )
+    parser.add_argument(
+        "--symbols-file",
+        type=Path,
+        default=SYMBOLS_PATH,
+        help="the names of the game's functions, for the mods (default: config/<game id>/symbols.txt)",
+    )
+    parser.add_argument(
         "--launcher-name", default=DEFAULT_LAUNCHER_NAME, help="the launcher's file name, without .exe"
     )
     parser.add_argument("--zip", type=Path, help="also write the package as this zip file")
@@ -462,6 +540,8 @@ def main(argv: list[str] | None = None) -> int:
         package_files_directory=arguments.package_files_directory,
         license_file=arguments.license_file,
         game_settings_file=arguments.game_settings_file,
+        mods_directory=arguments.mods_directory,
+        symbols_file=arguments.symbols_file,
         versions=versions,
     )
     try:

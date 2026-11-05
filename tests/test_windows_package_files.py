@@ -98,6 +98,27 @@ def test_the_project_has_a_settings_file_for_the_game_the_package_plays():
     assert package_windows.GAME_SETTINGS_FILE.parent.name == game_definition()["GameId"]
 
 
+# -- The mods the package carries ---------------------------------------------------------------------
+
+
+def test_the_project_has_the_mods_and_the_symbols_that_the_assembler_packs():
+    assert (package_windows.MODS_DIRECTORY / "CMakeLists.txt").is_file()
+    assert package_windows.SYMBOLS_PATH.is_file()
+
+
+def test_every_function_the_mods_name_is_in_the_header_the_package_gets():
+    # A mod that names a function the header lacks would stop building on the player's computer.
+    header = package_windows.mod_symbols_header(package_windows.SYMBOLS_PATH)
+    defined = set(re.findall(r"^#define (DOLRECOMP_SYMBOL_\w+) ", header, re.MULTILINE))
+    used = {
+        name
+        for source in package_windows.MODS_DIRECTORY.glob("*/mod.c")
+        for name in re.findall(r"\bDOLRECOMP_SYMBOL_\w+", source.read_text(encoding="utf-8"))
+    }
+    assert used
+    assert used <= defined
+
+
 def project_settings() -> dict[str, str]:
     """The `Name = value` lines of the project's settings file, with the section each is in."""
     settings = {}

@@ -134,7 +134,8 @@ de direcciones del Explorador de archivos): el juego extraído (`games`), el mó
 | --- | --- |
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | Lo que haces doble clic (con el launcher, o con el teclado), el script que prepara el juego y los datos del juego. |
 | `Measure-Speed.bat`, `Measure-Speed.ps1` | Opcionales: abren el juego con el teclado y anotan qué tan rápido corre (ver «Rendimiento y batería»). |
-| `bin\` | El launcher, el runner, DolRecomp (el recompilador) y `moderngekko-port` (lo que los une). `bin\source` trae los pocos archivos de código que hacen falta para construir el módulo del juego. |
+| `bin\` | El launcher, el runner, DolRecomp (el recompilador) y `moderngekko-port` (lo que los une). `bin\source` trae los pocos archivos de código que hacen falta para construir el módulo del juego y los headers de ModernGekko que incluye un mod. |
+| `mods\` | El código de los mods y el header con los nombres de las funciones del juego con los que están escritos. |
 | `toolchain\` | El compilador de C portátil (llvm-mingw), CMake, Ninja y Python, que construyen el módulo. No se instala nada en Windows. |
 | `licenses\`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `VERSIONS.txt` | Licencias, componentes de terceros y las versiones exactas con las que se hizo este paquete. |
 
@@ -277,7 +278,8 @@ and `StaticRecompModules`), your saved games, the settings, and the log of the l
 | --- | --- |
 | `Play.bat`, `Play-Keyboard.bat`, `play.ps1`, `game.psd1` | What you double-click (with the launcher, or with the keyboard), the script that prepares the game, and the game's data. |
 | `Measure-Speed.bat`, `Measure-Speed.ps1` | Optional: they open the game with the keyboard and write down how fast it runs (see "Performance and battery"). |
-| `bin\` | The launcher, the runner, DolRecomp (the recompiler) and `moderngekko-port` (what ties them together). `bin\source` holds the few source files that building the game's module needs. |
+| `bin\` | The launcher, the runner, DolRecomp (the recompiler) and `moderngekko-port` (what ties them together). `bin\source` holds the few source files that building the game's module needs, and the ModernGekko headers that a mod includes. |
+| `mods\` | The source of the mods, and the header with the names of the game's functions that they are written with. |
 | `toolchain\` | The portable C compiler (llvm-mingw), CMake, Ninja and Python, which build the module. Nothing is installed in Windows. |
 | `licenses\`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `VERSIONS.txt` | Licenses, third-party components, and the exact versions this package was made with. |
 

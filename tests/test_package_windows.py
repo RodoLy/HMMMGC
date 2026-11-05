@@ -23,6 +23,13 @@ import package_windows as package  # noqa: E402
 LAUNCHER_NAME = "HarvestMoonMM"
 # What the made-up settings file of the project holds: a comment and one setting.
 PROJECT_SETTINGS = "# the project's settings\n[Core]\nFastDiscSpeed = True\n"
+# What the made-up symbols file holds: two functions and a data object, in the format of symbols.txt.
+PROJECT_SYMBOLS = (
+    "# the names of the game's functions\n"
+    "OSInit = .text:0x80003100; // type:function size:0x40\n"
+    "fn_80166888 = .text:0x80166888; // type:function size:0x1F4\n"
+    "gSaveData = .bss:0x80400000; // type:object size:0x10\n"
+)
 
 
 def write_files(root: Path, relative_paths: list[str]) -> Path:
@@ -67,8 +74,24 @@ def inputs(tmp_path) -> package.PackageInputs:
             "LICENSE",
             "vendor/dolphin/COPYING",
             "vendor/dolphin/Externals/licenses.md",
+            "include/moderngekko/mod_abi.h",
+            "include/moderngekko/cpu_state.h",
+            "include/moderngekko/cpu_abi_version.h",
+            "include/moderngekko/runtime.hpp",  # part of the runner's own API: a mod never includes it
         ],
     )
+    mods = write_files(
+        tmp_path / "mods",
+        [
+            "CMakeLists.txt",
+            "README.md",  # for whoever writes mods, not for a player
+            "include/hm_mm_mod.h",
+            "jamie_marriage/mod.c",
+            "boot_logger/mod.c",
+        ],
+    )
+    symbols_file = tmp_path / "symbols.txt"
+    symbols_file.write_text(PROJECT_SYMBOLS, encoding="utf-8")
     llvm_mingw = write_files(
         tmp_path / "llvm-mingw",
         [
@@ -140,6 +163,8 @@ def inputs(tmp_path) -> package.PackageInputs:
         package_files_directory=package_files,
         license_file=license_file,
         game_settings_file=game_settings_file,
+        mods_directory=mods,
+        symbols_file=symbols_file,
         versions={"llvm-mingw": "20261020", "ModernGekko": "edd460a"},
     )
 
@@ -223,6 +248,79 @@ def test_the_settings_of_other_games_in_dolphins_data_are_not_touched(inputs, tm
     package_directory = package.assemble_package(inputs, tmp_path / "out")
     packaged = package_directory / "bin" / "Sys" / "GameSettings" / "GALE01.ini"
     assert packaged.read_text(encoding="utf-8") == "[Core]\nCPUCore = 1\n"
+
+
+# -- The mods ---------------------------------------------------------------------------------------
+
+
+def test_the_mods_go_as_source_in_a_folder_of_their_own(package_directory):
+    files = files_under(package_directory / "mods")
+    assert {"CMakeLists.txt", "include/hm_mm_mod.h", "jamie_marriage/mod.c", "boot_logger/mod.c"} <= files
+
+
+def test_the_readme_of_the_mods_is_for_whoever_writes_mods_and_is_not_packaged(package_directory):
+    assert "README.md" not in files_under(package_directory / "mods")
+
+
+def test_the_header_that_names_the_games_functions_is_made_from_the_projects_symbols(package_directory):
+    header = (package_directory / "mods" / "generated" / "G4AEE9_symbols.h").read_text(encoding="utf-8")
+    assert "#define DOLRECOMP_SYMBOL_COUNT 2u\n" in header  # the data object is not a function
+    assert "#define DOLRECOMP_SYMBOL_OSInit 0x80003100u\n" in header
+    assert "#define DOLRECOMP_SYMBOL_SIZE_OSInit 0x00000040u\n" in header
+    assert "#define DOLRECOMP_SYMBOL_fn_80166888 0x80166888u\n" in header
+    assert "gSaveData" not in header
+
+
+def test_the_header_that_names_the_games_functions_has_unix_line_ends_on_any_machine(package_directory):
+    header = package_directory / "mods" / "generated" / "G4AEE9_symbols.h"
+    assert b"\r" not in header.read_bytes()
+
+
+def test_the_headers_a_mod_includes_go_where_the_mods_cmake_file_looks_for_them(package_directory):
+    # mods/CMakeLists.txt is given bin/source as the ModernGekko source folder and adds its include/.
+    included = files_under(package_directory / "bin" / "source" / "include")
+    assert included == {
+        "moderngekko/mod_abi.h",
+        "moderngekko/cpu_state.h",
+        "moderngekko/cpu_abi_version.h",
+    }
+
+
+def test_the_mod_headers_are_the_ones_of_the_moderngekko_that_made_the_runner(package_directory):
+    copied = package_directory / "bin" / "source" / "include" / "moderngekko" / "mod_abi.h"
+    assert copied.read_text(encoding="utf-8") == "include/moderngekko/mod_abi.h"  # they hold their own path
+
+
+def test_a_missing_mods_folder_is_named_in_the_error(inputs, tmp_path):
+    shutil.rmtree(inputs.mods_directory)
+    with pytest.raises(package.PackageError, match="mods' source folder"):
+        package.assemble_package(inputs, tmp_path / "out")
+
+
+def test_a_missing_symbols_file_is_named_in_the_error(inputs, tmp_path):
+    inputs.symbols_file.unlink()
+    with pytest.raises(package.PackageError, match="the game's symbols"):
+        package.assemble_package(inputs, tmp_path / "out")
+
+
+def test_a_symbols_file_without_functions_is_refused(inputs, tmp_path):
+    only_data = "gSaveData = .bss:0x80400000; // type:object size:0x10\n"
+    inputs.symbols_file.write_text(only_data, encoding="utf-8")
+    with pytest.raises(package.PackageError, match="no functions"):
+        package.assemble_package(inputs, tmp_path / "out")
+
+
+def test_a_line_of_the_symbols_file_that_cannot_be_read_is_refused_and_shown(inputs, tmp_path):
+    inputs.symbols_file.write_text(PROJECT_SYMBOLS + "this line is broken\n", encoding="utf-8")
+    with pytest.raises(package.PackageError, match=r"symbols\.txt:5 could not be read: this line is broken"):
+        package.assemble_package(inputs, tmp_path / "out")
+
+
+@pytest.mark.parametrize("header", package.MOD_HEADERS)
+def test_a_missing_mod_header_is_named_in_the_error(inputs, tmp_path, header):
+    (inputs.source_directory / header).unlink()
+    with pytest.raises(package.PackageError, match=header):
+        package.assemble_package(inputs, tmp_path / "out")
 
 
 def test_each_tool_of_the_toolchain_goes_in_its_own_folder(package_directory):
@@ -467,6 +565,8 @@ def command_line(inputs, tmp_path, *extra) -> list[str]:
         "--package-files-directory", str(inputs.package_files_directory),
         "--license-file", str(inputs.license_file),
         "--game-settings-file", str(inputs.game_settings_file),
+        "--mods-directory", str(inputs.mods_directory),
+        "--symbols-file", str(inputs.symbols_file),
         "--build-directory", str(inputs.build_directory),
         "--source-directory", str(inputs.source_directory),
         "--llvm-mingw-directory", str(inputs.llvm_mingw_directory),
