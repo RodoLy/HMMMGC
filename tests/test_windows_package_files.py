@@ -216,3 +216,20 @@ def test_the_keyboard_switch_is_declared_and_opens_the_runner_with_the_game_and_
     assert "$RunnerPath" in start
     assert "'--game', $ExtractedGameDirectory" in start  # what the launcher gives the runner, too
     assert "'--user-dir', $UserDirectory" in start
+
+
+# The names that Dolphin's video backends have on Windows, as the runner's --graphics option takes them.
+DOLPHIN_VIDEO_BACKENDS_ON_WINDOWS = {"D3D12", "D3D", "Vulkan"}
+
+
+def test_the_keyboard_start_gives_the_runner_the_graphics_api_that_game_psd1_names():
+    # Left alone the runner uses Vulkan, which draws nothing on the Snapdragon laptop of the first
+    # real test, so the script says which API to use.
+    start = body_of_function(read_packaging_file("play.ps1"), "Start-GameWithKeyboard")
+    assert "'--graphics', $Game.GraphicsBackend" in start
+
+
+def test_the_graphics_api_in_game_psd1_is_a_name_that_dolphin_knows():
+    # The runner gives the name to Dolphin without checking it, so a mistyped one would show only
+    # when someone starts the game.
+    assert game_definition()["GraphicsBackend"] in DOLPHIN_VIDEO_BACKENDS_ON_WINDOWS

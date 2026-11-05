@@ -26,6 +26,18 @@
     # la configuración, las partidas guardadas y los registros).
     UserDirectoryName = 'HarvestMoonMM'
 
+    # The graphics API that play.ps1 gives to the runner when it opens the game itself (-Keyboard).
+    # DirectX 12 is used because Vulkan, which the runner picks when it is not told otherwise, does
+    # not work on the Snapdragon laptop where the package was tried: the game window stays black and
+    # the log says "Failed to submit command buffer". The names are the ones of Dolphin's video
+    # backends: D3D12, D3D (DirectX 11), Vulkan.
+    # La API gráfica que play.ps1 le da al runner cuando abre el juego mismo (-Keyboard). Se usa
+    # DirectX 12 porque Vulkan, que el runner elige si no se le dice otra cosa, no funciona en la
+    # laptop Snapdragon donde se probó el paquete: la ventana del juego se queda en negro y el
+    # registro dice "Failed to submit command buffer". Los nombres son los de los motores de video
+    # de Dolphin: D3D12, D3D (DirectX 11), Vulkan.
+    GraphicsBackend   = 'D3D12'
+
     # The kinds of disc image that the launcher can read (Dolphin's disc reader opens them all).
     # Los tipos de imagen de disco que el launcher puede leer (el lector de discos de Dolphin
     # los abre todos).

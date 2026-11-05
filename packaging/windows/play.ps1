@@ -405,12 +405,15 @@ function Start-Launcher {
 # it starts the runner with the game and the player's folder. The launcher does not let Play work
 # until a controller is connected, but the runner does not need one, so this is the way to play
 # with the keyboard. What the runner says is shown and kept in the log, like what the tools say.
+# The graphics API is given on purpose: left alone, the runner uses Vulkan, which draws nothing on
+# some computers (see GraphicsBackend in game.psd1).
 function Start-GameWithKeyboard {
     Write-Host (Get-Message 'KeyboardControls')
     Write-Host (Get-Message 'OpeningGame')
     $exitCode = Invoke-Program -FilePath $RunnerPath -Arguments @(
         '--game', $ExtractedGameDirectory,
-        '--user-dir', $UserDirectory
+        '--user-dir', $UserDirectory,
+        '--graphics', $Game.GraphicsBackend
     )
     if ($exitCode -ne 0) { throw (Get-Message 'GameFailed' @($exitCode, $LogPath)) }
 }
