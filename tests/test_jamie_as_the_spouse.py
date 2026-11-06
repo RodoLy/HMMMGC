@@ -136,7 +136,10 @@ def test_every_message_number_is_one_that_talk_lsb_shows(languages):
     assert {message.number for message in languages["e"]} <= shown
 
 
-@pytest.mark.skipif(not DISC_DIRECTORY.is_dir(), reason="needs the extracted disc (tools/extract_disc.py)")
+# orig/G4AEE9 is in every checkout (it holds a .gitkeep), so the test looks for the files of the disc.
+@pytest.mark.skipif(
+    not (DISC_DIRECTORY / "files").is_dir(), reason="needs the extracted disc (tools/extract_disc.py)"
+)
 def test_the_disc_has_jamies_messages_in_every_language_of_the_mod(languages):
     for letter in languages:
         path = DISC_DIRECTORY / "files" / f"message_{letter}" / "chara" / f"{JAMIE_FILE_NAME}_{letter}.bin"
