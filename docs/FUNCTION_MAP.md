@@ -36,7 +36,7 @@ LLVM como puntos de entrada (`tools/export_dolrecomp_map.py`).
 | …destino de algún `bl` | 3 637 |
 | Tablas de `switch` | 274 (4 sin comprobación de límite, ver abajo) |
 | Datos dentro de código | 3 (`_rom_copy_info`, `_bss_init_info`, cadena de TRK) |
-| Funciones con nombre | 655, todas con evidencia (92 por lectura del código, 563 por firma del SDK) |
+| Funciones con nombre | 682, todas con evidencia (119 por lectura del código, 563 por firma del SDK) |
 
 ### Cómo se sabe que es correcto
 
@@ -247,8 +247,8 @@ juego, en `0x801CAB68`.
 **Dónde está cada biblioteca.** El enlazador deja juntas las funciones de una
 biblioteca, así que una cadena de nombres con el mismo prefijo marca su rango.
 Cada rango va del inicio de su primera función con nombre al final de la
-última. Entre dos rangos hay a veces una o dos funciones sin nombre, de una de
-las dos vecinas.
+última. Entre dos rangos hay a veces algunas funciones sin nombre (cinco, la
+mayor cantidad, entre AX y AXFX), de una de las dos vecinas.
 
 | Biblioteca | Rango | Funciones | Con nombre |
 |---|---|---|---|
@@ -260,8 +260,10 @@ las dos vecinas.
 | AI | `0x8017D780`–`0x8017E008` | 17 | 13 |
 | AR | `0x8017E04C`–`0x8017FB40` | 8 | 8 |
 | ARQ | `0x8017FB40`–`0x8017FEDC` | 5 | 4 |
-| AX y AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
-| DSP | `0x801877FC`–`0x80188300` | 12 | 11 |
+| AX | `0x8017FEDC`–`0x80182E44` | 56 | 16 |
+| AXFX | `0x80183BD4`–`0x80185740` | 19 | 9 |
+| MIX | `0x801857FC`–`0x801877DC` | 4 | 4 |
+| DSP | `0x801877DC`–`0x80188300` | 14 | 13 |
 | CARD | `0x80188300`–`0x8018ED98` | 89 | 71 |
 | GX | `0x8018EDE0`–`0x80195F98` | 156 | 128 |
 | TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
@@ -271,22 +273,24 @@ las dos vecinas.
 | OS (segunda parte) | `0x801A9FF4`–`0x801AA1B0` | 1 | 1 |
 | SI | `0x801AA420`–`0x801ABC18` | 24 | 23 |
 
-La fila de AX y AXFX es la zona entre `AXInit` y DSP. Casi todas sus firmas
-faltan en la base, pero las pocas que hay la identifican: `do_src1` y
-`do_src2` (AX) tienen nombre, y `AXFXSetHooks` y `HandleReverb` (AXFX) se
-reconocen pero se comparten entre varias funciones, así que no se nombran. La
-fila «Resto de TRK, biblioteca C y soporte del compilador» tiene, con nombre,
+Las filas de AX, AXFX y MIX son la zona del audio, entre `AXInit` y DSP. Casi
+todas sus firmas faltan en la base. Antes de leer su código solo tenían nombre
+`AXInit`, `AXInitEx` y los dos convertidores del chorus de AXFX (`do_src1` y
+`do_src2`); la base reconoce `HandleReverb`, pero da ese nombre a dos funciones
+(la de cada reverberación), así que no se nombra. Las demás salieron de leer el
+código (ver «La zona del audio»). Entre AX y AXFX quedan cinco funciones sin
+nombre, y entre AXFX y MIX una. La fila «Resto de TRK, biblioteca C y soporte del compilador» tiene, con nombre,
 `sprintf`, `qsort`, `memmove`, las funciones matemáticas (`__ieee754_pow`,
 `sin`, `tan`...), `__div2u`, `__construct_array` y, de TRK,
 `CircleBufferReadBytes`.
 
-La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 646 con
-nombre, el 61 %. Fuera de ella el código del juego y su middleware queda sin
-nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 411
-funciones del SDK que siguen sin nombre se reparten así: 176 comparten firma con
-otras, 173 no tienen firma en la base, 49 son cortas sin respaldo, 7 repiten
-nombre, 4 tienen otro tamaño y 2 tienen nombre de C++. AX es el caso más claro
-de las que no están en la base: 72 de sus 87 funciones.
+La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 673 con
+nombre, el 64 %. Fuera de ella el código del juego y su middleware queda sin
+nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 384
+funciones del SDK que siguen sin nombre se reparten así: 170 comparten firma con
+otras, 152 no tienen firma en la base, 49 son cortas sin respaldo, 7 repiten
+nombre, 4 tienen otro tamaño y 2 tienen nombre de C++. La zona del audio es el
+caso más claro de las que no están en la base: 72 de sus 87 funciones.
 
 **Lo que no se usa todavía.** La base trae, en la mitad de sus entradas (5 133
 de 10 549), el archivo y el objeto del enlazador (`card.a CARDBios.o`, por
@@ -392,9 +396,8 @@ CARD en las que se apoyan: `__CARDSyncCallback`, la que cada llamada síncrona
 de CARD le pasa a su gemela asíncrona, y `__CARDDefaultApiCallback`, la que se
 usa cuando no se da ninguna. Con ellas, `tools/find_library_entry_points.py`
 ya no encuentra puntos de entrada sin nombre en las bibliotecas que dicen sus
-nombres. La excepción es AX, cuyo tramo con nombre es de solo dos funciones:
-medida a mano (`--range 0x8017FEDC-0x801877FC`), la zona de AX y AXFX tiene 28
-puntos de entrada, y 27 siguen sin nombre.
+nombres. La excepción era la zona del audio, que se nombró después (ver «La
+zona del audio», abajo).
 
 **Por qué la firma no bastó.** La mayoría tiene pocas instrucciones (un getter
 o un setter de una variable, o una función vacía). 22 tienen «firma
@@ -467,14 +470,63 @@ archivo: `OnReset_OSAlarm` es la `OnReset` de `OSAlarm.c`.
 | `0x8018E6D4` | `CARDWrite` | `CARDWriteAsync` y luego `__CARDSync`. |
 | `0x8018E8D0` | `CARDDelete` | `CARDDeleteAsync` y luego `__CARDSync`. |
 
-**Qué comprueba la prueba.** `tests/test_sdk_function_names.py` guarda esta
-tabla y comprueba, contra el `main.dol` real: que cada dirección tiene el
+#### La zona del audio
+
+Entre `AXInit` y la biblioteca DSP (`0x8017FEDC`–`0x801877FC`) solo tenían
+nombre cuatro funciones, así que la herramienta veía un tramo de AX de dos
+funciones y casi ninguno de sus puntos de entrada. Medida a mano
+(`--range 0x8017FEDC-0x801877FC`) tiene 28, y 27 no tenían nombre: 21 no están
+en la base y 6 comparten firma. Leyendo el código, la zona resultó ser cuatro
+bibliotecas seguidas: AX (las voces y el envío de cada cuadro de audio al DSP),
+AXFX (los efectos: dos reverberaciones, chorus y delay), MIX (el mezclador que
+va sobre AX) y el inicio de DSP.
+
+Una voz de AX es un `AXVPB`. Su bloque de parámetros para el DSP (`AXPB`)
+empieza en `+0x138`, y cada función que cambia una parte del bloque la marca en
+`sync` (`+0x1C`) para que el siguiente cuadro la copie al DSP. La parte que
+escribe distingue a cada función.
+
+| Dirección | Nombre | Hechos de su código |
+|---|---|---|
+| `0x8018016C` | `AXAcquireVoice` | Saca una voz de las pilas de prioridades (`0x802FAB40`) con las interrupciones apagadas y le guarda la prioridad, la función de aviso y el contexto (`+0xC`, `+0x10`, `+0x14`). |
+| `0x80180758` | `AXRegisterAuxACallback` | Guarda la función y el contexto del envío auxiliar A (`-0x6D38(r13)` y `-0x6D30(r13)`). |
+| `0x80180764` | `AXRegisterAuxBCallback` | Lo mismo para el envío B (`-0x6D34` y `-0x6D2C`). |
+| `0x80180E88` | `AXSetMode` | Cambia el modo de la lista de comandos (`-0x6CF0(r13)`). |
+| `0x8018160C` | `AXRegisterCallback` | Cambia, con las interrupciones apagadas, la función que se llama en cada cuadro de audio (`-0x6CD0(r13)`) y devuelve la anterior. |
+| `0x80182734` | `AXSetVoiceSrcType` | Escribe `srcSelect` y `coefSelect` del bloque (`+0x138`, y ahí `+0x8` y `+0xA`). |
+| `0x801827F8` | `AXSetVoiceState` | Escribe `state` (`+0x146`) y marca `0x4`; al parar una voz pide además quitar el chasquido (`depop`, `+0x20`). |
+| `0x80182854` | `AXSetVoiceType` | Escribe `type` (`+0x148`) y marca `0x8`. |
+| `0x801828A0` | `AXSetVoiceMix` | Copia la mezcla (`+0x14A`), ajusta `mixerCtrl` (`+0x144`) y marca `0x10`. |
+| `0x80182AF4` | `AXSetVoiceAddr` | Copia las direcciones de la muestra (`+0x1A6`) y marca `0x1000`. |
+| `0x80182C04` | `AXSetVoiceAdpcm` | Copia los coeficientes ADPCM (`+0x1B6`). |
+| `0x80182CA8` | `AXSetVoiceSrc` | Copia el convertidor de frecuencia (`+0x1DE`). |
+| `0x80182D40` | `AXSetVoiceSrcRatio` | Convierte una razón de punto flotante en las dos mitades de la razón del convertidor (`+0x1DE` y `+0x1E0`). |
+| `0x80182DD8` | `AXSetVoiceAdpcmLoop` | Copia el estado ADPCM del bucle (`+0x1EC`). |
+| `0x80183BD4` | `AXFXReverbHiInit` | Con las interrupciones apagadas, limpia «desactivada por ahora» (`+0x1C4`) y arma la reverberación alta. |
+| `0x8018469C` | `AXFXReverbStdInit` | Lo mismo para la reverberación estándar (`+0x13C`). |
+| `0x80184ABC` | `AXFXChorusInit` | Pide sus líneas de retardo al gancho de memoria (`-0x75D8(r13)`). Va justo después de `do_src1` y `do_src2`, los dos convertidores de `chorus.c`. |
+| `0x801855FC` | `AXFXDelayInit` | Olvida los tres búferes del delay (`+0x30`, `+0x34` y `+0x38`) y aplica los ajustes. |
+| `0x801856E4` | `__AXFXAllocFunction` | Pide memoria al montón actual (`OSAllocFromHeap`). Es el valor inicial del gancho `-0x75D8(r13)`. |
+| `0x8018570C` | `__AXFXFreeFunction` | La devuelve (`OSFreeToHeap`). Es el valor inicial del gancho `-0x75D4(r13)`. |
+| `0x80185734` | `AXFXSetHooks` | Cambia los dos ganchos. |
+| `0x801857FC` | `MIXInit` | Reinicia los 64 canales (`0x80314220`: modo `0x50000000`, envíos a -96 dB), el atenuador del streaming del disco y el modo de sonido. |
+| `0x801858C4` | `MIXInitChannel` | Prepara el canal de una voz según el modo de sonido, con las interrupciones apagadas. |
+| `0x80186740` | `MIXReleaseChannel` | `__MIXChannel[voz->index].axvpb = NULL`. |
+| `0x80186760` | `MIXUpdateSettings` | Lleva el atenuador del streaming un paso hacia lo pedido, con el volumen de streaming de AI (`AISetStreamVolLeft` y `AISetStreamVolRight`). |
+| `0x801877DC` | `DSPCheckMailToDSP` | Lee el bit 15 de `0xCC005000`: el DSP todavía no leyó el último correo. |
+| `0x801877EC` | `DSPCheckMailFromDSP` | Lee el bit 15 de `0xCC005004`: hay un correo del DSP. Va justo antes de `DSPReadMailFromDSP`. |
+
+**Qué comprueba la prueba.** `tests/test_sdk_function_names.py` guarda estas
+dos tablas y comprueba, contra el `main.dol` real: que cada dirección tiene el
 nombre y el tamaño de la tabla y que su código tiene los hechos; que ninguna
 otra función de su biblioteca los tiene; y los datos detrás de los nombres:
 cada `OnReset` es la función del registro de reinicio que registra su
-biblioteca, con su prioridad; las funciones vacías de OS y DVD son el valor
-inicial de la variable que las guarda; las seis funciones asíncronas de CARD
-usan `__CARDDefaultApiCallback`; las variables empiezan con los valores de las
+biblioteca, con su prioridad; las funciones vacías de OS y DVD y los dos
+ganchos de AXFX son el valor inicial de la variable que los guarda; las seis
+funciones asíncronas de CARD usan `__CARDDefaultApiCallback`; lo que guardan
+`AXRegisterAuxACallback`, `AXRegisterAuxBCallback`, `AXRegisterCallback`,
+`AXSetMode`, `AXFXSetHooks` y `VISetPostRetraceCallback` lo leen otras
+funciones de su biblioteca; las variables empiezan con los valores de las
 fuentes del SDK; `__VIRetraceHandler` cuenta los retrazos que devuelve
 `VIGetRetraceCount` y llama a la función de antes del retrazo antes que a la de
 después; y `DSPCheckInit` lee la marca que pone `DSPInit`.
@@ -557,7 +609,7 @@ backend DolRecomp finds functions on its own; our map reaches mods as names
 | …target of some `bl` | 3,637 |
 | `switch` tables | 274 (4 without a bounds check, see below) |
 | Data inside code | 3 (`_rom_copy_info`, `_bss_init_info`, TRK string) |
-| Named functions | 655, all with evidence (92 from reading the code, 563 from SDK signatures) |
+| Named functions | 682, all with evidence (119 from reading the code, 563 from SDK signatures) |
 
 ### How we know it is right
 
@@ -765,8 +817,8 @@ fall inside the GX range; the other eight are the game's vertex functions, at
 **Where each library is.** The linker keeps the functions of a library
 together, so a run of names with the same prefix marks its range. Each range
 goes from the start of its first named function to the end of its last one.
-Between two ranges there are sometimes one or two unnamed functions, which
-belong to one of the two neighbours.
+Between two ranges there are sometimes a few unnamed functions (five at most,
+between AX and AXFX), which belong to one of the two neighbours.
 
 | Library | Range | Functions | Named |
 |---|---|---|---|
@@ -778,8 +830,10 @@ belong to one of the two neighbours.
 | AI | `0x8017D780`–`0x8017E008` | 17 | 13 |
 | AR | `0x8017E04C`–`0x8017FB40` | 8 | 8 |
 | ARQ | `0x8017FB40`–`0x8017FEDC` | 5 | 4 |
-| AX and AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
-| DSP | `0x801877FC`–`0x80188300` | 12 | 11 |
+| AX | `0x8017FEDC`–`0x80182E44` | 56 | 16 |
+| AXFX | `0x80183BD4`–`0x80185740` | 19 | 9 |
+| MIX | `0x801857FC`–`0x801877DC` | 4 | 4 |
+| DSP | `0x801877DC`–`0x80188300` | 14 | 13 |
 | CARD | `0x80188300`–`0x8018ED98` | 89 | 71 |
 | GX | `0x8018EDE0`–`0x80195F98` | 156 | 128 |
 | TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
@@ -789,22 +843,24 @@ belong to one of the two neighbours.
 | OS (second part) | `0x801A9FF4`–`0x801AA1B0` | 1 | 1 |
 | SI | `0x801AA420`–`0x801ABC18` | 24 | 23 |
 
-The AX and AXFX row is the zone between `AXInit` and DSP. Most of its
-signatures are missing from the database, but the few there are identify it:
-`do_src1` and `do_src2` (AX) are named, and `AXFXSetHooks` and `HandleReverb`
-(AXFX) are recognised but shared among several functions, so they are not
-named. The row "Rest of TRK, C library and compiler support" has, named,
+The AX, AXFX and MIX rows are the audio zone, between `AXInit` and DSP. Most
+of its signatures are missing from the database. Before its code was read,
+only `AXInit`, `AXInitEx` and the two converters of the AXFX chorus (`do_src1`
+and `do_src2`) had a name; the database recognises `HandleReverb`, but gives
+that name to two functions (the one of each reverb), so it is not used. The
+others came from reading the code (see "The audio zone"). Five unnamed
+functions are left between AX and AXFX, and one between AXFX and MIX. The row "Rest of TRK, C library and compiler support" has, named,
 `sprintf`, `qsort`, `memmove`, the math functions (`__ieee754_pow`, `sin`,
 `tan`...), `__div2u`, `__construct_array` and, from TRK,
 `CircleBufferReadBytes`.
 
-The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 646 named,
-61 %. Outside it the game's code and its middleware have no names: 2,643
-functions before it and 746 after SI (only `main`). The 411 SDK functions that
-are still unnamed split like this: 176 share a signature with others, 173
+The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 673 named,
+64 %. Outside it the game's code and its middleware have no names: 2,643
+functions before it and 746 after SI (only `main`). The 384 SDK functions that
+are still unnamed split like this: 170 share a signature with others, 152
 have no signature in the database, 49 are short with no backing, 7 repeat a
-name, 4 have another size and 2 have a C++ name. AX is the clearest case of
-those missing from the database: 72 of its 87 functions.
+name, 4 have another size and 2 have a C++ name. The audio zone is the
+clearest case of those missing from the database: 72 of its 87 functions.
 
 **What is not used yet.** In half of its entries (5,133 of 10,549) the
 database carries the linker's archive and object (`card.a CARDBios.o`, for
@@ -910,9 +966,7 @@ rest on join them: `__CARDSyncCallback`, the one each synchronous CARD call
 passes to its asynchronous twin, and `__CARDDefaultApiCallback`, the one used
 when none is given. With them, `tools/find_library_entry_points.py` finds no
 unnamed entry point left in the libraries that their names mark. The exception
-is AX, whose named stretch is only two functions long: measured by hand
-(`--range 0x8017FEDC-0x801877FC`), the AX and AXFX zone has 28 entry points,
-and 27 are still unnamed.
+was the audio zone, named afterwards (see "The audio zone", below).
 
 **Why the signature was not enough.** Most are a few instructions long (a
 getter or a setter of one variable, or an empty function). 22 have a "shared
@@ -984,15 +1038,63 @@ its own: `OnReset_OSAlarm` is the `OnReset` of `OSAlarm.c`.
 | `0x8018E6D4` | `CARDWrite` | `CARDWriteAsync`, then `__CARDSync`. |
 | `0x8018E8D0` | `CARDDelete` | `CARDDeleteAsync`, then `__CARDSync`. |
 
-**What the test checks.** `tests/test_sdk_function_names.py` holds this table
-and checks, against the real `main.dol`: that each address has the table's
-name and size and that its code has the facts; that no other function of its
-library has them; and the data behind the names: each `OnReset` is the
+#### The audio zone
+
+Between `AXInit` and the DSP library (`0x8017FEDC`–`0x801877FC`) only four
+functions had a name, so the tool saw an AX stretch of two functions and
+almost none of its entry points. Measured by hand
+(`--range 0x8017FEDC-0x801877FC`) it has 28, and 27 had no name: 21 are not in
+the database and 6 share a checksum. Reading the code, the zone turned out to
+be four libraries in a row: AX (the voices, and sending each audio frame to
+the DSP), AXFX (the effects: two reverbs, chorus and delay), MIX (the mixer
+that sits on AX) and the start of DSP.
+
+An AX voice is an `AXVPB`. Its parameter block for the DSP (`AXPB`) starts at
+`+0x138`, and every function that changes a part of the block marks it in
+`sync` (`+0x1C`) so that the next frame copies it to the DSP. The part it
+writes tells each function apart.
+
+| Address | Name | Facts of its code |
+|---|---|---|
+| `0x8018016C` | `AXAcquireVoice` | Takes a voice from the stacks of the priorities (`0x802FAB40`) with the interrupts off and keeps the priority, the callback and the context in it (`+0xC`, `+0x10`, `+0x14`). |
+| `0x80180758` | `AXRegisterAuxACallback` | Keeps the function and the context of aux send A (`-0x6D38(r13)` and `-0x6D30(r13)`). |
+| `0x80180764` | `AXRegisterAuxBCallback` | The same for send B (`-0x6D34` and `-0x6D2C`). |
+| `0x80180E88` | `AXSetMode` | Swaps the mode of the command list (`-0x6CF0(r13)`). |
+| `0x8018160C` | `AXRegisterCallback` | Swaps, with the interrupts off, the function called on every audio frame (`-0x6CD0(r13)`) and returns the one before. |
+| `0x80182734` | `AXSetVoiceSrcType` | Writes `srcSelect` and `coefSelect` of the block (`+0x138`, and there `+0x8` and `+0xA`). |
+| `0x801827F8` | `AXSetVoiceState` | Writes `state` (`+0x146`) and marks `0x4`; stopping a voice also asks for a depop (`+0x20`). |
+| `0x80182854` | `AXSetVoiceType` | Writes `type` (`+0x148`) and marks `0x8`. |
+| `0x801828A0` | `AXSetVoiceMix` | Copies the mix (`+0x14A`), adjusts `mixerCtrl` (`+0x144`) and marks `0x10`. |
+| `0x80182AF4` | `AXSetVoiceAddr` | Copies the addresses of the sample (`+0x1A6`) and marks `0x1000`. |
+| `0x80182C04` | `AXSetVoiceAdpcm` | Copies the ADPCM coefficients (`+0x1B6`). |
+| `0x80182CA8` | `AXSetVoiceSrc` | Copies the sample-rate converter (`+0x1DE`). |
+| `0x80182D40` | `AXSetVoiceSrcRatio` | Turns a floating-point ratio into the two halves of the converter's ratio (`+0x1DE` and `+0x1E0`). |
+| `0x80182DD8` | `AXSetVoiceAdpcmLoop` | Copies the ADPCM state of the loop (`+0x1EC`). |
+| `0x80183BD4` | `AXFXReverbHiInit` | With the interrupts off, clears "temporarily disabled" (`+0x1C4`) and builds the high reverb. |
+| `0x8018469C` | `AXFXReverbStdInit` | The same for the standard reverb (`+0x13C`). |
+| `0x80184ABC` | `AXFXChorusInit` | Asks the memory hook (`-0x75D8(r13)`) for its delay lines. It comes right after `do_src1` and `do_src2`, the two converters of `chorus.c`. |
+| `0x801855FC` | `AXFXDelayInit` | Forgets the three buffers of the delay (`+0x30`, `+0x34` and `+0x38`) and applies the settings. |
+| `0x801856E4` | `__AXFXAllocFunction` | Takes memory from the current heap (`OSAllocFromHeap`). It is the first value of the hook `-0x75D8(r13)`. |
+| `0x8018570C` | `__AXFXFreeFunction` | Gives it back (`OSFreeToHeap`). It is the first value of the hook `-0x75D4(r13)`. |
+| `0x80185734` | `AXFXSetHooks` | Swaps both hooks. |
+| `0x801857FC` | `MIXInit` | Resets the 64 channels (`0x80314220`: mode `0x50000000`, sends at -96 dB), the fader of the disc stream and the sound mode. |
+| `0x801858C4` | `MIXInitChannel` | Sets up a voice's channel for the sound mode, with the interrupts off. |
+| `0x80186740` | `MIXReleaseChannel` | `__MIXChannel[voice->index].axvpb = NULL`. |
+| `0x80186760` | `MIXUpdateSettings` | Brings the fader of the disc stream one step closer to what was asked, through the AI stream volume (`AISetStreamVolLeft` and `AISetStreamVolRight`). |
+| `0x801877DC` | `DSPCheckMailToDSP` | Reads bit 15 of `0xCC005000`: the DSP has not read the last mail yet. |
+| `0x801877EC` | `DSPCheckMailFromDSP` | Reads bit 15 of `0xCC005004`: there is a mail from the DSP. It comes right before `DSPReadMailFromDSP`. |
+
+**What the test checks.** `tests/test_sdk_function_names.py` holds these two
+tables and checks, against the real `main.dol`: that each address has the
+table's name and size and that its code has the facts; that no other function
+of its library has them; and the data behind the names: each `OnReset` is the
 function of the reset record that its library registers, with its priority;
-the empty functions of OS and DVD are the first value of the variable that
-holds them; the six asynchronous CARD functions use
-`__CARDDefaultApiCallback`; the variables start with the values of the SDK
-sources; `__VIRetraceHandler` counts the retraces that `VIGetRetraceCount`
+the empty functions of OS and DVD and the two AXFX hooks are the first value
+of the variable that holds them; the six asynchronous CARD functions use
+`__CARDDefaultApiCallback`; what `AXRegisterAuxACallback`,
+`AXRegisterAuxBCallback`, `AXRegisterCallback`, `AXSetMode`, `AXFXSetHooks`
+and `VISetPostRetraceCallback` keep is read by other functions of their
+library; the variables start with the values of the SDK sources; `__VIRetraceHandler` counts the retraces that `VIGetRetraceCount`
 returns and calls the function for before the retrace ahead of the one for
 after; and `DSPCheckInit` reads the flag that `DSPInit` sets.
 

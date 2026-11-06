@@ -90,8 +90,9 @@ aurora, y qué se sabe y qué no, está en
       CARD, DVD, VI, AI, DSP, AR y PAD, y dos funciones internas de CARD, se
       nombraron leyendo su código, cada una con una prueba contra `main.dol`
       (655 nombres en total; ver [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
-- [ ] Nombrar los 27 puntos de entrada sin nombre de la zona de AX y AXFX (el
-      audio), que la herramienta solo ve con un tramo dado a mano.
+- [x] Nombrar los 27 puntos de entrada sin nombre de la zona del audio (AX,
+      AXFX, MIX y dos de DSP), que la herramienta solo veía con un tramo dado a
+      mano; cada uno con su prueba contra `main.dol` (682 nombres en total).
 - [ ] Afinar los nombres del SDK: usar el archivo del enlazador que trae la
       mitad de la base (para AX, TRK y la biblioteca C) y nombrar `PPCArch` por
       el número de registro especial. No bloquea nada.
@@ -340,8 +341,9 @@ is known and what is not, is in
       AI, DSP, AR and PAD, and two internal CARD functions, were named by
       reading their code, each with a test against `main.dol` (655 names in
       total; see [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
-- [ ] Name the 27 unnamed entry points of the AX and AXFX zone (the audio),
-      which the tool only sees with a stretch given by hand.
+- [x] Name the 27 unnamed entry points of the audio zone (AX, AXFX, MIX and
+      two of DSP), which the tool only saw with a stretch given by hand; each
+      with its test against `main.dol` (682 names in total).
 - [ ] Refine the SDK names: use the linker archive that half of the database
       carries (for AX, TRK and the C library) and name `PPCArch` by its
       special-register number. Nothing waits on it.
