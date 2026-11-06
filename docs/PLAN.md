@@ -325,7 +325,7 @@ pieza por pieza, en el orden de arriba)
       (`jamie_marriage` 0.6.0): mientras es tu pareja, su cumpleaños es el 22
       de invierno, libre de festivales y de otros cumpleaños, y le contesta
       al regalo con su frase de cumpleaños.
-- [ ] **Eventos de cónyuge para Jamie** (lo pidió el jugador): el
+- [x] **Eventos de cónyuge para Jamie** (lo pidió el jugador): el
       aniversario (`Eve_memo03` en la mañana y `Eve_memo00` en la noche, con
       amistad de 700 o más), el embarazo (`Eve_conce00` a `19`, uno por
       pareja), el nacimiento (`Eve_child00` a `19`), el cumpleaños del hijo
@@ -337,7 +337,12 @@ pieza por pieza, en el orden de arriba)
       prestadas las escenas de la pareja 4 (si el jugador es el chico) o de
       la 13 (si es la chica), con su modelo y frases nuevas en los cinco
       idiomas ([El embarazo y el parto](SCRIPTS.md#el-embarazo-y-el-parto)).
-      Faltan el aniversario, el cumpleaños del hijo y su revisión médica.
+      **Días especiales hechos** (`jamie_marriage` 0.8.0): en el
+      aniversario, el cumpleaños del hijo y su revisión médica, Jamie toma el
+      papel de la pareja 4 o de la 13 en los guiones que sirven para todos
+      los cónyuges, con frases nuevas en los cinco idiomas
+      ([Los días especiales](SCRIPTS.md#los-días-especiales)); el hijo crece
+      igual con Jamie de pareja.
 - [ ] **Diálogos en español con el texto del disco**: el disco americano
       trae la traducción oficial al español (y al francés, alemán e
       italiano) de la versión europea de GameCube que no salió; el programa
@@ -778,7 +783,7 @@ by piece, in the order above)
       0.6.0): while Jamie is your spouse, the birthday is the 22nd of winter,
       free of festivals and other birthdays, and Jamie answers the present
       with the birthday line.
-- [ ] **Spouse events for Jamie** (asked for by the player): the
+- [x] **Spouse events for Jamie** (asked for by the player): the
       anniversary (`Eve_memo03` in the morning and `Eve_memo00` at night, with
       friendship 700 or more), the pregnancy (`Eve_conce00` to `19`, one per
       partner), the birth (`Eve_child00` to `19`), the child's birthday
@@ -788,8 +793,12 @@ by piece, in the order above)
       **Pregnancy and birth done** (`jamie_marriage` 0.7.0): Jamie borrows the
       scenes of partner 4 (when the player is the boy) or 13 (when the player
       is the girl), with Jamie's model and new lines in the five languages
-      ([Pregnancy and birth](SCRIPTS.md#pregnancy-and-birth)). The
-      anniversary, the child's birthday and its checkup are still to do.
+      ([Pregnancy and birth](SCRIPTS.md#pregnancy-and-birth)).
+      **Special days done** (`jamie_marriage` 0.8.0): on the anniversary, the
+      child's birthday and its checkup, Jamie takes the part of partner 4 or
+      13 in the scripts shared by every spouse, with new lines in the five
+      languages ([Special days](SCRIPTS.md#special-days)); the child grows up
+      all the same with Jamie as the spouse.
 - [ ] **Dialogue in Spanish with the disc's text**: the American disc holds
       the official Spanish translation (and the French, German and Italian
       ones) of the European GameCube release that never came out; the

@@ -10,6 +10,7 @@ Reproduce / Reproducir:
 python3 tools/lsb.py Eve_rm01        # disassemble one script, by name or by path
 python3 tools/lsb.py --check         # validate the 291 scripts of the disc
 python3 tools/lsb.py --builtins      # native function behind each built-in index
+python3 tools/spouse_switches.py Eve_memo00 4  # where a script picks partner 4's lines
 HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest tests/test_lsb.py
 ```
 
@@ -680,10 +681,11 @@ los bloques de las cadenas, a los que se salta desde su mismo bloque, sino la
 primera instrucción de la revisión del embarazo, a la que se llega desde otro
 bloque, y la entrada de la revisión del campo para el parto: entre esa
 entrada y la cadena del parto nada lee la pareja.
-`tests/test_jamie_pregnancy_and_birth.py` revisa las frases en cada idioma,
-corre los ganchos sobre una memoria falsa y comprueba, en los archivos del
-juego, los lugares de cada script, el espacio para las frases y el código de
-la revisión del campo en las direcciones que usa el mod.
+`tests/test_jamie_scene_lines.py` revisa las frases en cada idioma, y
+`tests/test_jamie_pregnancy_and_birth.py` corre los ganchos sobre una memoria
+falsa y comprueba, en los archivos del juego, los lugares de cada script, el
+espacio para las frases y el código de la revisión del campo en las
+direcciones que usa el mod.
 
 **Prueba en el juego (2026-11-06).** Con un estado guardado del chico casado
 con Jamie y las condiciones escritas a mano (días de casados, contador y
@@ -776,6 +778,103 @@ elige al hijo sin mirar a la pareja: `fn_80046F7C` escribe en
 `save + 0x22F4` el 45 o el 46 según la bandera `0xC7`, o 126 mientras el
 valor 43 no sea 255.
 
+### Los días especiales
+
+Además del embarazo y del parto, un matrimonio tiene días especiales, y la
+revisión del campo los arranca en la primera casa del jugador (el primer
+número de `save + 0xB4CC`, que `fn_80038E04` traduce a un área) sin mirar
+quién es el cónyuge (solo su amistad):
+
+- **La mañana del aniversario de bodas o del cumpleaños del hijo** (el evento
+  `0xF3`, `Eve_memo03`). Entre las revisiones de la mañana (desde
+  `0x80169194`): el jugador está casado (la bandera principal 0), la amistad
+  del cónyuge es de 700 o más, y hoy es la fecha de la boda (con un día o más
+  de casados) o la del nacimiento del hijo (con el hijo de un día o más,
+  `save + 0xCB6C`). El cónyuge le pide al jugador que vuelva temprano a casa,
+  y el clima del día queda en 0.
+- **La noche de esos días** (desde `0x80169A20`, es decir, con la bandera de
+  la mañana apagada, al entrar a la primera casa desde la granja y después de
+  la revisión del embarazo): si el `0xF3` ya corrió ese día (`fn_800FC17C`; la
+  rutina diaria borra los eventos `0xF0` a `0xF3`), de 6 a 10 de la noche del
+  aniversario arranca el `0xF0` (`Eve_memo00`), y de 4 a 8 de la tarde del
+  cumpleaños del hijo el `0xF1` (`Eve_memo01`). El cónyuge pregunta qué día
+  es, el jugador elige entre tres respuestas y el cónyuge contesta según
+  acierte o no.
+- **La revisión médica del hijo** (`0xF4`, `Eve_memo04`), una mañana: el hijo
+  tiene 60 días o más, el jugador está casado, la amistad del cónyuge es de
+  900 o más y la del hijo ya crecido (el personaje 46, `save + 0x6850`) de 300
+  o más. El cónyuge despierta al jugador, van a la clínica y, al final, el
+  juego enciende la bandera `0xC8`. El hijo crece a los 30 días: la rutina
+  diaria (`fn_80032EE8`) suma un día a su edad y, al llegar a 30, enciende la
+  bandera `0xC7`, con la que el hijo es el personaje 46 en lugar del 45.
+
+Cada uno tiene un solo script para todos los cónyuges. El script lee quién es
+el cónyuge (el valor 38 del juego, el número de `save + 0x22B8`) en una
+variable local y elige sus frases con cadenas de comparaciones, una por cada
+pareja del 3 al 22: `LOCAL_GET`, `PUSH_INT` de la pareja, `NOT_EQUAL` y
+`JUMP_IF_ZERO` a su caso. `Eve_memo04` primero copia el número del cónyuge en
+otra variable con una cadena así y pone la copia en escena. Los archivos de
+mensajes tienen un mensaje por pareja en cada parte: en `Eve_memo03`, del 1
+al 20 (la pareja P dice el P − 2); en `Eve_memo00` y `Eve_memo01`, la pregunta
+(1 a 20), las tres respuestas (21 a 23), lo que dice si el jugador acierta (24
+a 43) y si no (44 a 63); en `Eve_memo04`, el despertar (1 a 20), el doctor (21
+y 22) y lo que dice el cónyuge después (23 a 42). Jamie (el 2) no está en
+ninguna cadena: el juego arranca estos eventos también con Jamie de cónyuge,
+pero los guiones no tienen frases para Jamie, y en la revisión la copia se
+queda en 0.
+
+**Lo que hace el mod (0.8.0).** Cuando el juego carga uno de esos scripts y
+Jamie es el cónyuge, el mod escribe el 2 de Jamie sobre el número de la
+pareja 4 si el jugador es el chico, o sobre el de la 13 si es la chica, en
+cada comparación y en la copia: 1 lugar en `Eve_memo03`, 3 en `Eve_memo00`, 4
+en `Eve_memo01` y 4 en `Eve_memo04`. Jamie entra así en los casos de esa
+pareja, y los mensajes de esos casos apuntan a frases de Jamie escritas sobre
+los de las parejas 5 a 12, que con Jamie de cónyuge nunca salen (del 3 al 10
+en `Eve_memo03`, del 26 al 33 en `Eve_memo00` y `Eve_memo01`, y del 25 al 32
+en `Eve_memo04`). Los lugares de la otra pareja (la 13 si el jugador es el
+chico) no se tocan. Las frases son nuevas, con la voz de Jamie, en los cinco
+idiomas del disco; en el cumpleaños del hijo, Jamie recuerda que antes pensaba
+que no había nada que celebrar (lo que dice en el cumpleaños del jugador).
+`tools/spouse_switches.py` encuentra las comparaciones, las copias y los
+mensajes de cada caso. `tests/test_jamie_special_days.py` compara con esa
+herramienta las listas del mod, corre los ganchos sobre una memoria falsa y
+revisa en los archivos del juego que solo los casos de otras parejas muestran
+los mensajes que se pisan y que las frases caben en cada idioma.
+
+**Prueba en el juego (2026-11-06).** Con la copia de la partida real (el
+chico, casado con Jamie, año 3, otoño 19, el día de la boda) en las dos
+ranuras de prueba de la tarjeta. Los días especiales solo salen en la primera
+casa del jugador: en esa partida, el área 39, donde vive Jamie; la copia
+amanece en la segunda (el área 33), así que las ranuras de prueba
+intercambian los dos números de `save + 0xB4CC` (sin eso, en el área 33 no
+pasó nada).
+
+- En la primera ranura, con un día de casados, la amistad de Jamie en 800 y
+  la bandera de la mañana encendida, al cargar arrancó el `0xF3` (el registro
+  dijo `put Jamie in the morning of a special day (Eve_memo03.lsb, 1 places)`)
+  y Jamie le pidió al jugador que volviera temprano. Con la hora a las 6 de la
+  tarde (`save + 0x2258` en 18), al salir a la granja y volver arrancó el
+  `0xF0` (3 lugares, 3 frases): Jamie pregunta qué día es y, según la
+  respuesta, dice las frases de quien lo recordó o las de quien lo olvidó.
+- En la segunda (80 días de casados, el valor 43 en 60, la amistad en 950 y
+  la boda movida a la víspera) el parto arrancó al cargar, y al bebé se le
+  puso Mia. Con el hijo de un día y el `0xF3` marcado, a las 4 de la tarde
+  arrancó el `0xF1` (4 lugares, 3 frases), con el nombre del bebé en las
+  frases de Jamie, tanto con la respuesta correcta como con otra.
+- Con el hijo de 59 días, la bandera `0xC7` y la amistad del personaje 46 en
+  300, el jugador se fue a dormir a las 8 de la noche (a las 7:50 de la mañana
+  elegir dormir no hizo nada). A la mañana siguiente el hijo tenía 60 días y
+  arrancó el `0xF4` (4 lugares, 2 frases): Jamie despierta al jugador, van a
+  la clínica con el hijo ya crecido, Jamie está en escena y dice sus frases, y
+  al final el juego da su nota y enciende la bandera `0xC8`.
+- Con el hijo de 29 días y la bandera `0xC7` apagada, tras otra noche el hijo
+  tenía 30 días y la rutina diaria había encendido la bandera: el hijo crece
+  igual con Jamie de pareja, y en la casa estaba el personaje 46 en lugar del
+  bebé en la cuna.
+- Con la chica (`save + 0x227C` en 1 en la primera ranura) salieron igual la
+  mañana y la noche del aniversario, con las dos respuestas, ahora con los
+  lugares de la pareja 13 (Jamie como esposo).
+
 ### Qué no está verificado
 
 - La prueba usó condiciones escritas a mano sobre un estado guardado, con el
@@ -813,13 +912,12 @@ valor 43 no sea 255.
   `fn_800A232C` usa como índice de campo de varios lugares, entre ellos el
   `0x81`. La opción A impide la escritura (en la prueba `0x2258` no cambió),
   pero no se sabe si una partida que continúa necesitaría otro valor.
-- El embarazo y el parto de Jamie se probaron con los contadores escritos a
-  mano (días de casados, el contador, la amistad y los días de embarazo; en
-  la primera prueba también la bandera de la mañana), no en una partida que
-  llegue sola a ellos. Tampoco se vio al hijo crecer (qué cambia la bandera
-  `0xC7`) ni los eventos del hijo con Jamie de pareja: el de la pareja que
-  pregunta qué día es (`Eve_memo01`, que incluye el cumpleaños del hijo) y la
-  revisión (`Eve_memo04`).
+- El embarazo, el parto y los días especiales de Jamie se probaron con los
+  contadores y las fechas escritos a mano (días de casados, el contador, la
+  amistad, los días de embarazo, la edad del hijo, la hora y la fecha de la
+  boda; a veces también la bandera de la mañana), no en una partida que llegue
+  sola a ellos. Con la chica, de los días especiales solo se probó el
+  aniversario.
 - **La cama grande.** Tras el parto, Woody trae la cuna y se abre la
   pantalla de muebles, que no se cierra mientras el jugador casado no tenga
   una cama grande (Bed L, los objetos `0x2F5` a `0x2F8`) en la casa
@@ -1516,10 +1614,10 @@ hook the blocks of the chains, which are reached from their own chunk, but
 the first instruction of the pregnancy check, reached from another chunk,
 and the entry of the field check for the birth: between that entry and the
 birth's chain nothing reads the spouse.
-`tests/test_jamie_pregnancy_and_birth.py` checks the lines in every
-language, runs the hooks on a fake memory and checks, on the game's files,
-the places of each script, the room for the lines and the field check's code
-at the addresses the mod uses.
+`tests/test_jamie_scene_lines.py` checks the lines in every language, and
+`tests/test_jamie_pregnancy_and_birth.py` runs the hooks on a fake memory and
+checks, on the game's files, the places of each script, the room for the
+lines and the field check's code at the addresses the mod uses.
 
 **Test in the game (2026-11-06).** With a saved state of the boy married to
 Jamie and the conditions written by hand (days of marriage, counter and
@@ -1609,6 +1707,103 @@ The game chooses the child without looking at the spouse: `fn_80046F7C`
 writes 45 or 46 to `save + 0x22F4` according to flag `0xC7`, or 126 while
 value 43 is not 255.
 
+### Special days
+
+Besides the pregnancy and the birth, a married couple has special days, and
+the field check starts them in the player's first house (the first number of
+`save + 0xB4CC`, which `fn_80038E04` turns into an area) without looking at
+who the spouse is (only at the spouse's friendship):
+
+- **The morning of the wedding anniversary or of the child's birthday** (event
+  `0xF3`, `Eve_memo03`). Among the morning checks (from `0x80169194`): the
+  player is married (main flag 0), the spouse's friendship is 700 or more, and
+  today is the wedding date (after a day of marriage or more) or the child's
+  date of birth (with the child a day old or more, `save + 0xCB6C`). The
+  spouse asks the player to come home early, and the day's weather is set to
+  0.
+- **The evening of those days** (from `0x80169A20`, that is, with the
+  morning flag clear, on coming into the first house from the farm, after the
+  pregnancy check): if `0xF3` has run that day (`fn_800FC17C`; the daily
+  routine clears events `0xF0` to `0xF3`), from 6 to 10 in the evening of the
+  anniversary `0xF0` starts (`Eve_memo00`), and from 4 to 8 in the evening
+  of the child's birthday `0xF1` (`Eve_memo01`). The spouse asks what day it
+  is, the player picks one of three answers and the spouse answers whether
+  the player got it right or not.
+- **The child's checkup** (`0xF4`, `Eve_memo04`), one morning: the child is
+  60 days old or more, the player is married, the spouse's friendship is 900
+  or more and that of the grown-up child (character 46, `save + 0x6850`) 300
+  or more. The spouse wakes the player up, they go to the clinic and, at the
+  end, the game sets flag `0xC8`. The child grows up at 30 days: the daily
+  routine (`fn_80032EE8`) adds a day to the child's age and, at 30, sets flag
+  `0xC7`, with which the child is character 46 instead of 45.
+
+Each of them has one script for every spouse. The script reads who the
+spouse is (game value 38, the number at `save + 0x22B8`) into a local
+variable and picks the lines with chains of comparisons, one for each partner
+from 3 to 22: `LOCAL_GET`, `PUSH_INT` of the partner, `NOT_EQUAL` and
+`JUMP_IF_ZERO` to the partner's case. `Eve_memo04` first copies the spouse's
+number into another variable with such a chain and puts the copy on stage.
+The message files have a message for each partner in each part: in
+`Eve_memo03`, 1 to 20 (partner P says P − 2); in `Eve_memo00` and
+`Eve_memo01`, the question (1 to 20), the three answers (21 to 23), what the
+spouse says when the player gets it right (24 to 43) and when not (44 to 63);
+in `Eve_memo04`, the waking up (1 to 20), the doctor (21 and 22) and what the
+spouse says afterwards (23 to 42). Jamie (2) is in no chain: the game starts
+these events with Jamie as the spouse too, but the scripts have no lines for
+Jamie, and in the checkup the copy stays at 0.
+
+**What the mod does (0.8.0).** When the game loads one of those scripts and
+Jamie is the spouse, the mod writes Jamie's 2 over partner 4's number when
+the player is the boy, or over partner 13's when the player is the girl, in
+each comparison and in the copy: 1 place in `Eve_memo03`, 3 in `Eve_memo00`,
+4 in `Eve_memo01` and 4 in `Eve_memo04`. Jamie then takes that partner's
+cases, and the messages of those cases point to Jamie's lines, written over
+those of partners 5 to 12, which never show with Jamie as the spouse (3 to
+10 in `Eve_memo03`, 26 to 33 in `Eve_memo00` and `Eve_memo01`, and 25 to 32
+in `Eve_memo04`). The other partner's places (13's when the player is the
+boy) are left alone. The lines are new, in Jamie's voice, in the five
+languages of the disc; on the child's birthday Jamie remembers having thought
+there was nothing to celebrate (what Jamie says on the player's birthday).
+`tools/spouse_switches.py` finds the comparisons, the copies and the messages
+of each case. `tests/test_jamie_special_days.py` compares the mod's lists
+with that tool, runs the hooks on a fake memory and checks, in the game's
+files, that only other partners' cases show the messages that are written
+over, and that the lines fit in every language.
+
+**In-game test (2026-11-06).** With the copy of the real save (the boy,
+married to Jamie, year 3, autumn 19, the wedding day) in the two test slots
+of the card. The special days only happen in the player's first house: in
+that save, area 39, where Jamie lives; the copy wakes up in the second one
+(area 33), so the test slots swap the two numbers of `save + 0xB4CC`
+(without that, nothing happened in area 33).
+
+- In the first slot, with one day of marriage, Jamie's friendship at 800 and
+  the morning flag set, `0xF3` started on loading (the log said
+  `put Jamie in the morning of a special day (Eve_memo03.lsb, 1 places)`) and
+  Jamie asked the player to come home early. With the hour at 6 in the
+  evening (`save + 0x2258` at 18), going out to the farm and coming back
+  started `0xF0` (3 places, 3 lines): Jamie asks what day it is and, by the
+  answer, says the lines for someone who remembered or for someone who
+  forgot.
+- In the second (80 days of marriage, value 43 at 60, the friendship at 950
+  and the wedding moved to the day before) the birth started on loading, and
+  the baby was named Mia. With the child one day old and `0xF3` marked,
+  `0xF1` started at 4 in the afternoon (4 places, 3 lines), with the
+  child's name in Jamie's lines, with the right answer and with another.
+- With the child 59 days old, flag `0xC7` and character 46's friendship at
+  300, the player went to bed at 8 in the evening (at 7:50 in the morning,
+  choosing to sleep did nothing). The next morning the child was 60 days old
+  and `0xF4` started (4 places, 2 lines): Jamie wakes the player up, they go
+  to the clinic with the grown-up child, Jamie is on stage and says the
+  lines, and at the end the game gives its note and sets flag `0xC8`.
+- With the child 29 days old and flag `0xC7` clear, after another night the
+  child was 30 days old and the daily routine had set the flag: the child
+  grows up all the same with Jamie as the spouse, and character 46 was in
+  the house instead of the baby in the crib.
+- With the girl (`save + 0x227C` at 1 in the first slot) the morning and the
+  evening of the anniversary came out the same, with both answers, now with
+  partner 13's places (Jamie as the husband).
+
 ### What is not verified
 
 - The test used hand-written conditions on a saved state, with index 26
@@ -1647,13 +1842,11 @@ value 43 is not 255.
   `0x81` among them. Option A prevents the write (in the test `0x2258` did
   not change), but it is not known whether a game that carries on would need
   a different value.
-- Jamie's pregnancy and birth were tried with the counters written by hand
-  (days of marriage, the counter, the friendship and the days of pregnancy;
-  in the first test also the morning flag), not in a game that reaches them
-  by itself. Nor was the child seen growing up (what flag `0xC7` changes), or
-  the child's events with Jamie as the spouse: the one where the spouse asks
-  what day it is (`Eve_memo01`, which includes the child's birthday) and the
-  checkup (`Eve_memo04`).
+- Jamie's pregnancy, birth and special days were tried with the counters
+  and dates written by hand (days of marriage, the counter, the friendship,
+  the days of pregnancy, the child's age, the hour and the wedding date;
+  sometimes also the morning flag), not in a game that reaches them by
+  itself. With the girl, only the anniversary was tried of the special days.
 - **The big bed.** After the birth, Woody brings the crib and the furniture
   screen opens, and it does not close while the married player has no big
   bed (Bed L, items `0x2F5` to `0x2F8`) in the house (`fn_800D9428`; the

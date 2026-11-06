@@ -77,6 +77,15 @@
  * mod puts Jamie in it wherever it names the partner, and in the scene's messages it writes Jamie's own lines,
  * in the five languages, over messages that the scene never shows.
  *
+ * Special days. On the morning of the wedding anniversary and of the child's birthday the spouse asks the
+ * player to come home early, and that evening asks what day it is; once the child is old enough, the spouse
+ * wakes the player up for the child's checkup at the clinic. The game starts these scenes for any spouse,
+ * Jamie too, but each one has a single script that picks the spouse's lines by the spouse's number, and
+ * Jamie's matched none: the scripts had no lines for Jamie, and in the checkup the spouse's number that the
+ * scene uses as an actor stayed at 0. When such a script is loaded, the mod gives Jamie the part of partner 4
+ * (of partner 13 when the player is the girl), and writes Jamie's own lines, in the five languages, over
+ * messages of other partners.
+ *
  * It is safe to run more than once for the same check, which can happen (see mods/README.md): clearing
  * a flag that is already clear changes nothing. It also covers a second proposal to Jamie, because the
  * proposal sets the flag again and the next field check clears it again.
@@ -156,6 +165,15 @@
  * sea esa pareja para el juego, y enseguida Jamie vuelve a ser el cónyuge. Cuando se carga el guion de la
  * escena, el mod pone a Jamie donde el guion nombra a la pareja, y en los mensajes de la escena escribe frases
  * propias de Jamie, en los cinco idiomas, sobre mensajes que la escena nunca muestra.
+ *
+ * Días especiales. La mañana del aniversario de bodas y la del cumpleaños del hijo, el cónyuge le pide al
+ * jugador que vuelva temprano, y esa noche le pregunta qué día es; cuando el hijo ya tiene edad, el cónyuge
+ * despierta al jugador para la revisión del hijo en la clínica. El juego arranca estas escenas con cualquier
+ * cónyuge, también con Jamie, pero cada una tiene un solo guion que elige las frases del cónyuge según su
+ * número, y el de Jamie no coincidía con ninguno: los guiones no tenían frases para Jamie, y en la revisión
+ * se quedaba en 0 el número del cónyuge que la escena usa como actor. Cuando se carga uno de esos guiones, el
+ * mod le da a Jamie el papel de la pareja 4 (el de la 13 cuando el jugador es la chica) y escribe frases
+ * propias de Jamie, en los cinco idiomas, sobre mensajes de otras parejas.
  *
  * Es seguro que corra más de una vez por la misma revisión, cosa que puede pasar (ver mods/README.md):
  * apagar una bandera que ya está apagada no cambia nada. También cubre una segunda propuesta a Jamie,
@@ -599,14 +617,23 @@ typedef struct SpouseMessage {
 } SpouseMessage;
 
 /*
- * The scenes that Jamie takes part in as the spouse (see "Babies" further down): the pregnancy and the
- * birth, each in the version where Jamie is the wife (the player is the boy) or the husband (the girl).
+ * The scenes that Jamie takes part in as the spouse: the pregnancy and the birth (see "Babies" further down)
+ * and the special days of a married couple (see "Special days"), each in the version where Jamie is the wife
+ * (the player is the boy) or the husband (the girl).
  */
 typedef enum JamieSceneId {
     SCENE_PREGNANCY_AS_THE_WIFE,
     SCENE_PREGNANCY_AS_THE_HUSBAND,
     SCENE_BIRTH_AS_THE_WIFE,
     SCENE_BIRTH_AS_THE_HUSBAND,
+    SCENE_COME_HOME_EARLY_AS_THE_WIFE,
+    SCENE_COME_HOME_EARLY_AS_THE_HUSBAND,
+    SCENE_ANNIVERSARY_AS_THE_WIFE,
+    SCENE_ANNIVERSARY_AS_THE_HUSBAND,
+    SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE,
+    SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND,
+    SCENE_CHILDS_CHECKUP_AS_THE_WIFE,
+    SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND,
     JAMIE_SCENE_COUNT
 } JamieSceneId;
 
@@ -629,6 +656,30 @@ typedef enum JamieSceneId {
 #define BIRTH_HUSBAND_SEES_THE_BABY 6u
 #define BIRTH_HUSBAND_ASKS_FOR_A_NAME 7u
 #define BIRTH_HUSBAND_HEARS_THE_NAME 8u
+
+/*
+ * The special days have one message file for every spouse, with a message for each partner from 3 to 22 in
+ * each part of the scene: partner 4's is the second of each run of twenty and partner 13's the eleventh
+ * (tools/spouse_switches.py lists which message each partner's case shows).
+ */
+#define COME_HOME_EARLY_WIFE_ASKS 2u /* Eve_memo03, the morning of the anniversary or of the child's birthday */
+#define COME_HOME_EARLY_HUSBAND_ASKS 11u
+#define ANNIVERSARY_WIFE_ASKS_WHAT_DAY_IT_IS 2u /* Eve_memo00, that evening; a list of three answers follows */
+#define ANNIVERSARY_WIFE_WHEN_THE_PLAYER_REMEMBERS 25u
+#define ANNIVERSARY_WIFE_WHEN_THE_PLAYER_FORGETS 45u
+#define ANNIVERSARY_HUSBAND_ASKS_WHAT_DAY_IT_IS 11u
+#define ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS 34u
+#define ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_FORGETS 54u
+#define CHILDS_BIRTHDAY_WIFE_ASKS_WHAT_DAY_IT_IS 2u /* Eve_memo01, the evening of the child's birthday */
+#define CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_REMEMBERS 25u
+#define CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_FORGETS 45u /* either of the two wrong answers */
+#define CHILDS_BIRTHDAY_HUSBAND_ASKS_WHAT_DAY_IT_IS 11u
+#define CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS 34u
+#define CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_FORGETS 54u
+#define CHILDS_CHECKUP_WIFE_WAKES_THE_PLAYER 2u /* Eve_memo04, in the morning */
+#define CHILDS_CHECKUP_WIFE_AFTER_THE_DOCTOR 24u
+#define CHILDS_CHECKUP_HUSBAND_WAKES_THE_PLAYER 11u
+#define CHILDS_CHECKUP_HUSBAND_AFTER_THE_DOCTOR 33u
 
 typedef struct SceneLine {
     JamieSceneId scene;
@@ -1121,12 +1172,14 @@ static const SpouseMessage italian_spouse_messages[] = {
 };
 
 /*
- * Jamie's lines in the scenes of the pregnancy and the birth, written for this mod. They answer what Jamie
- * says as the rival: that the player will collapse in the end (message 28 of Jamie's file; the French text
- * of the disc says something else there, so in French the line stands on its own), that one can only rely on
- * oneself, that without strength nobody can be protected, the player's silly face, and that Jamie is never
- * grateful for anything. A line for the wife is Jamie as a woman and a line for the husband Jamie as a man,
- * so each one is written in the words of its version.
+ * Jamie's lines in the scenes of the pregnancy, the birth and the special days, written for this mod. They
+ * answer what Jamie says as the rival: that the player will collapse in the end (message 28 of Jamie's file;
+ * the French text of the disc says something else there, so in French the line stands on its own), that one
+ * can only rely on oneself, that without strength nobody can be protected, the player's silly face, and that
+ * Jamie is never grateful for anything; on the child's birthday, they answer Jamie's own words on the
+ * player's birthday above (that there was nothing to celebrate). A line for the wife is Jamie as a woman and
+ * a line for the husband Jamie as a man, so each one is written in the words of its version; on the special
+ * days Jamie says the same in both, and only the words for the player change with the player's gender.
  */
 static const SceneLine english_scene_lines[] = {
     {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_TELLS_THE_NEWS,
@@ -1166,6 +1219,57 @@ static const SceneLine english_scene_lines[] = {
     {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
      .text = JAMIE_SPEAKS "…Humph. It's a good" NEW_ROW "name." NEW_PAGE "And I'm not crying." NEW_ROW "Got it?"
              END_OF_MESSAGE},
+    /* The special days: the same words for the wife and for the husband. */
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_WIFE, .number = COME_HOME_EARLY_WIFE_ASKS,
+     .text = JAMIE_SPEAKS "Hey. Come home early" NEW_ROW "tonight, got it?" NEW_PAGE "…Don't ask why." NEW_ROW
+             "You'll see." END_OF_MESSAGE},
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_HUSBAND, .number = COME_HOME_EARLY_HUSBAND_ASKS,
+     .text = JAMIE_SPEAKS "Hey. Come home early" NEW_ROW "tonight, got it?" NEW_PAGE "…Don't ask why." NEW_ROW
+             "You'll see." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hey. Do you know what" NEW_ROW "day it is today?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "…You remembered." NEW_ROW "Humph. Not bad." NEW_PAGE "I made dinner. Sit down" NEW_ROW
+             "before it gets cold." NEW_PAGE "…And don't make that" NEW_ROW "face. It's just dinner." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "You forgot?! Geeez…" NEW_ROW "I knew it." NEW_PAGE "…Forget it. I'm going" NEW_ROW "to bed."
+             END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hey. Do you know what" NEW_ROW "day it is today?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "…You remembered." NEW_ROW "Humph. Not bad." NEW_PAGE "I made dinner. Sit down" NEW_ROW
+             "before it gets cold." NEW_PAGE "…And don't make that" NEW_ROW "face. It's just dinner." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "You forgot?! Geeez…" NEW_ROW "I knew it." NEW_PAGE "…Forget it. I'm going" NEW_ROW "to bed."
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hey. You know what day" NEW_ROW "it is today, right?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Right. The day " CHILD_NAME NEW_ROW "was born." NEW_PAGE "I used to think birthdays" NEW_ROW
+             "were nothing to celebrate." NEW_PAGE "…This one is." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Wrong! It's " CHILD_NAME "'s" NEW_ROW "birthday! Geeez…" NEW_PAGE
+             "What kind of parent" NEW_ROW "forgets that?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hey. You know what day" NEW_ROW "it is today, right?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Right. The day " CHILD_NAME NEW_ROW "was born." NEW_PAGE "I used to think birthdays" NEW_ROW
+             "were nothing to celebrate." NEW_PAGE "…This one is." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Wrong! It's " CHILD_NAME "'s" NEW_ROW "birthday! Geeez…" NEW_PAGE
+             "What kind of parent" NEW_ROW "forgets that?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Hey! Wake up already!" NEW_PAGE "Today is " CHILD_NAME "'s" NEW_ROW "checkup. Let's go!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Hah! I knew it." NEW_ROW "Come here, " CHILD_NAME "." NEW_PAGE "…You're tough. Just" NEW_ROW
+             "like your parents." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Hey! Wake up already!" NEW_PAGE "Today is " CHILD_NAME "'s" NEW_ROW "checkup. Let's go!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Hah! I knew it." NEW_ROW "Come here, " CHILD_NAME "." NEW_PAGE "…You're tough. Just" NEW_ROW
+             "like your parents." END_OF_MESSAGE},
 };
 
 static const SceneLine spanish_scene_lines[] = {
@@ -1207,6 +1311,57 @@ static const SceneLine spanish_scene_lines[] = {
     {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
      .text = JAMIE_SPEAKS "...Umm. Es un buen" NEW_ROW "nombre." NEW_PAGE "Y no estoy llorando." NEW_ROW
              "¿Entendido?" END_OF_MESSAGE},
+    /* The special days: only "padre" (the player is the boy) becomes "madre" when the player is the girl. */
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_WIFE, .number = COME_HOME_EARLY_WIFE_ASKS,
+     .text = JAMIE_SPEAKS "Oye. Esta noche vuelve" NEW_ROW "temprano, ¿entendido?" NEW_PAGE
+             "...No preguntes por qué." NEW_ROW "Ya lo verás." END_OF_MESSAGE},
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_HUSBAND, .number = COME_HOME_EARLY_HUSBAND_ASKS,
+     .text = JAMIE_SPEAKS "Oye. Esta noche vuelve" NEW_ROW "temprano, ¿entendido?" NEW_PAGE
+             "...No preguntes por qué." NEW_ROW "Ya lo verás." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Oye. ¿Sabes qué día" NEW_ROW "es hoy?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "...Te acordaste." NEW_ROW "Umm. Nada mal." NEW_PAGE "Hice la cena. Siéntate" NEW_ROW
+             "antes de que se enfríe." NEW_PAGE "...Y no pongas esa cara." NEW_ROW "Solo es una cena." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "¿Se te olvidó? Cielos..." NEW_ROW "Lo sabía." NEW_PAGE "...Bah. Olvídalo. Me voy" NEW_ROW
+             "a dormir." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Oye. ¿Sabes qué día" NEW_ROW "es hoy?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "...Te acordaste." NEW_ROW "Umm. Nada mal." NEW_PAGE "Hice la cena. Siéntate" NEW_ROW
+             "antes de que se enfríe." NEW_PAGE "...Y no pongas esa cara." NEW_ROW "Solo es una cena." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "¿Se te olvidó? Cielos..." NEW_ROW "Lo sabía." NEW_PAGE "...Bah. Olvídalo. Me voy" NEW_ROW
+             "a dormir." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Oye. Sabes qué día es" NEW_ROW "hoy, ¿verdad?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Eso es. El día en que" NEW_ROW "nació " CHILD_NAME "." NEW_PAGE "Antes pensaba que no había"
+             NEW_ROW "nada que celebrar." NEW_PAGE "...Esto sí." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "¡Error! Es el cumpleaños" NEW_ROW "de " CHILD_NAME ". Cielos..." NEW_PAGE
+             "¿Qué clase de padre" NEW_ROW "se olvida de eso?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Oye. Sabes qué día es" NEW_ROW "hoy, ¿verdad?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Eso es. El día en que" NEW_ROW "nació " CHILD_NAME "." NEW_PAGE "Antes pensaba que no había"
+             NEW_ROW "nada que celebrar." NEW_PAGE "...Esto sí." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "¡Error! Es el cumpleaños" NEW_ROW "de " CHILD_NAME ". Cielos..." NEW_PAGE
+             "¿Qué clase de madre" NEW_ROW "se olvida de eso?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "¡Eh! ¡Despierta ya!" NEW_PAGE "Hoy es la revisión de" NEW_ROW CHILD_NAME ". ¡Vamos!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "¡Ja! Lo sabía." NEW_ROW "Ven aquí, " CHILD_NAME "." NEW_PAGE "...Eres fuerte. Igual" NEW_ROW
+             "que tus padres." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "¡Eh! ¡Despierta ya!" NEW_PAGE "Hoy es la revisión de" NEW_ROW CHILD_NAME ". ¡Vamos!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "¡Ja! Lo sabía." NEW_ROW "Ven aquí, " CHILD_NAME "." NEW_PAGE "...Eres fuerte. Igual" NEW_ROW
+             "que tus padres." END_OF_MESSAGE},
 };
 
 static const SceneLine french_scene_lines[] = {
@@ -1249,6 +1404,59 @@ static const SceneLine french_scene_lines[] = {
     {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
      .text = JAMIE_SPEAKS "…Humf. C'est un beau" NEW_ROW "prénom." NEW_PAGE "Et je ne pleure pas." NEW_ROW "Compris ?"
              END_OF_MESSAGE},
+    /* The special days: "souvenu" becomes "souvenue" when the player is the girl. */
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_WIFE, .number = COME_HOME_EARLY_WIFE_ASKS,
+     .text = JAMIE_SPEAKS "Hé. Rentre tôt ce soir," NEW_ROW "compris ?" NEW_PAGE "…Ne demande pas" NEW_ROW
+             "pourquoi. Tu verras." END_OF_MESSAGE},
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_HUSBAND, .number = COME_HOME_EARLY_HUSBAND_ASKS,
+     .text = JAMIE_SPEAKS "Hé. Rentre tôt ce soir," NEW_ROW "compris ?" NEW_PAGE "…Ne demande pas" NEW_ROW
+             "pourquoi. Tu verras." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hé. Tu sais quel jour" NEW_ROW "on est aujourd'hui ?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "…Tu t'en es souvenu." NEW_ROW "Humf. Pas mal." NEW_PAGE "J'ai fait le dîner." NEW_ROW
+             "Assieds-toi avant que" NEW_ROW "ça refroidisse." NEW_PAGE "…Et ne fais pas cette" NEW_ROW
+             "tête. C'est juste un dîner." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Tu as oublié ?! Rahhh…" NEW_ROW "Je le savais." NEW_PAGE "…Laisse tomber. Je vais" NEW_ROW
+             "me coucher." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hé. Tu sais quel jour" NEW_ROW "on est aujourd'hui ?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "…Tu t'en es souvenue." NEW_ROW "Humf. Pas mal." NEW_PAGE "J'ai fait le dîner." NEW_ROW
+             "Assieds-toi avant que" NEW_ROW "ça refroidisse." NEW_PAGE "…Et ne fais pas cette" NEW_ROW
+             "tête. C'est juste un dîner." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Tu as oublié ?! Rahhh…" NEW_ROW "Je le savais." NEW_PAGE "…Laisse tomber. Je vais" NEW_ROW
+             "me coucher." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hé. Tu sais quel jour on" NEW_ROW "est aujourd'hui, hein ?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Oui. C'est l'anniversaire" NEW_ROW "de " CHILD_NAME "." NEW_PAGE "Avant, je trouvais qu'il"
+             NEW_ROW "n'y avait rien à fêter." NEW_PAGE "…Mais ça, ça se fête." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Faux ! C'est l'anniversaire" NEW_ROW "de " CHILD_NAME " ! Rahhh…" NEW_PAGE
+             "Quel parent oublie une" NEW_ROW "chose pareille ?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Hé. Tu sais quel jour on" NEW_ROW "est aujourd'hui, hein ?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Oui. C'est l'anniversaire" NEW_ROW "de " CHILD_NAME "." NEW_PAGE "Avant, je trouvais qu'il"
+             NEW_ROW "n'y avait rien à fêter." NEW_PAGE "…Mais ça, ça se fête." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Faux ! C'est l'anniversaire" NEW_ROW "de " CHILD_NAME " ! Rahhh…" NEW_PAGE
+             "Quel parent oublie une" NEW_ROW "chose pareille ?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Hé ! Debout, vite !" NEW_PAGE "C'est la visite médicale" NEW_ROW "de " CHILD_NAME
+             " aujourd'hui." NEW_ROW "On y va !" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Ha ! Je le savais." NEW_ROW "Viens là, " CHILD_NAME "." NEW_PAGE
+             "…Tu es solide. Comme" NEW_ROW "tes parents." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Hé ! Debout, vite !" NEW_PAGE "C'est la visite médicale" NEW_ROW "de " CHILD_NAME
+             " aujourd'hui." NEW_ROW "On y va !" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Ha ! Je le savais." NEW_ROW "Viens là, " CHILD_NAME "." NEW_PAGE
+             "…Tu es solide. Comme" NEW_ROW "tes parents." END_OF_MESSAGE},
 };
 
 static const SceneLine german_scene_lines[] = {
@@ -1290,6 +1498,59 @@ static const SceneLine german_scene_lines[] = {
     {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
      .text = JAMIE_SPEAKS "… Pöh. Das ist ein guter" NEW_ROW "Name." NEW_PAGE "Und ich weine nicht." NEW_ROW "Klar?"
              END_OF_MESSAGE},
+    /* The special days: the same words for the wife and for the husband. */
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_WIFE, .number = COME_HOME_EARLY_WIFE_ASKS,
+     .text = JAMIE_SPEAKS "He. Komm heute Abend" NEW_ROW "früh nach Hause, klar?" NEW_PAGE
+             "… Frag nicht, warum." NEW_ROW "Du wirst schon sehen." END_OF_MESSAGE},
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_HUSBAND, .number = COME_HOME_EARLY_HUSBAND_ASKS,
+     .text = JAMIE_SPEAKS "He. Komm heute Abend" NEW_ROW "früh nach Hause, klar?" NEW_PAGE
+             "… Frag nicht, warum." NEW_ROW "Du wirst schon sehen." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "He. Weißt du, was heute" NEW_ROW "für ein Tag ist?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "… Du hast dran gedacht." NEW_ROW "Pöh. Nicht schlecht." NEW_PAGE
+             "Ich hab gekocht. Setz" NEW_ROW "dich, bevor es kalt wird." NEW_PAGE "… Und schau nicht so." NEW_ROW
+             "Ist doch nur ein Essen." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Du hast es vergessen?!" NEW_ROW "Oje … Wusste ich's doch." NEW_PAGE "… Vergiss es. Ich geh"
+             NEW_ROW "schlafen." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "He. Weißt du, was heute" NEW_ROW "für ein Tag ist?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "… Du hast dran gedacht." NEW_ROW "Pöh. Nicht schlecht." NEW_PAGE
+             "Ich hab gekocht. Setz" NEW_ROW "dich, bevor es kalt wird." NEW_PAGE "… Und schau nicht so." NEW_ROW
+             "Ist doch nur ein Essen." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Du hast es vergessen?!" NEW_ROW "Oje … Wusste ich's doch." NEW_PAGE "… Vergiss es. Ich geh"
+             NEW_ROW "schlafen." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "He. Du weißt doch, was" NEW_ROW "heute für ein Tag ist?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Genau. Heute hat " CHILD_NAME NEW_ROW "Geburtstag." NEW_PAGE
+             "Früher fand ich, das sei" NEW_ROW "kein Grund zum Feiern." NEW_PAGE "… Der hier schon." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Falsch! Heute hat " CHILD_NAME NEW_ROW "Geburtstag! Oje …" NEW_PAGE "Wie kann man so was"
+             NEW_ROW "vergessen?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "He. Du weißt doch, was" NEW_ROW "heute für ein Tag ist?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Genau. Heute hat " CHILD_NAME NEW_ROW "Geburtstag." NEW_PAGE
+             "Früher fand ich, das sei" NEW_ROW "kein Grund zum Feiern." NEW_PAGE "… Der hier schon." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Falsch! Heute hat " CHILD_NAME NEW_ROW "Geburtstag! Oje …" NEW_PAGE "Wie kann man so was"
+             NEW_ROW "vergessen?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "He! Steh endlich auf!" NEW_PAGE "Heute ist die Untersuchung" NEW_ROW "von " CHILD_NAME
+             ". Los!" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Ha! Wusste ich's doch." NEW_ROW "Komm her, " CHILD_NAME "." NEW_PAGE "… Du bist zäh. Wie"
+             NEW_ROW "deine Eltern." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "He! Steh endlich auf!" NEW_PAGE "Heute ist die Untersuchung" NEW_ROW "von " CHILD_NAME
+             ". Los!" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Ha! Wusste ich's doch." NEW_ROW "Komm her, " CHILD_NAME "." NEW_PAGE "… Du bist zäh. Wie"
+             NEW_ROW "deine Eltern." END_OF_MESSAGE},
 };
 
 static const SceneLine italian_scene_lines[] = {
@@ -1330,6 +1591,59 @@ static const SceneLine italian_scene_lines[] = {
      .text = JAMIE_SPEAKS "Come lo chiamiamo?" NEW_PAGE "…Scegli tu. Ma niente di" NEW_ROW "ridicolo." END_OF_MESSAGE},
     {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
      .text = JAMIE_SPEAKS "…Uffa. È un bel nome." NEW_PAGE "E non sto piangendo." NEW_ROW "Chiaro?" END_OF_MESSAGE},
+    /* The special days: "ricordato" and "dimenticato" end in -a when the player is the girl. */
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_WIFE, .number = COME_HOME_EARLY_WIFE_ASKS,
+     .text = JAMIE_SPEAKS "Ehi. Stasera torna a casa" NEW_ROW "presto, intesi?" NEW_PAGE "…Non chiedere perché." NEW_ROW
+             "Vedrai." END_OF_MESSAGE},
+    {.scene = SCENE_COME_HOME_EARLY_AS_THE_HUSBAND, .number = COME_HOME_EARLY_HUSBAND_ASKS,
+     .text = JAMIE_SPEAKS "Ehi. Stasera torna a casa" NEW_ROW "presto, intesi?" NEW_PAGE "…Non chiedere perché." NEW_ROW
+             "Vedrai." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Ehi. Lo sai che giorno" NEW_ROW "è oggi?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "…Te ne sei ricordato." NEW_ROW "Uffa. Non male." NEW_PAGE "Ho preparato la cena." NEW_ROW
+             "Siediti prima che si" NEW_ROW "raffreddi." NEW_PAGE "…E non fare quella" NEW_ROW
+             "faccia. È solo una cena." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_WIFE, .number = ANNIVERSARY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Te ne sei dimenticato?!" NEW_ROW "Uffa… Lo sapevo." NEW_PAGE "…Lascia stare. Vado a" NEW_ROW
+             "dormire." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Ehi. Lo sai che giorno" NEW_ROW "è oggi?" END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "…Te ne sei ricordata." NEW_ROW "Uffa. Non male." NEW_PAGE "Ho preparato la cena." NEW_ROW
+             "Siediti prima che si" NEW_ROW "raffreddi." NEW_PAGE "…E non fare quella" NEW_ROW
+             "faccia. È solo una cena." END_OF_MESSAGE},
+    {.scene = SCENE_ANNIVERSARY_AS_THE_HUSBAND, .number = ANNIVERSARY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Te ne sei dimenticata?!" NEW_ROW "Uffa… Lo sapevo." NEW_PAGE "…Lascia stare. Vado a" NEW_ROW
+             "dormire." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Ehi. Lo sai che giorno è" NEW_ROW "oggi, vero?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Esatto. È il compleanno" NEW_ROW "di " CHILD_NAME "." NEW_PAGE "Pensavo che non ci fosse"
+             NEW_ROW "niente da festeggiare." NEW_PAGE "…Questo sì." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE, .number = CHILDS_BIRTHDAY_WIFE_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Sbagliato! È il compleanno" NEW_ROW "di " CHILD_NAME "! Uffa…" NEW_PAGE
+             "Che razza di genitore" NEW_ROW "se lo dimentica?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_ASKS_WHAT_DAY_IT_IS,
+     .text = JAMIE_SPEAKS "Ehi. Lo sai che giorno è" NEW_ROW "oggi, vero?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_REMEMBERS,
+     .text = JAMIE_SPEAKS "Esatto. È il compleanno" NEW_ROW "di " CHILD_NAME "." NEW_PAGE "Pensavo che non ci fosse"
+             NEW_ROW "niente da festeggiare." NEW_PAGE "…Questo sì." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND, .number = CHILDS_BIRTHDAY_HUSBAND_WHEN_THE_PLAYER_FORGETS,
+     .text = JAMIE_SPEAKS "Sbagliato! È il compleanno" NEW_ROW "di " CHILD_NAME "! Uffa…" NEW_PAGE
+             "Che razza di genitore" NEW_ROW "se lo dimentica?" END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Ehi! Svegliati, dai!" NEW_PAGE "Oggi c'è la visita di" NEW_ROW CHILD_NAME ". Andiamo!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_WIFE, .number = CHILDS_CHECKUP_WIFE_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Ah! Lo sapevo." NEW_ROW "Vieni qui, " CHILD_NAME "." NEW_PAGE "…Sei forte. Come i" NEW_ROW
+             "tuoi genitori." END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_WAKES_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Ehi! Svegliati, dai!" NEW_PAGE "Oggi c'è la visita di" NEW_ROW CHILD_NAME ". Andiamo!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND, .number = CHILDS_CHECKUP_HUSBAND_AFTER_THE_DOCTOR,
+     .text = JAMIE_SPEAKS "Ah! Lo sapevo." NEW_ROW "Vieni qui, " CHILD_NAME "." NEW_PAGE "…Sei forte. Come i" NEW_ROW
+             "tuoi genitori." END_OF_MESSAGE},
 };
 
 /* The languages of the disc's message folders (/message_e/ and so on), with Jamie's lines in each one. */
@@ -1653,26 +1967,26 @@ static void after_a_character_message_is_shown(CPUState* cpu)
  */
 #define PUSH_INT_OPCODE 0x02u
 
-static const uint16_t pregnancy_as_the_wife_actor_bytes[] = { /* Eve_conce01, partner 4 */
+static const uint16_t pregnancy_as_the_wife_partner_bytes[] = { /* Eve_conce01, partner 4 */
     0x05EC, 0x064C, 0x0655, 0x065E, 0x0694, 0x06AD, 0x081B, 0x0847,
     0x0893, 0x08D2, 0x08DD, 0x0A9C, 0x0AF2, 0x0AFD,
 };
 
-static const uint16_t pregnancy_as_the_husband_actor_bytes[] = { /* Eve_conce10, partner 13 */
+static const uint16_t pregnancy_as_the_husband_partner_bytes[] = { /* Eve_conce10, partner 13 */
     0x0608, 0x0637, 0x06D5, 0x0710, 0x0739, 0x0744, 0x076A, 0x077A,
     0x0785, 0x079B, 0x07BE, 0x07C5, 0x07D5, 0x07E7, 0x07F6, 0x0804,
     0x084C, 0x0857, 0x0886, 0x08CB, 0x0977, 0x0987, 0x09AD, 0x09D7,
     0x09F5, 0x0A42, 0x0A57, 0x0A6A, 0x0A89, 0x0A94, 0x0AF3,
 };
 
-static const uint16_t birth_as_the_wife_actor_bytes[] = { /* Eve_child01, partner 4 */
+static const uint16_t birth_as_the_wife_partner_bytes[] = { /* Eve_child01, partner 4 */
     0x0375, 0x03DE, 0x03E7, 0x03F0, 0x0423, 0x042F, 0x0440, 0x0488,
     0x04BD, 0x0868, 0x090A, 0x0913, 0x092E, 0x09FB, 0x0A2B, 0x0A41,
     0x0A86, 0x0ABD, 0x0AD3, 0x0BBC, 0x0C35, 0x0C3E, 0x0C59, 0x0CA1,
     0x0CBA, 0x0CC9,
 };
 
-static const uint16_t birth_as_the_husband_actor_bytes[] = { /* Eve_child10, partner 13 */
+static const uint16_t birth_as_the_husband_partner_bytes[] = { /* Eve_child10, partner 13 */
     0x03AF, 0x0403, 0x0455, 0x04B3, 0x0512, 0x051D, 0x053B, 0x0574,
     0x0588, 0x059A, 0x05A7, 0x05B2, 0x05E4, 0x05FA, 0x061F, 0x064F,
     0x066F, 0x0694, 0x06A6, 0x06B1, 0x06C2, 0x06CD, 0x06E3, 0x06EE,
@@ -1686,6 +2000,50 @@ static const uint16_t birth_as_the_husband_actor_bytes[] = { /* Eve_child10, par
 };
 
 /*
+ * Special days (see the comment at the top, and docs/SCRIPTS.md, "Los días especiales").
+ *
+ * The field check also starts the special days of a married couple, in the player's first house and without
+ * looking at who the spouse is (only at the spouse's friendship). Among the morning checks: on the wedding
+ * anniversary, or on the child's birthday, the spouse asks the player to come home early (event 0xF3,
+ * Eve_memo03; the spouse's friendship must be 700 or more); when the child is 60 days old or more, the spouse
+ * wakes the player up for the child's checkup at the clinic (0xF4, Eve_memo04). Back home that evening, after
+ * that morning, the spouse asks what day it is and the player answers from a list (0xF0, Eve_memo00, from 6
+ * to 10 in the evening on the anniversary; 0xF1, Eve_memo01, from 4 to 8 on the child's birthday).
+ *
+ * Each of them has one script for every spouse. The script reads who the spouse is (game value 38) and picks
+ * the spouse's lines with chains of comparisons, one for each partner from 3 to 22; Eve_memo04 first copies
+ * the spouse's number into another local with such a chain, and puts that copy on stage. Jamie (2) matches
+ * none, so the scripts had no lines for Jamie, and in the checkup the copy kept its 0. When the game loads
+ * one of these scripts while Jamie is the spouse, the mod writes Jamie's number over partner 4's (partner
+ * 13's when the player is the girl), wherever the script holds it: in each comparison and in the copy. Then
+ * Jamie takes that partner's case of each chain, and that partner's messages, now shown for Jamie, point
+ * to Jamie's own lines, written over messages of other partners. tools/spouse_switches.py finds the
+ * bytes and the messages, and the test compares them with these lists.
+ */
+#define EVENT_ANNIVERSARY_EVENING 0xF0u         /* Eve_memo00 */
+#define EVENT_CHILDS_BIRTHDAY_EVENING 0xF1u     /* Eve_memo01 */
+#define EVENT_COME_HOME_EARLY 0xF3u             /* Eve_memo03 */
+#define EVENT_CHILDS_CHECKUP 0xF4u              /* Eve_memo04 */
+
+static const uint16_t come_home_early_as_the_wife_partner_bytes[] = {0x019B};    /* Eve_memo03, partner 4 */
+static const uint16_t come_home_early_as_the_husband_partner_bytes[] = {0x01E3}; /* partner 13 */
+static const uint16_t anniversary_as_the_wife_partner_bytes[] = {0x0181, 0x03F4, 0x062F}; /* Eve_memo00 */
+static const uint16_t anniversary_as_the_husband_partner_bytes[] = {0x01C9, 0x043C, 0x0677};
+static const uint16_t childs_birthday_as_the_wife_partner_bytes[] = {0x01D7, 0x0490, 0x06DD, 0x0901}; /* Eve_memo01 */
+static const uint16_t childs_birthday_as_the_husband_partner_bytes[] = {0x021F, 0x04D8, 0x0725, 0x0949};
+static const uint16_t childs_checkup_as_the_wife_partner_bytes[] = {0x0273, 0x0313, 0x0453, 0x0855}; /* Eve_memo04 */
+static const uint16_t childs_checkup_as_the_husband_partner_bytes[] = {0x02BB, 0x0351, 0x049B, 0x089D};
+
+/*
+ * How the game picks the partner of a scene that Jamie borrows. A scene of a partner has a script and an
+ * event of its own for each partner, and a chain of the field check starts the spouse's by the spouse's
+ * number, so the mod makes Jamie stand in for the partner while the chain runs (see "Babies"). A scene for
+ * every spouse has one script, which the game starts for Jamie too, and the script picks the spouse's lines
+ * by the spouse's number (see "Special days").
+ */
+typedef enum JamieSceneKind { SCENE_OF_A_PARTNER, SCENE_FOR_EVERY_SPOUSE } JamieSceneKind;
+
+/*
  * A scene that Jamie borrows. Its message file stays loaded for the whole event (fn_800FC2B4 loads it when
  * the event starts and keeps it at event manager + 0xB0), and it holds the lines of every partner of the
  * same kind, so Jamie's lines go over the text of messages that this scene never shows: from
@@ -1693,36 +2051,86 @@ static const uint16_t birth_as_the_husband_actor_bytes[] = { /* Eve_child10, par
  * file (the test checks that they fit in every language of the disc).
  */
 typedef struct JamieScene {
-    const char* name;            /* for the log */
-    bool jamie_is_the_wife;      /* the version for a male player */
-    bool is_the_birth;           /* the birth's chain, or else the pregnancy's */
-    uint32_t partner;            /* the partner whose event Jamie borrows */
-    uint32_t event;              /* that partner's event in the chain */
-    const char* script_name;     /* the event's script: /Script/<name>.lsb */
-    const char* message_file;    /* the event's messages: /message_<language>/event/<name>_<language>.bin */
-    const uint16_t* actor_bytes; /* the bytes of the script that hold the partner's number */
-    uint32_t actor_byte_count;
+    const char* name;              /* for the log */
+    JamieSceneKind kind;
+    bool jamie_is_the_wife;        /* the version for a male player */
+    bool is_the_birth;             /* for a scene of a partner: the birth's chain, or else the pregnancy's */
+    uint32_t partner;              /* the partner whose scene, or whose case of each chain, Jamie borrows */
+    uint32_t event;                /* the event that the game starts */
+    const char* script_name;       /* the event's script: /Script/<name>.lsb */
+    const char* message_file;      /* the event's messages: /message_<language>/event/<name>_<language>.bin */
+    const uint16_t* partner_bytes; /* the bytes of the script that hold the partner's number */
+    uint32_t partner_byte_count;
     uint32_t first_unused_message;
     uint32_t first_message_after_the_unused_ones;
 } JamieScene;
 
+#define PARTNER_BYTES(array) .partner_bytes = (array), .partner_byte_count = HM_MM_ARRAY_COUNT(array)
+#define AS_THE_WIFE .jamie_is_the_wife = true, .partner = PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE
+#define AS_THE_HUSBAND .jamie_is_the_wife = false, .partner = PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND
+
 static const JamieScene jamie_scenes[JAMIE_SCENE_COUNT] = {
-    [SCENE_PREGNANCY_AS_THE_WIFE] = {"the pregnancy", true, false, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE,
-                                     EVENT_PREGNANCY_OF_PARTNER_4, "Eve_conce01", "Eve_conce00",
-                                     pregnancy_as_the_wife_actor_bytes,
-                                     HM_MM_ARRAY_COUNT(pregnancy_as_the_wife_actor_bytes), 5u, 13u},
-    [SCENE_PREGNANCY_AS_THE_HUSBAND] = {"the pregnancy", false, false, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND,
-                                        EVENT_PREGNANCY_WITH_PARTNER_13, "Eve_conce10", "Eve_conce10",
-                                        pregnancy_as_the_husband_actor_bytes,
-                                        HM_MM_ARRAY_COUNT(pregnancy_as_the_husband_actor_bytes), 16u, 30u},
-    [SCENE_BIRTH_AS_THE_WIFE] = {"the birth", true, true, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE,
-                                 EVENT_BIRTH_OF_PARTNER_4, "Eve_child01", "Eve_child00",
-                                 birth_as_the_wife_actor_bytes, HM_MM_ARRAY_COUNT(birth_as_the_wife_actor_bytes),
-                                 12u, 36u},
-    [SCENE_BIRTH_AS_THE_HUSBAND] = {"the birth", false, true, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND,
-                                    EVENT_BIRTH_WITH_PARTNER_13, "Eve_child10", "Eve_child10",
-                                    birth_as_the_husband_actor_bytes,
-                                    HM_MM_ARRAY_COUNT(birth_as_the_husband_actor_bytes), 9u, 36u},
+    [SCENE_PREGNANCY_AS_THE_WIFE] = {
+        .name = "the pregnancy", .kind = SCENE_OF_A_PARTNER, AS_THE_WIFE, .is_the_birth = false,
+        .event = EVENT_PREGNANCY_OF_PARTNER_4, .script_name = "Eve_conce01", .message_file = "Eve_conce00",
+        PARTNER_BYTES(pregnancy_as_the_wife_partner_bytes),
+        .first_unused_message = 5u, .first_message_after_the_unused_ones = 13u},
+    [SCENE_PREGNANCY_AS_THE_HUSBAND] = {
+        .name = "the pregnancy", .kind = SCENE_OF_A_PARTNER, AS_THE_HUSBAND, .is_the_birth = false,
+        .event = EVENT_PREGNANCY_WITH_PARTNER_13, .script_name = "Eve_conce10", .message_file = "Eve_conce10",
+        PARTNER_BYTES(pregnancy_as_the_husband_partner_bytes),
+        .first_unused_message = 16u, .first_message_after_the_unused_ones = 30u},
+    [SCENE_BIRTH_AS_THE_WIFE] = {
+        .name = "the birth", .kind = SCENE_OF_A_PARTNER, AS_THE_WIFE, .is_the_birth = true,
+        .event = EVENT_BIRTH_OF_PARTNER_4, .script_name = "Eve_child01", .message_file = "Eve_child00",
+        PARTNER_BYTES(birth_as_the_wife_partner_bytes),
+        .first_unused_message = 12u, .first_message_after_the_unused_ones = 36u},
+    [SCENE_BIRTH_AS_THE_HUSBAND] = {
+        .name = "the birth", .kind = SCENE_OF_A_PARTNER, AS_THE_HUSBAND, .is_the_birth = true,
+        .event = EVENT_BIRTH_WITH_PARTNER_13, .script_name = "Eve_child10", .message_file = "Eve_child10",
+        PARTNER_BYTES(birth_as_the_husband_partner_bytes),
+        .first_unused_message = 9u, .first_message_after_the_unused_ones = 36u},
+    /* The rooms of the special days: the messages of partners 5 to 12 in a part that both versions skip. */
+    [SCENE_COME_HOME_EARLY_AS_THE_WIFE] = {
+        .name = "the morning of a special day", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_WIFE,
+        .event = EVENT_COME_HOME_EARLY, .script_name = "Eve_memo03", .message_file = "Eve_memo03",
+        PARTNER_BYTES(come_home_early_as_the_wife_partner_bytes),
+        .first_unused_message = 3u, .first_message_after_the_unused_ones = 11u},
+    [SCENE_COME_HOME_EARLY_AS_THE_HUSBAND] = {
+        .name = "the morning of a special day", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_HUSBAND,
+        .event = EVENT_COME_HOME_EARLY, .script_name = "Eve_memo03", .message_file = "Eve_memo03",
+        PARTNER_BYTES(come_home_early_as_the_husband_partner_bytes),
+        .first_unused_message = 3u, .first_message_after_the_unused_ones = 11u},
+    [SCENE_ANNIVERSARY_AS_THE_WIFE] = {
+        .name = "the evening of the anniversary", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_WIFE,
+        .event = EVENT_ANNIVERSARY_EVENING, .script_name = "Eve_memo00", .message_file = "Eve_memo00",
+        PARTNER_BYTES(anniversary_as_the_wife_partner_bytes),
+        .first_unused_message = 26u, .first_message_after_the_unused_ones = 34u},
+    [SCENE_ANNIVERSARY_AS_THE_HUSBAND] = {
+        .name = "the evening of the anniversary", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_HUSBAND,
+        .event = EVENT_ANNIVERSARY_EVENING, .script_name = "Eve_memo00", .message_file = "Eve_memo00",
+        PARTNER_BYTES(anniversary_as_the_husband_partner_bytes),
+        .first_unused_message = 26u, .first_message_after_the_unused_ones = 34u},
+    [SCENE_CHILDS_BIRTHDAY_AS_THE_WIFE] = {
+        .name = "the evening of the child's birthday", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_WIFE,
+        .event = EVENT_CHILDS_BIRTHDAY_EVENING, .script_name = "Eve_memo01", .message_file = "Eve_memo01",
+        PARTNER_BYTES(childs_birthday_as_the_wife_partner_bytes),
+        .first_unused_message = 26u, .first_message_after_the_unused_ones = 34u},
+    [SCENE_CHILDS_BIRTHDAY_AS_THE_HUSBAND] = {
+        .name = "the evening of the child's birthday", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_HUSBAND,
+        .event = EVENT_CHILDS_BIRTHDAY_EVENING, .script_name = "Eve_memo01", .message_file = "Eve_memo01",
+        PARTNER_BYTES(childs_birthday_as_the_husband_partner_bytes),
+        .first_unused_message = 26u, .first_message_after_the_unused_ones = 34u},
+    [SCENE_CHILDS_CHECKUP_AS_THE_WIFE] = {
+        .name = "the child's checkup", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_WIFE,
+        .event = EVENT_CHILDS_CHECKUP, .script_name = "Eve_memo04", .message_file = "Eve_memo04",
+        PARTNER_BYTES(childs_checkup_as_the_wife_partner_bytes),
+        .first_unused_message = 25u, .first_message_after_the_unused_ones = 33u},
+    [SCENE_CHILDS_CHECKUP_AS_THE_HUSBAND] = {
+        .name = "the child's checkup", .kind = SCENE_FOR_EVERY_SPOUSE, AS_THE_HUSBAND,
+        .event = EVENT_CHILDS_CHECKUP, .script_name = "Eve_memo04", .message_file = "Eve_memo04",
+        PARTNER_BYTES(childs_checkup_as_the_husband_partner_bytes),
+        .first_unused_message = 25u, .first_message_after_the_unused_ones = 33u},
 };
 
 /*
@@ -1761,8 +2169,8 @@ static const JamieScene* scene_for_the_player(CPUState* cpu, uint32_t save_data,
 }
 
 /*
- * Whether this scene is Jamie's: Jamie is the spouse (or stands in for the scene's partner right now), and
- * the scene is the version for the player's gender.
+ * Whether this scene is Jamie's: the scene is the version for the player's gender, and Jamie is the spouse
+ * or, for a scene of a partner, stands in for the scene's partner right now.
  */
 static bool scene_is_jamies(CPUState* cpu, const JamieScene* scene)
 {
@@ -1771,7 +2179,10 @@ static bool scene_is_jamies(CPUState* cpu, const JamieScene* scene)
         return false;
     }
     const uint32_t spouse = read_word(cpu, save_data + SPOUSE_OFFSET);
-    return spouse == JAMIE_CHARACTER_NUMBER || (scene == stand_in.scene && spouse == scene->partner);
+    if (spouse == JAMIE_CHARACTER_NUMBER) {
+        return true;
+    }
+    return scene->kind == SCENE_OF_A_PARTNER && scene == stand_in.scene && spouse == scene->partner;
 }
 
 /* Whether fn_800FC2B4 would start this event now: events are allowed, and this one has not started before. */
@@ -2002,18 +2413,18 @@ static bool is_the_message_file_of(const char* path, const JamieScene* scene, ch
 /* Writes Jamie's number over the partner's in the scene's script that the game has just loaded. */
 static void put_jamie_in_the_loaded_script(CPUState* cpu, uint32_t file, const JamieScene* scene)
 {
-    for (uint32_t index = 0; index < scene->actor_byte_count; ++index) {
-        const uint32_t number_byte = file + scene->actor_bytes[index];
+    for (uint32_t index = 0; index < scene->partner_byte_count; ++index) {
+        const uint32_t number_byte = file + scene->partner_bytes[index];
         if (read_byte(cpu, number_byte) != scene->partner || read_byte(cpu, number_byte - 1) != PUSH_INT_OPCODE) {
             HM_MM_LOG(MOD_ID, "%s.lsb is not the script this mod knows: left as it is", scene->script_name);
             return;
         }
     }
-    for (uint32_t index = 0; index < scene->actor_byte_count; ++index) {
-        write_byte(cpu, file + scene->actor_bytes[index], (uint8_t)JAMIE_CHARACTER_NUMBER);
+    for (uint32_t index = 0; index < scene->partner_byte_count; ++index) {
+        write_byte(cpu, file + scene->partner_bytes[index], (uint8_t)JAMIE_CHARACTER_NUMBER);
     }
     HM_MM_LOG(MOD_ID, "put Jamie in %s (%s.lsb, %u places)", scene->name, scene->script_name,
-              (unsigned int)scene->actor_byte_count);
+              (unsigned int)scene->partner_byte_count);
 }
 
 /*
@@ -2063,7 +2474,11 @@ static struct {
     const SpouseLanguage* language; /* for SCENE_MESSAGES */
 } pending_scene_file;
 
-/* fn_80029E74(path), on its entry: is the file the script or the messages of one of Jamie's scenes? */
+/*
+ * fn_80029E74(path), on its entry: is the file the script or the messages of one of Jamie's scenes? The two
+ * versions of a special day share their files, so a file of a scene that is not Jamie's is not the end of the
+ * search.
+ */
 static void before_a_file_is_loaded(CPUState* cpu)
 {
     pending_scene_file.kind = NOT_A_SCENE_FILE;
@@ -2074,16 +2489,14 @@ static void before_a_file_is_loaded(CPUState* cpu)
     for (uint32_t scene_id = 0; scene_id < JAMIE_SCENE_COUNT; ++scene_id) {
         const JamieScene* scene = &jamie_scenes[scene_id];
         char folder_letter = '\0';
-        if (is_the_script_of(path, scene)) {
-            if (scene_is_jamies(cpu, scene)) {
-                pending_scene_file.kind = SCENE_SCRIPT;
-                pending_scene_file.scene = (JamieSceneId)scene_id;
-            }
+        if (is_the_script_of(path, scene) && scene_is_jamies(cpu, scene)) {
+            pending_scene_file.kind = SCENE_SCRIPT;
+            pending_scene_file.scene = (JamieSceneId)scene_id;
             return;
         }
-        if (is_the_message_file_of(path, scene, &folder_letter)) {
+        if (is_the_message_file_of(path, scene, &folder_letter) && scene_is_jamies(cpu, scene)) {
             const SpouseLanguage* language = language_with_folder_letter(folder_letter);
-            if (language != NULL && scene_is_jamies(cpu, scene)) {
+            if (language != NULL) {
                 pending_scene_file.kind = SCENE_MESSAGES;
                 pending_scene_file.scene = (JamieSceneId)scene_id;
                 pending_scene_file.language = language;
@@ -2159,7 +2572,7 @@ static const ModernGekkoModDesc descriptor = {
     .cpu_state_size = sizeof(CPUState),
     .game_id = HM_MM_GAME_ID,
     .id = MOD_ID,
-    .version = "0.7.0",
+    .version = "0.8.0",
     .display_name = "Jamie marriage does not end the game",
     .hooks = hooks,
     .num_hooks = HM_MM_ARRAY_COUNT(hooks),

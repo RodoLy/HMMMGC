@@ -4,18 +4,21 @@ and the game's bytes and message window, as the mod and the game use them.
 Lo que las pruebas leen de mods/jamie_marriage/mod.c: sus textos, tablas y macros, como los lee el
 compilador de C, y los bytes y la ventana de mensajes del juego, como los usan el mod y el juego.
 
-tests/test_jamie_as_the_spouse.py (the spouse's conversations and birthday) and
-tests/test_jamie_pregnancy_and_birth.py (the scenes) share it.
+tests/test_jamie_as_the_spouse.py (the spouse's conversations and birthday) and the tests of the scenes that
+Jamie borrows (tests/test_jamie_scene_lines.py, tests/test_jamie_pregnancy_and_birth.py and
+tests/test_jamie_special_days.py) share it.
 """
 
 import re
+import struct
 import sys
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
-from project import REPOSITORY_ROOT, SCRIPT_DIRECTORY  # noqa: E402
+from project import DISC_DIRECTORY, REPOSITORY_ROOT, SCRIPT_DIRECTORY  # noqa: E402
 
 MOD_SOURCE = REPOSITORY_ROOT / "mods" / "jamie_marriage" / "mod.c"
 
@@ -41,6 +44,7 @@ FONT_BYTES_OUTSIDE_LATIN_1 = {"Œ": 0x8C, "œ": 0x9C, "…": 0x85}
 # The European languages whose text is on the disc, by the letter of their folder (/message_e/ ...).
 DISC_LANGUAGES = {"e", "s", "f", "g", "i"}
 JAMIE_CHARACTER_NUMBER = 2
+JAMIE_SPEAKS = b"\x1e\x02"  # the speaker code of an event message: 0x1E and the character's number
 JAMIE_FILE_NAME = "Rion"  # the disc's name for Jamie's message file
 
 TALK_SCRIPT = SCRIPT_DIRECTORY / "talk.lsb"
@@ -246,6 +250,157 @@ def read_scene_table(source: str, table_name: str) -> list[SceneLine]:
 def read_scene_languages(source: str) -> dict[str, list[SceneLine]]:
     """The scene tables of spouse_languages[], by the letter of the language's folder."""
     return {letter: read_scene_table(source, table_name) for letter, _, table_name in language_rows(source)}
+
+
+# ---------------------------------------------------------------------------------------------------------
+# The scenes that Jamie borrows: the rows of jamie_scenes[], with the arrays and macros that they name.
+# ---------------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Scene:
+    """A row of jamie_scenes[] in mod.c."""
+
+    name: str  # its name in JamieSceneId, such as SCENE_PREGNANCY_AS_THE_WIFE
+    kind: str  # SCENE_OF_A_PARTNER or SCENE_FOR_EVERY_SPOUSE
+    jamie_is_the_wife: bool
+    is_the_birth: bool
+    partner: int
+    event: int
+    script_name: str
+    message_file: str
+    partner_bytes: tuple[int, ...]
+    first_unused_message: int
+    first_message_after_the_unused_ones: int
+
+    @property
+    def unused_messages(self) -> range:
+        return range(self.first_unused_message, self.first_message_after_the_unused_ones)
+
+
+def hex_macros(source: str) -> dict[str, int]:
+    """The macros whose value is a hexadecimal number, such as `#define HOUSE_CASE_ADDRESS 0x801668D0u`."""
+    return {
+        name: int(value, 16)
+        for name, value in re.findall(r"^#define\s+(\w+)\s+0x([0-9A-Fa-f]+)u\b", source, re.MULTILINE)
+    }
+
+
+def uint16_arrays(source: str) -> dict[str, tuple[int, ...]]:
+    """The values of every `static const uint16_t <name>[] = {...};`, by name."""
+    arrays = {}
+    for name, body in re.findall(r"static const uint16_t (\w+)\[\] = \{(.*?)\};", source, re.DOTALL):
+        body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL)
+        arrays[name] = tuple(int(value, 16) for value in re.findall(r"0x([0-9A-Fa-f]+)", body))
+    return arrays
+
+
+# A macro that stands for designated initializers, such as `#define AS_THE_WIFE .jamie_is_the_wife = true,
+# ...`, or, with a parameter, `#define PARTNER_BYTES(array) .partner_bytes = (array), ...`.
+INITIALIZER_MACRO = re.compile(r"^#define\s+(\w+)(?:\((\w+)\))?\s+(\..*?)\s*$", re.MULTILINE)
+
+
+def with_the_argument(match: re.Match[str], body: str, parameter: str) -> str:
+    """The body of a macro with a parameter, for the call that `match` found, with its argument in place."""
+    return re.sub(rf"\b{parameter}\b", match.group(1), body)
+
+
+def expand_initializer_macros(text: str, source: str) -> str:
+    """`text` with the initializer macros of `source` replaced by what they stand for, as in C."""
+    for name, parameter, body in INITIALIZER_MACRO.findall(source):
+        if parameter:
+            text = re.sub(
+                rf"\b{name}\((\w+)\)", partial(with_the_argument, body=body, parameter=parameter), text
+            )
+        else:
+            text = re.sub(rf"\b{name}\b", body.replace("\\", r"\\"), text)
+    return text
+
+
+def single_value(fields: dict[str, list[Token]], field: str, where: str) -> str:
+    """The text of a field that holds one token, taken out of `fields`."""
+    tokens = fields.pop(field)
+    assert len(tokens) == 1, f"{where}: .{field} is not a single value"
+    return tokens[0].text
+
+
+def read_scenes(source: str) -> dict[str, Scene]:
+    """The rows of jamie_scenes[], `[SCENE_...] = {.field = value, ...}`, by their name in JamieSceneId."""
+    start = re.search(r"static const JamieScene jamie_scenes\[JAMIE_SCENE_COUNT\] = \{", source)
+    assert start, f"no jamie_scenes[] in {MOD_SOURCE.name}"
+    end = source.index("\n};", start.end())
+    string_macros, number_macros = read_macros(source)
+    numbers = {**number_macros, **hex_macros(source)}
+    arrays = uint16_arrays(source)
+    scenes = {}
+    rows = split_on_top_level_commas(tokens_of(expand_initializer_macros(source[start.end() : end], source)))
+    for row in rows:
+        texts = [token.text for token in row]
+        assert texts[0] == "[" and texts[2:5] == ["]", "=", "{"] and texts[-1] == "}", (
+            "use [SCENE_...] = {...}"
+        )
+        name = texts[1]
+        fields = {}
+        for field in split_on_top_level_commas(row[5:-1]):
+            assert field[0].text == "." and field[2].text == "=", f"{name}: use .field = value"
+            fields[field[1].text] = field[3:]
+        array = [token.text for token in fields.pop("partner_bytes")]
+        assert len(array) == 3 and array[0] == "(" and array[2] == ")", (
+            f"{name}: .partner_bytes is not (array)"
+        )
+        count = [token.text for token in fields.pop("partner_byte_count")]
+        assert count == ["HM_MM_ARRAY_COUNT", "(", array[1], ")"], f"{name}: the count is not its array's"
+        scene = Scene(
+            name=name,
+            kind=single_value(fields, "kind", name),
+            jamie_is_the_wife=single_value(fields, "jamie_is_the_wife", name) == "true",
+            is_the_birth=fields.pop("is_the_birth", [Token("name", "false")])[0].text == "true",
+            partner=numbers[single_value(fields, "partner", name)],
+            event=numbers[single_value(fields, "event", name)],
+            script_name=evaluate_string(fields.pop("script_name"), string_macros).decode("utf-8"),
+            message_file=evaluate_string(fields.pop("message_file"), string_macros).decode("utf-8"),
+            partner_bytes=arrays[array[1]],
+            first_unused_message=int(single_value(fields, "first_unused_message", name).rstrip("u")),
+            first_message_after_the_unused_ones=int(
+                single_value(fields, "first_message_after_the_unused_ones", name).rstrip("u")
+            ),
+        )
+        evaluate_string(fields.pop("name"), string_macros)  # only for the log, but it must be a text
+        assert not fields, f"{name}: unknown fields {sorted(fields)}"
+        scenes[name] = scene
+    return scenes
+
+
+# ---------------------------------------------------------------------------------------------------------
+# The game's events and their message files.
+# ---------------------------------------------------------------------------------------------------------
+
+# The tables of events in main.dol: for each event, a pointer to the name of its script, and one to the path
+# of its English messages (or 0).
+EVENT_SCRIPT_TABLE_ADDRESS = 0x8026BBA0
+EVENT_MESSAGE_TABLE_ADDRESS = 0x8026B740
+MESSAGE_FILE_HEADER = struct.Struct(">HH4xII")  # speaker, highest message, 4 other bytes, table, text
+
+
+def event_message_file(scene: Scene, letter: str) -> bytes:
+    """The scene's message file in a language, found without regard to case, as the game asks for it."""
+    folder = DISC_DIRECTORY / "files" / f"message_{letter}" / "event"
+    wanted = f"{scene.message_file}_{letter}.bin".lower()
+    matches = [path for path in folder.iterdir() if path.name.lower() == wanted]
+    assert matches, f"the disc has no {wanted} in {folder}"
+    return matches[0].read_bytes()
+
+
+def room_of_the_unused_messages(scene: Scene, letter: str) -> int:
+    """How many bytes of text the scene's unused messages take in that language's file, one after another."""
+    where = f"{scene.name}, language {letter}"
+    data = event_message_file(scene, letter)
+    _speaker, highest_message, table, _text = MESSAGE_FILE_HEADER.unpack_from(data)
+    assert scene.first_message_after_the_unused_ones <= highest_message, where
+    offsets = struct.unpack_from(f">{highest_message + 1}I", data, table)
+    room = offsets[scene.first_unused_message : scene.first_message_after_the_unused_ones + 1]
+    assert list(room) == sorted(room), f"{where}: the unused messages are not in a row"
+    return room[-1] - room[0]
 
 
 # ---------------------------------------------------------------------------------------------------------
