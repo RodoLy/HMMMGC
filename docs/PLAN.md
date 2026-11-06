@@ -10,6 +10,19 @@ Prioridad: **la recompilación va primero** (pista A). La pista B (mods del
 juego) empieza ya con el mod de Jamie, porque funciona sobre el juego
 recompilado; todo lo que la pista A descubre le sirve.
 
+**Decisión (2026-11-05): la base se queda en ModernGekko, con el núcleo de
+Dolphin; la pista A queda en pausa.** El jugador pidió quitar Dolphin solo si
+otra recompilación de GameCube o Wii ya lo hace. Ninguna lo hace todavía:
+DolRecomp traduce solo el código del procesador y deja el runtime a cada
+proyecto, y el único runtime completo (ModernGekko) usa el núcleo de Dolphin.
+Los ports sin Dolphin que existen, como el de Twilight Princess (Dusklight,
+sobre aurora), son descompilaciones: el juego reescrito a mano en C++, un
+trabajo de años y de muchas personas que no existe para Magical Melody.
+Lo que sigue es la pista B (mods) y la pista C (launcher y controles). 4K es la
+resolución interna de Dolphin (un ajuste); widescreen y 60/120 fps se buscan
+como mods. Si aparece un runtime de recompilación sin Dolphin, se vuelve a
+evaluar. El texto que sigue sobre la pista A se conserva como referencia.
+
 **Meta: un port totalmente nativo, sin código de Dolphin.** Hoy es un híbrido:
 el código del juego ya corre recompilado como código nativo en Windows ARM64,
 pero el hardware que lo rodea (video, audio, disco, controles, tarjeta de
@@ -233,6 +246,19 @@ cambio en inglés, documentación bilingüe y nunca datos del juego.
 Priority: **the recompilation comes first** (track A). Track B (game mods)
 starts now with the Jamie mod, because it works on the recompiled game;
 everything track A discovers feeds into it.
+
+**Decision (2026-11-05): the base stays on ModernGekko, with the Dolphin
+core; track A is paused.** The player asked to remove Dolphin only if another
+GameCube or Wii recompilation already does it. None does yet: DolRecomp
+translates only the processor's code and leaves the runtime to each project,
+and the only complete runtime (ModernGekko) uses the Dolphin core. The ports
+without Dolphin that exist, such as the Twilight Princess one (Dusklight, on
+aurora), are decompilations: the game rewritten by hand in C++, years of work
+by many people, which does not exist for Magical Melody. What comes next is
+track B (mods) and track C (launcher and controls). 4K is Dolphin's internal
+resolution (a setting); widescreen and 60/120 fps are sought as mods. If a
+recompilation runtime without Dolphin appears, this is evaluated again. The
+text about track A below is kept for reference.
 
 **Goal: a fully native port, with no Dolphin code.** Today it is a hybrid: the
 game's code already runs recompiled as native code on Windows ARM64, but the
