@@ -1,0 +1,38 @@
+# Naming of the native runtime's C++, as CONTRIBUTING.md describes it. clang-tidy 18:
+#   cmake -S runtime -B build/native/runtime -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...
+#   run-clang-tidy -p build/native/runtime 'runtime/src/.*\.cpp$'
+#
+# Nombres del C++ del runtime nativo, como los describe CONTRIBUTING.md.
+#
+# Names that WiiCompiled's guest ABI headers declare (PPC_ReadSpr, Memory::GetPointer,
+# TranslatedFunctionRegistry::Register...) keep their spelling: the translated code calls
+# them by it. Those declarations live outside runtime/src, so the check does not look at
+# them; FunctionIgnoredRegexp lists the few it cannot tell apart (function templates, and
+# InitializeDataSections, which the translator writes). A native replacement is named
+# after the game function it replaces (OSLoadContextNative replaces OSLoadContext), so
+# that a search finds both.
+Checks: '-*,readability-identifier-naming'
+HeaderFilterRegex: '.*/runtime/src/.*'
+CheckOptions:
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.FunctionIgnoredRegexp: '^([A-Z][A-Za-z0-9]*Native|ReadResolvedFallback|WriteResolvedFallback|InitializeDataSections)$'
+  readability-identifier-naming.MethodCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: '_'
+  readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.StaticConstantCase: UPPER_CASE
+  readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
