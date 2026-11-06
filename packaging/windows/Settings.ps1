@@ -45,6 +45,12 @@
         para volver a los valores por omisión.
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingWriteHost', '',
+    Justification = 'When the window cannot open, the error goes to the console of Settings.bat, which waits for a key.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseShouldProcessForStateChangingFunctions', '',
+    Justification = 'The functions build and update this window, not commands for others to call.')]
 [CmdletBinding()]
 param()
 

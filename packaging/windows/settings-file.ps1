@@ -62,6 +62,14 @@
     impide que el juego arranque.
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseShouldProcessForStateChangingFunctions', '',
+    Justification = 'The functions make and write the settings for Settings.ps1 and play.ps1, not commands for others to call.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', '',
+    Justification = 'Settings.ps1 and play.ps1 load this file with a dot and use the values that it sets.')]
+param()
+
 # -- What is allowed ---------------------------------------------------------------------------------
 
 # The name of the file, inside the player's folder.
