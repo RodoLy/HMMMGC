@@ -14,10 +14,11 @@ python3 tools/spouse_switches.py Eve_memo00 4  # where a script picks partner 4'
 HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest tests/test_lsb.py
 ```
 
-Everything here comes from static analysis of `main.dol` and the disc files;
-nothing was run on the recompiled game. / Todo lo de aquí sale de análisis
-estático de `main.dol` y de los archivos del disco; nada se ejecutó en el
-juego recompilado.
+Casi todo lo de aquí sale de análisis estático de `main.dol` y de los
+archivos del disco; las secciones que lo dicen también se probaron en el
+juego recompilado, corriendo con ModernGekko. / Most of this comes from
+static analysis of `main.dol` and the disc files; the sections that say so
+were also tried in the recompiled game, running on ModernGekko.
 
 ---
 
