@@ -213,6 +213,33 @@ Fuentes: el código de [aurora](https://github.com/encounter/aurora) en el commi
 `GXFrameBuffer.cpp`, `GXTexture.cpp`, `lib/gx/command_processor.cpp` y
 `cmake/AuroraDawnProvider.cmake`.
 
+### Prueba con el traductor de WiiCompiled (2026-11-05)
+
+[WiiCompiled](https://github.com/patchzyy/wiicompiled) es la recompilación
+estática de Mario Kart Wii que corre sin Dolphin (runtime propio y aurora).
+Varios proyectos la usan de base (New Super Mario Bros. Wii, KartPad,
+DriftDroid, WebCompiled). Lo que se probó con este juego:
+
+- **El traductor traduce el juego completo.** Con un manifiesto mínimo (las
+  bases del área de datos pequeños, `r13 = 0x80329080` y `r2 = 0x8032A780`,
+  salen de `__init_registers` en `0x8000332C`, y el mapa de funciones de
+  `config/G4AEE9/symbols.txt`) tradujo 4 470 funciones desde `__start` en unos
+  20 segundos, sin instrucciones sin soporte. Hizo falta un solo cambio local
+  al traductor: no seguir llamadas a direcciones fuera de la RAM, porque
+  `__OSDBJump` (`0x8016F6B0`) es un `bla 0x60` al depurador de la consola.
+- **El runtime está atado a Mario Kart Wii.** Reemplaza unas 550 funciones del
+  SDK (124 de GX, 205 avisos de GX sin usar, OS, VI, PAD, DVD, audio) por
+  dirección fija de ese juego. De 336 nombres distintos, 131 existen con el
+  mismo nombre en este juego; el resto son de Wii (IOS, NAND, ES) o tienen otro
+  nombre o versión en el SDK de GameCube de 2005. Hace falta una capa propia
+  para GameCube: las mismas piezas con las direcciones de este juego, más la
+  tarjeta de memoria (CARD/EXI), que Wii no usa.
+- **aurora necesita Dawn,** la implementación de WebGPU de Google, que se
+  compila con dependencias que se descargan de los servidores de Google. Desde
+  el contenedor de esta sesión no se llega a esos servidores, así que aurora se
+  tiene que compilar en otro lado (GitHub Actions o la computadora del
+  jugador).
+
 ### Resultado de la prueba de arranque (2026-11-03)
 
 **Magical Melody arranca y dibuja con DolRecomp + ModernGekko.**
@@ -492,6 +519,33 @@ Sources: [aurora](https://github.com/encounter/aurora)'s code at commit
 `GXManage.h`, `lib/dolphin/gx/GXManage.cpp`, `GXDispList.cpp`,
 `GXFrameBuffer.cpp`, `GXTexture.cpp`, `lib/gx/command_processor.cpp` and
 `cmake/AuroraDawnProvider.cmake`.
+
+### Trying the WiiCompiled translator (2026-11-05)
+
+[WiiCompiled](https://github.com/patchzyy/wiicompiled) is the static
+recompilation of Mario Kart Wii that runs without Dolphin (its own runtime and
+aurora). Several projects use it as their base (New Super Mario Bros. Wii,
+KartPad, DriftDroid, WebCompiled). What was tried with this game:
+
+- **The translator translates the whole game.** With a minimal manifest (the
+  small data area bases, `r13 = 0x80329080` and `r2 = 0x8032A780`, come from
+  `__init_registers` at `0x8000332C`, and the function map from
+  `config/G4AEE9/symbols.txt`) it translated 4,470 functions from `__start` in
+  about 20 seconds, with no unsupported instructions. A single local change to
+  the translator was needed: do not follow calls to addresses outside RAM,
+  because `__OSDBJump` (`0x8016F6B0`) is a `bla 0x60` into the console's
+  debugger.
+- **The runtime is tied to Mario Kart Wii.** It replaces about 550 functions of
+  the SDK (124 of GX, 205 GX warnings for unused ones, OS, VI, PAD, DVD, audio)
+  at fixed addresses of that game. Of 336 different names, 131 exist with the
+  same name in this game; the rest belong to the Wii (IOS, NAND, ES) or have
+  another name or version in the 2005 GameCube SDK. A layer of our own for
+  GameCube is needed: the same pieces at this game's addresses, plus the memory
+  card (CARD/EXI), which the Wii does not use.
+- **aurora needs Dawn,** Google's WebGPU implementation, which is built with
+  dependencies downloaded from Google's servers. The container of this session
+  cannot reach those servers, so aurora has to be built elsewhere (GitHub
+  Actions or the player's computer).
 
 ### Boot test result (2026-11-03)
 
