@@ -10,18 +10,20 @@ Prioridad: **la recompilación va primero** (pista A). La pista B (mods del
 juego) empieza ya con el mod de Jamie, porque funciona sobre el juego
 recompilado; todo lo que la pista A descubre le sirve.
 
-**Decisión (2026-11-05): la base se queda en ModernGekko, con el núcleo de
-Dolphin; la pista A queda en pausa.** El jugador pidió quitar Dolphin solo si
-otra recompilación de GameCube o Wii ya lo hace. Ninguna lo hace todavía:
-DolRecomp traduce solo el código del procesador y deja el runtime a cada
-proyecto, y el único runtime completo (ModernGekko) usa el núcleo de Dolphin.
-Los ports sin Dolphin que existen, como el de Twilight Princess (Dusklight,
-sobre aurora), son descompilaciones: el juego reescrito a mano en C++, un
-trabajo de años y de muchas personas que no existe para Magical Melody.
-Lo que sigue es la pista B (mods) y la pista C (launcher y controles). 4K es la
-resolución interna de Dolphin (un ajuste); widescreen y 60/120 fps se buscan
-como mods. Si aparece un runtime de recompilación sin Dolphin, se vuelve a
-evaluar. El texto que sigue sobre la pista A se conserva como referencia.
+**Decisión (2026-11-05, corregida el mismo día): la pista A sigue.** El
+jugador pidió quitar Dolphin solo si otra recompilación de GameCube o Wii ya
+lo hace. Al principio se creyó que ninguna lo hacía, pero sí hay una:
+[WiiCompiled](https://github.com/patchzyy/wiicompiled), la recompilación
+estática de Mario Kart Wii (GPL-3.0, como este proyecto), corre sin emulador:
+traduce el código del juego por adelantado y lo une a un runtime propio de
+alto nivel (DVD, NAND, PAD, audio, ritmo de video y servicios del sistema)
+con [aurora](https://github.com/encounter/aurora) para los gráficos sobre
+Dawn (D3D12, Vulkan, Metal). Dolphin solo le sirvió de referencia del
+hardware. Ya hay otra recompilación hecha sobre ella (New Super Mario Bros.
+Wii). Es el mismo camino que esta pista eligió el 2026-11-04, así que el orden
+de abajo se mantiene, ahora con WiiCompiled como referencia de un runtime que
+ya funciona con aurora; falta estudiar cuánto de él sirve para un juego de
+GameCube. Mientras tanto, la base que juega sigue siendo ModernGekko.
 
 **Meta: un port totalmente nativo, sin código de Dolphin.** Hoy es un híbrido:
 el código del juego ya corre recompilado como código nativo en Windows ARM64,
@@ -247,18 +249,20 @@ Priority: **the recompilation comes first** (track A). Track B (game mods)
 starts now with the Jamie mod, because it works on the recompiled game;
 everything track A discovers feeds into it.
 
-**Decision (2026-11-05): the base stays on ModernGekko, with the Dolphin
-core; track A is paused.** The player asked to remove Dolphin only if another
-GameCube or Wii recompilation already does it. None does yet: DolRecomp
-translates only the processor's code and leaves the runtime to each project,
-and the only complete runtime (ModernGekko) uses the Dolphin core. The ports
-without Dolphin that exist, such as the Twilight Princess one (Dusklight, on
-aurora), are decompilations: the game rewritten by hand in C++, years of work
-by many people, which does not exist for Magical Melody. What comes next is
-track B (mods) and track C (launcher and controls). 4K is Dolphin's internal
-resolution (a setting); widescreen and 60/120 fps are sought as mods. If a
-recompilation runtime without Dolphin appears, this is evaluated again. The
-text about track A below is kept for reference.
+**Decision (2026-11-05, corrected the same day): track A goes on.** The
+player asked to remove Dolphin only if another GameCube or Wii recompilation
+already does it. At first it was believed that none did, but there is one:
+[WiiCompiled](https://github.com/patchzyy/wiicompiled), the static
+recompilation of Mario Kart Wii (GPL-3.0, like this project), runs without an
+emulator: it translates the game's code ahead of time and joins it to its own
+high-level runtime (DVD, NAND, PAD, audio, video pacing and system services)
+with [aurora](https://github.com/encounter/aurora) for the graphics, on Dawn
+(D3D12, Vulkan, Metal). Dolphin was only its reference for the hardware.
+Another recompilation is already built on it (New Super Mario Bros. Wii). It
+is the same road that this track chose on 2026-11-04, so the order below
+stays, now with WiiCompiled as the reference of a runtime that already works
+with aurora; how much of it serves a GameCube game is still to be studied.
+Meanwhile, the base that plays is still ModernGekko.
 
 **Goal: a fully native port, with no Dolphin code.** Today it is a hybrid: the
 game's code already runs recompiled as native code on Windows ARM64, but the
