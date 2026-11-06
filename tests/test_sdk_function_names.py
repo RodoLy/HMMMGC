@@ -1,6 +1,6 @@
-"""The 41 functions of the Nintendo SDK, outside GX, that were named by reading what their code does.
+"""The 68 functions of the Nintendo SDK, outside GX, that were named by reading what their code does.
 
-Las 41 funciones del SDK de Nintendo, fuera de GX, que se nombraron leyendo lo que hace su código.
+Las 68 funciones del SDK de Nintendo, fuera de GX, que se nombraron leyendo lo que hace su código.
 
 Which ones / Cuáles
 -------------------
@@ -10,11 +10,21 @@ points that tools/find_library_entry_points.py lists. 39 of them were still unna
 the CARD entry points rest on them: __CARDSyncCallback, the callback every synchronous CARD call passes to
 its asynchronous twin, and __CARDDefaultApiCallback, the one used when no callback is given.
 
+The audio zone came after: between AXInit and the DSP library only four functions had a name, so the tool
+saw almost none of its entry points. Measured by hand, it has 28, and 27 had no name: 14 of AX, 7 of AXFX
+(the effects: reverbs, chorus and delay), 4 of MIX (the mixer that sits on AX) and the 2 functions at the
+start of the DSP library that tell whether a mail is waiting.
+
 Un runtime nativo reemplaza, biblioteca por biblioteca, las funciones del SDK a las que llega el resto del
 juego: los puntos de entrada que lista tools/find_library_entry_points.py. 39 seguían sin nombre (16 de OS,
 9 de CARD, 4 de DVD, 4 de VI, 2 de AI, 2 de DSP, 1 de AR y 1 de PAD). Se suman dos funciones internas de
 CARD en las que se apoyan sus puntos de entrada: __CARDSyncCallback, la que cada llamada síncrona de CARD
 le pasa a su gemela asíncrona, y __CARDDefaultApiCallback, la que se usa cuando no se da ninguna.
+
+Después vino la zona del audio: entre AXInit y la biblioteca DSP solo cuatro funciones tenían nombre, así
+que la herramienta casi no veía sus puntos de entrada. Medida a mano tiene 28, y 27 no tenían nombre: 14 de
+AX, 7 de AXFX (los efectos: reverberaciones, chorus y delay), 4 de MIX (el mezclador que va sobre AX) y las 2
+funciones del inicio de la biblioteca DSP que dicen si hay un correo esperando.
 
 Why the signatures could not name them / Por qué las firmas no pudieron
 -----------------------------------------------------------------------
@@ -63,8 +73,9 @@ What the tests check / Qué comprueban las pruebas
 Against the real main.dol: every function has the name, the size and the facts of its row; no other
 function of its library has them (a row that fitted two functions would identify neither); and the data
 behind the names: each OnReset is the function of the reset record that its library registers, the empty
-functions are the first values of the variables that hold them, the variables start with the values that
-the SDK sources give them, and the retrace handler counts the retraces that VIGetRetraceCount returns.
+functions are the first values of the variables that hold them, what a function registers is read by
+other functions of its library, the variables start with the values that the SDK sources give them, and the
+retrace handler counts the retraces that VIGetRetraceCount returns.
 """
 
 import os
@@ -136,6 +147,53 @@ ALL_FOUR_CONTROLLERS = 0xF000  # PAD_CHAN0_BIT | ... | PAD_CHAN3_BIT, the upper 
 NO_CONTROLLER_RESETTING = 0x20  # PADSync: ResettingChan == 32
 SRAM_SIZE = 0x14  # sizeof(OSSram)
 INTERRUPTS = {"OSDisableInterrupts", "OSRestoreInterrupts"}
+
+# AX. A voice is an AXVPB; the parameter block that the DSP reads (AXPB) starts at +0x138 of it (ax.h).
+VOICE_PRIORITY_OFFSET = 0xC
+VOICE_CALLBACK_OFFSET = 0x10
+VOICE_USER_CONTEXT_OFFSET = 0x14
+VOICE_SYNC_OFFSET = 0x1C  # flags saying which parts of the block to copy to the DSP on the next frame
+VOICE_DEPOP_OFFSET = 0x20
+VOICE_PARAMETER_BLOCK_OFFSET = 0x138
+SOURCE_SELECT_OFFSET_IN_BLOCK = 0x8  # pb.srcSelect
+COEFFICIENT_SELECT_OFFSET_IN_BLOCK = 0xA  # pb.coefSelect
+VOICE_MIXER_CONTROL_OFFSET = 0x144  # pb.mixerCtrl
+VOICE_STATE_OFFSET = 0x146  # pb.state
+VOICE_TYPE_OFFSET = 0x148  # pb.type
+VOICE_MIX_OFFSET = 0x14A  # pb.mix
+VOICE_ADDRESS_OFFSET = 0x1A6  # pb.addr
+VOICE_ADPCM_OFFSET = 0x1B6  # pb.adpcm
+VOICE_SAMPLE_RATE_CONVERTER_OFFSET = 0x1DE  # pb.src; its first two halves are the ratio
+VOICE_SAMPLE_RATE_RATIO_LOW_OFFSET = 0x1E0
+VOICE_ADPCM_LOOP_OFFSET = 0x1EC  # pb.adpcmLoop
+SYNC_COPY_STATE = 0x4  # AX_SYNC_FLAG_COPYSTATE
+SYNC_COPY_TYPE = 0x8  # AX_SYNC_FLAG_COPYTYPE
+SYNC_COPY_MIX = 0x10  # AX_SYNC_FLAG_COPYAXPBMIX
+SYNC_COPY_ADDRESS = 0x1000  # AX_SYNC_FLAG_COPYADDR
+VOICE_STACK_HEADS = 0x802FAB40  # AXAlloc.c __AXStackHead[32]: one stack of voices per priority
+AUX_A_CALLBACK = -0x6D38  # AXAux.c __AXCallbackAuxA
+AUX_B_CALLBACK = -0x6D34  # __AXCallbackAuxB
+AUX_A_CONTEXT = -0x6D30  # __AXContextAuxA
+AUX_B_CONTEXT = -0x6D2C  # __AXContextAuxB
+COMMAND_LIST_MODE = -0x6CF0  # AXCL.c __AXClMode
+USER_FRAME_CALLBACK = -0x6CD0  # AXOut.c __AXUserFrameCallback
+# AXFX: the effects take their memory through two hooks (axfx.c).
+AXFX_ALLOC_HOOK = -0x75D8  # __AXFXAlloc
+AXFX_FREE_HOOK = -0x75D4  # __AXFXFree
+REVERB_HI_TEMPORARILY_DISABLED_OFFSET = 0x1C4  # AXFX_REVERBHI.tempDisableFX
+REVERB_STD_TEMPORARILY_DISABLED_OFFSET = 0x13C  # AXFX_REVERBSTD.tempDisableFX
+DELAY_BUFFER_OFFSETS = {0x30, 0x34, 0x38}  # AXFX_DELAY.left, .right and .sur
+# MIX.
+MIX_CHANNELS = 0x80314220  # mix.c __MIXChannel[64], one per voice
+MIX_DVD_STREAM_ATTENUATION_NOW = -0x6C68  # __MIXDvdStreamAttenCurrent
+MIX_DVD_STREAM_ATTENUATION_WANTED = -0x6C64  # __MIXDvdStreamAttenUser
+MIX_SOUND_MODE = -0x6C60  # __MIXSoundMode
+MIX_RESET_MODE_HIGH_HALF = 0x5000  # a reset channel's mode is 0x50000000
+MIX_RESET_AUX_LEVEL = 0xFC40  # -0x3C0: the aux sends of a reset channel start at -96 dB
+VOICE_INDEX_OFFSET = 0x18  # AXVPB.index: the voice's channel
+# DSP: the mailboxes are the first registers of 0xCC005000; bit 15 of the high half says "a mail is there".
+DSP_MAIL_TO_DSP_OFFSET = 0x5000
+DSP_MAIL_FROM_DSP_OFFSET = 0x5004
 
 EVIDENCE = [
     # ---- OS ----
@@ -414,6 +472,217 @@ EVIDENCE = [
         addresses={CARD_SYNC_CALLBACK},
         callees={"CARDDeleteAsync", "__CARDSync"},
     ),
+    # ---- AX ----
+    # Takes a voice from the stacks of the priorities, with the interrupts off, and keeps the priority, the
+    # callback and the user's context in it.
+    Evidence(
+        0x8018016C,
+        "AXAcquireVoice",
+        0x174,
+        addresses={VOICE_STACK_HEADS},
+        stored_offsets={VOICE_PRIORITY_OFFSET, VOICE_CALLBACK_OFFSET, VOICE_USER_CONTEXT_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    # The two aux sends: each keeps a callback and its context (see the test of the registered callbacks).
+    Evidence(0x80180758, "AXRegisterAuxACallback", 0xC, stored_offsets={AUX_A_CALLBACK, AUX_A_CONTEXT}),
+    Evidence(0x80180764, "AXRegisterAuxBCallback", 0xC, stored_offsets={AUX_B_CALLBACK, AUX_B_CONTEXT}),
+    Evidence(
+        0x80180E88,
+        "AXSetMode",
+        0x14,
+        loaded_offsets={COMMAND_LIST_MODE},
+        stored_offsets={COMMAND_LIST_MODE},
+    ),
+    # Swaps the function called on every audio frame, with the interrupts off, and returns the one before.
+    Evidence(
+        0x8018160C,
+        "AXRegisterCallback",
+        0x44,
+        loaded_offsets={USER_FRAME_CALLBACK},
+        stored_offsets={USER_FRAME_CALLBACK},
+        callees=INTERRUPTS,
+    ),
+    # The voice setters: each writes its part of the parameter block with the interrupts off and marks it in
+    # the sync flags, so that the next frame copies it to the DSP. The part tells them apart.
+    Evidence(
+        0x80182734,
+        "AXSetVoiceSrcType",
+        0xC4,
+        constants={VOICE_PARAMETER_BLOCK_OFFSET},
+        loaded_offsets={VOICE_SYNC_OFFSET},
+        stored_offsets={SOURCE_SELECT_OFFSET_IN_BLOCK, COEFFICIENT_SELECT_OFFSET_IN_BLOCK, VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    # Stopping a voice also asks for a depop.
+    Evidence(
+        0x801827F8,
+        "AXSetVoiceState",
+        0x5C,
+        constants={SYNC_COPY_STATE},
+        stored_offsets={VOICE_STATE_OFFSET, VOICE_DEPOP_OFFSET, VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x80182854,
+        "AXSetVoiceType",
+        0x4C,
+        constants={SYNC_COPY_TYPE},
+        stored_offsets={VOICE_TYPE_OFFSET, VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x801828A0,
+        "AXSetVoiceMix",
+        0x254,
+        constants={VOICE_MIX_OFFSET, SYNC_COPY_MIX},
+        stored_offsets={VOICE_MIXER_CONTROL_OFFSET, VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x80182AF4,
+        "AXSetVoiceAddr",
+        0x110,
+        constants={VOICE_ADDRESS_OFFSET, SYNC_COPY_ADDRESS},
+        stored_offsets={VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x80182C04,
+        "AXSetVoiceAdpcm",
+        0xA4,
+        constants={VOICE_ADPCM_OFFSET},
+        stored_offsets={VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x80182CA8,
+        "AXSetVoiceSrc",
+        0x98,
+        constants={VOICE_SAMPLE_RATE_CONVERTER_OFFSET},
+        stored_offsets={VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    # Turns a float ratio into the two halves of the converter's ratio.
+    Evidence(
+        0x80182D40,
+        "AXSetVoiceSrcRatio",
+        0x98,
+        stored_offsets={
+            VOICE_SAMPLE_RATE_CONVERTER_OFFSET,
+            VOICE_SAMPLE_RATE_RATIO_LOW_OFFSET,
+            VOICE_SYNC_OFFSET,
+        },
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x80182DD8,
+        "AXSetVoiceAdpcmLoop",
+        0x6C,
+        constants={VOICE_ADPCM_LOOP_OFFSET},
+        stored_offsets={VOICE_SYNC_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    # ---- AXFX ----
+    # Each init clears its "temporarily disabled" flag and builds the effect with the interrupts off.
+    Evidence(
+        0x80183BD4,
+        "AXFXReverbHiInit",
+        0x70,
+        stored_offsets={REVERB_HI_TEMPORARILY_DISABLED_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    Evidence(
+        0x8018469C,
+        "AXFXReverbStdInit",
+        0x6C,
+        stored_offsets={REVERB_STD_TEMPORARILY_DISABLED_OFFSET},
+        callees=INTERRUPTS,
+    ),
+    # Takes its delay lines from the allocation hook; it follows the two sample-rate converters of chorus.c.
+    Evidence(
+        0x80184ABC,
+        "AXFXChorusInit",
+        0x248,
+        loaded_offsets={AXFX_ALLOC_HOOK},
+        callees=INTERRUPTS,
+        comes_after="do_src2",
+    ),
+    # Forgets the three delay buffers, then applies the settings.
+    Evidence(
+        0x801855FC,
+        "AXFXDelayInit",
+        0x48,
+        stored_offsets=DELAY_BUFFER_OFFSETS,
+        callees=INTERRUPTS,
+    ),
+    # The default hooks: memory from and to the current heap (see the test of the default callbacks).
+    Evidence(
+        0x801856E4,
+        "__AXFXAllocFunction",
+        0x28,
+        loaded_offsets={CURRENT_HEAP},
+        callees={"OSAllocFromHeap"},
+    ),
+    Evidence(
+        0x8018570C,
+        "__AXFXFreeFunction",
+        0x28,
+        loaded_offsets={CURRENT_HEAP},
+        callees={"OSFreeToHeap"},
+    ),
+    Evidence(0x80185734, "AXFXSetHooks", 0xC, stored_offsets={AXFX_ALLOC_HOOK, AXFX_FREE_HOOK}),
+    # ---- MIX ----
+    # Resets the 64 channels (mode 0x50000000, aux sends at -96 dB), the DVD stream fader and the sound mode.
+    Evidence(
+        0x801857FC,
+        "MIXInit",
+        0xC8,
+        addresses={MIX_CHANNELS},
+        constants={MIX_RESET_MODE_HIGH_HALF, MIX_RESET_AUX_LEVEL},
+        stored_offsets={MIX_DVD_STREAM_ATTENUATION_NOW, MIX_DVD_STREAM_ATTENUATION_WANTED, MIX_SOUND_MODE},
+    ),
+    Evidence(
+        0x801858C4,
+        "MIXInitChannel",
+        0xE7C,
+        addresses={MIX_CHANNELS},
+        loaded_offsets={MIX_SOUND_MODE},
+        callees=INTERRUPTS,
+    ),
+    # __MIXChannel[voice->index].axvpb = NULL.
+    Evidence(
+        0x80186740,
+        "MIXReleaseChannel",
+        0x20,
+        addresses={MIX_CHANNELS},
+        loaded_offsets={VOICE_INDEX_OFFSET},
+        stored_offsets={0},
+    ),
+    # Brings the DVD stream fader one step closer to what was asked, through the AI stream volume.
+    Evidence(
+        0x80186760,
+        "MIXUpdateSettings",
+        0x107C,
+        loaded_offsets={MIX_DVD_STREAM_ATTENUATION_WANTED},
+        stored_offsets={MIX_DVD_STREAM_ATTENUATION_NOW},
+        callees={"AISetStreamVolLeft", "AISetStreamVolRight"},
+    ),
+    # ---- DSP ----
+    Evidence(
+        0x801877DC,
+        "DSPCheckMailToDSP",
+        0x10,
+        constants={HARDWARE_REGISTERS_HIGH_HALF},
+        loaded_offsets={DSP_MAIL_TO_DSP_OFFSET},
+    ),
+    Evidence(
+        0x801877EC,
+        "DSPCheckMailFromDSP",
+        0x10,
+        constants={HARDWARE_REGISTERS_HIGH_HALF},
+        loaded_offsets={DSP_MAIL_FROM_DSP_OFFSET},
+        comes_before="DSPReadMailFromDSP",
+    ),
 ]
 
 
@@ -447,6 +716,26 @@ class DefaultCallback:
 DEFAULT_CALLBACKS = [
     DefaultCallback(SWITCH_THREAD_CALLBACK, "DefaultSwitchThreadCallback", "OS"),
     DefaultCallback(CHECK_OPTIONAL_COMMAND, "defaultOptionalCommandChecker", "DVD"),
+    DefaultCallback(AXFX_ALLOC_HOOK, "__AXFXAllocFunction", "AXFX"),
+    DefaultCallback(AXFX_FREE_HOOK, "__AXFXFreeFunction", "AXFX"),
+]
+
+
+@dataclass(frozen=True)
+class RegisteredValue:
+    """A function that keeps what the game gives it in variables that other functions of its library read."""
+
+    function: str
+    variable_offsets: frozenset[int]
+
+
+REGISTERED_VALUES = [
+    RegisteredValue("AXRegisterAuxACallback", frozenset({AUX_A_CALLBACK, AUX_A_CONTEXT})),
+    RegisteredValue("AXRegisterAuxBCallback", frozenset({AUX_B_CALLBACK, AUX_B_CONTEXT})),
+    RegisteredValue("AXRegisterCallback", frozenset({USER_FRAME_CALLBACK})),
+    RegisteredValue("AXSetMode", frozenset({COMMAND_LIST_MODE})),
+    RegisteredValue("AXFXSetHooks", frozenset({AXFX_ALLOC_HOOK, AXFX_FREE_HOOK})),
+    RegisteredValue("VISetPostRetraceCallback", frozenset({POST_RETRACE_CALLBACK})),
 ]
 
 
@@ -471,10 +760,10 @@ FIRST_VALUES = [
 ]
 
 
-def test_the_table_has_41_functions_with_different_names_and_addresses():
-    assert len(EVIDENCE) == 41
-    assert len({evidence.name for evidence in EVIDENCE}) == 41
-    assert len({evidence.address for evidence in EVIDENCE}) == 41
+def test_the_table_has_68_functions_with_different_names_and_addresses():
+    assert len(EVIDENCE) == 68
+    assert len({evidence.name for evidence in EVIDENCE}) == 68
+    assert len({evidence.address for evidence in EVIDENCE}) == 68
 
 
 def test_a_repeated_static_name_carries_the_name_of_its_file():
@@ -591,6 +880,22 @@ def test_the_asynchronous_card_calls_fall_back_on_the_empty_callback(dol, symbol
         "__CARDFormatRegionAsync",
     ):
         assert CARD_DEFAULT_API_CALLBACK in facts_of(name, dol, symbols, small_data_bases).addresses, name
+
+
+@needs_game_files
+@pytest.mark.parametrize("registered", REGISTERED_VALUES, ids=lambda registered: registered.function)
+def test_what_a_function_registers_is_read_by_other_functions_of_its_library(
+    registered, symbols, facts_by_library
+):
+    setter = symbols.by_name(registered.function)
+    library = library_holding(symbols, setter.address)
+    for offset in sorted(registered.variable_offsets):
+        readers = [
+            address
+            for address, facts in facts_by_library[library].items()
+            if address != setter.address and offset in facts.loaded_offsets
+        ]
+        assert readers, f"no other function of {library} reads the variable at {offset:#x}(r13)"
 
 
 @needs_game_files
