@@ -597,6 +597,139 @@ es la pareja, le devuelve el «ninguno» del juego. Lo hace al entrar a cada
 área (`fn_80042D10`), así que la fecha ya está cuando el juego revisa los
 cumpleaños a la mañana siguiente.
 
+### El embarazo y el parto
+
+El juego decide el embarazo y el parto en la revisión del campo
+(`fn_80166888`), que corre al entrar a un área. Elige qué revisar por el área
+(`0x80321D40`) con la tabla de casos de `0x802A341C`: las casas del jugador
+(áreas 27 a 39 y 116 a 121) usan todas el caso de `0x801668D0`, que primero
+prueba la bandera principal `0x1A4`. El juego la enciende cada mañana
+(`fn_80032EE8`) y la apaga cuando el jugador sale (`fn_801649FC`).
+
+- Con la bandera encendida corren las revisiones de la mañana; entre ellas,
+  la del parto (desde `0x8016809C`): el valor 43 (`save + 0xCB60`, los días
+  de embarazo) es 60 o más y no es el aniversario de bodas (la estación y el
+  día de `save + 0xD514` y `save + 0xD520`).
+- Con la bandera apagada va a la del embarazo (`0x80169410`): el jugador
+  entró desde la granja (el área anterior, `fn_8003465C`, es la que
+  `fn_800A232C(0x81)` da para la estación), lleva 20 días o más de casado
+  (`save + 0xCB54`), el contador de `save + 0xD508` (uno más cada día de
+  casado, en `fn_80032EE8`) llegó a 10 y la amistad de la pareja es de 900 o
+  más.
+
+Después, cada revisión sigue una cadena de bloques, uno por pareja, del 3 al
+22: «¿la pareja es el 3? entonces el evento `0xC8` (`Eve_conce00`); ¿es el 4?
+entonces el `0xC9` (`Eve_conce01`)…», hasta el `0xDB` (`Eve_conce19`); los
+del parto van del `0xDC` (`Eve_child00`) al `0xEF` (`Eve_child19`). Jamie (el
+2) no tiene bloque en ninguna de las dos, así que el juego nunca le da esas
+escenas. El bloque del embarazo pone el valor 43 en 1 (desde ahí suma uno
+cada día, y el día en que vale 1 la rutina diaria enciende el bit 4 de la
+pareja: su frase 10, la del embarazo). El del parto lo pone en 255, anota la
+fecha (`save + 0xD52C` y `save + 0xD538`), pone en 0 el clima del día y en 2
+`save + 0x4808`, y enciende el bit 5 de la pareja (su frase 11, la del
+nacimiento) en una dirección fija de cada bloque.
+
+`fn_800FC2B4` arranca el evento solo si el bit 8 de `0x80321DC0` está
+encendido y el evento no empezó antes. Carga su archivo de mensajes de la
+tabla de `0x8026B740` (para `0xC9`, `/message_e/event/Eve_conce00_e.bin`, el
+mismo que el de la pareja 3) y guarda el nombre de su script, de la tabla de
+`0x8026BBA0`. Un archivo de mensajes de evento tiene el formato de los de los
+personajes, pero cada mensaje empieza con quién habla: `1E` y el número del
+personaje (`1E 02` es Jamie). Las diez parejas del chico (3 a 12) comparten
+un archivo para el embarazo y otro para el parto, y las diez de la chica (13
+a 22) otros dos; cada escena muestra solo algunos de sus números.
+
+**Lo que hace el mod (0.7.0).** Cuando Jamie es la pareja, Jamie toma
+prestadas las escenas de la pareja 4 si el jugador es el chico (`Eve_conce01`
+y `Eve_child01`) y las de la 13 si es la chica (`Eve_conce10` y
+`Eve_child10`):
+
+1. Justo antes de la cadena, si todas las condiciones se cumplen para Jamie,
+   escribe el número de la pareja como cónyuge (para el embarazo, también la
+   amistad de Jamie en el contador de la pareja, porque la revisión la lee por
+   el número de la pareja). El bloque de la pareja arranca la escena.
+2. Jamie vuelve a ser la pareja enseguida: en `fn_800FC2B4`, si va a arrancar
+   otro evento o si el de la escena no va a arrancar; al regresar la revisión
+   del campo; en el final común de sus revisiones (`0x8016D55C`); y, por si
+   acaso, en la revisión siguiente y al entrar a la siguiente área
+   (`fn_80042D10`). Un evento que no va a arrancar no cambia nada: las
+   revisiones de la mañana piden varios que ya se vieron (en la prueba, el
+   `0x100`, el `0x109` y el `0x1A`) antes de llegar a la cadena del parto.
+3. Cuando el juego carga el script de la escena, el mod escribe el 2 de Jamie
+   donde el script nombra a la pareja: como actor de una función nativa, como
+   argumento de una función del propio script que llega a un actor, o como
+   quien habla (la función nativa 164). `tools/script_actors.py` encuentra
+   esos lugares: 14 en `Eve_conce01`, 31 en `Eve_conce10`, 26 en
+   `Eve_child01` y 78 en `Eve_child10`. Antes de escribir, el mod comprueba
+   que en cada uno esté el número de la pareja después de un `PUSH_INT`; si
+   no, deja el script como está.
+4. Cuando carga el archivo de mensajes, escribe las frases de Jamie sobre
+   mensajes que la escena nunca muestra (del 5 al 12 de `Eve_conce00`, del 16
+   al 29 de `Eve_conce10`, del 12 al 35 de `Eve_child00` y del 9 al 35 de
+   `Eve_child10`) y apunta ahí la tabla para los números que dice la pareja
+   (el 4 y el 16; el 30, el 3 y el 15; del 9 al 11 y el 39; el 2 y del 6 al
+   8). Las frases son nuevas, con la voz de Jamie, en los cinco idiomas del
+   disco, y concuerdan con el sexo del jugador donde el idioma lo pide.
+5. Tras el parto, pasa a Jamie el bit 5 que el bloque encendió en la pareja,
+   para que la primera conversación sea la de Jamie sobre el nacimiento.
+
+ModernGekko solo corre un hook cuando el código recompilado vuelve a su
+despachador, y un salto dentro del mismo bloque de 16 KB es un `goto` que no
+vuelve (ver [mods/README.md](../mods/README.md)). Por eso el mod no engancha
+los bloques de las cadenas, a los que se salta desde su mismo bloque, sino la
+primera instrucción de la revisión del embarazo, a la que se llega desde otro
+bloque, y la entrada de la revisión del campo para el parto: entre esa
+entrada y la cadena del parto nada lee la pareja.
+`tests/test_jamie_pregnancy_and_birth.py` revisa las frases en cada idioma,
+corre los ganchos sobre una memoria falsa y comprueba, en los archivos del
+juego, los lugares de cada script, el espacio para las frases y el código de
+la revisión del campo en las direcciones que usa el mod.
+
+**Prueba en el juego (2026-11-06).** Con un estado guardado del chico casado
+con Jamie y las condiciones escritas a mano (días de casados, contador y
+amistad), al entrar a la primera casa desde la granja el registro dijo
+`Jamie stands in for partner 4 to start the pregnancy`,
+`gave Jamie 2 lines in the messages of the pregnancy`,
+`Jamie is the spouse again after the pregnancy` y
+`put Jamie in the pregnancy (Eve_conce01.lsb, 14 places)`, y corrió el evento
+`0xC9`: Theodore manda al jugador a la clínica, el doctor lo felicita, y en la
+cama de la clínica está el modelo de Jamie, que dice sus frases; después
+hablan el doctor y Martha, Jamie dice su última frase y el jugador recibe la
+nota de la felicidad. De vuelta en la casa, Jamie estaba ahí como cónyuge y
+la partida decía lo que debía: la pareja es el 2, el valor 43 vale 1, la
+pareja 4 tiene otra vez su propia amistad y el evento `0xC9` quedó marcado
+como empezado. Con el mismo estado y el jugador cambiado a la chica
+(`save + 0x227C` en 1; el juego le puso su modelo enseguida), corrió el
+`0xD2` (`Eve_conce10`, 31 lugares, 3 frases): Jamie encuentra a la jugadora
+desmayada en la casa y la lleva a la clínica, el doctor le habla como al
+esposo, y Jamie dice sus tres frases junto a la cama. El
+final fue el mismo: la pareja es el 2, el valor 43 vale 1, la pareja 13
+tiene su propia amistad y el `0xD2` quedó marcado. Detalle visual: en una
+animación de alegría de esa versión, el sombrero de Jamie queda un poco por
+encima de su cabeza.
+
+El parto, con el chico: el mismo estado con el valor 43 en 60, el `0xC9`
+marcado y la bandera `0x1A4` encendida al entrar a la casa (afuera el juego
+la apaga). La primera prueba mostró un error del mod: las revisiones de la
+mañana pidieron a `fn_800FC2B4` los eventos `0x100`, `0x109` y `0x1A`, que ya
+se habían visto y no arrancaron, y el mod devolvía a Jamie en cuanto veía
+otro evento, así que la cadena del parto ya no la encontraba como cónyuge.
+Ahora solo la devuelve si ese otro evento va a arrancar. Con eso corrió el `0xDD`
+(`Eve_child01`, 26 lugares, 4 frases): Theodore avisa que la esposa está de
+parto, Jamie dice su frase en la cama de la clínica, Martha manda al jugador
+a esperar, nace el bebé, Jamie dice sus frases, pide que el jugador elija el
+nombre (sale la pantalla para escribirlo) y responde al nombre; después
+Woody trae la cuna y se abre la pantalla de muebles (ver «La cama grande» en
+«Qué no está verificado»). El registro dijo también
+`Jamie, not partner 4, is to talk about the birth`, y la partida quedó como
+debía: la pareja es el 2, el valor 43 vale 255, la fecha del nacimiento es
+la del día, Jamie tiene el bit 5 y la pareja 4 no, y el `0xDD` quedó marcado.
+Con la chica corrió el `0xE6` (`Eve_child10`, 78 lugares, 4 frases): Jamie
+acompaña a la jugadora en la clínica, Martha lo manda a esperar, nace el
+bebé y Jamie dice sus frases, pide el nombre y responde a él; después llega
+Woody con la cuna. La partida quedó igual de bien, con el bit 5 en Jamie y no
+en la pareja 13 y el `0xE6` marcado.
+
 ### Qué no está verificado
 
 - La prueba usó condiciones escritas a mano sobre un estado guardado, con el
@@ -634,6 +767,21 @@ cumpleaños a la mañana siguiente.
   `fn_800A232C` usa como índice de campo de varios lugares, entre ellos el
   `0x81`. La opción A impide la escritura (en la prueba `0x2258` no cambió),
   pero no se sabe si una partida que continúa necesitaría otro valor.
+- El embarazo y el parto de Jamie se probaron con condiciones escritas a mano
+  (días de casados, el contador, la amistad, los días de embarazo y la
+  bandera de la mañana), no en una partida que llegue sola a ellas. Tampoco
+  se vieron las conversaciones que siguen (la frase 10 de Jamie al día
+  siguiente del embarazo, la 11 tras el parto) ni la vida con el hijo cuando
+  la pareja es Jamie: el juego podría elegir algo del hijo por el número de
+  la pareja.
+- **La cama grande.** Tras el parto, Woody trae la cuna y se abre la
+  pantalla de muebles, que no se cierra mientras el jugador casado no tenga
+  la cama grande (Bed L) en la casa: le pide que la traiga porque está
+  casado (los textos están en `0x801DE00C` y `0x801DE128`). Con las otras
+  parejas no pasa, porque el juego pide comprarla (Woody la vende con la casa
+  de nivel 3) antes de la pluma azul; con Jamie no. En el estado de la prueba
+  no había cama grande, así que esa pantalla no se pudo cerrar. Hasta que el
+  mod lo resuelva, hay que tener la cama grande antes del parto.
 
 ### Nombres propuestos
 
@@ -1235,6 +1383,137 @@ Jamie is not the spouse, it gives back the game's "none". It does so on
 entering every area (`fn_80042D10`), so the date is there when the game
 checks the birthdays the next morning.
 
+### Pregnancy and birth
+
+The game decides the pregnancy and the birth in the field check
+(`fn_80166888`), which runs on entering an area. It chooses what to check by
+the area (`0x80321D40`) through the table of cases at `0x802A341C`: the
+player's houses (areas 27 to 39 and 116 to 121) all use the case at
+`0x801668D0`, which first tests main flag `0x1A4`. The game sets it every
+morning (`fn_80032EE8`) and clears it when the player goes out
+(`fn_801649FC`).
+
+- With the flag set, the morning checks run; among them, the birth's (from
+  `0x8016809C`): value 43 (`save + 0xCB60`, the days of pregnancy) is 60 or
+  more, and it is not the wedding anniversary (the season and day at
+  `save + 0xD514` and `save + 0xD520`).
+- With the flag clear, it goes to the pregnancy's (`0x80169410`): the player
+  came in from the farm (the previous area, given by `fn_8003465C`, is the one
+  `fn_800A232C(0x81)` gives for the season), has been married for 20 days or
+  more (`save + 0xCB54`), the counter at `save + 0xD508` (one more each day of
+  marriage, in `fn_80032EE8`) has reached 10, and the spouse's friendship is
+  900 or more.
+
+Each check then goes through a chain of blocks, one for each partner, from 3
+to 22: "is the spouse 3? then event `0xC8` (`Eve_conce00`); is it 4? then
+`0xC9` (`Eve_conce01`)…", up to `0xDB` (`Eve_conce19`); the birth's go from
+`0xDC` (`Eve_child00`) to `0xEF` (`Eve_child19`). Jamie (2) has no block in
+either, so the game never gives Jamie these scenes. The pregnancy's block
+sets value 43 to 1 (from then on it grows by one each day, and on the day it
+is 1 the daily routine sets bit 4 of the spouse: line 10, the pregnancy's).
+The birth's sets it to 255, records the date (`save + 0xD52C` and
+`save + 0xD538`), sets the day's weather to 0 and `save + 0x4808` to 2, and
+sets bit 5 of the spouse (line 11, the birth's) at an address fixed in each
+block.
+
+`fn_800FC2B4` starts the event only if bit 8 of `0x80321DC0` is set and the
+event has not started before. It loads the event's message file from the
+table at `0x8026B740` (for `0xC9`, `/message_e/event/Eve_conce00_e.bin`, the
+same as partner 3's) and keeps the name of its script, from the table at
+`0x8026BBA0`. An event message file has the format of the characters' ones,
+but each message starts with who speaks: `1E` and the character's number
+(`1E 02` is Jamie). The boy's ten partners (3 to 12) share one file for the
+pregnancy and another for the birth, and the girl's ten (13 to 22) two
+others; each scene shows only some of their numbers.
+
+**What the mod does (0.7.0).** When Jamie is the spouse, Jamie borrows the
+scenes of partner 4 when the player is the boy (`Eve_conce01` and
+`Eve_child01`) and those of partner 13 when the player is the girl
+(`Eve_conce10` and `Eve_child10`):
+
+1. Right before the chain, if every condition holds for Jamie, it writes the
+   partner's number as the spouse (for the pregnancy, also Jamie's friendship
+   into the partner's counter, since the check reads it by the spouse's
+   number). The partner's block starts the scene.
+2. Jamie is the spouse again right away: in `fn_800FC2B4`, if another event
+   is about to start or the scene's will not; when the field check returns;
+   at the shared end of its checks (`0x8016D55C`); and, as a safety net, at
+   the next field check and on entering the next area (`fn_80042D10`). An
+   event that will not start changes nothing: the morning checks ask for
+   several that were seen long ago (in the test, `0x100`, `0x109` and `0x1A`)
+   before they reach the birth's chain.
+3. When the game loads the scene's script, the mod writes Jamie's 2 where the
+   script names the partner: as the actor of a native function, as an
+   argument of one of the script's own functions that reaches an actor, or as
+   the speaker (native function 164). `tools/script_actors.py` finds those
+   places: 14 in `Eve_conce01`, 31 in `Eve_conce10`, 26 in `Eve_child01` and
+   78 in `Eve_child10`. Before writing, the mod checks that each holds the
+   partner's number after a `PUSH_INT`; if not, it leaves the script as it is.
+4. When it loads the message file, it writes Jamie's lines over messages the
+   scene never shows (5 to 12 of `Eve_conce00`, 16 to 29 of `Eve_conce10`, 12
+   to 35 of `Eve_child00` and 9 to 35 of `Eve_child10`) and points the table
+   there for the numbers the partner says (4 and 16; 30, 3 and 15; 9 to 11 and
+   39; 2 and 6 to 8). The lines are new, in Jamie's voice, in the five
+   languages of the disc, and agree with the player's gender where the
+   language needs it.
+5. After the birth, it moves to Jamie the bit 5 that the block set on the
+   partner, so that the first conversation is Jamie's about the birth.
+
+ModernGekko only runs a hook when the recompiled code returns to its
+dispatcher, and a branch within the same 16 KB chunk is a `goto` that does
+not (see [mods/README.md](../mods/README.md)). That is why the mod does not
+hook the blocks of the chains, which are reached from their own chunk, but
+the first instruction of the pregnancy check, reached from another chunk,
+and the entry of the field check for the birth: between that entry and the
+birth's chain nothing reads the spouse.
+`tests/test_jamie_pregnancy_and_birth.py` checks the lines in every
+language, runs the hooks on a fake memory and checks, on the game's files,
+the places of each script, the room for the lines and the field check's code
+at the addresses the mod uses.
+
+**Test in the game (2026-11-06).** With a saved state of the boy married to
+Jamie and the conditions written by hand (days of marriage, counter and
+friendship), on entering the first house from the farm the log said
+`Jamie stands in for partner 4 to start the pregnancy`,
+`gave Jamie 2 lines in the messages of the pregnancy`,
+`Jamie is the spouse again after the pregnancy` and
+`put Jamie in the pregnancy (Eve_conce01.lsb, 14 places)`, and event `0xC9`
+ran: Theodore sends the player to the clinic, the doctor congratulates the
+player, and Jamie's model is in the clinic's bed and says Jamie's lines; then
+the doctor and Martha speak, Jamie says the last line and the player gets the
+note of happiness. Back in the house, Jamie was there as the spouse and the
+save data said what it should: the spouse is 2, value 43 is 1, partner 4 has
+its own friendship back and event `0xC9` is marked as started. With the same
+state and the player changed to the girl (`save + 0x227C` set to 1; the game
+gave her her model at once), `0xD2` ran (`Eve_conce10`, 31 places, 3 lines):
+Jamie finds the player collapsed at home and takes her to the clinic, the
+doctor speaks to Jamie as the husband, and Jamie says the three lines by
+the bed. The end was the same: the spouse is 2, value 43 is
+1, partner 13 has its own friendship and `0xD2` is marked. A visual detail:
+in a happy animation of that version, Jamie's hat sits a little above Jamie's
+head.
+
+The birth, with the boy: the same state with value 43 at 60, `0xC9` marked
+and flag `0x1A4` set on entering the house (outside, the game clears it). The
+first try showed a bug in the mod: the morning checks asked `fn_800FC2B4` for
+events `0x100`, `0x109` and `0x1A`, which had been seen before and did not
+start, and the mod gave Jamie back as soon as it saw another event, so the
+birth's chain no longer found Jamie. Now it gives Jamie back only if that
+other event will start. With that, `0xDD` ran (`Eve_child01`, 26 places, 4
+lines): Theodore says the wife is in labor, Jamie says the line in the
+clinic's bed, Martha sends the player to wait, the baby is born, Jamie says
+the lines, asks the player to choose the name (the screen to write it comes
+up) and answers the name; then Woody brings the crib and the furniture
+screen opens (see "The big bed" in "What is not verified"). The log also
+said `Jamie, not partner 4, is to talk about the birth`, and the save data
+was as it should be: the spouse is 2, value 43 is 255, the date of birth is
+the day's, Jamie has bit 5 and partner 4 does not, and `0xDD` is marked.
+With the girl, `0xE6` ran (`Eve_child10`, 78 places, 4 lines): Jamie is with
+the player at the clinic, Martha sends him out to wait, the baby is born and
+Jamie says the lines, asks for the name and answers it; then Woody comes with
+the crib. The save data was just as right, with bit 5 on Jamie and not on
+partner 13, and `0xE6` marked.
+
 ### What is not verified
 
 - The test used hand-written conditions on a saved state, with index 26
@@ -1273,6 +1552,21 @@ checks the birthdays the next morning.
   `0x81` among them. Option A prevents the write (in the test `0x2258` did
   not change), but it is not known whether a game that carries on would need
   a different value.
+- Jamie's pregnancy and birth were tried under hand-written conditions (days
+  of marriage, the counter, the friendship, the days of pregnancy and the
+  morning flag), not in a game that reaches them by itself. Nor were the
+  conversations that follow seen (Jamie's line 10 the day after the
+  pregnancy, line 11 after the birth), or life with the child when the spouse
+  is Jamie: the game might choose something about the child by the spouse's
+  number.
+- **The big bed.** After the birth, Woody brings the crib and the furniture
+  screen opens, and it does not close while the married player has no big
+  bed (Bed L) in the house: it asks for one because the player is married
+  (the texts are at `0x801DE00C` and `0x801DE128`). With the other partners it
+  does not happen, because the game asks the player to buy it (Woody sells
+  it with the level 3 house) before the blue feather; with Jamie it does
+  not. The test's state had no big bed, so that screen could not be closed.
+  Until the mod solves it, the player needs the big bed before the birth.
 
 ### Proposed names
 

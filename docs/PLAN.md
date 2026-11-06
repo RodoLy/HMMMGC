@@ -333,6 +333,11 @@ pieza por pieza, en el orden de arriba)
       la frase de cada pareja por su número y el de Jamie no está, y el del
       embarazo se elige con una cadena de comparaciones de `fn_80166888` que
       no incluye a Jamie.
+      **Embarazo y parto hechos** (`jamie_marriage` 0.7.0): Jamie toma
+      prestadas las escenas de la pareja 4 (si el jugador es el chico) o de
+      la 13 (si es la chica), con su modelo y frases nuevas en los cinco
+      idiomas ([El embarazo y el parto](SCRIPTS.md#el-embarazo-y-el-parto)).
+      Faltan el aniversario, el cumpleaños del hijo y su revisión médica.
 - [ ] **Diálogos en español con el texto del disco**: el disco americano
       trae la traducción oficial al español (y al francés, alemán e
       italiano) de la versión europea de GameCube que no salió; el programa
@@ -780,6 +785,11 @@ by piece, in the order above)
       (`Eve_memo01`) and checkup (`Eve_memo04`). The scripts choose each
       partner's line by number and Jamie's is missing, and the pregnancy is
       chosen by a chain of comparisons in `fn_80166888` that leaves Jamie out.
+      **Pregnancy and birth done** (`jamie_marriage` 0.7.0): Jamie borrows the
+      scenes of partner 4 (when the player is the boy) or 13 (when the player
+      is the girl), with Jamie's model and new lines in the five languages
+      ([Pregnancy and birth](SCRIPTS.md#pregnancy-and-birth)). The
+      anniversary, the child's birthday and its checkup are still to do.
 - [ ] **Dialogue in Spanish with the disc's text**: the American disc holds
       the official Spanish translation (and the French, German and Italian
       ones) of the European GameCube release that never came out; the

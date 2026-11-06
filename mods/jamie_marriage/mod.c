@@ -68,6 +68,15 @@
  * anybody else's birthday, in the copy of that table the game keeps in memory, and gives the "none" back
  * otherwise.
  *
+ * Babies. When the time comes, the game starts the pregnancy (the one expecting the baby collapses and the
+ * doctor gives the news) and, 60 days later, the birth, with a scene of each for every partner. Jamie has none, so
+ * with Jamie nothing happened. This mod lends Jamie another partner's scenes: those of partner 4 when the
+ * player is the boy (Jamie is the one expecting the baby) and of partner 13 when the player is the girl
+ * (Jamie is the father). At the moment the game chooses the scene by the spouse, the mod makes Jamie that
+ * partner for the game, and makes Jamie the spouse again right after. When the scene's script is loaded, the
+ * mod puts Jamie in it wherever it names the partner, and in the scene's messages it writes Jamie's own lines,
+ * in the five languages, over messages that the scene never shows.
+ *
  * It is safe to run more than once for the same check, which can happen (see mods/README.md): clearing
  * a flag that is already clear changes nothing. It also covers a second proposal to Jamie, because the
  * proposal sets the flag again and the next field check clears it again.
@@ -138,6 +147,15 @@
  * «ninguno», así que Jamie nunca tuvo. Mientras Jamie es el cónyuge, este mod le da el 22 de invierno, un
  * día sin festival ni cumpleaños de nadie más, en la copia de esa tabla que el juego tiene en memoria, y le
  * devuelve el «ninguno» si no lo es.
+ *
+ * Bebés. Llegado el momento, el juego empieza el embarazo (quien espera al bebé se desmaya y el médico da
+ * la noticia) y, 60 días después, el parto, con una escena de cada uno para cada pareja. Jamie no tiene
+ * ninguna, así que con Jamie no pasaba nada. Este mod le presta a Jamie las escenas de otra pareja: las de la
+ * pareja 4 cuando el jugador es el chico (Jamie es quien espera al bebé) y las de la 13 cuando es la chica
+ * (Jamie es el papá). En el momento en que el juego elige la escena según el cónyuge, el mod hace que Jamie
+ * sea esa pareja para el juego, y enseguida Jamie vuelve a ser el cónyuge. Cuando se carga el guion de la
+ * escena, el mod pone a Jamie donde el guion nombra a la pareja, y en los mensajes de la escena escribe frases
+ * propias de Jamie, en los cinco idiomas, sobre mensajes que la escena nunca muestra.
  *
  * Es seguro que corra más de una vez por la misma revisión, cosa que puede pasar (ver mods/README.md):
  * apagar una bandera que ya está apagada no cambia nada. También cubre una segunda propuesta a Jamie,
@@ -537,8 +555,9 @@ static void before_the_characters_are_placed(CPUState* cpu)
  * (01 05), each followed by 0x1D; what the spouse calls the player (01 3E); the child's name (01 40); and
  * the end of the message (01 08 1F 1D).
  *
- * tests/test_jamie_as_the_spouse.py checks every text below the way the game will get it: that the font
- * has all its letters, and that it fits the window (rows of up to 28 letters, pages of up to 3 rows).
+ * tests/test_jamie_as_the_spouse.py (the spouse's lines) and tests/test_jamie_pregnancy_and_birth.py (the
+ * lines of the scenes) check every text below the way the game will get it: that the font has all its
+ * letters, and that it fits the window (rows of up to 28 letters, pages of up to 3 rows).
  */
 #define NEW_ROW "\x01\x04\x1D"
 #define NEW_PAGE "\x01\x05\x1D"
@@ -547,6 +566,13 @@ static void before_the_characters_are_placed(CPUState* cpu)
 #define CHILD_NAME "\x01\x40"
 #define WINDOW_CODE 0x01u
 #define WINDOW_CODE_BYTES 2u
+
+/*
+ * The messages of events start with who speaks them: the byte 0x1E and the speaker's character number,
+ * which puts the speaker's name on the window (Jamie speaks with 1E 02 in her own events, such as
+ * eve_rm01). Only the lines of the scenes below use it.
+ */
+#define JAMIE_SPEAKS "\x1E\x02"
 
 #define ASCII_LAST 0x7Fu
 #define UNICODE_LATIN_1_FIRST 0xA0u /* from here to 0xFF the letters are the font's own bytes: á, ñ, ü, ¿ ... */
@@ -572,10 +598,50 @@ typedef struct SpouseMessage {
     const char* text_if_the_player_is_a_girl; /* when Jamie is a man and the words change; NULL otherwise */
 } SpouseMessage;
 
+/*
+ * The scenes that Jamie takes part in as the spouse (see "Babies" further down): the pregnancy and the
+ * birth, each in the version where Jamie is the wife (the player is the boy) or the husband (the girl).
+ */
+typedef enum JamieSceneId {
+    SCENE_PREGNANCY_AS_THE_WIFE,
+    SCENE_PREGNANCY_AS_THE_HUSBAND,
+    SCENE_BIRTH_AS_THE_WIFE,
+    SCENE_BIRTH_AS_THE_HUSBAND,
+    JAMIE_SCENE_COUNT
+} JamieSceneId;
+
+/*
+ * The messages of the partner whose scene Jamie borrows, by number (the same numbers in the files of every
+ * language). Eve_conce01 is the pregnancy of partner 4, and its messages are those of every wife's pregnancy
+ * (eve_conce00); Eve_conce10 is the pregnancy with partner 13, with those of every husband's (eve_conce10);
+ * Eve_child01 and Eve_child10 are the births, with eve_child00 and eve_child10.
+ */
+#define PREGNANCY_WIFE_TELLS_THE_NEWS 4u       /* in the clinic's bed, after the doctor's congratulations */
+#define PREGNANCY_WIFE_LAST_WORDS 16u          /* after the doctor's advice to the husband, and Martha */
+#define PREGNANCY_HUSBAND_FINDS_THE_PLAYER 30u /* at home, where the player has collapsed */
+#define PREGNANCY_HUSBAND_HEARS_THE_NEWS 3u    /* at the clinic, after the doctor */
+#define PREGNANCY_HUSBAND_LAST_WORDS 15u       /* after the doctor and Martha */
+#define BIRTH_WIFE_IN_LABOR 39u                /* before Martha sends the player out of the room */
+#define BIRTH_WIFE_HOLDS_THE_BABY 9u           /* after Martha shows the baby */
+#define BIRTH_WIFE_ASKS_FOR_A_NAME 10u         /* the screen to write the baby's name follows */
+#define BIRTH_WIFE_HEARS_THE_NAME 11u
+#define BIRTH_HUSBAND_DURING_THE_LABOR 2u
+#define BIRTH_HUSBAND_SEES_THE_BABY 6u
+#define BIRTH_HUSBAND_ASKS_FOR_A_NAME 7u
+#define BIRTH_HUSBAND_HEARS_THE_NAME 8u
+
+typedef struct SceneLine {
+    JamieSceneId scene;
+    uint32_t number;  /* the message number that the scene's script shows */
+    const char* text; /* UTF-8, starting with JAMIE_SPEAKS and ending with END_OF_MESSAGE */
+} SceneLine;
+
 typedef struct SpouseLanguage {
     char folder_letter; /* the letter after MESSAGE_FOLDER_PREFIX in the paths of this language's files */
     const SpouseMessage* messages;
     uint32_t message_count;
+    const SceneLine* scene_lines;
+    uint32_t scene_line_count;
 } SpouseLanguage;
 
 /*
@@ -1054,13 +1120,230 @@ static const SpouseMessage italian_spouse_messages[] = {
              "Buon compleanno, " PLAYER_NICKNAME "." END_OF_MESSAGE},
 };
 
+/*
+ * Jamie's lines in the scenes of the pregnancy and the birth, written for this mod. They answer what Jamie
+ * says as the rival: that the player will collapse in the end (message 28 of Jamie's file; the French text
+ * of the disc says something else there, so in French the line stands on its own), that one can only rely on
+ * oneself, that without strength nobody can be protected, the player's silly face, and that Jamie is never
+ * grateful for anything. A line for the wife is Jamie as a woman and a line for the husband Jamie as a man,
+ * so each one is written in the words of its version.
+ */
+static const SceneLine english_scene_lines[] = {
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_TELLS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Don't you dare laugh." NEW_ROW "I always said you'd" NEW_ROW "collapse in the end." NEW_PAGE
+             "…And now look at me." NEW_PAGE "The doctor says it's a" NEW_ROW "baby. Ours." NEW_ROW
+             "…Hah. Look at your face." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_LAST_WORDS,
+     .text = JAMIE_SPEAKS "Humph. You heard the" NEW_ROW "doctor. Be nice to me." NEW_PAGE "…You can start by" NEW_ROW
+             "carrying me home. Hah!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_FINDS_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Hey! …Hey! What's wrong?!" NEW_PAGE "Hang on. I'm taking you" NEW_ROW
+             "to the clinic. Now!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_HEARS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Geeez… Don't scare me" NEW_ROW "like that." NEW_PAGE "I always said you'd" NEW_ROW
+             "collapse in the end." NEW_ROW "I never wanted to be right." NEW_PAGE "…A baby, huh." NEW_ROW
+             "Heh. A baby." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_LAST_WORDS,
+     .text = JAMIE_SPEAKS "From now on, the heavy" NEW_ROW "work is mine." NEW_ROW "Don't argue." NEW_PAGE
+             "…Just take care of" NEW_ROW "yourself. Both of you." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_IN_LABOR,
+     .text = JAMIE_SPEAKS "Nngh…! I'm fine…!" NEW_ROW "I can do this…" NEW_ROW "on my own…!" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HOLDS_THE_BABY,
+     .text = JAMIE_SPEAKS "Look at this tiny face…" NEW_PAGE "…See? I told you I could" NEW_ROW "do it on my own."
+             NEW_PAGE "…That's a lie. I'm glad" NEW_ROW "you were here." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "You choose the name." NEW_ROW "…Nothing silly, got it?" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "Humph. Not a bad name." NEW_PAGE "…Not that I'm happy or" NEW_ROW "anything."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_DURING_THE_LABOR,
+     .text = JAMIE_SPEAKS "H-hey… Hang in there." NEW_ROW "I'm right here." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_SEES_THE_BABY,
+     .text = JAMIE_SPEAKS "…It's here. You did it." NEW_PAGE "Heh. Maybe you're" NEW_ROW "stronger than me after all."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "What do we call it?" NEW_PAGE "…You choose. Just" NEW_ROW "nothing silly." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "…Humph. It's a good" NEW_ROW "name." NEW_PAGE "And I'm not crying." NEW_ROW "Got it?"
+             END_OF_MESSAGE},
+};
+
+static const SceneLine spanish_scene_lines[] = {
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_TELLS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Ni se te ocurra reírte." NEW_ROW "Siempre dije que al final" NEW_ROW
+             "acabarías derrumbándote." NEW_PAGE "...Y mírame ahora." NEW_PAGE "El médico dice que es un" NEW_ROW
+             "bebé. Nuestro bebé." NEW_ROW "...Ja. Menuda cara pones." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_LAST_WORDS,
+     .text = JAMIE_SPEAKS "Umm. Ya oíste al médico." NEW_ROW "Tienes que tratarme bien." NEW_PAGE
+             "...Para empezar, llévame" NEW_ROW "a casa a cuestas. ¡Ja!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_FINDS_THE_PLAYER,
+     .text = JAMIE_SPEAKS "¡Eh! ...¡Eh! ¿Qué te pasa?" NEW_PAGE "Aguanta. Te llevo al" NEW_ROW "hospital. ¡Ya!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_HEARS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Cielos... No me des esos" NEW_ROW "sustos." NEW_PAGE "Siempre dije que al final" NEW_ROW
+             "acabarías derrumbándote." NEW_ROW "No quería tener razón." NEW_PAGE "...Un bebé, ¿eh?" NEW_ROW
+             "Eh. Un bebé." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_LAST_WORDS,
+     .text = JAMIE_SPEAKS "A partir de ahora, el" NEW_ROW "trabajo duro es cosa mía." NEW_ROW "No discutas." NEW_PAGE
+             "...Tú solo cuídate." NEW_ROW "Por los dos." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_IN_LABOR,
+     .text = JAMIE_SPEAKS "¡Nngh...! ¡Estoy bien...!" NEW_ROW "Puedo hacerlo..." NEW_ROW "¡yo sola...!" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HOLDS_THE_BABY,
+     .text = JAMIE_SPEAKS "Mira qué carita tan" NEW_ROW "pequeña..." NEW_PAGE "...¿Ves? Te dije que podía" NEW_ROW
+             "hacerlo yo sola." NEW_PAGE "...Es mentira. Me alegro" NEW_ROW "de que estuvieras aquí."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "Elige tú el nombre." NEW_ROW "...Nada ridículo, ¿eh?" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "Umm. No está mal." NEW_PAGE "...Y no es que esté" NEW_ROW "contenta ni nada."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_DURING_THE_LABOR,
+     .text = JAMIE_SPEAKS "E-eh... Aguanta." NEW_ROW "Estoy aquí." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_SEES_THE_BABY,
+     .text = JAMIE_SPEAKS "...Ya está. Lo lograste." NEW_PAGE "Eh. Puede que seas más" NEW_ROW "fuerte que yo."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "¿Cómo lo llamamos?" NEW_PAGE "...Elige tú. Pero nada" NEW_ROW "ridículo." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "...Umm. Es un buen" NEW_ROW "nombre." NEW_PAGE "Y no estoy llorando." NEW_ROW
+             "¿Entendido?" END_OF_MESSAGE},
+};
+
+static const SceneLine french_scene_lines[] = {
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_TELLS_THE_NEWS,
+     .text = JAMIE_SPEAKS "N'essaie même pas de rire." NEW_PAGE "J'ai toujours dit que tu" NEW_ROW
+             "finirais par t'effondrer." NEW_ROW "…Et regarde-moi." NEW_PAGE "Le docteur dit que c'est" NEW_ROW
+             "un bébé. Le nôtre." NEW_ROW "…Ha ! Si tu voyais ta tête." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_LAST_WORDS,
+     .text = JAMIE_SPEAKS "Humf. Tu as entendu le" NEW_ROW "docteur. Veille sur moi." NEW_PAGE
+             "…Commence par me porter" NEW_ROW "jusqu'à la maison. Ha !" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_FINDS_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Hé ! …Hé ! Ça ne va pas ?" NEW_PAGE "Tiens bon. Je t'emmène à" NEW_ROW "la clinique. Vite !"
+             END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_HEARS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Rahhh… Ne me fais plus" NEW_ROW "peur comme ça." NEW_PAGE "J'ai toujours dit que tu" NEW_ROW
+             "finirais par t'effondrer." NEW_ROW "Je voulais avoir tort." NEW_PAGE "…Un bébé, hein." NEW_ROW
+             "Hé. Un bébé." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_LAST_WORDS,
+     .text = JAMIE_SPEAKS "À partir de maintenant," NEW_ROW "les gros travaux, c'est" NEW_ROW "moi. Ne discute pas."
+             NEW_PAGE "…Prends juste soin de" NEW_ROW "toi. De vous deux." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_IN_LABOR,
+     .text = JAMIE_SPEAKS "Nngh… ! Ça va… !" NEW_ROW "Je peux y arriver…" NEW_ROW "toute seule… !" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HOLDS_THE_BABY,
+     .text = JAMIE_SPEAKS "Regarde ce tout petit" NEW_ROW "visage…" NEW_PAGE "…Tu vois ? Je t'avais dit" NEW_ROW
+             "que j'y arriverais seule." NEW_PAGE "…C'est faux. Je suis" NEW_ROW "contente que tu sois là."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "Choisis le prénom." NEW_ROW "…Rien de ridicule, hein ?" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "Humf. Ce n'est pas mal." NEW_PAGE "…Pas que ça me fasse" NEW_ROW "plaisir, hein."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_DURING_THE_LABOR,
+     .text = JAMIE_SPEAKS "H-hé… Tiens bon." NEW_ROW "Je suis là." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_SEES_THE_BABY,
+     .text = JAMIE_SPEAKS "…Il est là. Tu as réussi." NEW_PAGE "Hé. Tu es peut-être plus" NEW_ROW
+             "forte que moi, après tout." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "On l'appelle comment ?" NEW_PAGE "…Choisis, toi. Mais rien" NEW_ROW "de ridicule."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "…Humf. C'est un beau" NEW_ROW "prénom." NEW_PAGE "Et je ne pleure pas." NEW_ROW "Compris ?"
+             END_OF_MESSAGE},
+};
+
+static const SceneLine german_scene_lines[] = {
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_TELLS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Wehe, du lachst." NEW_PAGE "Ich hab immer gesagt, dass" NEW_ROW
+             "du am Ende zusammenbrichst." NEW_ROW "… Und jetzt sieh mich an." NEW_PAGE "Der Arzt sagt, es ist ein"
+             NEW_ROW "Baby. Unser Baby." NEW_ROW "… Ha. Dein Gesicht!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_LAST_WORDS,
+     .text = JAMIE_SPEAKS "Pöh. Du hast den Arzt" NEW_ROW "gehört. Sei gut zu mir." NEW_PAGE "… Fang damit an, mich"
+             NEW_ROW "nach Hause zu tragen. Ha!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_FINDS_THE_PLAYER,
+     .text = JAMIE_SPEAKS "He! … He! Was ist los?" NEW_PAGE "Halt durch. Ich bring dich" NEW_ROW
+             "in die Klinik. Sofort!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_HEARS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Oje … Erschreck mich nie" NEW_ROW "wieder so." NEW_PAGE "Ich hab immer gesagt, dass" NEW_ROW
+             "du am Ende zusammenbrichst." NEW_ROW "Ich wollte nie recht haben." NEW_PAGE "… Ein Baby, was?" NEW_ROW
+             "Ha. Ein Baby." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_LAST_WORDS,
+     .text = JAMIE_SPEAKS "Ab jetzt mache ich die" NEW_ROW "schwere Arbeit." NEW_ROW "Keine Widerrede." NEW_PAGE
+             "… Pass einfach auf dich" NEW_ROW "auf. Auf euch beide." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_IN_LABOR,
+     .text = JAMIE_SPEAKS "Nngh …! Geht schon …!" NEW_ROW "Ich schaff das …" NEW_ROW "allein …!" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HOLDS_THE_BABY,
+     .text = JAMIE_SPEAKS "Sieh dir dieses winzige" NEW_ROW "Gesicht an …" NEW_PAGE "… Siehst du? Ich hab doch" NEW_ROW
+             "gesagt, ich schaff das" NEW_ROW "allein." NEW_PAGE "… Gelogen. Ich bin froh," NEW_ROW
+             "dass du da warst." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "Such du den Namen aus." NEW_ROW "… Nichts Albernes, klar?" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "Pöh. Kein schlechter Name." NEW_PAGE "… Nicht, dass ich mich" NEW_ROW "freue oder so."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_DURING_THE_LABOR,
+     .text = JAMIE_SPEAKS "H-he … Halt durch." NEW_ROW "Ich bin hier." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_SEES_THE_BABY,
+     .text = JAMIE_SPEAKS "… Es ist da. Du hast es" NEW_ROW "geschafft." NEW_PAGE "Ha. Vielleicht bist du doch" NEW_ROW
+             "stärker als ich." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "Wie nennen wir es?" NEW_PAGE "… Such du aus. Nur nichts" NEW_ROW "Albernes." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "… Pöh. Das ist ein guter" NEW_ROW "Name." NEW_PAGE "Und ich weine nicht." NEW_ROW "Klar?"
+             END_OF_MESSAGE},
+};
+
+static const SceneLine italian_scene_lines[] = {
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_TELLS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Non azzardarti a ridere." NEW_PAGE "Ho sempre detto che alla" NEW_ROW
+             "fine saresti crollato." NEW_ROW "…E guarda me, adesso." NEW_PAGE "Il dottore dice che aspetto" NEW_ROW
+             "un bambino. Il nostro." NEW_ROW "…Ah! Guarda che faccia." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_WIFE, .number = PREGNANCY_WIFE_LAST_WORDS,
+     .text = JAMIE_SPEAKS "Uffa. Hai sentito il" NEW_ROW "dottore. Trattami bene." NEW_PAGE "…Puoi cominciare" NEW_ROW
+             "portandomi a casa in" NEW_ROW "braccio. Ah!" END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_FINDS_THE_PLAYER,
+     .text = JAMIE_SPEAKS "Ehi! …Ehi! Che ti succede?" NEW_PAGE "Resisti. Ti porto in" NEW_ROW "clinica. Subito!"
+             END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_HEARS_THE_NEWS,
+     .text = JAMIE_SPEAKS "Uffa… Non spaventarmi" NEW_ROW "così." NEW_PAGE "Ho sempre detto che alla" NEW_ROW
+             "fine saresti crollata." NEW_ROW "Non volevo avere ragione." NEW_PAGE "…Un bambino, eh." NEW_ROW
+             "Eh. Un bambino." END_OF_MESSAGE},
+    {.scene = SCENE_PREGNANCY_AS_THE_HUSBAND, .number = PREGNANCY_HUSBAND_LAST_WORDS,
+     .text = JAMIE_SPEAKS "D'ora in poi, i lavori" NEW_ROW "pesanti li faccio io." NEW_ROW "Non discutere." NEW_PAGE
+             "…Pensa solo a riguardarti." NEW_ROW "Per tutti e due." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_IN_LABOR,
+     .text = JAMIE_SPEAKS "Nngh…! Sto bene…!" NEW_ROW "Ce la faccio…" NEW_ROW "da sola…!" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HOLDS_THE_BABY,
+     .text = JAMIE_SPEAKS "Guarda che faccino" NEW_ROW "minuscolo…" NEW_PAGE "…Visto? Te l'avevo detto" NEW_ROW
+             "che ce l'avrei fatta da" NEW_ROW "sola." NEW_PAGE "…Non è vero. Sono contenta" NEW_ROW
+             "che tu fossi qui." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "Scegli tu il nome." NEW_ROW "…Niente di ridicolo, eh?" END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_WIFE, .number = BIRTH_WIFE_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "Uffa. Non è un brutto" NEW_ROW "nome." NEW_PAGE "…Non che io sia contenta" NEW_ROW
+             "o roba del genere." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_DURING_THE_LABOR,
+     .text = JAMIE_SPEAKS "E-ehi… Resisti." NEW_ROW "Sono qui." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_SEES_THE_BABY,
+     .text = JAMIE_SPEAKS "…Eccolo. Ce l'hai fatta." NEW_PAGE "Eh. Forse sei più forte" NEW_ROW "di me, dopotutto."
+             END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_ASKS_FOR_A_NAME,
+     .text = JAMIE_SPEAKS "Come lo chiamiamo?" NEW_PAGE "…Scegli tu. Ma niente di" NEW_ROW "ridicolo." END_OF_MESSAGE},
+    {.scene = SCENE_BIRTH_AS_THE_HUSBAND, .number = BIRTH_HUSBAND_HEARS_THE_NAME,
+     .text = JAMIE_SPEAKS "…Uffa. È un bel nome." NEW_PAGE "E non sto piangendo." NEW_ROW "Chiaro?" END_OF_MESSAGE},
+};
+
 /* The languages of the disc's message folders (/message_e/ and so on), with Jamie's lines in each one. */
 static const SpouseLanguage spouse_languages[] = {
-    {'e', english_spouse_messages, HM_MM_ARRAY_COUNT(english_spouse_messages)},
-    {'s', spanish_spouse_messages, HM_MM_ARRAY_COUNT(spanish_spouse_messages)},
-    {'f', french_spouse_messages, HM_MM_ARRAY_COUNT(french_spouse_messages)},
-    {'g', german_spouse_messages, HM_MM_ARRAY_COUNT(german_spouse_messages)},
-    {'i', italian_spouse_messages, HM_MM_ARRAY_COUNT(italian_spouse_messages)},
+    {'e', english_spouse_messages, HM_MM_ARRAY_COUNT(english_spouse_messages), english_scene_lines,
+     HM_MM_ARRAY_COUNT(english_scene_lines)},
+    {'s', spanish_spouse_messages, HM_MM_ARRAY_COUNT(spanish_spouse_messages), spanish_scene_lines,
+     HM_MM_ARRAY_COUNT(spanish_scene_lines)},
+    {'f', french_spouse_messages, HM_MM_ARRAY_COUNT(french_spouse_messages), french_scene_lines,
+     HM_MM_ARRAY_COUNT(french_scene_lines)},
+    {'g', german_spouse_messages, HM_MM_ARRAY_COUNT(german_spouse_messages), german_scene_lines,
+     HM_MM_ARRAY_COUNT(german_scene_lines)},
+    {'i', italian_spouse_messages, HM_MM_ARRAY_COUNT(italian_spouse_messages), italian_scene_lines,
+     HM_MM_ARRAY_COUNT(italian_scene_lines)},
 };
 
 static uint16_t read_half_word(CPUState* cpu, uint32_t address)
@@ -1071,6 +1354,17 @@ static uint16_t read_half_word(CPUState* cpu, uint32_t address)
 static void write_half_word(CPUState* cpu, uint32_t address, uint16_t value)
 {
     moderngekko_mod_write(cpu, address, value, HALF_WORD_BYTES);
+}
+
+/* The language whose message folder has this letter (/message_e/ is 'e'), or NULL without Jamie's lines. */
+static const SpouseLanguage* language_with_folder_letter(char folder_letter)
+{
+    for (uint32_t index = 0; index < HM_MM_ARRAY_COUNT(spouse_languages); ++index) {
+        if (spouse_languages[index].folder_letter == folder_letter) {
+            return &spouse_languages[index];
+        }
+    }
+    return NULL;
 }
 
 /*
@@ -1093,12 +1387,7 @@ static const SpouseLanguage* language_of_the_messages_of(CPUState* cpu, uint32_t
     if (read_byte(cpu, path + prefix_length + 1) != (uint8_t)FOLDER_SEPARATOR) {
         return NULL;
     }
-    for (uint32_t index = 0; index < HM_MM_ARRAY_COUNT(spouse_languages); ++index) {
-        if (spouse_languages[index].folder_letter == folder_letter) {
-            return &spouse_languages[index];
-        }
-    }
-    return NULL;
+    return language_with_folder_letter(folder_letter);
 }
 
 /* Jamie's line for a message number, in the words for the player's gender, or NULL if there is none. */
@@ -1261,15 +1550,14 @@ static void before_a_character_message_is_shown(CPUState* cpu)
 }
 
 /*
- * fn_80029E74(path): loads a whole file into a new buffer and returns its address. This runs when it
- * returns; while a line is waiting, the file is the one that fn_8008534C asked for.
+ * Called when fn_80029E74 has loaded a file (see after_a_file_is_loaded): while a line is waiting, the file
+ * is the one that fn_8008534C asked for.
  */
-static void after_a_file_is_loaded(CPUState* cpu)
+static void give_the_loaded_file_the_spouse_line(CPUState* cpu, uint32_t file)
 {
     if (pending_message_length == 0) {
         return;
     }
-    const uint32_t file = cpu->gpr[3];
     const size_t length = pending_message_length;
     pending_message_length = 0;
     if (file == 0) {
@@ -1284,6 +1572,543 @@ static void after_a_character_message_is_shown(CPUState* cpu)
 {
     (void)cpu;
     pending_message_length = 0;
+}
+
+/*
+ * Babies (see the comment at the top, and docs/SCRIPTS.md, "El embarazo y el parto").
+ *
+ * The field check (fn_80166888) chooses its checks by the area just entered, through the table of cases at
+ * 0x802A341C; every house of the player uses the case at 0x801668D0. That case first tests main flag 0x1A4,
+ * which the game sets every morning (fn_80032EE8) and clears once the player goes out (fn_801649FC). While
+ * the flag is set the case runs the morning checks, the birth among them (from 0x8016809C): the pregnancy
+ * has gone on for 60 days or more and it is not the wedding anniversary. While it is clear the case goes to
+ * the pregnancy check (0x80169410): the player came in from the farm, has been married for 20 days or more,
+ * the counter at save data + 0xD508 (one more each day of marriage) has reached 10, and the spouse's
+ * friendship is 900 or more. Each check then goes through a chain of blocks, one for each partner: "is the
+ * spouse 3? then start event 0xC8 (Eve_conce00); is it 4? then 0xC9 (Eve_conce01)..." up to 22. Jamie has no
+ * block in either chain.
+ *
+ * ModernGekko runs a hook where the recompiled code hands control back to its dispatcher, which happens on a
+ * branch or a call from one chunk of the code to another (DolRecomp cuts each code section into chunks of 4096
+ * instructions, 16 KB, from the start of the section: 0x800184C0 for this one); a branch within a chunk is a
+ * plain jump and runs no hook (seen in the game: the blocks of the chains never ran theirs). So the mod
+ * acts at points that do run: the pregnancy check's first instruction, reached from the chunk before it; the
+ * entry and the return of the field check; and the entry of fn_800FC2B4, which starts an event. When Jamie
+ * is the spouse and every condition of a check holds for Jamie, the mod writes the number of the partner
+ * whose scene Jamie borrows as the spouse (for the pregnancy, also Jamie's friendship as the partner's, which
+ * the check reads by the spouse's number); the partner's block starts the scene and the field check returns.
+ * fn_800FC2B4 starts an event only if events are allowed and the event has not started before; otherwise it
+ * does nothing, and the check that asked goes on to the next one. While Jamie stands in, the only event that
+ * may start is the scene's: if another one is about to start, or the scene's will not, Jamie is the spouse
+ * again at once, before anything else reads the spouse. An event that will not start changes nothing, so
+ * Jamie goes on standing in (the morning checks ask for several events seen long ago, such as 0x100, 0x109
+ * and 0x1A, before they reach the birth's chain). The return of the field check, the shared end of its checks
+ * (0x8016D55C) and the next area give Jamie back too. Between the field check's entry and its birth chain
+ * nothing reads the spouse, so the birth's stand-in can start at the entry. Jamie borrows partner 4's scenes
+ * as the wife and partner 13's as the husband.
+ */
+#define PREGNANCY_CHECK_ADDRESS 0x80169410u   /* the first instruction of the pregnancy check */
+#define END_OF_THE_FIELD_CHECKS_ADDRESS 0x8016D55Cu /* where the field check goes when no check started an event */
+#define FIELD_CHECK_CASES_ADDRESS 0x802A341Cu /* a word for each area: where the field check goes for it */
+#define LAST_AREA_WITH_A_CASE 0x7Cu
+#define HOUSE_CASE_ADDRESS 0x801668D0u
+#define CURRENT_AREA_ADDRESS 0x80321D40u
+#define FLAG_MORNING_CHECKS 0x1A4u
+#define EVENTS_ALLOWED_ADDRESS 0x80321DC0u /* fn_800FC2B4 starts an event only while this bit is set */
+#define EVENTS_ALLOWED_BIT 0x8u
+
+#define DAYS_MARRIED_OFFSET 0xCB54u
+#define DAYS_OF_MARRIAGE_BEFORE_A_PREGNANCY 20u
+#define DAILY_MARRIAGE_COUNTER_OFFSET 0xD508u
+#define DAILY_MARRIAGE_COUNT_BEFORE_A_PREGNANCY 10u
+#define FRIENDSHIP_OFFSET 0x6628u /* a counter of 12 bytes for each character number */
+#define FRIENDSHIP_BYTES_EACH 12u
+#define FRIENDSHIP_BEFORE_A_PREGNANCY 900u
+#define PREGNANCY_DAYS_OFFSET 0xCB60u /* value 43 of the scripts: 0, then the days of the pregnancy, 255 once born */
+#define DAYS_OF_PREGNANCY_BEFORE_THE_BIRTH 60u
+
+#define PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE 4u
+#define PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND 13u
+#define EVENT_PREGNANCY_OF_PARTNER_4 0xC9u       /* Eve_conce01 */
+#define EVENT_PREGNANCY_WITH_PARTNER_13 0xD2u    /* Eve_conce10 */
+#define EVENT_BIRTH_OF_PARTNER_4 0xDDu           /* Eve_child01 */
+#define EVENT_BIRTH_WITH_PARTNER_13 0xE6u        /* Eve_child10 */
+
+/*
+ * When the birth starts, the block sets bit 5 of the spouse's character bits at an address of its own
+ * (0x5570 for partner 4): talk.lsb then shows the spouse's message 11, about the birth, on the next
+ * conversation, and clears the bit. With Jamie standing in, the bit lands on the partner, so the mod moves it
+ * to Jamie. Nothing else in the game sets that bit on a partner who is not the spouse.
+ */
+#define CHARACTER_BIT_TALKS_ABOUT_THE_BIRTH 5u
+
+/*
+ * The scene's script is a file of /Script/, loaded by fn_80055068 through fn_80029E74 when the event begins.
+ * Where it names the partner, it pushes the number with PUSH_INT (opcode 0x02, the number in the next byte):
+ * as the actor of a built-in, as the actor of one of the script's own functions, or as the speaker of the
+ * next line. tools/script_actors.py finds those places; these are the file offsets of the bytes that hold
+ * the number, and the test compares them with what the tool finds on the disc. Before writing Jamie's number
+ * the mod checks that every one of those bytes holds the partner's number after a PUSH_INT, so a script that
+ * is not the one expected is left as it is.
+ */
+#define PUSH_INT_OPCODE 0x02u
+
+static const uint16_t pregnancy_as_the_wife_actor_bytes[] = { /* Eve_conce01, partner 4 */
+    0x05EC, 0x064C, 0x0655, 0x065E, 0x0694, 0x06AD, 0x081B, 0x0847,
+    0x0893, 0x08D2, 0x08DD, 0x0A9C, 0x0AF2, 0x0AFD,
+};
+
+static const uint16_t pregnancy_as_the_husband_actor_bytes[] = { /* Eve_conce10, partner 13 */
+    0x0608, 0x0637, 0x06D5, 0x0710, 0x0739, 0x0744, 0x076A, 0x077A,
+    0x0785, 0x079B, 0x07BE, 0x07C5, 0x07D5, 0x07E7, 0x07F6, 0x0804,
+    0x084C, 0x0857, 0x0886, 0x08CB, 0x0977, 0x0987, 0x09AD, 0x09D7,
+    0x09F5, 0x0A42, 0x0A57, 0x0A6A, 0x0A89, 0x0A94, 0x0AF3,
+};
+
+static const uint16_t birth_as_the_wife_actor_bytes[] = { /* Eve_child01, partner 4 */
+    0x0375, 0x03DE, 0x03E7, 0x03F0, 0x0423, 0x042F, 0x0440, 0x0488,
+    0x04BD, 0x0868, 0x090A, 0x0913, 0x092E, 0x09FB, 0x0A2B, 0x0A41,
+    0x0A86, 0x0ABD, 0x0AD3, 0x0BBC, 0x0C35, 0x0C3E, 0x0C59, 0x0CA1,
+    0x0CBA, 0x0CC9,
+};
+
+static const uint16_t birth_as_the_husband_actor_bytes[] = { /* Eve_child10, partner 13 */
+    0x03AF, 0x0403, 0x0455, 0x04B3, 0x0512, 0x051D, 0x053B, 0x0574,
+    0x0588, 0x059A, 0x05A7, 0x05B2, 0x05E4, 0x05FA, 0x061F, 0x064F,
+    0x066F, 0x0694, 0x06A6, 0x06B1, 0x06C2, 0x06CD, 0x06E3, 0x06EE,
+    0x06FB, 0x0706, 0x071C, 0x0727, 0x0730, 0x073F, 0x074A, 0x0760,
+    0x076B, 0x0778, 0x0783, 0x0799, 0x07A4, 0x07AD, 0x07CA, 0x0849,
+    0x0858, 0x0863, 0x0876, 0x0881, 0x088A, 0x0895, 0x08A0, 0x08AF,
+    0x08B8, 0x08C7, 0x08DC, 0x090E, 0x0940, 0x0A07, 0x0A12, 0x0A1E,
+    0x0A27, 0x0A3D, 0x0A48, 0x0A54, 0x0A69, 0x0A8D, 0x0A98, 0x0AA4,
+    0x0AB8, 0x0B09, 0x0B14, 0x0B26, 0x0C11, 0x0C42, 0x0C62, 0x0D63,
+    0x0D6E, 0x0D7A, 0x0D83, 0x0D8E, 0x0DBC, 0x0DC8,
+};
+
+/*
+ * A scene that Jamie borrows. Its message file stays loaded for the whole event (fn_800FC2B4 loads it when
+ * the event starts and keeps it at event manager + 0xB0), and it holds the lines of every partner of the
+ * same kind, so Jamie's lines go over the text of messages that this scene never shows: from
+ * first_unused_message to the message before first_message_after_the_unused_ones, which are in a row in the
+ * file (the test checks that they fit in every language of the disc).
+ */
+typedef struct JamieScene {
+    const char* name;            /* for the log */
+    bool jamie_is_the_wife;      /* the version for a male player */
+    bool is_the_birth;           /* the birth's chain, or else the pregnancy's */
+    uint32_t partner;            /* the partner whose event Jamie borrows */
+    uint32_t event;              /* that partner's event in the chain */
+    const char* script_name;     /* the event's script: /Script/<name>.lsb */
+    const char* message_file;    /* the event's messages: /message_<language>/event/<name>_<language>.bin */
+    const uint16_t* actor_bytes; /* the bytes of the script that hold the partner's number */
+    uint32_t actor_byte_count;
+    uint32_t first_unused_message;
+    uint32_t first_message_after_the_unused_ones;
+} JamieScene;
+
+static const JamieScene jamie_scenes[JAMIE_SCENE_COUNT] = {
+    [SCENE_PREGNANCY_AS_THE_WIFE] = {"the pregnancy", true, false, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE,
+                                     EVENT_PREGNANCY_OF_PARTNER_4, "Eve_conce01", "Eve_conce00",
+                                     pregnancy_as_the_wife_actor_bytes,
+                                     HM_MM_ARRAY_COUNT(pregnancy_as_the_wife_actor_bytes), 5u, 13u},
+    [SCENE_PREGNANCY_AS_THE_HUSBAND] = {"the pregnancy", false, false, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND,
+                                        EVENT_PREGNANCY_WITH_PARTNER_13, "Eve_conce10", "Eve_conce10",
+                                        pregnancy_as_the_husband_actor_bytes,
+                                        HM_MM_ARRAY_COUNT(pregnancy_as_the_husband_actor_bytes), 16u, 30u},
+    [SCENE_BIRTH_AS_THE_WIFE] = {"the birth", true, true, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE,
+                                 EVENT_BIRTH_OF_PARTNER_4, "Eve_child01", "Eve_child00",
+                                 birth_as_the_wife_actor_bytes, HM_MM_ARRAY_COUNT(birth_as_the_wife_actor_bytes),
+                                 12u, 36u},
+    [SCENE_BIRTH_AS_THE_HUSBAND] = {"the birth", false, true, PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND,
+                                    EVENT_BIRTH_WITH_PARTNER_13, "Eve_child10", "Eve_child10",
+                                    birth_as_the_husband_actor_bytes,
+                                    HM_MM_ARRAY_COUNT(birth_as_the_husband_actor_bytes), 9u, 36u},
+};
+
+/*
+ * The stand-in in progress: the scene, and for the pregnancy the partner's own friendship, which Jamie's
+ * replaces while the check reads it (scene is NULL when Jamie stands in for nobody).
+ */
+static struct {
+    const JamieScene* scene;
+    bool friendship_replaced;
+    uint32_t partners_own_friendship;
+} stand_in;
+
+static uint32_t character_bits_of(uint32_t save_data, uint32_t character_number)
+{
+    return save_data + CHARACTER_BITS_OFFSET + CHARACTER_BITS_BYTES_EACH * character_number;
+}
+
+static uint32_t friendship_of(uint32_t save_data, uint32_t character_number)
+{
+    return save_data + FRIENDSHIP_OFFSET + FRIENDSHIP_BYTES_EACH * character_number;
+}
+
+static bool player_is_the_boy(CPUState* cpu, uint32_t save_data)
+{
+    return read_word(cpu, save_data + PLAYER_CHARACTER_OFFSET) == PLAYER_CHARACTER_THE_BOY;
+}
+
+/* The scene of this kind (the pregnancy or the birth) in the version for the player's gender. */
+static const JamieScene* scene_for_the_player(CPUState* cpu, uint32_t save_data, bool the_birth)
+{
+    const bool jamie_is_the_wife = player_is_the_boy(cpu, save_data);
+    if (the_birth) {
+        return &jamie_scenes[jamie_is_the_wife ? SCENE_BIRTH_AS_THE_WIFE : SCENE_BIRTH_AS_THE_HUSBAND];
+    }
+    return &jamie_scenes[jamie_is_the_wife ? SCENE_PREGNANCY_AS_THE_WIFE : SCENE_PREGNANCY_AS_THE_HUSBAND];
+}
+
+/*
+ * Whether this scene is Jamie's: Jamie is the spouse (or stands in for the scene's partner right now), and
+ * the scene is the version for the player's gender.
+ */
+static bool scene_is_jamies(CPUState* cpu, const JamieScene* scene)
+{
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (save_data == NO_SAVE_DATA || scene->jamie_is_the_wife != player_is_the_boy(cpu, save_data)) {
+        return false;
+    }
+    const uint32_t spouse = read_word(cpu, save_data + SPOUSE_OFFSET);
+    return spouse == JAMIE_CHARACTER_NUMBER || (scene == stand_in.scene && spouse == scene->partner);
+}
+
+/* Whether fn_800FC2B4 would start this event now: events are allowed, and this one has not started before. */
+static bool event_would_start(CPUState* cpu, uint32_t save_data, uint32_t event)
+{
+    return (read_word(cpu, EVENTS_ALLOWED_ADDRESS) & EVENTS_ALLOWED_BIT) != 0 &&
+           !is_bit_set(cpu, save_data + STARTED_EVENTS_OFFSET, event);
+}
+
+/*
+ * Jamie becomes the scene's partner in the save data, for the chain that is about to run. For the pregnancy,
+ * the partner's friendship becomes Jamie's while the check reads it.
+ */
+static void stand_in_for_the_partner(CPUState* cpu, uint32_t save_data, const JamieScene* scene)
+{
+    stand_in.scene = scene;
+    stand_in.friendship_replaced = !scene->is_the_birth;
+    if (stand_in.friendship_replaced) {
+        stand_in.partners_own_friendship = read_word(cpu, friendship_of(save_data, scene->partner));
+        write_word(cpu, friendship_of(save_data, scene->partner),
+                   read_word(cpu, friendship_of(save_data, JAMIE_CHARACTER_NUMBER)));
+    }
+    write_word(cpu, save_data + SPOUSE_OFFSET, scene->partner);
+    HM_MM_LOG(MOD_ID, "Jamie stands in for partner %u to start %s", (unsigned int)scene->partner, scene->name);
+}
+
+/* Jamie is the spouse again in the save data, and the partner has its own friendship back. */
+static void give_jamie_back(CPUState* cpu)
+{
+    const JamieScene* scene = stand_in.scene;
+    if (scene == NULL) {
+        return;
+    }
+    stand_in.scene = NULL;
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (save_data == NO_SAVE_DATA) {
+        return;
+    }
+    if (stand_in.friendship_replaced) {
+        write_word(cpu, friendship_of(save_data, scene->partner), stand_in.partners_own_friendship);
+    }
+    if (read_word(cpu, save_data + SPOUSE_OFFSET) == scene->partner) {
+        write_word(cpu, save_data + SPOUSE_OFFSET, JAMIE_CHARACTER_NUMBER);
+    }
+    HM_MM_LOG(MOD_ID, "Jamie is the spouse again after %s", scene->name);
+}
+
+/* Whether Jamie is the spouse in this save data and stands in for nobody yet: the start of every stand-in. */
+static bool jamie_is_the_spouse_and_free(CPUState* cpu, uint32_t save_data)
+{
+    return save_data != NO_SAVE_DATA && stand_in.scene == NULL &&
+           read_word(cpu, save_data + SPOUSE_OFFSET) == JAMIE_CHARACTER_NUMBER;
+}
+
+/*
+ * 0x80169410, the first instruction of the pregnancy check. The check itself makes sure the player came in
+ * from the farm; if that fails, it goes to the end of the field checks without reading the spouse, so only
+ * the conditions after it are checked here, as the game checks them.
+ */
+static void at_the_start_of_the_pregnancy_check(CPUState* cpu)
+{
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (!jamie_is_the_spouse_and_free(cpu, save_data)) {
+        return; /* a hook may run twice: the second time Jamie already stands in */
+    }
+    const JamieScene* scene = scene_for_the_player(cpu, save_data, false);
+    const bool conditions_hold =
+        read_word(cpu, save_data + DAYS_MARRIED_OFFSET) >= DAYS_OF_MARRIAGE_BEFORE_A_PREGNANCY &&
+        read_word(cpu, save_data + DAILY_MARRIAGE_COUNTER_OFFSET) >= DAILY_MARRIAGE_COUNT_BEFORE_A_PREGNANCY &&
+        read_word(cpu, friendship_of(save_data, JAMIE_CHARACTER_NUMBER)) >= FRIENDSHIP_BEFORE_A_PREGNANCY &&
+        event_would_start(cpu, save_data, scene->event);
+    if (conditions_hold) {
+        stand_in_for_the_partner(cpu, save_data, scene);
+    }
+}
+
+/*
+ * The entry of the field check, for the birth: in a house, with the morning checks on, after 60 days of
+ * pregnancy and on a day that is not the wedding anniversary. The checks that run before the birth's chain
+ * do not read the spouse; if one of them starts an event first, fn_800FC2B4 gives Jamie back.
+ */
+static void before_the_field_check_stand_in_for_the_birth(CPUState* cpu)
+{
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (!jamie_is_the_spouse_and_free(cpu, save_data)) {
+        return;
+    }
+    const uint32_t area = read_word(cpu, CURRENT_AREA_ADDRESS);
+    if (area > LAST_AREA_WITH_A_CASE ||
+        read_word(cpu, FIELD_CHECK_CASES_ADDRESS + area * WORD_BYTES) != HOUSE_CASE_ADDRESS ||
+        !is_bit_set(cpu, save_data + MAIN_FLAGS_OFFSET, FLAG_MORNING_CHECKS)) {
+        return;
+    }
+    const uint32_t pregnancy_days = read_word(cpu, save_data + PREGNANCY_DAYS_OFFSET);
+    const bool anniversary =
+        read_word(cpu, save_data + SEASON_OFFSET) == read_word(cpu, save_data + WEDDING_SEASON_OFFSET) &&
+        read_word(cpu, save_data + DAY_OF_THE_SEASON_OFFSET) == read_word(cpu, save_data + WEDDING_DAY_OFFSET);
+    const JamieScene* scene = scene_for_the_player(cpu, save_data, true);
+    if (pregnancy_days >= DAYS_OF_PREGNANCY_BEFORE_THE_BIRTH && !anniversary &&
+        !is_bit_set(cpu, save_data + STARTED_EVENTS_OFFSET, scene->event)) {
+        stand_in_for_the_partner(cpu, save_data, scene);
+    }
+}
+
+/*
+ * fn_800FC2B4(event manager, event): starts an event, or does nothing if it will not start. While Jamie stands
+ * in, the event that starts must be the scene's; Jamie is the spouse again before the call goes on when
+ * another event is about to start, or when the scene's will not.
+ */
+static void before_an_event_starts(CPUState* cpu)
+{
+    const JamieScene* scene = stand_in.scene;
+    if (scene == NULL) {
+        return;
+    }
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (save_data == NO_SAVE_DATA) {
+        give_jamie_back(cpu);
+        return;
+    }
+    const uint32_t event = moderngekko_mod_arg_u32(cpu, 1);
+    const bool will_start = event_would_start(cpu, save_data, event);
+    const bool another_event_starts = event != scene->event && will_start;
+    const bool the_scene_will_not_start = event == scene->event && !will_start;
+    if (another_event_starts || the_scene_will_not_start) {
+        give_jamie_back(cpu);
+    }
+}
+
+/* The bit of the birth's conversation, if the birth block set it on the partner, goes to Jamie. */
+static void give_jamie_the_birth_conversation(CPUState* cpu)
+{
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (save_data == NO_SAVE_DATA || read_word(cpu, save_data + SPOUSE_OFFSET) != JAMIE_CHARACTER_NUMBER) {
+        return;
+    }
+    const uint32_t partner = player_is_the_boy(cpu, save_data) ? PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_WIFE
+                                                               : PARTNER_JAMIE_STANDS_IN_FOR_AS_THE_HUSBAND;
+    const uint32_t partner_bits = character_bits_of(save_data, partner);
+    if (!is_bit_set(cpu, partner_bits, CHARACTER_BIT_TALKS_ABOUT_THE_BIRTH)) {
+        return;
+    }
+    clear_bit(cpu, partner_bits, CHARACTER_BIT_TALKS_ABOUT_THE_BIRTH);
+    set_bit(cpu, character_bits_of(save_data, JAMIE_CHARACTER_NUMBER), CHARACTER_BIT_TALKS_ABOUT_THE_BIRTH);
+    HM_MM_LOG(MOD_ID, "Jamie, not partner %u, is to talk about the birth", (unsigned int)partner);
+}
+
+/*
+ * Everything the stand-in leaves behind, put right. It runs where the chains are surely over: when the field
+ * check returns and at the shared end of its checks, and as a safety net when the next one starts and when an
+ * area is entered (fn_80042D10), which happens before anybody can be talked to.
+ */
+static void settle_the_stand_in(CPUState* cpu)
+{
+    give_jamie_back(cpu);
+    give_jamie_the_birth_conversation(cpu);
+}
+
+/*
+ * The paths that fn_80029E74 receives. The disc's file names do not depend on case (the game itself asks for
+ * "Eve_conce00_e.bin" where the disc says "eve_conce00_e.bin"), so the comparisons ignore it.
+ */
+#define LONGEST_PATH 96u
+#define SCRIPT_FOLDER "/Script/"
+#define SCRIPT_EXTENSION ".lsb"
+#define EVENT_FOLDER "event/"
+#define LANGUAGE_SEPARATOR '_'
+#define MESSAGE_FILE_EXTENSION ".bin"
+
+/* Copies the path at `address` into `path`; false when it does not fit, which no path of the mod's does. */
+static bool read_path(CPUState* cpu, uint32_t address, char* path, size_t capacity)
+{
+    for (size_t index = 0; index < capacity; ++index) {
+        path[index] = (char)read_byte(cpu, address + (uint32_t)index);
+        if (path[index] == '\0') {
+            return true;
+        }
+    }
+    return false;
+}
+
+static char lowercase(char letter)
+{
+    return letter >= 'A' && letter <= 'Z' ? (char)(letter - 'A' + 'a') : letter;
+}
+
+/* What follows `prefix` in `text`, ignoring case, or NULL when `text` does not start with it. */
+static const char* after_prefix(const char* text, const char* prefix)
+{
+    if (text == NULL) {
+        return NULL;
+    }
+    for (; *prefix != '\0'; ++prefix, ++text) {
+        if (lowercase(*text) != lowercase(*prefix)) {
+            return NULL;
+        }
+    }
+    return text;
+}
+
+static bool is_the_script_of(const char* path, const JamieScene* scene)
+{
+    const char* rest = after_prefix(after_prefix(after_prefix(path, SCRIPT_FOLDER), scene->script_name),
+                                    SCRIPT_EXTENSION);
+    return rest != NULL && *rest == '\0';
+}
+
+/* Whether `path` is the scene's message file in some language; its folder letter goes to `folder_letter`. */
+static bool is_the_message_file_of(const char* path, const JamieScene* scene, char* folder_letter)
+{
+    const char* rest = after_prefix(path, MESSAGE_FOLDER_PREFIX);
+    if (rest == NULL || rest[0] == '\0' || rest[1] != FOLDER_SEPARATOR) {
+        return false;
+    }
+    const char letter = rest[0];
+    rest = after_prefix(after_prefix(rest + 2, EVENT_FOLDER), scene->message_file);
+    if (rest == NULL || rest[0] != LANGUAGE_SEPARATOR || lowercase(rest[1]) != lowercase(letter)) {
+        return false;
+    }
+    rest = after_prefix(rest + 2, MESSAGE_FILE_EXTENSION);
+    if (rest == NULL || *rest != '\0') {
+        return false;
+    }
+    *folder_letter = letter;
+    return true;
+}
+
+/* Writes Jamie's number over the partner's in the scene's script that the game has just loaded. */
+static void put_jamie_in_the_loaded_script(CPUState* cpu, uint32_t file, const JamieScene* scene)
+{
+    for (uint32_t index = 0; index < scene->actor_byte_count; ++index) {
+        const uint32_t number_byte = file + scene->actor_bytes[index];
+        if (read_byte(cpu, number_byte) != scene->partner || read_byte(cpu, number_byte - 1) != PUSH_INT_OPCODE) {
+            HM_MM_LOG(MOD_ID, "%s.lsb is not the script this mod knows: left as it is", scene->script_name);
+            return;
+        }
+    }
+    for (uint32_t index = 0; index < scene->actor_byte_count; ++index) {
+        write_byte(cpu, file + scene->actor_bytes[index], (uint8_t)JAMIE_CHARACTER_NUMBER);
+    }
+    HM_MM_LOG(MOD_ID, "put Jamie in %s (%s.lsb, %u places)", scene->name, scene->script_name,
+              (unsigned int)scene->actor_byte_count);
+}
+
+/*
+ * Puts Jamie's lines of the scene, in the file's language, over the text of the messages that the scene
+ * never shows, and points their numbers there. Stops at a line that would not fit, leaving it the game's.
+ */
+static void put_jamies_lines_in_the_loaded_messages(CPUState* cpu, uint32_t file, JamieSceneId scene_id,
+                                                    const SpouseLanguage* language)
+{
+    const JamieScene* scene = &jamie_scenes[scene_id];
+    const uint32_t highest_message = read_half_word(cpu, file + MESSAGE_FILE_HEADER_HIGHEST_MESSAGE);
+    if (scene->first_message_after_the_unused_ones > highest_message) {
+        return;
+    }
+    const uint32_t table = file + read_word(cpu, file + MESSAGE_FILE_HEADER_TABLE_START);
+    const uint32_t text = file + read_word(cpu, file + MESSAGE_FILE_HEADER_TEXT_START);
+    uint32_t destination = text + read_word(cpu, table + scene->first_unused_message * WORD_BYTES);
+    const uint32_t end_of_the_room =
+        text + read_word(cpu, table + scene->first_message_after_the_unused_ones * WORD_BYTES);
+    uint32_t lines_written = 0;
+    for (uint32_t index = 0; index < language->scene_line_count; ++index) {
+        const SceneLine* line = &language->scene_lines[index];
+        if (line->scene != scene_id || line->number > highest_message) {
+            continue;
+        }
+        uint8_t bytes[LONGEST_SPOUSE_MESSAGE_BYTES];
+        const size_t length = encode_for_the_game(line->text, bytes, sizeof bytes);
+        if (length == 0 || destination + length > end_of_the_room) {
+            break;
+        }
+        for (size_t byte = 0; byte < length; ++byte) {
+            write_byte(cpu, destination + (uint32_t)byte, bytes[byte]);
+        }
+        write_word(cpu, table + line->number * WORD_BYTES, destination - text);
+        destination += (uint32_t)length;
+        ++lines_written;
+    }
+    HM_MM_LOG(MOD_ID, "gave Jamie %u lines in the messages of %s", (unsigned int)lines_written, scene->name);
+}
+
+/* What the file that fn_80029E74 is loading is to receive, decided from its path when the load starts. */
+typedef enum SceneFileKind { NOT_A_SCENE_FILE, SCENE_SCRIPT, SCENE_MESSAGES } SceneFileKind;
+
+static struct {
+    SceneFileKind kind;
+    JamieSceneId scene;
+    const SpouseLanguage* language; /* for SCENE_MESSAGES */
+} pending_scene_file;
+
+/* fn_80029E74(path), on its entry: is the file the script or the messages of one of Jamie's scenes? */
+static void before_a_file_is_loaded(CPUState* cpu)
+{
+    pending_scene_file.kind = NOT_A_SCENE_FILE;
+    char path[LONGEST_PATH];
+    if (!read_path(cpu, moderngekko_mod_arg_u32(cpu, 0), path, sizeof path)) {
+        return;
+    }
+    for (uint32_t scene_id = 0; scene_id < JAMIE_SCENE_COUNT; ++scene_id) {
+        const JamieScene* scene = &jamie_scenes[scene_id];
+        char folder_letter = '\0';
+        if (is_the_script_of(path, scene)) {
+            if (scene_is_jamies(cpu, scene)) {
+                pending_scene_file.kind = SCENE_SCRIPT;
+                pending_scene_file.scene = (JamieSceneId)scene_id;
+            }
+            return;
+        }
+        if (is_the_message_file_of(path, scene, &folder_letter)) {
+            const SpouseLanguage* language = language_with_folder_letter(folder_letter);
+            if (language != NULL && scene_is_jamies(cpu, scene)) {
+                pending_scene_file.kind = SCENE_MESSAGES;
+                pending_scene_file.scene = (JamieSceneId)scene_id;
+                pending_scene_file.language = language;
+            }
+            return;
+        }
+    }
+}
+
+/*
+ * fn_80029E74(path): loads a whole file into a new buffer and returns its address. This runs when it
+ * returns, and gives the file what was decided for it: Jamie in a scene's script, Jamie's lines in a scene's
+ * messages, or a spouse line in Jamie's own file.
+ */
+static void after_a_file_is_loaded(CPUState* cpu)
+{
+    const uint32_t file = cpu->gpr[3];
+    const SceneFileKind kind = pending_scene_file.kind;
+    pending_scene_file.kind = NOT_A_SCENE_FILE;
+    if (kind == SCENE_SCRIPT && file != 0) {
+        put_jamie_in_the_loaded_script(cpu, file, &jamie_scenes[pending_scene_file.scene]);
+    } else if (kind == SCENE_MESSAGES && file != 0) {
+        put_jamies_lines_in_the_loaded_messages(cpu, file, pending_scene_file.scene, pending_scene_file.language);
+    }
+    give_the_loaded_file_the_spouse_line(cpu, file);
 }
 
 /*
@@ -1313,10 +2138,18 @@ static void clear_the_ending_flag_after_the_wedding(CPUState* cpu)
 }
 
 static const ModernGekkoModHook hooks[] = {
+    RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_80166888, settle_the_stand_in),
     RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_80166888, clear_the_ending_flag_after_the_wedding),
+    RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_80166888, before_the_field_check_stand_in_for_the_birth),
+    RECOMP_HOOK_RETURN(DOLRECOMP_SYMBOL_fn_80166888, settle_the_stand_in),
+    RECOMP_HOOK(PREGNANCY_CHECK_ADDRESS, at_the_start_of_the_pregnancy_check),
+    RECOMP_HOOK(END_OF_THE_FIELD_CHECKS_ADDRESS, settle_the_stand_in),
+    RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_800FC2B4, before_an_event_starts),
+    RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_80042D10, settle_the_stand_in),
     RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_80042D10, before_the_characters_are_placed),
     RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_8008534C, before_a_character_message_is_shown),
     RECOMP_HOOK_RETURN(DOLRECOMP_SYMBOL_fn_8008534C, after_a_character_message_is_shown),
+    RECOMP_HOOK(DOLRECOMP_SYMBOL_fn_80029E74, before_a_file_is_loaded),
     RECOMP_HOOK_RETURN(DOLRECOMP_SYMBOL_fn_80029E74, after_a_file_is_loaded),
 };
 
@@ -1326,7 +2159,7 @@ static const ModernGekkoModDesc descriptor = {
     .cpu_state_size = sizeof(CPUState),
     .game_id = HM_MM_GAME_ID,
     .id = MOD_ID,
-    .version = "0.6.0",
+    .version = "0.7.0",
     .display_name = "Jamie marriage does not end the game",
     .hooks = hooks,
     .num_hooks = HM_MM_ARRAY_COUNT(hooks),

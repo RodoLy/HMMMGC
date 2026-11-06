@@ -98,15 +98,23 @@ compilar.
   llamadas ni acumulen. Un *patch* reemplaza la función y regresa al que
   llamó, así que no debería repetirse, pero todavía no hay un mod con *patch*
   que lo confirme dentro del juego.
-- **Un hook puede no correr nunca si la función se llama desde su mismo
-  bloque.** Un hook de entrada en `fn_8001AC20`, que el juego ejecuta en cada
-  cuadro, no corrió ni una vez en 1 200 cuadros; su único llamador,
-  `fn_80019AA4`, está en el mismo bloque de 16 KB (`tools/find_callers.py` lo
-  muestra). Un hook en `fn_80049D28`, a la que se llama desde otro bloque,
-  corrió en cada llamada. La causa no está comprobada (lo más probable es que
-  el despachador solo consulte los mods cuando entra a un bloque desde fuera).
-  Antes de escribir un mod, mira quién llama a la función; si todos sus
-  llamadores están en su bloque, engancha otra función.
+- **Un hook no corre si se llega a su dirección desde su mismo bloque.**
+  DolRecomp corta cada sección de código en bloques de 4096 instrucciones
+  (16 KB) desde el inicio de la sección; para el código del juego, desde
+  `0x800184C0`. En el código generado, un salto o una llamada dentro del mismo
+  bloque es un `goto`, y solo uno que sale del bloque vuelve al despachador,
+  que es donde ModernGekko consulta los mods. Un hook de entrada en
+  `fn_8001AC20`, que el juego ejecuta en cada cuadro, no corrió ni una vez en
+  1 200 cuadros: su único llamador, `fn_80019AA4`, está en el mismo bloque
+  (`tools/find_callers.py` lo muestra) y la llamada de `0x80019D18` es un
+  `goto label_8001AC20`. Un hook en `fn_80049D28`, a la que se llama desde
+  otro bloque, corrió en cada llamada. Vale para cualquier dirección, no solo
+  para el inicio de una función: `jamie_marriage` engancha la primera
+  instrucción de la revisión del embarazo (`0x80169410`), a la que se salta
+  desde otro bloque, y sus hooks en los bloques de las cadenas, a los que se
+  salta desde el mismo, nunca corrieron. Antes de escribir un mod, mira desde
+  dónde se llega a la dirección; si todo llega desde su bloque, engancha
+  otra.
 
 ### Mods del proyecto
 
@@ -114,7 +122,7 @@ compilar.
 |---|---|---|
 | [`boot_logger`](boot_logger/mod.c) | Listo | Prueba de humo: imprime una línea cada vez que el juego entra a `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` y `main`. No cambia nada. |
 | [`state_logger`](state_logger/mod.c) | Listo | Imprime cada cambio de estado de la máquina de estados del juego (título, día nuevo, eventos, juego libre), cada estado que otro código pide y cada vez que entra la revisión del campo. Sirve para saber cuándo corre un gancho. No cambia nada. |
-| [`jamie_marriage`](jamie_marriage/mod.c) | Probado en el juego con una partida real; las frases de cónyuge, con condiciones escritas a mano | Casarse con Jamie ya no termina el juego: si la ceremonia ya empezó y la bandera 230 sigue encendida, la apaga en la revisión del campo y anota la boda como el juego lo hace con las demás parejas (diseño en [SCRIPTS.md](../docs/SCRIPTS.md)); tras la ceremonia se ve una vez la escena de las notas. Jamie vive en la casa como cónyuge (0.4.0) y, desde 0.5.0, habla como cónyuge: 33 frases propias en lugar de sus frases de rival, en los cinco idiomas cuyo texto trae el disco ([Las conversaciones](../docs/SCRIPTS.md#las-conversaciones)). Desde 0.6.0 tiene cumpleaños: el 22 de invierno. |
+| [`jamie_marriage`](jamie_marriage/mod.c) | Probado en el juego con una partida real; las frases de cónyuge, el embarazo y el parto, con condiciones escritas a mano | Casarse con Jamie ya no termina el juego: si la ceremonia ya empezó y la bandera 230 sigue encendida, la apaga en la revisión del campo y anota la boda como el juego lo hace con las demás parejas (diseño en [SCRIPTS.md](../docs/SCRIPTS.md)); tras la ceremonia se ve una vez la escena de las notas. Jamie vive en la casa como cónyuge (0.4.0) y, desde 0.5.0, habla como cónyuge: 33 frases propias en lugar de sus frases de rival, en los cinco idiomas cuyo texto trae el disco ([Las conversaciones](../docs/SCRIPTS.md#las-conversaciones)). Desde 0.6.0 tiene cumpleaños: el 22 de invierno. Desde 0.7.0 hay embarazo y parto: Jamie toma prestadas las escenas de otra pareja, con su modelo y frases nuevas en los cinco idiomas, para el chico y para la chica ([El embarazo y el parto](../docs/SCRIPTS.md#el-embarazo-y-el-parto)); antes del parto hace falta la cama grande, porque la pantalla de muebles que abre la cuna no se cierra sin ella. |
 | [`player_speed`](player_speed/mod.c) | Probado en el juego, en la nube; falta Windows | El personaje camina y corre más rápido: engancha la actualización del jugador (`fn_80049D28`) y multiplica la velocidad horizontal que el juego guardó el cuadro anterior, solo en juego libre. Por omisión al 150 % de la velocidad original; `HM_MM_PLAYER_SPEED_PERCENT` (de 25 a 300) lo cambia, y en el paquete de Windows `play.ps1 -PlayerSpeed`. Con 400 el personaje atravesó la puerta de su casa; por encima de 200 queda bajo el propio riesgo del jugador. No cambia la animación. Cómo se mueve el personaje: [MOVEMENT.md](../docs/MOVEMENT.md). |
 | `cheats` | Planeado | Trucos activables. |
 
@@ -212,14 +220,22 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
   write the same value; never count calls or accumulate. A *patch* replaces
   the function and returns to the caller, so it should not repeat, but there
   is not yet a mod with a *patch* that confirms this inside the game.
-- **A hook may never run if the function is called from its own block.** An
-  entry hook on `fn_8001AC20`, which the game runs every frame, did not run
-  once in 1,200 frames; its only caller, `fn_80019AA4`, is in the same 16 KB
-  block (`tools/find_callers.py` shows it). A hook on `fn_80049D28`, which is
-  called from another block, ran on every call. The cause is not confirmed
-  (most likely the dispatcher only asks the mods when it enters a block from
-  outside). Before writing a mod, look at who calls the function; if all its
-  callers are in its block, hook another function.
+- **A hook does not run when its address is reached from its own block.**
+  DolRecomp cuts each code section into blocks of 4096 instructions (16 KB)
+  from the start of the section; for the game's code, from `0x800184C0`. In
+  the generated code, a branch or a call within the same block is a `goto`,
+  and only one that leaves the block returns to the dispatcher, which is
+  where ModernGekko asks the mods. An entry hook on `fn_8001AC20`, which the
+  game runs every frame, did not run once in 1,200 frames: its only caller,
+  `fn_80019AA4`, is in the same block (`tools/find_callers.py` shows it) and
+  the call at `0x80019D18` is a `goto label_8001AC20`. A hook on
+  `fn_80049D28`, which is called from another block, ran on every call. It
+  holds for any address, not only the start of a function: `jamie_marriage`
+  hooks the first instruction of the pregnancy check (`0x80169410`), reached
+  by a branch from another block, and its hooks on the blocks of the chains,
+  reached from the same block, never ran. Before writing a mod, look at
+  where the address is reached from; if everything comes from its block,
+  hook another one.
 
 ### The project's mods
 
@@ -227,6 +243,6 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
 |---|---|---|
 | [`boot_logger`](boot_logger/mod.c) | Done | Smoke test: prints a line each time the game enters `OSInit`, `DVDInit`, `VIInit`, `PADInit`, `GXInit` and `main`. Changes nothing. |
 | [`state_logger`](state_logger/mod.c) | Done | Prints every change of the game's state machine (title, new day, events, free play), every state other code asks for, and each time the field check is entered. Useful to learn when a hook will run. Changes nothing. |
-| [`jamie_marriage`](jamie_marriage/mod.c) | Tried in the game with a real save; the spouse lines under hand-written conditions | Marrying Jamie no longer ends the game: if the ceremony has already started and flag 230 is still set, it clears the flag in the field check and records the wedding the way the game does for the other partners (design in [SCRIPTS.md](../docs/SCRIPTS.md)); the notes scene plays once after the ceremony. Jamie lives in the house as the spouse (0.4.0) and, since 0.5.0, talks like a spouse: 33 lines of its own instead of the rival's lines, in the five languages whose text is on the disc ([The conversations](../docs/SCRIPTS.md#the-conversations)). Since 0.6.0 Jamie has a birthday: the 22nd of winter. |
+| [`jamie_marriage`](jamie_marriage/mod.c) | Tried in the game with a real save; the spouse lines, the pregnancy and the birth under hand-written conditions | Marrying Jamie no longer ends the game: if the ceremony has already started and flag 230 is still set, it clears the flag in the field check and records the wedding the way the game does for the other partners (design in [SCRIPTS.md](../docs/SCRIPTS.md)); the notes scene plays once after the ceremony. Jamie lives in the house as the spouse (0.4.0) and, since 0.5.0, talks like a spouse: 33 lines of its own instead of the rival's lines, in the five languages whose text is on the disc ([The conversations](../docs/SCRIPTS.md#the-conversations)). Since 0.6.0 Jamie has a birthday: the 22nd of winter. Since 0.7.0 there are a pregnancy and a birth: Jamie borrows another partner's scenes, with Jamie's model and new lines in the five languages, for the boy and for the girl ([Pregnancy and birth](../docs/SCRIPTS.md#pregnancy-and-birth)); the big bed is needed before the birth, because the furniture screen that the crib opens does not close without it. |
 | [`player_speed`](player_speed/mod.c) | Tried in the game, in the cloud; Windows still to do | The character walks and runs faster: it hooks the player's update (`fn_80049D28`) and multiplies the horizontal velocity that the game stored one frame earlier, only in free play. By default at 150% of the original speed; `HM_MM_PLAYER_SPEED_PERCENT` (25 to 300) changes it, and in the Windows package so does `play.ps1 -PlayerSpeed`. At 400 the character went through the door of its house; above 200 it is at the player's own risk. It does not change the animation. How the character moves: [MOVEMENT.md](../docs/MOVEMENT.md). |
 | `cheats` | Planned | Switchable cheats. |
