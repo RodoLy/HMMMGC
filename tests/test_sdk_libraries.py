@@ -37,6 +37,7 @@ from symbols import Symbol, SymbolTable  # noqa: E402
         ("ARStartDMA", "AR"),
         ("AXFXGetHooks", "AXFX"),  # not AX
         ("AXInit", "AX"),
+        ("MIXUpdateSettings", "MIX"),  # the mixer on top of AX
         ("C_MTXLookAt", "MTX"),
         ("PSMTXMultVec", "MTX"),
         ("DCFlushRange", "OS"),  # the cache functions are part of the OS library

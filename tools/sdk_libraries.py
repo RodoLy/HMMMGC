@@ -38,7 +38,8 @@ FUNCTION_KIND = "function"
 # The SDK names the functions of each library with the library's letters in front (OSInit, GXSetViewport,
 # CARDOpen), and the library's private ones with underscores before that (__GXSetDirtyState). The math
 # library has several families of names. DC, IC and LC are the cache functions of the OS library
-# (DCFlushRange, ICInvalidateRange, LCEnable). TRK is MetroTRK, the debugger kernel the SDK links in.
+# (DCFlushRange, ICInvalidateRange, LCEnable). TRK is MetroTRK, the debugger kernel the SDK links in. MIX is
+# the mixer that sits on AX (MIXInit, MIXUpdateSettings).
 LIBRARY_BY_PREFIX = {
     "AI": "AI",
     "AR": "AR",
@@ -55,6 +56,7 @@ LIBRARY_BY_PREFIX = {
     "GX": "GX",
     "IC": "OS",
     "LC": "OS",
+    "MIX": "MIX",
     "MTX": "MTX",
     "OS": "OS",
     "PAD": "PAD",
