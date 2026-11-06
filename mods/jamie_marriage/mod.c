@@ -32,19 +32,23 @@
  * night's sleep the morning brings the musical note of the wedding ("Your life together starts today"),
  * the same one as with any other partner.
  *
- * Living in the house. Where a character is at each hour comes from their daily routines: a table in the
- * game's data (0x8029F844) has one record of 60 bytes for each character, starting with Jamie, and each
- * record points to nine routines. Every one of the twenty partners has, in routines 4 and 5, the routine
- * of a spouse (on a sunny day and on a rainy day): rows of "where to be" for the parts of the day, many
- * of them at place 0x81, the player's house. Jamie's routines 4 and 5 are empty, because the game never
- * meant Jamie to marry, so the field (fn_80042D10, which puts the characters of an area in it) never finds
- * Jamie at home. This mod writes those two routines for Jamie, built from the game's own data while the
- * game runs (nothing of the game is copied into this file): the spouse routine of the first partner gives
- * the shape and the rows at home, and Jamie's own everyday routine gives the places she goes to. On a
- * sunny day Jamie starts the day at home, goes out to the first two places of her usual morning (she is
- * the outdoors kind, always with the animals and the fields), and comes back home for the rest of the
- * day; on a rainy day she stays at home. The routines are only read for a spouse, so writing them changes
- * nothing while the player is not married to Jamie.
+ * Living in the house. Where a character is at each hour comes from the game's data: a table
+ * (0x8029F844) has one record of 60 bytes for each character, starting with Jamie, and each record points
+ * to nine blocks. Seven are routines, rows of "where to be" whose first byte is a place (0x81 is the
+ * player's house). The other two are tables of the hours of the day, one for an ordinary day and one for
+ * when the character is the player's spouse: for each hour and kind of day (sunny or rainy, ordinary day
+ * or day off, festival) they hold a byte that chooses a row of one of the routines, or "nowhere"
+ * (fn_80131884 reads it, and the field, fn_80042D10, puts the characters of an area where it says). The
+ * spouse table of every partner sends them home in the morning, in the evening and at night (rows 6, 7
+ * and 10 of routine 4, all at the player's house) and to their usual places during the day. Jamie's spouse
+ * table says "nowhere" at every hour and Jamie's routine 4 is empty, because the game never meant Jamie to
+ * marry: once married, Jamie was nowhere at all. This mod gives Jamie both, built from the game's own data
+ * while the game runs (nothing of the game is copied into this file): routine 4 is the first partner's,
+ * and the spouse table takes the first partner's byte wherever it sends him home and Jamie's ordinary byte
+ * everywhere else. So Jamie starts the day at home, goes to her usual places during the day (she is the
+ * outdoors kind, always with the animals and the fields), and comes back home in the evening and to sleep.
+ * The spouse table is only read for the spouse, so writing it changes nothing while the player is not
+ * married to Jamie.
  *
  * It is safe to run more than once for the same check, which can happen (see mods/README.md): clearing
  * a flag that is already clear changes nothing. It also covers a second proposal to Jamie, because the
@@ -80,19 +84,23 @@
  * Jamie. En el juego, tras una noche de sueño la mañana trae la nota musical de la boda («Your life
  * together starts today»), la misma que con cualquier otra pareja.
  *
- * Vivir en la casa. Dónde está un personaje a cada hora sale de sus rutinas diarias: una tabla de los
- * datos del juego (0x8029F844) tiene un registro de 60 bytes por personaje, empezando por Jamie, y cada
- * registro apunta a nueve rutinas. Cada una de las veinte parejas tiene, en las rutinas 4 y 5, la rutina
- * de cónyuge (día soleado y día de lluvia): filas de «dónde estar» para las partes del día, muchas en el
- * lugar 0x81, la casa del jugador. Las rutinas 4 y 5 de Jamie están vacías, porque el juego nunca pensó en
- * casar a Jamie, así que el campo (fn_80042D10, que pone a los personajes de un área en ella) nunca
- * encuentra a Jamie en casa. Este mod escribe esas dos rutinas para Jamie, armadas con los datos del propio
- * juego mientras corre (nada del juego se copia en este archivo): la rutina de cónyuge de la primera
- * pareja da la forma y las filas en casa, y la rutina diaria de Jamie da los lugares a los que va. En un
- * día soleado Jamie empieza el día en casa, sale a los dos primeros lugares de su mañana de siempre (es de
- * las que viven afuera, con los animales y el campo) y vuelve a casa el resto del día; en un día de lluvia
- * se queda en casa. Las rutinas solo se leen para un cónyuge, así que escribirlas no cambia nada mientras
- * el jugador no está casado con Jamie.
+ * Vivir en la casa. Dónde está un personaje a cada hora sale de los datos del juego: una tabla
+ * (0x8029F844) tiene un registro de 60 bytes por personaje, empezando por Jamie, y cada registro apunta a
+ * nueve bloques. Siete son rutinas, filas de «dónde estar» cuyo primer byte es un lugar (0x81 es la casa
+ * del jugador). Los otros dos son tablas de las horas del día, una para un día normal y otra para cuando el
+ * personaje es el cónyuge del jugador: para cada hora y tipo de día (soleado o de lluvia, normal o de
+ * descanso, festival) guardan un byte que elige una fila de una de las rutinas, o «en ninguna parte»
+ * (fn_80131884 lo lee, y el campo, fn_80042D10, pone a los personajes de un área donde dice). La tabla de
+ * cónyuge de cada pareja la manda a casa en la mañana, en la tarde y en la noche (las filas 6, 7 y 10 de la
+ * rutina 4, todas en la casa del jugador) y a sus lugares de siempre durante el día. La tabla de cónyuge de
+ * Jamie dice «en ninguna parte» a todas horas y su rutina 4 está vacía, porque el juego nunca pensó en
+ * casar a Jamie: ya casada, Jamie no estaba en ningún lado. Este mod le da las dos, armadas con los datos
+ * del propio juego mientras corre (nada del juego se copia en este archivo): la rutina 4 es la de la
+ * primera pareja, y la tabla de cónyuge toma el byte de la primera pareja donde la manda a casa y el byte
+ * de un día normal de Jamie en todo lo demás. Así Jamie empieza el día en casa, va a sus lugares de siempre
+ * durante el día (es de las que viven afuera, con los animales y el campo) y vuelve a casa en la tarde y a
+ * dormir. La tabla de cónyuge solo se lee para el cónyuge, así que escribirla no cambia nada mientras el
+ * jugador no está casado con Jamie.
  *
  * Es seguro que corra más de una vez por la misma revisión, cosa que puede pasar (ver mods/README.md):
  * apagar una bandera que ya está apagada no cambia nada. También cubre una segunda propuesta a Jamie,
@@ -173,31 +181,35 @@
 #define CHARACTER_BIT_MARRIED 3u
 
 /*
- * The daily routines (see the comment at the top). Each record of the table is 60 bytes; the pointers to
- * the nine routines start at byte 16 of it. A routine is 200 bytes and holds rows of 18 bytes whose first
- * byte is the place: in a spouse routine, four rows for the morning from byte 18 (the last one is the walk
- * home), an empty row, and five rows at home from byte 108.
+ * Where the characters are (see the comment at the top). The table at 0x8029F844 has a record of 60 bytes
+ * for each character, starting with Jamie; the pointers to the nine blocks of a character start at byte 16
+ * of the record. Blocks 0 to 6 are routines: rows of 18 bytes whose first byte is a place. Block 7 is the
+ * table of the hours of an ordinary day and block 8 the one for the player's spouse.
  */
 #define ROUTINE_TABLE_ADDRESS 0x8029F844u
 #define ROUTINE_RECORD_BYTES 60u
-#define ROUTINE_POINTERS_OFFSET 16u
+#define BLOCK_POINTERS_OFFSET 16u
 #define FIRST_CHARACTER_OF_THE_TABLE 2u /* Jamie */
-#define ROUTINE_EVERYDAY_SUNNY 0u
-#define ROUTINE_SPOUSE_SUNNY 4u
-#define ROUTINE_SPOUSE_RAINY 5u
+#define BLOCK_SPOUSE_ROUTINE 4u
+#define BLOCK_HOURS_OF_AN_ORDINARY_DAY 7u
+#define BLOCK_HOURS_OF_A_SPOUSE 8u
 #define ROUTINE_BYTES 200u
-#define ROUTINE_MORNING_ROWS_OFFSET 18u
-#define ROUTINE_HOME_ROWS_OFFSET 108u
-#define ROUTINE_ROW_BYTES 18u
-#define PLACE_PLAYERS_HOUSE 0x81u
 
-/* The partner whose spouse routine gives the shape: the first one of a male player. */
+/*
+ * A table of hours has a row of 12 bytes for each hour, from 6 in the morning; the bytes of a row are the
+ * kinds of day (sunny or rainy, ordinary day or day off, festival). Each byte says which row of which
+ * routine the character follows at that hour (fn_80131884 reads it), or that the character is nowhere
+ * (0x78, and 0x3C on festivals). The bytes from 0x28 to 0x3B choose a row of the spouse routine: the byte
+ * minus 0x28 is the row. Every partner's spouse routine has its rows 6 to 10 at the player's house.
+ */
+#define HOURS_IN_A_DAY 24u
+#define HOURS_ROW_BYTES 12u
+#define HOURS_TABLE_BYTES (HOURS_IN_A_DAY * HOURS_ROW_BYTES)
+#define FIRST_BYTE_OF_THE_SPOUSE_ROUTINE 0x28u
+#define FIRST_BYTE_AFTER_THE_SPOUSE_ROUTINE 0x3Cu
+
+/* The partner whose spouse routine and hours give the shape: the first one of a male player. */
 #define MODEL_PARTNER_CHARACTER_NUMBER 3u
-
-/* The morning rows of a spouse routine: rows 0 to 2 are places to be, row 3 is the walk home. */
-#define SPOUSE_ROW_FIRST_MORNING 0u
-#define SPOUSE_ROW_LAST_MORNING 2u
-#define SPOUSE_ROW_WALK_HOME 3u
 
 static uint32_t read_word(CPUState* cpu, uint32_t address)
 {
@@ -209,28 +221,36 @@ static void write_word(CPUState* cpu, uint32_t address, uint32_t value)
     moderngekko_mod_write(cpu, address, value, WORD_BYTES);
 }
 
+static uint8_t read_byte(CPUState* cpu, uint32_t address)
+{
+    return (uint8_t)moderngekko_mod_read(cpu, address, BYTE_BYTES);
+}
+
+static void write_byte(CPUState* cpu, uint32_t address, uint8_t value)
+{
+    moderngekko_mod_write(cpu, address, value, BYTE_BYTES);
+}
+
 /* Whether bit `bit_number` of the array of bits that starts at `array_address` is set. */
 static bool is_bit_set(CPUState* cpu, uint32_t array_address, uint32_t bit_number)
 {
     const uint32_t byte_address = array_address + bit_number / BITS_PER_BYTE;
     const uint32_t bit_mask = 1u << (bit_number % BITS_PER_BYTE);
-    return (moderngekko_mod_read(cpu, byte_address, BYTE_BYTES) & bit_mask) != 0;
+    return (read_byte(cpu, byte_address) & bit_mask) != 0;
 }
 
 static void clear_bit(CPUState* cpu, uint32_t array_address, uint32_t bit_number)
 {
     const uint32_t byte_address = array_address + bit_number / BITS_PER_BYTE;
     const uint32_t bit_mask = 1u << (bit_number % BITS_PER_BYTE);
-    const uint64_t current_byte = moderngekko_mod_read(cpu, byte_address, BYTE_BYTES);
-    moderngekko_mod_write(cpu, byte_address, current_byte & ~(uint64_t)bit_mask, BYTE_BYTES);
+    write_byte(cpu, byte_address, (uint8_t)(read_byte(cpu, byte_address) & ~bit_mask));
 }
 
 static void set_bit(CPUState* cpu, uint32_t array_address, uint32_t bit_number)
 {
     const uint32_t byte_address = array_address + bit_number / BITS_PER_BYTE;
     const uint32_t bit_mask = 1u << (bit_number % BITS_PER_BYTE);
-    const uint64_t current_byte = moderngekko_mod_read(cpu, byte_address, BYTE_BYTES);
-    moderngekko_mod_write(cpu, byte_address, current_byte | bit_mask, BYTE_BYTES);
+    write_byte(cpu, byte_address, (uint8_t)(read_byte(cpu, byte_address) | bit_mask));
 }
 
 /*
@@ -251,75 +271,81 @@ static void record_the_marriage_with_jamie(CPUState* cpu, uint32_t save_data)
     set_bit(cpu, jamie_bits, CHARACTER_BIT_MARRIED);
 }
 
-static uint32_t routine_address(CPUState* cpu, uint32_t character_number, uint32_t routine_number)
+/* The address of one of the nine blocks of a character (0 when the character has none). */
+static uint32_t block_address(CPUState* cpu, uint32_t character_number, uint32_t block_number)
 {
     const uint32_t record =
         ROUTINE_TABLE_ADDRESS + (character_number - FIRST_CHARACTER_OF_THE_TABLE) * ROUTINE_RECORD_BYTES;
-    return read_word(cpu, record + ROUTINE_POINTERS_OFFSET + routine_number * WORD_BYTES);
+    return read_word(cpu, record + BLOCK_POINTERS_OFFSET + block_number * WORD_BYTES);
 }
 
-static uint32_t morning_row_address(uint32_t routine, uint32_t row)
+static bool is_a_row_of_the_spouse_routine(uint8_t hour_byte)
 {
-    return routine + ROUTINE_MORNING_ROWS_OFFSET + row * ROUTINE_ROW_BYTES;
-}
-
-static uint32_t first_home_row_address(uint32_t routine)
-{
-    return routine + ROUTINE_HOME_ROWS_OFFSET;
-}
-
-static void copy_bytes(CPUState* cpu, uint32_t destination, uint32_t source, uint32_t count)
-{
-    for (uint32_t index = 0; index < count; ++index) {
-        const uint64_t value = moderngekko_mod_read(cpu, source + index, BYTE_BYTES);
-        moderngekko_mod_write(cpu, destination + index, value, BYTE_BYTES);
-    }
+    return hour_byte >= FIRST_BYTE_OF_THE_SPOUSE_ROUTINE && hour_byte < FIRST_BYTE_AFTER_THE_SPOUSE_ROUTINE;
 }
 
 /*
- * Writes Jamie's two spouse routines, unless they are already there. The game's data is loaded once, when
- * the game starts, so the work is done once; looking first keeps it cheap for every area that is entered.
- *
- * Sunny day: the model partner's routine, with Jamie at home in the first row and, in the other two rows
- * of the morning, the first two places of Jamie's everyday morning. Rainy day: at home all day.
+ * Copies `count` bytes, and tells whether any of them changed, so that the caller only reports real work.
  */
-static void give_jamie_the_routines_of_a_spouse(CPUState* cpu)
+static bool copy_bytes(CPUState* cpu, uint32_t destination, uint32_t source, uint32_t count)
 {
-    const uint32_t jamie_sunny = routine_address(cpu, JAMIE_CHARACTER_NUMBER, ROUTINE_SPOUSE_SUNNY);
-    const uint32_t jamie_rainy = routine_address(cpu, JAMIE_CHARACTER_NUMBER, ROUTINE_SPOUSE_RAINY);
-    const uint32_t jamie_everyday = routine_address(cpu, JAMIE_CHARACTER_NUMBER, ROUTINE_EVERYDAY_SUNNY);
-    const uint32_t model_sunny = routine_address(cpu, MODEL_PARTNER_CHARACTER_NUMBER, ROUTINE_SPOUSE_SUNNY);
-    const uint32_t model_rainy = routine_address(cpu, MODEL_PARTNER_CHARACTER_NUMBER, ROUTINE_SPOUSE_RAINY);
-    const bool all_routines_exist =
-        jamie_sunny != 0 && jamie_rainy != 0 && jamie_everyday != 0 && model_sunny != 0 && model_rainy != 0;
-    if (!all_routines_exist) {
+    bool changed = false;
+    for (uint32_t index = 0; index < count; ++index) {
+        const uint8_t value = read_byte(cpu, source + index);
+        if (read_byte(cpu, destination + index) != value) {
+            write_byte(cpu, destination + index, value);
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+/*
+ * Gives Jamie the spouse routine and the hours of a spouse, unless they are already there. The game's data
+ * is loaded once, when the game starts, so the writing happens once; comparing first keeps it cheap for
+ * every area that is entered.
+ *
+ * Spouse routine: the model partner's, whose rows 6 to 10 are at the player's house.
+ * Hours of a spouse: at each hour and on each kind of day, the model partner's byte where it chooses a row
+ * of the spouse routine (at home), and Jamie's byte of an ordinary day everywhere else (her usual places).
+ */
+static void give_jamie_the_life_of_a_spouse(CPUState* cpu)
+{
+    const uint32_t jamie_spouse_routine = block_address(cpu, JAMIE_CHARACTER_NUMBER, BLOCK_SPOUSE_ROUTINE);
+    const uint32_t jamie_ordinary_hours =
+        block_address(cpu, JAMIE_CHARACTER_NUMBER, BLOCK_HOURS_OF_AN_ORDINARY_DAY);
+    const uint32_t jamie_spouse_hours = block_address(cpu, JAMIE_CHARACTER_NUMBER, BLOCK_HOURS_OF_A_SPOUSE);
+    const uint32_t model_spouse_routine =
+        block_address(cpu, MODEL_PARTNER_CHARACTER_NUMBER, BLOCK_SPOUSE_ROUTINE);
+    const uint32_t model_spouse_hours =
+        block_address(cpu, MODEL_PARTNER_CHARACTER_NUMBER, BLOCK_HOURS_OF_A_SPOUSE);
+    const bool all_blocks_exist = jamie_spouse_routine != 0 && jamie_ordinary_hours != 0 &&
+                                  jamie_spouse_hours != 0 && model_spouse_routine != 0 &&
+                                  model_spouse_hours != 0;
+    if (!all_blocks_exist) {
         return;
     }
-    const uint32_t first_row_of_jamie = morning_row_address(jamie_sunny, SPOUSE_ROW_FIRST_MORNING);
-    if (moderngekko_mod_read(cpu, first_row_of_jamie, BYTE_BYTES) == PLACE_PLAYERS_HOUSE) {
-        return; /* already written */
-    }
-    const uint32_t model_row_at_home = first_home_row_address(model_sunny);
 
-    copy_bytes(cpu, jamie_sunny, model_sunny, ROUTINE_BYTES);
-    copy_bytes(cpu, first_row_of_jamie, model_row_at_home, ROUTINE_ROW_BYTES);
-    for (uint32_t row = SPOUSE_ROW_FIRST_MORNING + 1; row <= SPOUSE_ROW_LAST_MORNING; ++row) {
-        const uint32_t everyday_row = row - 1;
-        const uint32_t jamie_place = morning_row_address(jamie_everyday, everyday_row);
-        copy_bytes(cpu, morning_row_address(jamie_sunny, row), jamie_place, ROUTINE_ROW_BYTES);
+    bool changed = copy_bytes(cpu, jamie_spouse_routine, model_spouse_routine, ROUTINE_BYTES);
+    for (uint32_t index = 0; index < HOURS_TABLE_BYTES; ++index) {
+        const uint8_t model_byte = read_byte(cpu, model_spouse_hours + index);
+        const uint8_t jamie_byte = is_a_row_of_the_spouse_routine(model_byte)
+                                       ? model_byte
+                                       : read_byte(cpu, jamie_ordinary_hours + index);
+        if (read_byte(cpu, jamie_spouse_hours + index) != jamie_byte) {
+            write_byte(cpu, jamie_spouse_hours + index, jamie_byte);
+            changed = true;
+        }
     }
-
-    copy_bytes(cpu, jamie_rainy, model_rainy, ROUTINE_BYTES);
-    for (uint32_t row = SPOUSE_ROW_FIRST_MORNING; row <= SPOUSE_ROW_WALK_HOME; ++row) {
-        copy_bytes(cpu, morning_row_address(jamie_rainy, row), model_row_at_home, ROUTINE_ROW_BYTES);
+    if (changed) {
+        HM_MM_LOG(MOD_ID, "gave Jamie the routine and the hours of a spouse, so that she lives in the house");
     }
-    HM_MM_LOG(MOD_ID, "wrote Jamie's routines of a spouse, so that Jamie can live in the house");
 }
 
 /* fn_80042D10(): puts the characters of the area that is being entered in it. This runs on its entry. */
 static void before_the_characters_are_placed(CPUState* cpu)
 {
-    give_jamie_the_routines_of_a_spouse(cpu);
+    give_jamie_the_life_of_a_spouse(cpu);
 }
 
 /*
@@ -359,7 +385,7 @@ static const ModernGekkoModDesc descriptor = {
     .cpu_state_size = sizeof(CPUState),
     .game_id = HM_MM_GAME_ID,
     .id = MOD_ID,
-    .version = "0.3.0",
+    .version = "0.4.0",
     .display_name = "Jamie marriage does not end the game",
     .hooks = hooks,
     .num_hooks = HM_MM_ARRAY_COUNT(hooks),
