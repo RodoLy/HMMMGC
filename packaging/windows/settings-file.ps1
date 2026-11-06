@@ -151,7 +151,7 @@ function Read-SettingsFile {
             $speedProperty = $file.PSObject.Properties['playerSpeedPercent']
             if ($speedProperty -and $null -ne $speedProperty.Value) {
                 $speed = $speedProperty.Value
-                if (Test-WholeNumberInRange $speed $PlayerSpeedPercentMinimum $PlayerSpeedPercentMaximum) {
+                if (Test-WholeNumberInRange -Value $speed -Minimum $PlayerSpeedPercentMinimum -Maximum $PlayerSpeedPercentMaximum) {
                     $settings.PlayerSpeedPercent = [int] $speed
                 }
                 else {
@@ -162,7 +162,7 @@ function Read-SettingsFile {
             $gameSpeedProperty = $file.PSObject.Properties['gameSpeedPercent']
             if ($gameSpeedProperty -and $null -ne $gameSpeedProperty.Value) {
                 $gameSpeed = $gameSpeedProperty.Value
-                if (Test-WholeNumberInRange $gameSpeed $GameSpeedPercentMinimum $GameSpeedPercentMaximum) {
+                if (Test-WholeNumberInRange -Value $gameSpeed -Minimum $GameSpeedPercentMinimum -Maximum $GameSpeedPercentMaximum) {
                     $settings.GameSpeedPercent = [int] $gameSpeed
                 }
                 else {
