@@ -25,12 +25,13 @@
  *
  * Being married. With the other twenty partners, the game itself writes in the save data that the player
  * is married, at the moment the field check starts their wedding (fn_80166888, from 0x801672B8 for the
- * first partner, the same seven writes for each one): who the spouse is, main flag 0 ("married"), the
- * "is married" bit of the spouse's own character bits, and three values that it copies or resets. The
- * wedding with Jamie never goes through that code, because the game ended there. So, when this mod clears
- * the ending flag, it also makes those same writes, with Jamie's character number. In the game, after a
- * night's sleep the morning brings the musical note of the wedding ("Your life together starts today"),
- * the same one as with any other partner.
+ * first partner, the same seven writes for each one): who the spouse is, main flag 0 ("married"), the bit
+ * of the spouse's own character bits that makes the spouse ask what to call the player, the date of the
+ * wedding (the season and the day, which the anniversary is compared with) and the weather of the day.
+ * The wedding with Jamie never goes through that code, because the game ended there. So, when this mod
+ * clears the ending flag, it also makes those same writes, with Jamie's character number. In the game,
+ * after a night's sleep the morning brings the musical note of the wedding ("Your life together starts
+ * today"), the same one as with any other partner.
  *
  * Living in the house. Where a character is at each hour comes from the game's data: a table
  * (0x8029F844) has one record of 60 bytes for each character, starting with Jamie, and each record points
@@ -78,11 +79,12 @@
  * Estar casado. Con las otras veinte parejas, el propio juego escribe en la partida que el jugador está
  * casado, en el momento en que la revisión del campo empieza su boda (fn_80166888, desde 0x801672B8 para
  * la primera pareja, las mismas siete escrituras para cada una): quién es la pareja, la bandera principal
- * 0 («casado»), el bit «está casado» de los bits de personaje de la pareja, y tres valores que copia o
- * reinicia. La boda con Jamie nunca pasa por ese código, porque ahí terminaba el juego. Así que, cuando
- * este mod apaga la bandera del final, hace también esas mismas escrituras, con el número de personaje de
- * Jamie. En el juego, tras una noche de sueño la mañana trae la nota musical de la boda («Your life
- * together starts today»), la misma que con cualquier otra pareja.
+ * 0 («casado»), el bit de los bits de personaje de la pareja que la hace preguntar cómo llamar al jugador,
+ * la fecha de la boda (la estación y el día, con los que se compara el aniversario) y el clima del día. La
+ * boda con Jamie nunca pasa por ese código, porque ahí terminaba el juego. Así que, cuando este mod apaga
+ * la bandera del final, hace también esas mismas escrituras, con el número de personaje de Jamie. En el
+ * juego, tras una noche de sueño la mañana trae la nota musical de la boda («Your life together starts
+ * today»), la misma que con cualquier otra pareja.
  *
  * Vivir en la casa. Dónde está un personaje a cada hora sale de los datos del juego: una tabla
  * (0x8029F844) tiene un registro de 60 bytes por personaje, empezando por Jamie, y cada registro apunta a
@@ -163,22 +165,34 @@
 /*
  * Values of the save data. The game reads and writes each one with its own functions (fn_800A7940 reads
  * the word at the start of a value, fn_800A7950 writes it, keeping it within the limits that follow it).
+ * The scripts read them by number with their built-in 55 (fn_80060D94, a switch over these offsets); the
+ * number of each one is given where the scripts show what it means.
+ *
+ * The season and the day: talk.lsb (the conversations of the villagers) reads the season, 0 for spring
+ * to 3 for winter, as value 124, and the day of the season as value 125, to choose the line of each
+ * festival. The wedding copies both into the date of the wedding, and the field check starts the
+ * anniversary on the day whose season and day are those (fn_80166888, from 0x80169A78).
+ * The weather: talk.lsb reads it as value 129 and chooses the rain line when it is 2 and the storm line
+ * when it is 3. The wedding sets it to 0.
  */
 #define SPOUSE_OFFSET 0x22B8u  /* the character number of the spouse; 126 while there is none */
 #define FIANCE_OFFSET 0x2330u  /* the character number of the fiance (value 137 of the scripts) */
-#define HOUSE_VALUE_OFFSET 0x2234u      /* copied into the next one when the player marries */
-#define HOUSE_VALUE_COPY_OFFSET 0xD514u
-#define SECOND_VALUE_OFFSET 0x224Cu     /* copied into the next one when the player marries */
-#define SECOND_VALUE_COPY_OFFSET 0xD520u
-#define RESET_VALUE_OFFSET 0x1BC8u      /* set to 0 when the player marries */
+#define SEASON_OFFSET 0x2234u
+#define DAY_OF_THE_SEASON_OFFSET 0x224Cu
+#define WEDDING_SEASON_OFFSET 0xD514u
+#define WEDDING_DAY_OFFSET 0xD520u
+#define WEATHER_OFFSET 0x1BC8u
 
 /*
  * Every character has three bytes of bits, at this offset of the save data plus three times its number.
- * Bit 3 of them is "married to the player".
+ * Bit 3: the spouse is to ask what to call the player. talk.lsb, on the first conversation after the
+ * wedding, shows message 9 of the spouse ("what should I call you") and the list of names, and clears it.
+ * (Being the spouse is another bit, 8, which the game sets every morning for the character whose number
+ * is the spouse's: fn_80032EE8, from 0x80033670.)
  */
 #define CHARACTER_BITS_OFFSET 0x5564u
 #define CHARACTER_BITS_BYTES_EACH 3u
-#define CHARACTER_BIT_MARRIED 3u
+#define CHARACTER_BIT_ASKS_WHAT_TO_CALL_THE_PLAYER 3u
 
 /*
  * Where the characters are (see the comment at the top). The table at 0x8029F844 has a record of 60 bytes
@@ -262,13 +276,13 @@ static void record_the_marriage_with_jamie(CPUState* cpu, uint32_t save_data)
     write_word(cpu, save_data + SPOUSE_OFFSET, JAMIE_CHARACTER_NUMBER);
     write_word(cpu, save_data + FIANCE_OFFSET, JAMIE_CHARACTER_NUMBER);
     set_bit(cpu, save_data + MAIN_FLAGS_OFFSET, FLAG_MARRIED);
-    write_word(cpu, save_data + HOUSE_VALUE_COPY_OFFSET, read_word(cpu, save_data + HOUSE_VALUE_OFFSET));
-    write_word(cpu, save_data + SECOND_VALUE_COPY_OFFSET, read_word(cpu, save_data + SECOND_VALUE_OFFSET));
-    write_word(cpu, save_data + RESET_VALUE_OFFSET, 0);
+    write_word(cpu, save_data + WEDDING_SEASON_OFFSET, read_word(cpu, save_data + SEASON_OFFSET));
+    write_word(cpu, save_data + WEDDING_DAY_OFFSET, read_word(cpu, save_data + DAY_OF_THE_SEASON_OFFSET));
+    write_word(cpu, save_data + WEATHER_OFFSET, 0);
 
     const uint32_t jamie_bits = save_data + CHARACTER_BITS_OFFSET +
                                 CHARACTER_BITS_BYTES_EACH * JAMIE_CHARACTER_NUMBER;
-    set_bit(cpu, jamie_bits, CHARACTER_BIT_MARRIED);
+    set_bit(cpu, jamie_bits, CHARACTER_BIT_ASKS_WHAT_TO_CALL_THE_PLAYER);
 }
 
 /* The address of one of the nine blocks of a character (0 when the character has none). */
