@@ -44,8 +44,10 @@ function(add_game_mod mod_id)
         "${MODERNGEKKO_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${MOD_SYMBOL_HEADER_DIRECTORY}")
+    # The texts of jamie_marriage are written in UTF-8; /utf-8 makes MSVC read the sources that way, as GCC
+    # and Clang already do.
     if(MSVC)
-        target_compile_options(${mod_id} PRIVATE /W4)
+        target_compile_options(${mod_id} PRIVATE /W4 /utf-8)
     else()
         target_compile_options(${mod_id} PRIVATE -Wall -Wextra -Wpedantic)
     endif()

@@ -309,8 +309,36 @@ pieza por pieza, en el orden de arriba)
       pareja vive en la casa donde está la cama grande (`fn_80132190`), por
       eso con la casa inicial no aparecía. Probado por el jugador: Jamie está
       en la segunda casa a las 6:50 de la mañana.
-- [ ] **Diálogos de cónyuge para Jamie** (lo pidió el jugador el
-      2026-11-05): ya casada vive en la casa, pero al hablarle no dice nada.
+- [x] **Diálogos de cónyuge para Jamie** (lo pidió el jugador el
+      2026-11-05): ya casada vive en la casa, pero al hablarle decía sus
+      frases de rival ("I hate rain.", "Just go home."). **Hecho**
+      (`jamie_marriage` 0.5.0): `talk.lsb` elige el número de mensaje por la
+      situación y el mod pone, cuando Jamie es el cónyuge, 33 frases propias
+      en esos números (saludos, lluvia, tormenta, amistad, vida de casados,
+      hijos, cumpleaños, el apodo), con su carácter y en los cinco idiomas
+      cuyo texto trae el disco, en femenino o masculino según el jugador
+      ([SCRIPTS.md](SCRIPTS.md), «Las conversaciones»). Probado en el juego
+      con condiciones escritas a mano: en inglés y, cambiando la ruta del
+      archivo, en español, incluido el 100 que el archivo de Jamie no tiene.
+- [ ] **Cumpleaños de Jamie**: la tabla del juego no le da fecha (estación
+      -1), así que nunca le toca el regalo de cumpleaños. El mod puede darle
+      una (propuesta: Invierno 22, libre de festivales y de otros
+      cumpleaños; la frase ya está).
+- [ ] **Eventos de cónyuge para Jamie** (lo pidió el jugador): el
+      aniversario (`Eve_memo03` en la mañana y `Eve_memo00` en la noche, con
+      amistad de 700 o más), el embarazo (`Eve_conce00` a `19`, uno por
+      pareja), el nacimiento (`Eve_child00` a `19`), el cumpleaños del hijo
+      (`Eve_memo01`) y su revisión médica (`Eve_memo04`). Los guiones eligen
+      la frase de cada pareja por su número y el de Jamie no está, y el del
+      embarazo se elige con una cadena de comparaciones de `fn_80166888` que
+      no incluye a Jamie.
+- [ ] **Diálogos en español con el texto del disco**: el disco americano
+      trae la traducción oficial al español (y al francés, alemán e
+      italiano) de la versión europea de GameCube que no salió; el programa
+      americano solo abre `message_e`. Cambiar las 170 rutas a `message_s`
+      (misma longitud) la activa: probado con el archivo de Jamie. Los
+      menús, objetos y apodos están dentro del programa y seguirían en
+      inglés.
 - [ ] Avance rápido de las escenas mientras se mantiene una tecla (la barra
       espaciadora): un mod que acelere los eventos y la asignación de la
       tecla (hoy Espacio no está asignada en la distribución de teclado de
@@ -727,9 +755,36 @@ by piece, in the order above)
       the house where the big bed is (`fn_80132190`), which is why the
       starting house showed nobody. Tried by the player: Jamie is in the
       second house at 6:50 in the morning.
-- [ ] **Spouse dialogue for Jamie** (asked for by the player on
-      2026-11-05): once married she lives in the house, but she says nothing
-      when talked to.
+- [x] **Spouse dialogue for Jamie** (asked for by the player on
+      2026-11-05): once married she lives in the house, but she said her
+      rival's lines when talked to ("I hate rain.", "Just go home.").
+      **Done** (`jamie_marriage` 0.5.0): `talk.lsb` chooses the message
+      number by the situation, and when Jamie is the spouse the mod puts 33
+      lines of its own at those numbers (greetings, rain, storm, friendship,
+      married life, children, birthdays, the nickname), in Jamie's character
+      and in the five languages whose text is on the disc, as a woman or a
+      man depending on the player ([SCRIPTS.md](SCRIPTS.md), "The
+      conversations"). Tried in the game under hand-written conditions: in
+      English and, changing the path of the file, in Spanish, 100 included,
+      which Jamie's file lacks.
+- [ ] **Jamie's birthday**: the game's table gives Jamie no date (season
+      -1), so the birthday present never comes. The mod can give one
+      (proposal: Winter 22, free of festivals and other birthdays; the line
+      is already there).
+- [ ] **Spouse events for Jamie** (asked for by the player): the
+      anniversary (`Eve_memo03` in the morning and `Eve_memo00` at night, with
+      friendship 700 or more), the pregnancy (`Eve_conce00` to `19`, one per
+      partner), the birth (`Eve_child00` to `19`), the child's birthday
+      (`Eve_memo01`) and checkup (`Eve_memo04`). The scripts choose each
+      partner's line by number and Jamie's is missing, and the pregnancy is
+      chosen by a chain of comparisons in `fn_80166888` that leaves Jamie out.
+- [ ] **Dialogue in Spanish with the disc's text**: the American disc holds
+      the official Spanish translation (and the French, German and Italian
+      ones) of the European GameCube release that never came out; the
+      American program only opens `message_e`. Changing its 170 paths to
+      `message_s` (the same length) turns it on: tried with Jamie's file.
+      Menus, items and nicknames are inside the program and would stay in
+      English.
 - [ ] Fast-forward the scenes while a key is held (the space bar): a mod that
       speeds up the events and the key assignment (today Space is not mapped
       in Dolphin's keyboard layout). It is turned on and adjusted from the

@@ -498,6 +498,96 @@ siquiera se llegó a pedirlos.
    que el gancho manda al intérprete no se ejecutó en ese tramo. Solo se
    midió en la casa y en juego libre.
 
+### Las conversaciones
+
+Lo que dice un aldeano cuando le hablas sale de `talk.lsb`, el único script
+que usa la función nativa 52 (`fn_800627F4`, 103 llamadas). Esa función saca
+tres enteros (el personaje, donde 125 es «con quien habla el jugador» y
+`fn_800A3428` lo traduce a su número; el número de mensaje; y otro valor) y
+llama a `fn_8008534C(ventana, personaje, mensaje, ...)`, que:
+
+1. toma la ruta del archivo de mensajes del personaje de la tabla de
+   `0x801DFD40`, una palabra por número de personaje (la del 2, Jamie, es
+   `/message_e/chara/Rion_e.bin`);
+2. carga el archivo entero en un búfer nuevo con `fn_80029E74`;
+3. se rinde si el número de mensaje es mayor que el más alto del archivo;
+4. busca el texto por la tabla del archivo, lo pasa por `fn_80081E6C` (que
+   pone los nombres) y por `fn_801A1C88` (un `vsprintf`: un `%` del texto
+   sería un formato) y lo muestra con `fn_8008253C`;
+5. libera el búfer con `fn_801B9D7C`.
+
+Nadie más llama a `fn_8008534C`. Un archivo de mensajes empieza con el número
+del personaje que habla y el número de mensaje más alto que tiene (16 bits
+cada uno), cuatro bytes más, y dónde empiezan su tabla y su texto (32 bits
+cada uno). La tabla tiene una palabra por mensaje, del 0 al más alto: dónde
+empieza, contado desde el inicio del texto (`0xFF` es «sin mensaje»). En el
+texto, `01 04 1D` es un renglón nuevo, `01 05 1D` una página nueva,
+`01 08 1F 1D` el fin del mensaje, `01 0A` el nombre del jugador, `01 3E` cómo
+lo llama su pareja, `01 40` el nombre del hijo y `01 3D` el de la pareja. Las
+letras son las de la fuente de la consola (Windows-1252), salvo el signo de
+interrogación, que es `0x9D`; `0x85` es `…`.
+
+**Cada número es una situación**, el mismo para todos los personajes. En la
+primera conversación del día (bit 0 del personaje apagado), `talk.lsb`
+(subrutina `0x001A`) suma 5 a la amistad y prueba en este orden:
+
+| Mensaje | Situación |
+|---|---|
+| 1 | La primera vez que hablas con el personaje (bit 2 apagado) |
+| 70-85 | Días de festival (por estación y día) |
+| 3, 4, 5 | Saludo según la hora: de 6 a 10, de 10 a 17 y el resto; después sigue otro mensaje |
+| 8 | El día después de un tifón (clima de ayer 3) |
+| 60 | Día de tormenta (clima 3) |
+| 87 | Tu cumpleaños, con amistad de 300 o más |
+| 9, lista, 100 | La primera conversación después de la boda (bit 3): pregunta cómo llamarte, muestra la lista de nombres y responde con el 100 |
+| 10, 11 | La primera conversación tras saberse el embarazo (bit 4) y tras el nacimiento (bit 5) |
+| 61-68 | En ciertos lugares (función nativa 114) |
+| 12, 13 | Día de lluvia (clima 2), con amistad menor que 400 o desde 400 |
+| 14-21 | Según la amistad: menos de 100, 200, ..., 800 |
+| 26-30 | Casados (bandera 0), con amistad de 800 o más, la pareja y quien no es candidato: según los días de casados (menos de 20, 50, 80, 110, o más) |
+| 31-35 | Lo mismo cuando el valor 43 vale 255: frases de hijos, según la edad del hijo |
+| 90 | Casados, otro de los candidatos: «que seas feliz con» la pareja |
+| 22-25 | Sin casarse, con amistad de 800 o más (22 y 23 hasta 899, 24 y 25 desde 900, según el sexo del jugador) |
+
+En otra conversación del mismo día sale el 7 si el personaje es la pareja
+(bit 8) y si no el 6. Los regalos (subrutina `0x0B2C`) usan del 36 al 51: el
+37 es un regalo que le gusta en su cumpleaños (bit 6), del 41 al 45 van de
+«le encanta» a «no le gusta», el 38 es la propuesta con la pluma azul y el 50
+lo dice la pareja cuando te ve con el bebé en brazos.
+
+Los valores que lee: la amistad es el contador de `save + 0x6628 + 12·n` (la
+función nativa 122 lo lee y la 121 le suma). Los bits del personaje están en
+`save + 0x5564 + 3·n` (nativas 123, 124 y 125: encender, apagar y probar).
+Cada mañana el juego (`fn_80032EE8`, desde `0x800334F8`) apaga los bits 0 y 1,
+enciende el 6 a quien cumple años ese día y el 8 a quien es la pareja
+(`save + 0x22B8`). La fecha de cumpleaños sale de una tabla de los datos del
+juego (`*0x80321F50 + 0x329E0`, 4 bytes por personaje: la estación más 2 en
+los cuatro bits altos del primero y el día más 2 en el segundo;
+`fn_800A7D3C` y `fn_800A7D14`). De `GET_GAME_VALUE`: el 1 es el jugador
+(`save + 0x227C`: 0 el chico, que se casa con los personajes 3 a 12,
+`fn_800A2B60`), el 3 y el 4 su cumpleaños, el 38 la pareja, el 124 la
+estación (`save + 0x2234`), el 125 el día (`save + 0x224C`), el 126 la hora
+(`save + 0x2258`), el 129 el clima de hoy (`save + 0x1BC8`), el 131 el de
+ayer, el 154 los días de casados (`save + 0xCB54`), el 155 la edad del hijo
+(`save + 0xCB6C`) y el 43 es `save + 0xCB60`.
+
+Jamie (personaje 2) no tiene cumpleaños en esa tabla (estación -1, visto en
+la memoria del juego corriendo), y en los números de la pareja su archivo
+tiene frases de rival. El mod `jamie_marriage` 0.5.0 se las cambia cuando
+Jamie es la pareja: engancha la entrada de `fn_8008534C` (elige la frase), el
+regreso de `fn_80029E74` (la escribe en la copia del archivo recién cargada y
+le apunta la tabla; para el 100, que el archivo no tiene, sube también el
+número más alto) y el regreso de `fn_8008534C` (para que nada quede
+pendiente). Elige el idioma por la carpeta de la ruta: el disco trae los
+mismos archivos en `message_e`, `message_s`, `message_f`, `message_g` y
+`message_i` (y en japonés en `message`), con los mismos números (el más alto
+de Jamie es el 91 en todos), aunque el juego americano solo lee los de
+inglés: las 170 rutas de mensajes de su programa son de `message_e`, y cada
+una tiene su gemela en los otros cuatro idiomas europeos, salvo cinco que
+tampoco existen en inglés. `tests/test_jamie_spouse_messages.py` revisa que
+cada frase quepa en la ventana y tenga solo letras de la fuente, y corre los
+ganchos sobre una memoria falsa.
+
 ### Qué no está verificado
 
 - La prueba usó condiciones escritas a mano sobre un estado guardado, con el
@@ -527,15 +617,14 @@ siquiera se llegó a pedirlos.
   estático pide ese estado y en la prueba, tras `Eve_EP08`, no salieron
   créditos: el juego fue al estado 2 y al título. Puede ser código sin uso o
   llegar por un camino que el análisis estático no ve.
-- Qué significan `save + 0x2258`, `save + 0x2234` y `save + 0x1BC8`, que la
-  cadena reescribe antes de `Eve_EP08`. `0x2258` se lee en unos cien sitios
-  del DOL (el estado 0 la compara con 5 y con 6) y los selectores 126 y 129 de
-  `GET_GAME_VALUE` leen `0x2258` y `0x1BC8`; `fn_8002D148` lee `0x2234`,
-  `0x224C` y `0x2258` y devuelve un número de 0 a 3 que `fn_800A232C` usa como
-  índice de campo de varios lugares, entre ellos el `0x81`. No se sabe qué
-  representan. La opción A impide la escritura (en la prueba `0x2258` no
-  cambió), pero no se sabe si una partida que continúa necesitaría otro
-  valor.
+- La cadena reescribe `save + 0x2258`, `save + 0x2234` y `save + 0x1BC8` antes
+  de `Eve_EP08`. Ya se sabe qué son: la hora, la estación y el clima del día
+  (`talk.lsb` los lee para elegir el saludo de la hora, las frases de
+  festival y las de lluvia; ver «Las conversaciones»). `fn_8002D148` lee la
+  estación, el día y la hora, y devuelve un número de 0 a 3 que
+  `fn_800A232C` usa como índice de campo de varios lugares, entre ellos el
+  `0x81`. La opción A impide la escritura (en la prueba `0x2258` no cambió),
+  pero no se sabe si una partida que continúa necesitaría otro valor.
 
 ### Nombres propuestos
 
@@ -1037,6 +1126,97 @@ and they were not even requested.
    that the hook sends to the interpreter did not run in that stretch. It was
    only measured at the house and in free play.
 
+### The conversations
+
+What a villager says when you talk to them comes from `talk.lsb`, the only
+script that uses native function 52 (`fn_800627F4`, 103 calls). That function
+pops three integers (the character, where 125 is "whoever the player is
+talking to" and `fn_800A3428` turns it into their number; the message number;
+and one more value) and calls `fn_8008534C(window, character, message, ...)`,
+which:
+
+1. takes the path of the character's message file from the table at
+   `0x801DFD40`, a word for each character number (number 2, Jamie, is
+   `/message_e/chara/Rion_e.bin`);
+2. loads the whole file into a new buffer with `fn_80029E74`;
+3. gives up if the message number is above the highest one of the file;
+4. finds the text through the file's table, passes it through `fn_80081E6C`
+   (which puts the names in) and `fn_801A1C88` (a `vsprintf`: a `%` in the
+   text would be a format) and shows it with `fn_8008253C`;
+5. frees the buffer with `fn_801B9D7C`.
+
+Nothing else calls `fn_8008534C`. A message file starts with the number of
+the character who speaks and the highest message number it holds (16 bits
+each), four more bytes, and where its table and its text start (32 bits
+each). The table has a word for each message from 0 to the highest one: where
+it starts, counted from the start of the text (`0xFF` is "no message"). In
+the text, `01 04 1D` is a new row, `01 05 1D` a new page, `01 08 1F 1D` the
+end of the message, `01 0A` the player's name, `01 3E` what the spouse calls
+the player, `01 40` the child's name and `01 3D` the spouse's. The letters
+are those of the console's font (Windows-1252), except the question mark,
+which is `0x9D`; `0x85` is `…`.
+
+**Each number is a situation**, the same for every character. On the first
+conversation of the day (bit 0 of the character clear), `talk.lsb`
+(subroutine `0x001A`) adds 5 to the friendship and tries, in this order:
+
+| Message | Situation |
+|---|---|
+| 1 | The first time you talk to the character (bit 2 clear) |
+| 70-85 | Festival days (by season and day) |
+| 3, 4, 5 | Greeting by the hour: from 6 to 10, from 10 to 17, and the rest; another message follows |
+| 8 | The day after a typhoon (yesterday's weather 3) |
+| 60 | A stormy day (weather 3) |
+| 87 | Your birthday, with friendship 300 or more |
+| 9, list, 100 | The first conversation after the wedding (bit 3): asks what to call you, shows the list of names and answers with 100 |
+| 10, 11 | The first conversation once the pregnancy is known (bit 4) and after the birth (bit 5) |
+| 61-68 | At certain places (native function 114) |
+| 12, 13 | A rainy day (weather 2), with friendship below 400 or from 400 on |
+| 14-21 | By the friendship: below 100, 200, ..., 800 |
+| 26-30 | Married (flag 0), friendship 800 or more, the spouse and anyone who is not a partner candidate: by the days of marriage (below 20, 50, 80, 110, or more) |
+| 31-35 | The same when value 43 is 255: lines about children, by the child's age |
+| 90 | Married, another partner candidate: "be happy with" the spouse |
+| 22-25 | Not married, friendship 800 or more (22 and 23 up to 899, 24 and 25 from 900, by the player's gender) |
+
+On another conversation of the same day it shows 7 if the character is the
+spouse (bit 8) and 6 otherwise. Gifts (subroutine `0x0B2C`) use 36 to 51: 37
+is a gift the character likes on their birthday (bit 6), 41 to 45 go from
+"loves it" to "dislikes it", 38 is the proposal with the blue feather, and the
+spouse says 50 on seeing you with the baby in your arms.
+
+The values it reads: the friendship is the counter at `save + 0x6628 + 12·n`
+(native function 122 reads it and 121 adds to it). The character bits are at
+`save + 0x5564 + 3·n` (natives 123, 124 and 125: set, clear and test). Every
+morning the game (`fn_80032EE8`, from `0x800334F8`) clears bits 0 and 1, sets
+bit 6 for whoever has a birthday that day and bit 8 for the spouse
+(`save + 0x22B8`). The birthday comes from a table of the game's data
+(`*0x80321F50 + 0x329E0`, 4 bytes for each character: the season plus 2 in
+the four high bits of the first byte and the day plus 2 in the second;
+`fn_800A7D3C` and `fn_800A7D14`). From `GET_GAME_VALUE`: 1 is the player
+(`save + 0x227C`: 0 for the boy, who marries characters 3 to 12,
+`fn_800A2B60`), 3 and 4 the player's birthday, 38 the spouse, 124 the season
+(`save + 0x2234`), 125 the day (`save + 0x224C`), 126 the hour
+(`save + 0x2258`), 129 today's weather (`save + 0x1BC8`), 131 yesterday's,
+154 the days of marriage (`save + 0xCB54`), 155 the child's age
+(`save + 0xCB6C`), and 43 is `save + 0xCB60`.
+
+Jamie (character 2) has no birthday in that table (season -1, seen in the
+memory of the running game), and at the spouse's numbers Jamie's file holds a
+rival's lines. The `jamie_marriage` mod 0.5.0 changes them when Jamie is the
+spouse: it hooks the entry of `fn_8008534C` (chooses the line), the return of
+`fn_80029E74` (writes it into the copy of the file that was just loaded and
+points the table at it; for 100, which the file lacks, it also raises the
+highest number) and the return of `fn_8008534C` (so that nothing stays
+waiting). It chooses the language by the folder of the path: the disc has
+the same files in `message_e`, `message_s`, `message_f`, `message_g` and
+`message_i` (and in Japanese in `message`), with the same numbers (Jamie's
+highest is 91 in all of them), although the American game only reads the
+English ones: the 170 message paths of its program are in `message_e`, and
+each has its twin in the other four European languages, except five that do
+not exist in English either. `tests/test_jamie_spouse_messages.py` checks
+that every line fits the window and has only letters of the font, and runs
+the hooks on a fake memory.
+
 ### What is not verified
 
 - The test used hand-written conditions on a saved state, with index 26
@@ -1066,15 +1246,15 @@ and they were not even requested.
   requests that state, and in the test no credits appeared after `Eve_EP08`:
   the game went to state 2 and then to the title. It may be unused code or be
   reached by a path that static analysis does not see.
-- What `save + 0x2258`, `save + 0x2234` and `save + 0x1BC8` mean; the chain
-  rewrites them before `Eve_EP08`. `0x2258` is read in about a hundred places
-  in the DOL (state 0 compares it with 5 and 6) and `GET_GAME_VALUE`
-  selectors 126 and 129 read `0x2258` and `0x1BC8`; `fn_8002D148` reads
-  `0x2234`, `0x224C` and `0x2258` and returns a number from 0 to 3 that
-  `fn_800A232C` uses as the field index of several places, `0x81` among
-  them. What they represent is unknown. Option A prevents the write (in the
-  test `0x2258` did not change), but it is not known whether a game that
-  carries on would need a different value.
+- The chain rewrites `save + 0x2258`, `save + 0x2234` and `save + 0x1BC8`
+  before `Eve_EP08`. What they are is now known: the hour, the season and the
+  weather of the day (`talk.lsb` reads them to choose the greeting of the
+  hour, the festival lines and the rain lines; see "The conversations").
+  `fn_8002D148` reads the season, the day and the hour, and returns a number
+  from 0 to 3 that `fn_800A232C` uses as the field index of several places,
+  `0x81` among them. Option A prevents the write (in the test `0x2258` did
+  not change), but it is not known whether a game that carries on would need
+  a different value.
 
 ### Proposed names
 
