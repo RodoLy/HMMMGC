@@ -776,12 +776,16 @@ en la pareja 13 y el `0xE6` marcado.
   la pareja.
 - **La cama grande.** Tras el parto, Woody trae la cuna y se abre la
   pantalla de muebles, que no se cierra mientras el jugador casado no tenga
-  la cama grande (Bed L) en la casa: le pide que la traiga porque está
-  casado (los textos están en `0x801DE00C` y `0x801DE128`). Con las otras
-  parejas no pasa, porque el juego pide comprarla (Woody la vende con la casa
-  de nivel 3) antes de la pluma azul; con Jamie no. En el estado de la prueba
-  no había cama grande, así que esa pantalla no se pudo cerrar. Hasta que el
-  mod lo resuelva, hay que tener la cama grande antes del parto.
+  una cama grande (Bed L, los objetos `0x2F5` a `0x2F8`) en la casa
+  (`fn_800D9428`; los textos del aviso están en `0x801DE00C` y `0x801DE128`).
+  En una partida real eso ya está resuelto, también con Jamie: el evento de
+  la pluma azul (`Eve_marry00`, `0xB2`) solo arranca con una cama grande
+  puesta en la casa (`fn_800D9634`), y a Jamie también se le propone
+  matrimonio con la pluma. Así lo piden las otras parejas y así queda: el mod
+  no cambia esa regla. En la prueba no había ninguna porque la partida de
+  prueba era una del primer año con la boda escrita a mano; la partida real
+  del jugador tiene tres (una puesta en una casa y dos guardadas). Falta
+  probar el parto con esa partida.
 
 ### Nombres propuestos
 
@@ -1561,12 +1565,16 @@ partner 13, and `0xE6` marked.
   number.
 - **The big bed.** After the birth, Woody brings the crib and the furniture
   screen opens, and it does not close while the married player has no big
-  bed (Bed L) in the house: it asks for one because the player is married
-  (the texts are at `0x801DE00C` and `0x801DE128`). With the other partners it
-  does not happen, because the game asks the player to buy it (Woody sells
-  it with the level 3 house) before the blue feather; with Jamie it does
-  not. The test's state had no big bed, so that screen could not be closed.
-  Until the mod solves it, the player needs the big bed before the birth.
+  bed (Bed L, items `0x2F5` to `0x2F8`) in the house (`fn_800D9428`; the
+  texts of the warning are at `0x801DE00C` and `0x801DE128`). In a real game
+  that is already settled, with Jamie too: the blue feather's event
+  (`Eve_marry00`, `0xB2`) only starts with a big bed placed in the house
+  (`fn_800D9634`), and Jamie is proposed to with the feather as well. The
+  other partners ask for it, and so it stays: the mod does not change that
+  rule. The test had none because the test save was one of the first year
+  with the wedding written by hand; the player's real save has three (one
+  placed in a house and two in storage). The birth is still to be tried with
+  that save.
 
 ### Proposed names
 
