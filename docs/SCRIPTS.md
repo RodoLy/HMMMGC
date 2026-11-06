@@ -730,6 +730,39 @@ bebé y Jamie dice sus frases, pide el nombre y responde a él; después llega
 Woody con la cuna. La partida quedó igual de bien, con el bit 5 en Jamie y no
 en la pareja 13 y el `0xE6` marcado.
 
+Después se probó con una copia de la partida real de un jugador, casada con
+Jamie (el chico, año 3, otoño 19, el mismo día de la boda) y cargada desde la
+tarjeta de memoria. El archivo `E9-G4AE-HARVESTMOON.gci` guarda cuatro
+partidas de `0x1C000` bytes (en el `.gci`, la primera en `0x2040` y las demás
+una tras otra). Cada una empieza con un byte que dice si está en uso y una
+suma de comprobación en `+8` (la suma de todos sus bytes menos esos cuatro);
+sigue el resumen que muestra la pantalla de carga (el nombre en `+0x0C`, la
+granja en `+0x18`, el dinero en `+0x24`, las notas en `+0x28`, el año, la
+estación y el día en `+0x31`, `+0x32` y `+0x34`, la hora y el minuto en
+`+0x35` y `+0x36`), y en `+0xB388` están los datos de la partida con que
+trabaja el juego (a los que apunta `0x80321F48`). La partida casada se copió
+a las dos ranuras libres, sin tocar las del jugador: una con 20 días de
+casados, el contador en 10 y la amistad de Jamie en 950; otra con 80 días, el
+valor 43 en 60, el `0xC9` marcado y la nota que da el embarazo (la bandera
+`0x23A` y una nota más en `save + 0x60` y en el resumen; la nota de la boda es
+la bandera `0x239`). El juego cargó las dos.
+
+Con la primera, al salir por la puerta a la granja y volver a entrar arrancó
+el `0xC9`, con Jamie en la cama de la clínica y sus dos frases. Ya al cargar,
+el registro dijo que Jamie suplía a la pareja 4 y enseguida volvía a ser el
+cónyuge: la revisión del embarazo también corre al cargar, pero el jugador no
+venía de la granja y no arrancó nada. Al terminar la escena, el juego dejó al
+jugador en la otra casa de la partida (el área 39, donde vive Jamie), y la
+partida quedó con el valor 43 en 1, la pareja 4 con su propia amistad, 53
+notas y la bandera `0x1A7` encendida (`fn_800FC2B4` la enciende al arrancar
+un evento y el cambio de día la apaga). Con la segunda, el jugador se fue a
+dormir y a la mañana siguiente arrancó el `0xDD` sin escribir nada más: la
+bandera `0x1A4` la puso el propio cambio de día. Después del nombre llegó
+Woody con la cuna, y la pantalla de muebles se cerró en cuanto se colocó (la
+casa ya tenía cama grande). La partida quedó con el valor 43 en 255, la fecha
+de nacimiento en otoño 20, `save + 0x4808` en 2, el bit 5 en Jamie, el `0xDD`
+marcado y 54 notas.
+
 ### Qué no está verificado
 
 - La prueba usó condiciones escritas a mano sobre un estado guardado, con el
@@ -767,9 +800,10 @@ en la pareja 13 y el `0xE6` marcado.
   `fn_800A232C` usa como índice de campo de varios lugares, entre ellos el
   `0x81`. La opción A impide la escritura (en la prueba `0x2258` no cambió),
   pero no se sabe si una partida que continúa necesitaría otro valor.
-- El embarazo y el parto de Jamie se probaron con condiciones escritas a mano
-  (días de casados, el contador, la amistad, los días de embarazo y la
-  bandera de la mañana), no en una partida que llegue sola a ellas. Tampoco
+- El embarazo y el parto de Jamie se probaron con los contadores escritos a
+  mano (días de casados, el contador, la amistad y los días de embarazo; en
+  la primera prueba también la bandera de la mañana), no en una partida que
+  llegue sola a ellos. Tampoco
   se vieron las conversaciones que siguen (la frase 10 de Jamie al día
   siguiente del embarazo, la 11 tras el parto) ni la vida con el hijo cuando
   la pareja es Jamie: el juego podría elegir algo del hijo por el número de
@@ -782,10 +816,10 @@ en la pareja 13 y el `0xE6` marcado.
   la pluma azul (`Eve_marry00`, `0xB2`) solo arranca con una cama grande
   puesta en la casa (`fn_800D9634`), y a Jamie también se le propone
   matrimonio con la pluma. Así lo piden las otras parejas y así queda: el mod
-  no cambia esa regla. En la prueba no había ninguna porque la partida de
-  prueba era una del primer año con la boda escrita a mano; la partida real
-  del jugador tiene tres (una puesta en una casa y dos guardadas). Falta
-  probar el parto con esa partida.
+  no cambia esa regla. En la primera prueba no había ninguna porque la
+  partida de prueba era una del primer año con la boda escrita a mano; con la
+  copia de la partida real, que tiene una cama grande en cada casa, la
+  pantalla se cerró en cuanto se colocó la cuna.
 
 ### Nombres propuestos
 
@@ -1518,6 +1552,38 @@ Jamie says the lines, asks for the name and answers it; then Woody comes with
 the crib. The save data was just as right, with bit 5 on Jamie and not on
 partner 13, and `0xE6` marked.
 
+It was then tried with a copy of a player's real save, married to Jamie (the
+boy, year 3, autumn 19, the day of the wedding) and loaded from the memory
+card. The file `E9-G4AE-HARVESTMOON.gci` holds four games of `0x1C000` bytes
+(in the `.gci`, the first at `0x2040` and the others one after another). Each
+starts with a byte that says whether it is in use and a checksum at `+8` (the
+sum of all its bytes except those four); then comes the summary the load
+screen shows (the name at `+0x0C`, the farm at `+0x18`, the money at
+`+0x24`, the notes at `+0x28`, the year, the season and the day at `+0x31`,
+`+0x32` and `+0x34`, the hour and the minute at `+0x35` and `+0x36`), and at
+`+0xB388` is the save data the game works with (the data `0x80321F48` points
+to). The married game was copied to the two free slots, leaving the player's
+own alone: one with 20 days of marriage, the counter at 10 and Jamie's
+friendship at 950; another with 80 days, value 43 at 60, `0xC9` marked and
+the note the pregnancy gives (flag `0x23A` and one more note at `save + 0x60`
+and in the summary; the wedding's note is flag `0x239`). The game loaded
+both.
+
+With the first, going out of the door to the farm and coming back in started
+`0xC9`, with Jamie in the clinic's bed and Jamie's two lines. On loading, the
+log had already said that Jamie stood in for partner 4 and was the spouse
+again at once: the pregnancy check also runs on loading, but the player had
+not come from the farm and nothing started. When the scene ended, the game
+left the player in the save's other house (area 39, where Jamie lives), and
+the save data had value 43 at 1, partner 4 with its own friendship, 53 notes
+and flag `0x1A7` set (`fn_800FC2B4` sets it when it starts an event and the
+change of day clears it). With the second, the player went to bed and the
+next morning `0xDD` started with nothing else written: the change of day
+itself set flag `0x1A4`. After the name, Woody came with the crib, and the
+furniture screen closed as soon as it was placed (the house already had a
+big bed). The save data ended with value 43 at 255, the date of birth on
+autumn 20, `save + 0x4808` at 2, bit 5 on Jamie, `0xDD` marked and 54 notes.
+
 ### What is not verified
 
 - The test used hand-written conditions on a saved state, with index 26
@@ -1556,9 +1622,10 @@ partner 13, and `0xE6` marked.
   `0x81` among them. Option A prevents the write (in the test `0x2258` did
   not change), but it is not known whether a game that carries on would need
   a different value.
-- Jamie's pregnancy and birth were tried under hand-written conditions (days
-  of marriage, the counter, the friendship, the days of pregnancy and the
-  morning flag), not in a game that reaches them by itself. Nor were the
+- Jamie's pregnancy and birth were tried with the counters written by hand
+  (days of marriage, the counter, the friendship and the days of pregnancy;
+  in the first test also the morning flag), not in a game that reaches them
+  by itself. Nor were the
   conversations that follow seen (Jamie's line 10 the day after the
   pregnancy, line 11 after the birth), or life with the child when the spouse
   is Jamie: the game might choose something about the child by the spouse's
@@ -1571,10 +1638,10 @@ partner 13, and `0xE6` marked.
   (`Eve_marry00`, `0xB2`) only starts with a big bed placed in the house
   (`fn_800D9634`), and Jamie is proposed to with the feather as well. The
   other partners ask for it, and so it stays: the mod does not change that
-  rule. The test had none because the test save was one of the first year
-  with the wedding written by hand; the player's real save has three (one
-  placed in a house and two in storage). The birth is still to be tried with
-  that save.
+  rule. The first test had none because the test save was one of the first
+  year with the wedding written by hand; with the copy of the real save,
+  which has a big bed in each house, the screen closed as soon as the crib
+  was placed.
 
 ### Proposed names
 
