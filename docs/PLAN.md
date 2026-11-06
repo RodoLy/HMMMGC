@@ -276,7 +276,7 @@ pieza por pieza, en el orden de arriba)
       Necesita un guardado cerca de la boda con Jamie, que hoy no existe: se
       está armando uno con la propia rutina de guardado del juego, para que el
       jugador lo pruebe en su laptop.
-- [ ] **Jamie vive en la casa como cónyuge** después de la boda, igual que
+- [x] **Jamie vive en la casa como cónyuge** después de la boda, igual que
       cualquier otra pareja del juego (lo pidió el jugador el 2026-11-05). El
       juego original no lo hace: con Jamie la boda termina la partida, así que
       no hay rutina de cónyuge para Jamie. Pasos: (1) ver qué guarda el juego
@@ -297,6 +297,18 @@ pieza por pieza, en el orden de arriba)
       con la casa inicial, la pareja no apareció en la casa, ni Jamie ni una
       pareja normal; hay que probar con la casa nivel 3 (lo que exige el
       juego para casarse).
+      **Paso 2 hecho** (`jamie_marriage` 0.4.0): dónde está un personaje a
+      cada hora lo dice una tabla de horas, y para el cónyuge el juego usa
+      otra (`fn_80131884`). La de Jamie decía «en ninguna parte» a todas horas
+      y su rutina 4 estaba vacía, así que, ya casada, no estaba en ningún
+      lado (la 0.3.0 solo escribía las rutinas y no bastaba). El mod le da las
+      dos: la rutina 4 de la primera pareja y una tabla de cónyuge con las
+      horas en casa de esa pareja y los lugares de un día normal de Jamie. La
+      pareja vive en la casa donde está la cama grande (`fn_80132190`), por
+      eso con la casa inicial no aparecía. Probado por el jugador: Jamie está
+      en la segunda casa a las 6:50 de la mañana.
+- [ ] **Diálogos de cónyuge para Jamie** (lo pidió el jugador el
+      2026-11-05): ya casada vive en la casa, pero al hablarle no dice nada.
 - [ ] Avance rápido de las escenas mientras se mantiene una tecla (la barra
       espaciadora): un mod que acelere los eventos y la asignación de la
       tecla (hoy Espacio no está asignada en la distribución de teclado de
@@ -680,7 +692,7 @@ by piece, in the order above)
       a second proposal and both genders of the player. It needs a save close
       to the wedding with Jamie, which does not exist today: one is being made
       with the game's own save routine, for the player to try on their laptop.
-- [ ] **Jamie lives in the house as a spouse** after the wedding, like any
+- [x] **Jamie lives in the house as a spouse** after the wedding, like any
       other partner of the game (asked for by the player on 2026-11-05). The
       original game does not do it: with Jamie the wedding ends the game, so
       there is no spouse routine for Jamie. Steps: (1) see what the game saves
@@ -701,6 +713,19 @@ by piece, in the order above)
       the starting house, the spouse did not appear in the house, neither
       Jamie nor an ordinary partner; it has to be tried with the level 3 house
       (which the game requires for marrying).
+      **Step 2 done** (`jamie_marriage` 0.4.0): where a character is at each
+      hour comes from a table of hours, and for the spouse the game uses
+      another one (`fn_80131884`). Jamie's said "nowhere" at every hour and
+      her routine 4 was empty, so once married she was nowhere at all (0.3.0
+      only wrote the routines, which was not enough). The mod gives her both:
+      the first partner's routine 4 and a spouse table with that partner's
+      hours at home and Jamie's places of an ordinary day. The spouse lives in
+      the house where the big bed is (`fn_80132190`), which is why the
+      starting house showed nobody. Tried by the player: Jamie is in the
+      second house at 6:50 in the morning.
+- [ ] **Spouse dialogue for Jamie** (asked for by the player on
+      2026-11-05): once married she lives in the house, but she says nothing
+      when talked to.
 - [ ] Fast-forward the scenes while a key is held (the space bar): a mod that
       speeds up the events and the key assignment (today Space is not mapped
       in Dolphin's keyboard layout). It is turned on and adjusted from the
