@@ -62,6 +62,12 @@
  * opposite of the player. It writes the line into the copy of the file that the game has just loaded, so
  * the game shows it as Jamie's own; the copy is freed right after, and the disc is not touched.
  *
+ * A birthday. Every character's birthday is in a table of the game's data (system/Itemdata.bin), and on
+ * that day a present the character likes gets the birthday line. Jamie's says "none", so Jamie never had
+ * one. While Jamie is the spouse, this mod gives Jamie the 22nd of winter, a day without a festival or
+ * anybody else's birthday, in the copy of that table the game keeps in memory, and gives the "none" back
+ * otherwise.
+ *
  * It is safe to run more than once for the same check, which can happen (see mods/README.md): clearing
  * a flag that is already clear changes nothing. It also covers a second proposal to Jamie, because the
  * proposal sets the flag again and the next field check clears it again.
@@ -126,6 +132,12 @@
  * masculino, porque Jamie es lo contrario del jugador. Escribe la frase en la copia del archivo que el
  * juego acaba de cargar, así que el juego la muestra como propia de Jamie; la copia se libera enseguida
  * y el disco no se toca.
+ *
+ * Un cumpleaños. El cumpleaños de cada personaje está en una tabla de los datos del juego
+ * (system/Itemdata.bin), y ese día un regalo que le gusta recibe la frase de cumpleaños. La de Jamie dice
+ * «ninguno», así que Jamie nunca tuvo. Mientras Jamie es el cónyuge, este mod le da el 22 de invierno, un
+ * día sin festival ni cumpleaños de nadie más, en la copia de esa tabla que el juego tiene en memoria, y le
+ * devuelve el «ninguno» si no lo es.
  *
  * Es seguro que corra más de una vez por la misma revisión, cosa que puede pasar (ver mods/README.md):
  * apagar una bandera que ya está apagada no cambia nada. También cubre una segunda propuesta a Jamie,
@@ -380,10 +392,72 @@ static void give_jamie_the_life_of_a_spouse(CPUState* cpu)
     }
 }
 
-/* fn_80042D10(): puts the characters of the area that is being entered in it. This runs on its entry. */
+/*
+ * Birthdays (see the comment at the top). The word at 0x80321F50 holds where the game keeps its data file
+ * system/Itemdata.bin in memory, read once when the game starts. From 0x329E0 of it there is a record of
+ * 4 bytes for each character number: the season of the birthday plus 2 in the four high bits of the first
+ * byte, and the day plus 2 in the second byte (fn_800A7D3C and fn_800A7D14 read them). Every morning the
+ * game sets bit 6 of the bits of the character whose birthday it is (fn_80032EE8, from 0x80033604), and
+ * talk.lsb answers a present that the character likes with message 37 on that day. Jamie's record holds
+ * season -1 and day -1, the "none" of the game. The low four bits of the first byte are something else,
+ * and they are kept.
+ */
+#define GAME_DATA_POINTER_ADDRESS 0x80321F50u
+#define BIRTHDAY_TABLE_OFFSET 0x329E0u
+#define BIRTHDAY_RECORD_BYTES 4u
+#define BIRTHDAY_RECORD_DAY_OFFSET 1u
+#define BIRTHDAY_FIELD_BIAS 2
+#define BIRTHDAY_SEASON_SHIFT 4
+#define BIRTHDAY_RECORD_OTHER_BITS 0x0Fu
+#define NO_BIRTHDAY (-1)
+
+/* The 22nd of winter (season 3): no festival and no other character's birthday falls on it. */
+#define SEASON_WINTER 3
+#define JAMIE_BIRTHDAY_SEASON SEASON_WINTER
+#define JAMIE_BIRTHDAY_DAY 22
+
+/* Writes Jamie's birthday into the game's table, unless it is there already. */
+static void set_jamie_birthday(CPUState* cpu, int season, int day)
+{
+    const uint32_t game_data = read_word(cpu, GAME_DATA_POINTER_ADDRESS);
+    if (game_data == 0) {
+        return;
+    }
+    const uint32_t record = game_data + BIRTHDAY_TABLE_OFFSET + JAMIE_CHARACTER_NUMBER * BIRTHDAY_RECORD_BYTES;
+    const uint8_t first_byte = read_byte(cpu, record);
+    const uint8_t season_byte = (uint8_t)(((season + BIRTHDAY_FIELD_BIAS) << BIRTHDAY_SEASON_SHIFT) |
+                                          (first_byte & BIRTHDAY_RECORD_OTHER_BITS));
+    const uint8_t day_byte = (uint8_t)(day + BIRTHDAY_FIELD_BIAS);
+    if (first_byte == season_byte && read_byte(cpu, record + BIRTHDAY_RECORD_DAY_OFFSET) == day_byte) {
+        return;
+    }
+    write_byte(cpu, record, season_byte);
+    write_byte(cpu, record + BIRTHDAY_RECORD_DAY_OFFSET, day_byte);
+    HM_MM_LOG(MOD_ID, "set Jamie's birthday to season %d, day %d", season, day);
+}
+
+/* Jamie has a birthday while Jamie is the spouse, and the game's "none" otherwise. */
+static void give_jamie_a_birthday_while_married(CPUState* cpu)
+{
+    const uint32_t save_data = read_word(cpu, SAVE_DATA_POINTER_ADDRESS);
+    if (save_data == NO_SAVE_DATA) {
+        return;
+    }
+    if (read_word(cpu, save_data + SPOUSE_OFFSET) == JAMIE_CHARACTER_NUMBER) {
+        set_jamie_birthday(cpu, JAMIE_BIRTHDAY_SEASON, JAMIE_BIRTHDAY_DAY);
+    } else {
+        set_jamie_birthday(cpu, NO_BIRTHDAY, NO_BIRTHDAY);
+    }
+}
+
+/*
+ * fn_80042D10(): puts the characters of the area that is being entered in it. This runs on its entry, so
+ * the routine, the hours and the birthday are in place by the next morning and the next area.
+ */
 static void before_the_characters_are_placed(CPUState* cpu)
 {
     give_jamie_the_life_of_a_spouse(cpu);
+    give_jamie_a_birthday_while_married(cpu);
 }
 
 /*
@@ -463,7 +537,7 @@ static void before_the_characters_are_placed(CPUState* cpu)
  * (01 05), each followed by 0x1D; what the spouse calls the player (01 3E); the child's name (01 40); and
  * the end of the message (01 08 1F 1D).
  *
- * tests/test_jamie_spouse_messages.py checks every text below the way the game will get it: that the font
+ * tests/test_jamie_as_the_spouse.py checks every text below the way the game will get it: that the font
  * has all its letters, and that it fits the window (rows of up to 28 letters, pages of up to 3 rows).
  */
 #define NEW_ROW "\x01\x04\x1D"
@@ -1252,7 +1326,7 @@ static const ModernGekkoModDesc descriptor = {
     .cpu_state_size = sizeof(CPUState),
     .game_id = HM_MM_GAME_ID,
     .id = MOD_ID,
-    .version = "0.5.0",
+    .version = "0.6.0",
     .display_name = "Jamie marriage does not end the game",
     .hooks = hooks,
     .num_hooks = HM_MM_ARRAY_COUNT(hooks),

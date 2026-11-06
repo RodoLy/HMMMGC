@@ -320,10 +320,11 @@ pieza por pieza, en el orden de arriba)
       ([SCRIPTS.md](SCRIPTS.md), «Las conversaciones»). Probado en el juego
       con condiciones escritas a mano: en inglés y, cambiando la ruta del
       archivo, en español, incluido el 100 que el archivo de Jamie no tiene.
-- [ ] **Cumpleaños de Jamie**: la tabla del juego no le da fecha (estación
-      -1), así que nunca le toca el regalo de cumpleaños. El mod puede darle
-      una (propuesta: Invierno 22, libre de festivales y de otros
-      cumpleaños; la frase ya está).
+- [x] **Cumpleaños de Jamie**: la tabla del juego no le da fecha (estación
+      -1), así que nunca le tocaba el regalo de cumpleaños. **Hecho**
+      (`jamie_marriage` 0.6.0): mientras es tu pareja, su cumpleaños es el 22
+      de invierno, libre de festivales y de otros cumpleaños, y le contesta
+      al regalo con su frase de cumpleaños.
 - [ ] **Eventos de cónyuge para Jamie** (lo pidió el jugador): el
       aniversario (`Eve_memo03` en la mañana y `Eve_memo00` en la noche, con
       amistad de 700 o más), el embarazo (`Eve_conce00` a `19`, uno por
@@ -767,10 +768,11 @@ by piece, in the order above)
       conversations"). Tried in the game under hand-written conditions: in
       English and, changing the path of the file, in Spanish, 100 included,
       which Jamie's file lacks.
-- [ ] **Jamie's birthday**: the game's table gives Jamie no date (season
-      -1), so the birthday present never comes. The mod can give one
-      (proposal: Winter 22, free of festivals and other birthdays; the line
-      is already there).
+- [x] **Jamie's birthday**: the game's table gives Jamie no date (season
+      -1), so the birthday present never came. **Done** (`jamie_marriage`
+      0.6.0): while Jamie is your spouse, the birthday is the 22nd of winter,
+      free of festivals and other birthdays, and Jamie answers the present
+      with the birthday line.
 - [ ] **Spouse events for Jamie** (asked for by the player): the
       anniversary (`Eve_memo03` in the morning and `Eve_memo00` at night, with
       friendship 700 or more), the pregnancy (`Eve_conce00` to `19`, one per

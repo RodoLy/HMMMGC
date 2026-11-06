@@ -1,7 +1,8 @@
-"""Jamie's lines as the spouse fit the game's font and message window, in every language of the disc.
+"""Jamie as the spouse: lines that fit the game's font and message window in every language of the disc,
+and a birthday.
 
-Las frases de Jamie como cónyuge caben en la fuente y en la ventana de mensajes del juego, en cada idioma
-del disco.
+Jamie como cónyuge: frases que caben en la fuente y en la ventana de mensajes del juego, en cada idioma del
+disco, y un cumpleaños.
 
 mods/jamie_marriage/mod.c writes its texts in UTF-8 and turns them into the game's bytes when it uses them
 (encode_for_the_game). These tests read the tables of that file the way the C compiler does, turn each text
@@ -10,11 +11,13 @@ window's codes where they belong, rows and pages that fit the window, and the sa
 language. Two more compare the message numbers with talk.lsb and the languages with the folders of the
 disc; they are skipped without the game.
 
-The last test builds the mod's hooks into a small program with a fake memory and plays what the game does
+The last tests build the mod's hooks into a small program with a fake memory and play what the game does
 when talk.lsb shows a message of Jamie's (the start of fn_8008534C, the loading of the file, the return):
 the line has to land in the loaded file in the right language and words, and nothing may change when it
-should not. It needs a C compiler and ModernGekko's headers (MODERNGEKKO_TEMPLATE, as for
-scripts/build_mods.sh), and is skipped without them.
+should not. The same program enters an area (fn_80042D10) to see Jamie's record of the game's birthday
+table change while Jamie is the spouse, and only then. They need a C compiler and ModernGekko's headers
+(MODERNGEKKO_TEMPLATE, as for scripts/build_mods.sh), and are skipped without them; two more check, on the
+disc, that the new birthday falls on a free day.
 """
 
 import os
@@ -381,6 +384,17 @@ FILE_TEXT_START = 0x180
 FILE_HIGHEST_MESSAGE = 91
 UNTOUCHED_ENTRY_BASE = 0x1000
 
+# Jamie's record of the birthday table of system/Itemdata.bin, as the disc has it: season -1 and day -1
+# (each stored plus 2: 0x1 in the high bits of the first byte, 0x01 in the second), and two other bytes.
+JAMIE_BIRTHDAY_RECORD_ON_THE_DISC = bytes.fromhex("12012222")
+BIRTHDAY_TABLE_OFFSET = 0x329E0
+BIRTHDAY_RECORD_BYTES = 4
+BIRTHDAY_FIELD_BIAS = 2
+CHARACTERS_WITH_A_BIRTHDAY_RECORD = 110  # fn_80032EE8 walks character numbers 0 to 109 every morning
+WINTER = 3
+JAMIES_NEW_BIRTHDAY = (WINTER, 22)
+ITEM_DATA = DISC_DIRECTORY / "files" / "system" / "Itemdata.bin"
+
 HOOKS_DRIVER = r"""
 /* Plays, on a fake memory, what the game does when talk.lsb shows a message of Jamie's. */
 #include MOD_SOURCE_PATH
@@ -394,6 +408,7 @@ HOOKS_DRIVER = r"""
 #define PATH 0x80800000u
 #define FILE_ADDRESS 0x80A00000u
 #define WINDOW 0x802DBA28u
+#define GAME_DATA 0x80B00000u
 
 static uint8_t memory[MEMORY_BYTES];
 
@@ -473,6 +488,25 @@ static void report(const char* name, uint32_t message_number)
     printf("\n");
 }
 
+/*
+ * Enters an area (fn_80042D10) with Jamie's record of the game's birthday table as the disc has it, and
+ * prints the record afterwards: the case, then its four bytes.
+ */
+static void report_birthday(const char* name, uint32_t spouse)
+{
+    set_up(spouse, PLAYER_CHARACTER_THE_BOY, "/message_e/chara/Rion_e.bin");
+    fake_write(NULL, GAME_DATA_POINTER_ADDRESS, GAME_DATA, WORD_BYTES);
+    const uint32_t record = GAME_DATA + BIRTHDAY_TABLE_OFFSET +
+                            JAMIE_CHARACTER_NUMBER * BIRTHDAY_RECORD_BYTES;
+    fake_write(NULL, record, JAMIE_BIRTHDAY_RECORD_ON_THE_DISC, WORD_BYTES);
+    static CPUState cpu;
+    cpu.external_read = fake_read;
+    cpu.external_write = fake_write;
+    before_the_characters_are_placed(&cpu);
+    before_the_characters_are_placed(&cpu); /* a hook may run twice for one call */
+    printf("%s %08x\n", name, (unsigned int)fake_read(NULL, record, WORD_BYTES));
+}
+
 int main(void)
 {
     set_up(JAMIE_CHARACTER_NUMBER, PLAYER_CHARACTER_THE_BOY, "/message_s/chara/Rion_s.bin");
@@ -502,6 +536,9 @@ int main(void)
     set_up(JAMIE_CHARACTER_NUMBER, PLAYER_CHARACTER_THE_BOY, "/message_e/chara/Rion_e.bin");
     show_message(36, false);
     report("message_without_a_line", 36);
+
+    report_birthday("birthday_as_the_spouse", JAMIE_CHARACTER_NUMBER);
+    report_birthday("birthday_as_the_rival", MODEL_PARTNER_CHARACTER_NUMBER);
     return 0;
 }
 """
@@ -524,6 +561,7 @@ def hook_results(tmp_path_factory) -> dict[str, tuple[int, int, bytes]]:
         "FILE_TEXT_START": FILE_TEXT_START,
         "FILE_HIGHEST_MESSAGE": FILE_HIGHEST_MESSAGE,
         "UNTOUCHED_ENTRY_BASE": UNTOUCHED_ENTRY_BASE,
+        "JAMIE_BIRTHDAY_RECORD_ON_THE_DISC": int.from_bytes(JAMIE_BIRTHDAY_RECORD_ON_THE_DISC, "big"),
     }.items():
         driver = f"#define {name} 0x{value:X}u\n" + driver
     (work / "driver.c").write_text(driver, encoding="utf-8")
@@ -537,7 +575,11 @@ def hook_results(tmp_path_factory) -> dict[str, tuple[int, int, bytes]]:
     output = subprocess.run([str(program)], check=True, capture_output=True, text=True).stdout
     results = {}
     for line in output.splitlines():
-        name, highest, entry, *text = line.split()
+        name, *values = line.split()
+        if name.startswith("birthday_"):
+            results[name] = bytes.fromhex(values[0])
+            continue
+        highest, entry, *text = values
         results[name] = (int(highest), int(entry), bytes.fromhex(text[0]) if text else b"")
     return results
 
@@ -580,3 +622,45 @@ def test_jamie_speaks_as_a_man_to_a_girl(languages, hook_results):
 )
 def test_nothing_changes_when_it_should_not(hook_results, case, message_number):
     assert hook_results[case] == (FILE_HIGHEST_MESSAGE, UNTOUCHED_ENTRY_BASE + message_number, b"")
+
+
+def birthday_of(record: bytes) -> tuple[int, int]:
+    """The (season, day) of a record of the birthday table, as fn_800A7D3C and fn_800A7D14 read it."""
+    season = (record[0] >> 4) - BIRTHDAY_FIELD_BIAS
+    day = int.from_bytes(record[1:2], "big", signed=True) - BIRTHDAY_FIELD_BIAS
+    return season, day
+
+
+def test_jamie_has_a_birthday_only_while_married(hook_results):
+    as_the_spouse = hook_results["birthday_as_the_spouse"]
+    assert birthday_of(as_the_spouse) == JAMIES_NEW_BIRTHDAY
+    assert as_the_spouse[0] & 0x0F == JAMIE_BIRTHDAY_RECORD_ON_THE_DISC[0] & 0x0F  # the other bits stay
+    assert as_the_spouse[2:] == JAMIE_BIRTHDAY_RECORD_ON_THE_DISC[2:]
+    assert hook_results["birthday_as_the_rival"] == JAMIE_BIRTHDAY_RECORD_ON_THE_DISC
+
+
+@pytest.mark.skipif(not ITEM_DATA.is_file(), reason="needs the extracted disc (tools/extract_disc.py)")
+def test_jamies_new_birthday_is_free_on_the_disc():
+    data = ITEM_DATA.read_bytes()
+    records = [
+        data[BIRTHDAY_TABLE_OFFSET + BIRTHDAY_RECORD_BYTES * character :][:BIRTHDAY_RECORD_BYTES]
+        for character in range(CHARACTERS_WITH_A_BIRTHDAY_RECORD)
+    ]
+    assert records[JAMIE_CHARACTER_NUMBER] == JAMIE_BIRTHDAY_RECORD_ON_THE_DISC
+    assert birthday_of(records[JAMIE_CHARACTER_NUMBER]) == (-1, -1)
+    assert JAMIES_NEW_BIRTHDAY not in [birthday_of(record) for record in records]
+
+
+@pytest.mark.skipif(not TALK_SCRIPT.is_file(), reason="needs the game's talk.lsb (tools/extract_disc.py)")
+def test_no_festival_line_falls_on_jamies_new_birthday():
+    # Sub 0x001A compares the day of the season (local 4) with each festival's: PUSH_INT day; LOCAL_GET 4.
+    instructions = load_script(TALK_SCRIPT).instructions
+    festival_days = {
+        int(instruction.operand)
+        for instruction, following in zip(instructions, instructions[1:], strict=False)
+        if instruction.opcode.name == "PUSH_INT"
+        and following.opcode.name == "LOCAL_GET"
+        and following.operand == 4
+    }
+    assert festival_days, "talk.lsb compares no day"
+    assert JAMIES_NEW_BIRTHDAY[1] not in festival_days

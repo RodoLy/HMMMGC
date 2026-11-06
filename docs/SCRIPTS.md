@@ -584,9 +584,18 @@ mismos archivos en `message_e`, `message_s`, `message_f`, `message_g` y
 de Jamie es el 91 en todos), aunque el juego americano solo lee los de
 inglés: las 170 rutas de mensajes de su programa son de `message_e`, y cada
 una tiene su gemela en los otros cuatro idiomas europeos, salvo cinco que
-tampoco existen en inglés. `tests/test_jamie_spouse_messages.py` revisa que
+tampoco existen en inglés. `tests/test_jamie_as_the_spouse.py` revisa que
 cada frase quepa en la ventana y tenga solo letras de la fuente, y corre los
 ganchos sobre una memoria falsa.
+
+La tabla de cumpleaños sale de `system/Itemdata.bin` (desde `0x329E0`), que
+el juego carga al arrancar. Desde la versión 0.6.0, mientras Jamie es la
+pareja, el mod le da el 22 de invierno en esa copia de la memoria: ningún
+otro personaje cumple ese día y ningún día 22 tiene frase de festival en
+`talk.lsb` (los festivales del invierno son el 7, el 12 y el 19). Si Jamie no
+es la pareja, le devuelve el «ninguno» del juego. Lo hace al entrar a cada
+área (`fn_80042D10`), así que la fecha ya está cuando el juego revisa los
+cumpleaños a la mañana siguiente.
 
 ### Qué no está verificado
 
@@ -1213,9 +1222,18 @@ the same files in `message_e`, `message_s`, `message_f`, `message_g` and
 highest is 91 in all of them), although the American game only reads the
 English ones: the 170 message paths of its program are in `message_e`, and
 each has its twin in the other four European languages, except five that do
-not exist in English either. `tests/test_jamie_spouse_messages.py` checks
+not exist in English either. `tests/test_jamie_as_the_spouse.py` checks
 that every line fits the window and has only letters of the font, and runs
 the hooks on a fake memory.
+
+The birthday table comes from `system/Itemdata.bin` (from `0x329E0`), which
+the game loads when it starts. Since version 0.6.0, while Jamie is the
+spouse, the mod gives Jamie the 22nd of winter in that copy in memory: no
+other character has a birthday on that day and no 22nd has a festival line in
+`talk.lsb` (the winter festivals are on the 7th, the 12th and the 19th). When
+Jamie is not the spouse, it gives back the game's "none". It does so on
+entering every area (`fn_80042D10`), so the date is there when the game
+checks the birthdays the next morning.
 
 ### What is not verified
 
