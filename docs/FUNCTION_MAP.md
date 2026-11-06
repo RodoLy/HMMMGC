@@ -36,7 +36,7 @@ LLVM como puntos de entrada (`tools/export_dolrecomp_map.py`).
 | …destino de algún `bl` | 3 637 |
 | Tablas de `switch` | 274 (4 sin comprobación de límite, ver abajo) |
 | Datos dentro de código | 3 (`_rom_copy_info`, `_bss_init_info`, cadena de TRK) |
-| Funciones con nombre | 614, todas con evidencia (51 por lectura del código, 563 por firma del SDK) |
+| Funciones con nombre | 655, todas con evidencia (92 por lectura del código, 563 por firma del SDK) |
 
 ### Cómo se sabe que es correcto
 
@@ -58,9 +58,12 @@ Cada punto es una prueba en `tests/test_function_map.py`:
 
 Además, `tests/test_function_finder.py` y `tests/test_sdk_names.py`
 reproducen cada caso difícil con DOLs sintéticos, sin datos del juego. Los
-nombres que salieron de leer el código de GX tienen su propia prueba contra el
-`main.dol` real, `tests/test_gx_function_names.py` (ver «Nombres de GX por
-lectura del código»).
+nombres que salieron de leer el código tienen su propia prueba contra el
+`main.dol` real: `tests/test_gx_function_names.py` los de GX (ver «Nombres de
+GX por lectura del código») y `tests/test_sdk_function_names.py` los del resto
+del SDK (ver «Otros nombres del SDK por lectura del código»). Las dos leen los
+hechos del código con `tools/code_facts.py`, que se prueba con un programa
+hecho a mano en `tests/test_code_facts.py`.
 
 ### Cómo funciona
 
@@ -249,17 +252,17 @@ las dos vecinas.
 
 | Biblioteca | Rango | Funciones | Con nombre |
 |---|---|---|---|
-| OS (primera parte) | `0x8016EDA0`–`0x80175778` | 146 | 93 |
+| OS (primera parte) | `0x8016EDA0`–`0x80175778` | 146 | 109 |
 | MTX | `0x8017580C`–`0x801759C8` | 4 | 4 |
-| DVD | `0x801759C8`–`0x80179BB0` | 85 | 49 |
-| VI | `0x80179DF0`–`0x8017BBB0` | 20 | 13 |
-| PAD | `0x8017BF98`–`0x8017D73C` | 18 | 15 |
-| AI | `0x8017D780`–`0x8017E008` | 17 | 11 |
-| AR | `0x8017E04C`–`0x8017FB40` | 8 | 7 |
+| DVD | `0x801759C8`–`0x80179BB0` | 85 | 53 |
+| VI | `0x80179DF0`–`0x8017BBB0` | 20 | 17 |
+| PAD | `0x8017BF98`–`0x8017D73C` | 18 | 16 |
+| AI | `0x8017D780`–`0x8017E008` | 17 | 13 |
+| AR | `0x8017E04C`–`0x8017FB40` | 8 | 8 |
 | ARQ | `0x8017FB40`–`0x8017FEDC` | 5 | 4 |
 | AX y AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
-| DSP | `0x801877FC`–`0x80188300` | 12 | 9 |
-| CARD | `0x80188338`–`0x8018ED98` | 87 | 60 |
+| DSP | `0x801877FC`–`0x80188300` | 12 | 11 |
+| CARD | `0x80188300`–`0x8018ED98` | 89 | 71 |
 | GX | `0x8018EDE0`–`0x80195F98` | 156 | 128 |
 | TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
 | Resto de TRK, biblioteca C y soporte del compilador | `0x8019B5F0`–`0x801A7A14` | 188 | 72 |
@@ -277,11 +280,11 @@ fila «Resto de TRK, biblioteca C y soporte del compilador» tiene, con nombre,
 `sin`, `tan`...), `__div2u`, `__construct_array` y, de TRK,
 `CircleBufferReadBytes`.
 
-La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 605 con
-nombre, el 57 %. Fuera de ella el código del juego y su middleware queda sin
-nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 452
-funciones del SDK que siguen sin nombre se reparten así: 198 comparten firma con
-otras, 188 no tienen firma en la base, 51 son cortas sin respaldo, 9 repiten
+La región del SDK (`0x8016EB94`–`0x801ABC18`) tiene 1 057 funciones y 646 con
+nombre, el 61 %. Fuera de ella el código del juego y su middleware queda sin
+nombre: 2 643 funciones antes y 746 después de SI (solo `main`). Las 411
+funciones del SDK que siguen sin nombre se reparten así: 176 comparten firma con
+otras, 173 no tienen firma en la base, 49 son cortas sin respaldo, 7 repiten
 nombre, 4 tienen otro tamaño y 2 tienen nombre de C++. AX es el caso más claro
 de las que no están en la base: 72 de sus 87 funciones.
 
@@ -378,6 +381,104 @@ escribe la variable que lee `GXTokenInterruptHandler`, y `GXSetDispCopySrc` y
 `GXSetTexCopySrc` escriben el estado que leen `GXCopyDisp` y `GXCopyTex`, cada
 una el suyo.
 
+### Otros nombres del SDK por lectura del código
+
+Después de GX quedaban sin nombre 39 puntos de entrada de otras bibliotecas
+del SDK: 16 de OS, 9 de CARD, 4 de DVD, 4 de VI, 2 de AI, 2 de DSP, 1 de AR y
+1 de PAD (`tools/find_library_entry_points.py` con cada biblioteca). Son
+funciones que un runtime nativo tiene que dar (ver
+[NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)). Se suman dos funciones internas de
+CARD en las que se apoyan: `__CARDSyncCallback`, la que cada llamada síncrona
+de CARD le pasa a su gemela asíncrona, y `__CARDDefaultApiCallback`, la que se
+usa cuando no se da ninguna. Con ellas, `tools/find_library_entry_points.py`
+ya no encuentra puntos de entrada sin nombre en las bibliotecas que dicen sus
+nombres. La excepción es AX, cuyo tramo con nombre es de solo dos funciones:
+medida a mano (`--range 0x8017FEDC-0x801877FC`), la zona de AX y AXFX tiene 28
+puntos de entrada, y 27 siguen sin nombre.
+
+**Por qué la firma no bastó.** La mayoría tiene pocas instrucciones (un getter
+o un setter de una variable, o una función vacía). 22 tienen «firma
+compartida»: `OSCreateAlarm` y `OSInitThreadQueue`, por ejemplo, comparten la
+de un constructor de C++ de otro juego (`nlListContainer<P8SaveData>::__ct`).
+15 no están en la base. Y las cuatro funciones static que el SDK llama
+`OnReset`, en cuatro archivos distintos, salieron como «nombre repetido» (dos)
+o «corta sin respaldo» (dos).
+
+**Cómo se identificó cada una.** Con los hechos de su código que lee
+`tools/code_facts.py`, como las de GX, y dos clases de hechos más: los textos
+cuya dirección arma la función (los mensajes que imprime) y las funciones que
+tiene justo antes y justo después. El enlazador deja juntas las funciones de
+un archivo fuente, en el orden en que están escritas, así que las vecinas dicen
+de qué archivo viene una función: es lo que distingue `OSCreateAlarm` de
+`OSInitThreadQueue`, que tienen el mismo código. El código y las variables
+coinciden con las fuentes del SDK que reconstruyó la descompilación de
+Twilight Princess ([zeldaret/tp](https://github.com/zeldaret/tp),
+`libs/dolphin/src`). 20 de los nombres (10 de OS y todos los de DVD, VI y
+DSP) también están en el mapa de símbolos de Mario Kart Wii que trae WiiCompiled
+(`projects/mkwii/MAP.txt`), cuyo SDK comparte esos archivos (el mapa no tiene
+funciones de CARD).
+
+**Funciones static con el mismo nombre.** `symbols.txt` necesita un nombre por
+función (el código generado los usa como identificadores), así que una función
+static cuyo nombre el SDK repite en varios archivos lleva detrás el nombre del
+archivo: `OnReset_OSAlarm` es la `OnReset` de `OSAlarm.c`.
+
+| Dirección | Nombre | Hechos de su código |
+|---|---|---|
+| `0x8016F8C4` | `OSCreateAlarm` | Guarda cero en el manejador y la etiqueta de la alarma (`+0`, `+4`). Está en `OSAlarm.c`, entre `OSInitAlarm` y `InsertAlarm`. |
+| `0x8016FF28` | `OnReset_OSAlarm` | Recorre la cola de alarmas (`-0x6FD0(r13)`) y cancela con `OSCancelAlarm` las que `__DVDTestAlarm` no reconoce. Es la función del registro de reinicio `0x802A3AB0` (prioridad `0xFFFFFFFF`), que registra `OSInitAlarm`. |
+| `0x801701EC` | `OSSetCurrentHeap` | Cambia el montón actual (`-0x7698(r13)`, que empieza en -1) y devuelve el anterior. |
+| `0x801702D8` | `OSCheckHeap` | Imprime «OSCheckHeap: Failed HeapArray in %d» con `OSReport`. |
+| `0x80170638` | `OSGetArenaHi` | Lee el límite alto de la arena (`-0x6FB8(r13)`, en `.sbss`). |
+| `0x80170640` | `OSGetArenaLo` | Lee el límite bajo (`-0x7690(r13)`, que empieza en -1). |
+| `0x80170648` | `OSSetArenaHi` | Escribe el límite alto. |
+| `0x80170650` | `OSSetArenaLo` | Escribe el límite bajo. |
+| `0x80172684` | `OSGetFontEncode` | Lee el modo de TV (`0x800000CC`) y el estado de la salida de video digital (`0xCC00206E`), y guarda la codificación en una variable de 16 bits que empieza en `0xFFFF`. |
+| `0x801730A8` | `OnReset_OSMemory` | En el reinicio final escribe `0xFF` en `0xCC004010` y enmascara las interrupciones de la memoria (`__OSMaskInterrupts`). Registro `0x802A5150`, prioridad 127, de `__OSInitMemoryProtection`. |
+| `0x8017432C` | `__OSUnlockSram` | `UnlockSram(commit, 0)`. |
+| `0x80174350` | `__OSUnlockSramEx` | `UnlockSram(commit, 0x14)`: el tamaño de la SRAM. |
+| `0x801747F0` | `DefaultSwitchThreadCallback` | Vacía. Es el valor inicial de la variable `0x80321A10`, que leen `__OSThreadInit` y `SelectThread`. |
+| `0x8017494C` | `OSInitThreadQueue` | Guarda cero en las dos palabras de la cola. Está en `OSThread.c`, justo antes de `OSGetCurrentThread`. |
+| `0x8017495C` | `OSGetCurrentThread` | Lee `0x800000E4`, el hilo actual. |
+| `0x801749A8` | `OSEnableScheduler` | Resta 1 al contador `-0x6F40(r13)` con las interrupciones apagadas (la función de antes, `OSDisableScheduler`, suma 1). |
+| `0x80176B70` | `DVDOpen` | Imprime «Warning: DVDOpen(): file '%s' was not found under %s.» cuando `DVDConvertPathToEntrynum` no encuentra el archivo. |
+| `0x80176F70` | `defaultOptionalCommandChecker` | Vacía, al inicio de `dvd.c` (antes de `DVDInit`). Es el valor inicial de la variable `0x80321A30`. |
+| `0x801790F8` | `DVDSetAutoInvalidation` | Cambia `-0x7654(r13)`, que empieza en 1, y devuelve el valor anterior. |
+| `0x801794A4` | `DVDGetCurrentDiskID` | Devuelve `0x80000000`, donde se copia el ID del disco al arrancar. |
+| `0x8017A064` | `VISetPostRetraceCallback` | Cambia la función que `__VIRetraceHandler` llama al final del retrazo (`-0x6E48(r13)`). El juego no tiene `VISetPreRetraceCallback`. |
+| `0x8017ACCC` | `VIConfigure` | Imprime «VIConfigure(): Tried to change mode from (%d) to (%d), which is forbidden» y llama a `setFbbRegs` y `setVerticalRegs`. |
+| `0x8017B6EC` | `VIGetRetraceCount` | Lee el contador de retrazos (`-0x6E5C(r13)`), que suma `__VIRetraceHandler`. |
+| `0x8017B798` | `VIGetNextField` | Calcula el campo actual con las interrupciones apagadas y lo combina con `HorVer.AdjustedDispPosY` (`0x802FAA98`, `+0xA`). Está entre `getCurrentFieldEvenOdd` y `VIGetCurrentLine`. |
+| `0x8017D550` | `OnReset_Pad` | Quita la función de muestreo (`PADSetSamplingCallback`), espera a los controles (`SIBusy`) y recalibra los cuatro (`PADRecalibrate`). Registro `0x802A5958`, prioridad 127, de `PADInit`. |
+| `0x8017DAE0` | `AISetStreamVolLeft` | Escribe el byte bajo de `0xCC006C04`. |
+| `0x8017DB0C` | `AISetStreamVolRight` | Escribe el byte de arriba (bits 8–15) del mismo registro. |
+| `0x8017E33C` | `__ARGetInterruptStatus` | Lee el registro de control del DSP (`0xCC00500A`) y deja el bit `0x20`, la interrupción del DMA de ARAM. |
+| `0x801878EC` | `DSPCheckInit` | Lee la marca que pone `DSPInit` (`-0x6C58(r13)`). |
+| `0x80187964` | `DSPAssertTask` | Con las interrupciones apagadas, pone una tarea como la siguiente y, si hay otra corriendo, interrumpe al DSP por `0xCC00500A`. |
+| `0x80188300` | `__CARDDefaultApiCallback` | Vacía, al inicio de `CARDBios.c`. Seis funciones asíncronas de CARD la usan cuando no se les da una. |
+| `0x80188304` | `__CARDSyncCallback` | Despierta (`OSWakeupThread`) la cola de hilos del bloque de control de la ranura (`0x80315A20`, `+0x8C`). |
+| `0x801896F0` | `__CARDSync` | Duerme (`OSSleepThread`) en esa misma cola mientras el resultado sea «ocupada» (-1). |
+| `0x80189788` | `OnReset_CARDBios` | Antes del reinicio final desmonta las dos ranuras (`CARDUnmount`); una tarjeta ocupada lo retrasa. Registro `0x802AAA98`, prioridad 127, de `CARDInit`. |
+| `0x8018C260` | `CARDCheck` | `CARDCheckExAsync` con `__CARDSyncCallback` y luego `__CARDSync`. La cuenta de bytes va a una variable local. |
+| `0x8018CC28` | `CARDMount` | `CARDMountAsync` con `__CARDSyncCallback` y luego `__CARDSync`. |
+| `0x8018D554` | `CARDFormat` | `__CARDFormatRegionAsync` con la codificación de `__CARDGetFontEncode`, y luego `__CARDSync`. |
+| `0x8018DEE4` | `CARDCreate` | `CARDCreateAsync` y luego `__CARDSync`. |
+| `0x8018E358` | `CARDRead` | `CARDReadAsync` y luego `__CARDSync`. |
+| `0x8018E6D4` | `CARDWrite` | `CARDWriteAsync` y luego `__CARDSync`. |
+| `0x8018E8D0` | `CARDDelete` | `CARDDeleteAsync` y luego `__CARDSync`. |
+
+**Qué comprueba la prueba.** `tests/test_sdk_function_names.py` guarda esta
+tabla y comprueba, contra el `main.dol` real: que cada dirección tiene el
+nombre y el tamaño de la tabla y que su código tiene los hechos; que ninguna
+otra función de su biblioteca los tiene; y los datos detrás de los nombres:
+cada `OnReset` es la función del registro de reinicio que registra su
+biblioteca, con su prioridad; las funciones vacías de OS y DVD son el valor
+inicial de la variable que las guarda; las seis funciones asíncronas de CARD
+usan `__CARDDefaultApiCallback`; las variables empiezan con los valores de las
+fuentes del SDK; `__VIRetraceHandler` cuenta los retrazos que devuelve
+`VIGetRetraceCount` y llama a la función de antes del retrazo antes que a la de
+después; y `DSPCheckInit` lee la marca que pone `DSPInit`.
+
 ### Archivos fuente del juego
 
 Los asserts imprimen el nombre del archivo fuente. CodeWarrior enlaza los
@@ -456,7 +557,7 @@ backend DolRecomp finds functions on its own; our map reaches mods as names
 | …target of some `bl` | 3,637 |
 | `switch` tables | 274 (4 without a bounds check, see below) |
 | Data inside code | 3 (`_rom_copy_info`, `_bss_init_info`, TRK string) |
-| Named functions | 614, all with evidence (51 from reading the code, 563 from SDK signatures) |
+| Named functions | 655, all with evidence (92 from reading the code, 563 from SDK signatures) |
 
 ### How we know it is right
 
@@ -477,9 +578,12 @@ Each point is a test in `tests/test_function_map.py`:
 
 `tests/test_function_finder.py` and `tests/test_sdk_names.py` also
 reproduce every hard case with synthetic DOLs, no game data needed. The
-names that came from reading the GX code have their own test against the real
-`main.dol`, `tests/test_gx_function_names.py` (see "GX names by reading the
-code").
+names that came from reading the code have their own test against the real
+`main.dol`: `tests/test_gx_function_names.py` for GX (see "GX names by reading
+the code") and `tests/test_sdk_function_names.py` for the rest of the SDK (see
+"Other SDK names by reading the code"). Both read the facts of the code with
+`tools/code_facts.py`, which is tested on a hand-built program in
+`tests/test_code_facts.py`.
 
 ### How it works
 
@@ -666,17 +770,17 @@ belong to one of the two neighbours.
 
 | Library | Range | Functions | Named |
 |---|---|---|---|
-| OS (first part) | `0x8016EDA0`–`0x80175778` | 146 | 93 |
+| OS (first part) | `0x8016EDA0`–`0x80175778` | 146 | 109 |
 | MTX | `0x8017580C`–`0x801759C8` | 4 | 4 |
-| DVD | `0x801759C8`–`0x80179BB0` | 85 | 49 |
-| VI | `0x80179DF0`–`0x8017BBB0` | 20 | 13 |
-| PAD | `0x8017BF98`–`0x8017D73C` | 18 | 15 |
-| AI | `0x8017D780`–`0x8017E008` | 17 | 11 |
-| AR | `0x8017E04C`–`0x8017FB40` | 8 | 7 |
+| DVD | `0x801759C8`–`0x80179BB0` | 85 | 53 |
+| VI | `0x80179DF0`–`0x8017BBB0` | 20 | 17 |
+| PAD | `0x8017BF98`–`0x8017D73C` | 18 | 16 |
+| AI | `0x8017D780`–`0x8017E008` | 17 | 13 |
+| AR | `0x8017E04C`–`0x8017FB40` | 8 | 8 |
 | ARQ | `0x8017FB40`–`0x8017FEDC` | 5 | 4 |
 | AX and AXFX | `0x8017FEDC`–`0x801877FC` | 87 | 4 |
-| DSP | `0x801877FC`–`0x80188300` | 12 | 9 |
-| CARD | `0x80188338`–`0x8018ED98` | 87 | 60 |
+| DSP | `0x801877FC`–`0x80188300` | 12 | 11 |
+| CARD | `0x80188300`–`0x8018ED98` | 89 | 71 |
 | GX | `0x8018EDE0`–`0x80195F98` | 156 | 128 |
 | TRK | `0x80195F98`–`0x8019B5F0` | 120 | 76 |
 | Rest of TRK, C library and compiler support | `0x8019B5F0`–`0x801A7A14` | 188 | 72 |
@@ -694,11 +798,11 @@ named. The row "Rest of TRK, C library and compiler support" has, named,
 `tan`...), `__div2u`, `__construct_array` and, from TRK,
 `CircleBufferReadBytes`.
 
-The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 605 named,
-57 %. Outside it the game's code and its middleware have no names: 2,643
-functions before it and 746 after SI (only `main`). The 452 SDK functions that
-are still unnamed split like this: 198 share a signature with others, 188
-have no signature in the database, 51 are short with no backing, 9 repeat a
+The SDK region (`0x8016EB94`–`0x801ABC18`) has 1,057 functions and 646 named,
+61 %. Outside it the game's code and its middleware have no names: 2,643
+functions before it and 746 after SI (only `main`). The 411 SDK functions that
+are still unnamed split like this: 176 share a signature with others, 173
+have no signature in the database, 49 are short with no backing, 7 repeat a
 name, 4 have another size and 2 have a C++ name. AX is the clearest case of
 those missing from the database: 72 of its 87 functions.
 
@@ -794,6 +898,103 @@ either); and two data cross-checks: `GXSetDrawSyncCallback` writes the variable
 that `GXTokenInterruptHandler` reads, and `GXSetDispCopySrc` and
 `GXSetTexCopySrc` write the state that `GXCopyDisp` and `GXCopyTex` read, each
 one its own.
+
+### Other SDK names by reading the code
+
+After GX, 39 entry points of other SDK libraries were still unnamed: 16 of OS,
+9 of CARD, 4 of DVD, 4 of VI, 2 of AI, 2 of DSP, 1 of AR and 1 of PAD
+(`tools/find_library_entry_points.py` with each library). They are functions
+that a native runtime has to provide (see
+[NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)). Two internal CARD functions that they
+rest on join them: `__CARDSyncCallback`, the one each synchronous CARD call
+passes to its asynchronous twin, and `__CARDDefaultApiCallback`, the one used
+when none is given. With them, `tools/find_library_entry_points.py` finds no
+unnamed entry point left in the libraries that their names mark. The exception
+is AX, whose named stretch is only two functions long: measured by hand
+(`--range 0x8017FEDC-0x801877FC`), the AX and AXFX zone has 28 entry points,
+and 27 are still unnamed.
+
+**Why the signature was not enough.** Most are a few instructions long (a
+getter or a setter of one variable, or an empty function). 22 have a "shared
+checksum": `OSCreateAlarm` and `OSInitThreadQueue`, for example, share the one
+of a C++ constructor from another game (`nlListContainer<P8SaveData>::__ct`).
+15 are not in the database. And the four static functions that the SDK calls
+`OnReset`, in four different files, came out as "shared name" (two) or "short
+and uncorroborated" (two).
+
+**How each one was identified.** With the facts of its code that
+`tools/code_facts.py` reads, like the GX ones, and two more kinds of facts: the
+texts whose address the function puts together (the messages it prints) and
+the functions right before and right after it. The linker keeps the functions
+of one source file together, in the order they are written, so the neighbors
+say which file a function comes from: that is what tells `OSCreateAlarm` from
+`OSInitThreadQueue`, which have the same code. The code and the variables match
+the SDK sources that the Twilight Princess decompilation reconstructed
+([zeldaret/tp](https://github.com/zeldaret/tp), `libs/dolphin/src`). 20 of the
+names (10 of OS and all those of DVD, VI and DSP) are also in the Mario Kart Wii symbol map
+that WiiCompiled carries (`projects/mkwii/MAP.txt`), whose SDK shares those
+files (the map has no CARD functions).
+
+**Static functions with the same name.** `symbols.txt` needs one name per
+function (the generated code uses the names as identifiers), so a static
+function whose name the SDK repeats in several files gets the file's name after
+its own: `OnReset_OSAlarm` is the `OnReset` of `OSAlarm.c`.
+
+| Address | Name | Facts of its code |
+|---|---|---|
+| `0x8016F8C4` | `OSCreateAlarm` | Stores zero into the handler and the tag of the alarm (`+0`, `+4`). It sits in `OSAlarm.c`, between `OSInitAlarm` and `InsertAlarm`. |
+| `0x8016FF28` | `OnReset_OSAlarm` | Walks the alarm queue (`-0x6FD0(r13)`) and cancels with `OSCancelAlarm` the alarms that `__DVDTestAlarm` does not recognise. It is the function of the reset record `0x802A3AB0` (priority `0xFFFFFFFF`), which `OSInitAlarm` registers. |
+| `0x801701EC` | `OSSetCurrentHeap` | Swaps the current heap (`-0x7698(r13)`, which starts at -1) and returns the one before. |
+| `0x801702D8` | `OSCheckHeap` | Prints "OSCheckHeap: Failed HeapArray in %d" with `OSReport`. |
+| `0x80170638` | `OSGetArenaHi` | Reads the high bound of the arena (`-0x6FB8(r13)`, in `.sbss`). |
+| `0x80170640` | `OSGetArenaLo` | Reads the low bound (`-0x7690(r13)`, which starts at -1). |
+| `0x80170648` | `OSSetArenaHi` | Writes the high bound. |
+| `0x80170650` | `OSSetArenaLo` | Writes the low bound. |
+| `0x80172684` | `OSGetFontEncode` | Reads the TV mode (`0x800000CC`) and the status of the digital video output (`0xCC00206E`), and keeps the encoding in a 16-bit variable that starts at `0xFFFF`. |
+| `0x801730A8` | `OnReset_OSMemory` | On the final reset, writes `0xFF` to `0xCC004010` and masks the memory interrupts (`__OSMaskInterrupts`). Record `0x802A5150`, priority 127, from `__OSInitMemoryProtection`. |
+| `0x8017432C` | `__OSUnlockSram` | `UnlockSram(commit, 0)`. |
+| `0x80174350` | `__OSUnlockSramEx` | `UnlockSram(commit, 0x14)`: the size of the SRAM. |
+| `0x801747F0` | `DefaultSwitchThreadCallback` | Empty. It is the first value of the variable `0x80321A10`, which `__OSThreadInit` and `SelectThread` read. |
+| `0x8017494C` | `OSInitThreadQueue` | Stores zero into the two words of the queue. It sits in `OSThread.c`, right before `OSGetCurrentThread`. |
+| `0x8017495C` | `OSGetCurrentThread` | Reads `0x800000E4`, the current thread. |
+| `0x801749A8` | `OSEnableScheduler` | Takes 1 from the counter `-0x6F40(r13)` with the interrupts off (the function before it, `OSDisableScheduler`, adds 1). |
+| `0x80176B70` | `DVDOpen` | Prints "Warning: DVDOpen(): file '%s' was not found under %s." when `DVDConvertPathToEntrynum` does not find the file. |
+| `0x80176F70` | `defaultOptionalCommandChecker` | Empty, at the start of `dvd.c` (before `DVDInit`). It is the first value of the variable `0x80321A30`. |
+| `0x801790F8` | `DVDSetAutoInvalidation` | Swaps `-0x7654(r13)`, which starts at 1, and returns the value before. |
+| `0x801794A4` | `DVDGetCurrentDiskID` | Returns `0x80000000`, where the disc ID is copied at boot. |
+| `0x8017A064` | `VISetPostRetraceCallback` | Swaps the function that `__VIRetraceHandler` calls at the end of the retrace (`-0x6E48(r13)`). The game has no `VISetPreRetraceCallback`. |
+| `0x8017ACCC` | `VIConfigure` | Prints "VIConfigure(): Tried to change mode from (%d) to (%d), which is forbidden" and calls `setFbbRegs` and `setVerticalRegs`. |
+| `0x8017B6EC` | `VIGetRetraceCount` | Reads the retrace counter (`-0x6E5C(r13)`), which `__VIRetraceHandler` adds to. |
+| `0x8017B798` | `VIGetNextField` | Works out the current field with the interrupts off and combines it with `HorVer.AdjustedDispPosY` (`0x802FAA98`, `+0xA`). It sits between `getCurrentFieldEvenOdd` and `VIGetCurrentLine`. |
+| `0x8017D550` | `OnReset_Pad` | Drops the sampling function (`PADSetSamplingCallback`), waits for the controllers (`SIBusy`) and recalibrates all four (`PADRecalibrate`). Record `0x802A5958`, priority 127, from `PADInit`. |
+| `0x8017DAE0` | `AISetStreamVolLeft` | Writes the low byte of `0xCC006C04`. |
+| `0x8017DB0C` | `AISetStreamVolRight` | Writes the byte above it (bits 8–15) of the same register. |
+| `0x8017E33C` | `__ARGetInterruptStatus` | Reads the DSP control register (`0xCC00500A`) and keeps bit `0x20`, the ARAM DMA interrupt. |
+| `0x801878EC` | `DSPCheckInit` | Reads the flag that `DSPInit` sets (`-0x6C58(r13)`). |
+| `0x80187964` | `DSPAssertTask` | With the interrupts off, makes a task the next one and, if another is running, interrupts the DSP through `0xCC00500A`. |
+| `0x80188300` | `__CARDDefaultApiCallback` | Empty, at the start of `CARDBios.c`. Six asynchronous CARD functions use it when they are not given one. |
+| `0x80188304` | `__CARDSyncCallback` | Wakes (`OSWakeupThread`) the thread queue of the slot's control block (`0x80315A20`, `+0x8C`). |
+| `0x801896F0` | `__CARDSync` | Sleeps (`OSSleepThread`) on that same queue while the result is "busy" (-1). |
+| `0x80189788` | `OnReset_CARDBios` | Before the final reset, unmounts both slots (`CARDUnmount`); a busy card delays it. Record `0x802AAA98`, priority 127, from `CARDInit`. |
+| `0x8018C260` | `CARDCheck` | `CARDCheckExAsync` with `__CARDSyncCallback`, then `__CARDSync`. The byte count goes to a local variable. |
+| `0x8018CC28` | `CARDMount` | `CARDMountAsync` with `__CARDSyncCallback`, then `__CARDSync`. |
+| `0x8018D554` | `CARDFormat` | `__CARDFormatRegionAsync` with the encoding from `__CARDGetFontEncode`, then `__CARDSync`. |
+| `0x8018DEE4` | `CARDCreate` | `CARDCreateAsync`, then `__CARDSync`. |
+| `0x8018E358` | `CARDRead` | `CARDReadAsync`, then `__CARDSync`. |
+| `0x8018E6D4` | `CARDWrite` | `CARDWriteAsync`, then `__CARDSync`. |
+| `0x8018E8D0` | `CARDDelete` | `CARDDeleteAsync`, then `__CARDSync`. |
+
+**What the test checks.** `tests/test_sdk_function_names.py` holds this table
+and checks, against the real `main.dol`: that each address has the table's
+name and size and that its code has the facts; that no other function of its
+library has them; and the data behind the names: each `OnReset` is the
+function of the reset record that its library registers, with its priority;
+the empty functions of OS and DVD are the first value of the variable that
+holds them; the six asynchronous CARD functions use
+`__CARDDefaultApiCallback`; the variables start with the values of the SDK
+sources; `__VIRetraceHandler` counts the retraces that `VIGetRetraceCount`
+returns and calls the function for before the retrace ahead of the one for
+after; and `DSPCheckInit` reads the flag that `DSPInit` sets.
 
 ### Game source files
 

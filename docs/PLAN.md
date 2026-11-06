@@ -86,6 +86,12 @@ aurora, y qué se sabe y qué no, está en
       lista las 75 que alcanza el resto del programa; la firma nombró 49 y
       las otras 26 se nombraron leyendo su código, cada una con una prueba
       contra `main.dol` (614 nombres en total).
+- [x] Nombrar los demás puntos de entrada del SDK que usa el juego: 39 de OS,
+      CARD, DVD, VI, AI, DSP, AR y PAD, y dos funciones internas de CARD, se
+      nombraron leyendo su código, cada una con una prueba contra `main.dol`
+      (655 nombres en total; ver [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
+- [ ] Nombrar los 27 puntos de entrada sin nombre de la zona de AX y AXFX (el
+      audio), que la herramienta solo ve con un tramo dado a mano.
 - [ ] Afinar los nombres del SDK: usar el archivo del enlazador que trae la
       mitad de la base (para AX, TRK y la biblioteca C) y nombrar `PPCArch` por
       el número de registro especial. No bloquea nada.
@@ -330,6 +336,12 @@ is known and what is not, is in
       lists the 75 that the rest of the program reaches; the signature named
       49 and the other 26 were named by reading their code, each with a test
       against `main.dol` (614 names in total).
+- [x] Name the other SDK entry points the game uses: 39 of OS, CARD, DVD, VI,
+      AI, DSP, AR and PAD, and two internal CARD functions, were named by
+      reading their code, each with a test against `main.dol` (655 names in
+      total; see [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
+- [ ] Name the 27 unnamed entry points of the AX and AXFX zone (the audio),
+      which the tool only sees with a stretch given by hand.
 - [ ] Refine the SDK names: use the linker archive that half of the database
       carries (for AX, TRK and the C library) and name `PPCArch` by its
       special-register number. Nothing waits on it.
