@@ -252,7 +252,7 @@ function New-PercentRow {
 }
 
 # The settings that the window shows at this moment.
-function Get-ChosenSettings {
+function Get-SettingsFromWindow {
     $mods = [ordered] @{}
     foreach ($modId in $Game.ModIds) { $mods[$modId] = [bool] $ModCheckBoxes[$modId].Checked }
     return [pscustomobject] @{
@@ -263,7 +263,7 @@ function Get-ChosenSettings {
 }
 
 # The speed controls only mean something while the speed mod is on.
-function Update-SpeedControls {
+function Update-SpeedSection {
     $isOn = $true
     if ($ModCheckBoxes.ContainsKey($PlayerSpeedModId)) { $isOn = [bool] $ModCheckBoxes[$PlayerSpeedModId].Checked }
     $SpeedSlider.Enabled = $isOn
@@ -273,10 +273,10 @@ function Update-SpeedControls {
 
 # Saves what the window shows. With $Then = 'Stay' the window stays open; with another value it
 # closes after saving and the script starts what $script:AfterClosing says.
-function Save-ChosenSettings {
+function Save-SettingsFromWindow {
     param([Parameter(Mandatory)] [ValidateSet('Stay', 'PlayWithKeyboard', 'OpenLauncher')] [string] $Then)
     try {
-        Save-PlayerSettings -Path $SettingsPath -Settings (Get-ChosenSettings)
+        Save-SettingsFile -Path $SettingsPath -Settings (Get-SettingsFromWindow)
     }
     catch {
         Show-ErrorBox (Get-Message 'SaveFailed' $_.Exception.Message)
@@ -290,7 +290,7 @@ function Save-ChosenSettings {
     $Form.Close()
 }
 
-function Reset-ChosenSettings {
+function Reset-SettingsWindow {
     foreach ($modId in $Game.ModIds) { $ModCheckBoxes[$modId].Checked = $true }
     $SpeedBox.Value = $PlayerSpeedPercentDefault
     $GameSpeedBox.Value = $GameSpeedPercentDefault
@@ -302,7 +302,7 @@ try {
     Add-Type -AssemblyName System.Drawing
     [System.Windows.Forms.Application]::EnableVisualStyles()
 
-    $loaded = Read-PlayerSettings -Path $SettingsPath -ModIds $Game.ModIds
+    $loaded = Read-SettingsFile -Path $SettingsPath -ModIds $Game.ModIds
     $initialSpeed = $PlayerSpeedPercentDefault
     if ($null -ne $loaded.Settings.PlayerSpeedPercent) { $initialSpeed = $loaded.Settings.PlayerSpeedPercent }
 
@@ -338,7 +338,7 @@ try {
         $checkBox.Text = Get-ModText -ModId $modId -Field 'Name'
         $checkBox.Checked = [bool] $loaded.Settings.Mods[$modId]
         $checkBox.Margin = New-Object System.Windows.Forms.Padding(0, 8, 0, 0)
-        $checkBox.Add_CheckedChanged({ Update-SpeedControls })
+        $checkBox.Add_CheckedChanged({ Update-SpeedSection })
         $Layout.Controls.Add($checkBox)
         $ModCheckBoxes[$modId] = $checkBox
         $description = Get-ModText -ModId $modId -Field 'Description'
@@ -362,7 +362,7 @@ try {
     $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'SpeedWarning') -Width $ContentWidth -Muted))
     $SpeedModIsOffLabel = New-TextLabel -Text (Get-Message 'SpeedModIsOff') -Width $ContentWidth -Muted
     $Layout.Controls.Add($SpeedModIsOffLabel)
-    Update-SpeedControls
+    Update-SpeedSection
 
     # The speed of the whole game.
     $Layout.Controls.Add((New-TextLabel -Text (Get-Message 'GameSpeedHeading') -Width $ContentWidth -Bold -TopMargin 16))
@@ -393,10 +393,10 @@ try {
     $Buttons.MaximumSize = New-Object System.Drawing.Size($ContentWidth, 0)
     $Buttons.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 0)
 
-    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'SaveButton') -OnClick { Save-ChosenSettings -Then 'Stay' }))
-    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'SaveAndPlayButton') -OnClick { Save-ChosenSettings -Then 'PlayWithKeyboard' }))
-    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'SaveAndLauncherButton') -OnClick { Save-ChosenSettings -Then 'OpenLauncher' }))
-    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'ResetButton') -OnClick { Reset-ChosenSettings }))
+    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'SaveButton') -OnClick { Save-SettingsFromWindow -Then 'Stay' }))
+    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'SaveAndPlayButton') -OnClick { Save-SettingsFromWindow -Then 'PlayWithKeyboard' }))
+    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'SaveAndLauncherButton') -OnClick { Save-SettingsFromWindow -Then 'OpenLauncher' }))
+    $Buttons.Controls.Add((New-WindowButton -Text (Get-Message 'ResetButton') -OnClick { Reset-SettingsWindow }))
     $CloseButton = New-WindowButton -Text (Get-Message 'CancelButton') -OnClick { $Form.Close() }
     $Buttons.Controls.Add($CloseButton)
     $Layout.Controls.Add($Buttons)

@@ -100,7 +100,7 @@ function Get-SettingsPath {
 # not chosen ($null, which leaves it to the mod's default) and the game runs at its normal speed.
 # The settings are an object with three properties: Mods (a table from mod id to $true or $false),
 # PlayerSpeedPercent (a whole number or $null) and GameSpeedPercent (a whole number).
-function New-DefaultSettings {
+function New-DefaultSettingsSet {
     param([Parameter(Mandatory)] [AllowEmptyCollection()] [string[]] $ModIds)
     $mods = [ordered] @{}
     foreach ($modId in $ModIds) { $mods[$modId] = $true }
@@ -122,12 +122,12 @@ function Test-WholeNumberInRange {
 # Reads the settings file. Returns an object with the Settings that were read and the Problems that
 # were found (a list of texts, empty when all is well). Whatever cannot be used is left at its
 # default, and the rest of the file is kept.
-function Read-PlayerSettings {
+function Read-SettingsFile {
     param(
         [Parameter(Mandatory)] [string] $Path,
         [Parameter(Mandatory)] [AllowEmptyCollection()] [string[]] $ModIds
     )
-    $settings = New-DefaultSettings -ModIds $ModIds
+    $settings = New-DefaultSettingsSet -ModIds $ModIds
     $problems = New-Object System.Collections.Generic.List[string]
 
     if (Test-Path -LiteralPath $Path -PathType Leaf) {
@@ -184,7 +184,7 @@ function Read-PlayerSettings {
 # Writes the settings file (UTF-8 without a byte order mark, like every file of this package), and
 # creates the player's folder if it does not exist yet. A speed that was not chosen is left out of
 # the file, so that the mod keeps using its default.
-function Save-PlayerSettings {
+function Save-SettingsFile {
     param(
         [Parameter(Mandatory)] [string] $Path,
         [Parameter(Mandatory)] $Settings
@@ -200,7 +200,7 @@ function Save-PlayerSettings {
 }
 
 # The ids of the mods that are on, in the order the settings have them.
-function Get-EnabledModIds {
+function Get-EnabledModId {
     param([Parameter(Mandatory)] $Settings)
     return @($Settings.Mods.Keys | Where-Object { $Settings.Mods[$_] })
 }

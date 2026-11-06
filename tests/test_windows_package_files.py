@@ -165,27 +165,27 @@ def test_the_script_looks_for_the_mods_where_the_assembler_puts_them():
 
 def test_the_script_gives_cmake_the_options_that_the_mods_cmake_file_asks_for():
     asked_for = set(re.findall(r"^set\((\w+) \"\" CACHE", mods_cmake_file(), re.MULTILINE))
-    given = set(re.findall(r'"-D(\w+)=', body_of_function(read_packaging_file("play.ps1"), "Install-Mods")))
+    given = set(re.findall(r'"-D(\w+)=', body_of_function(read_packaging_file("play.ps1"), "Install-Mod")))
     assert asked_for == {"MODERNGEKKO_SOURCE_DIR", "MOD_SYMBOL_HEADER"}
     assert asked_for <= given
     assert given - asked_for <= {"CMAKE_C_COMPILER"}  # what CMake itself reads
 
 
 def test_the_mods_are_built_in_a_new_folder_each_time_and_only_the_ones_that_are_asked_for():
-    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
+    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mod")
     assert body.index("Remove-Item -LiteralPath $BuildDirectory") < body.index("$configureArguments")
     assert "'--target') + @($ModIds)" in body
 
 
 def test_what_the_tools_say_while_the_mods_are_built_goes_to_the_log_and_not_to_the_console():
-    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
+    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mod")
     calls = re.findall(r"Invoke-Program [^\n]*", body)
     assert len(calls) == 2  # setting up the build, and building
     assert all(call.endswith("-Quiet") for call in calls)
 
 
 def test_a_failure_while_the_mods_are_built_is_a_warning_and_the_game_starts_anyway():
-    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mods")
+    body = body_of_function(read_packaging_file("play.ps1"), "Install-Mod")
     before_catch, catch, after_catch = body.partition("catch {")
     assert catch
     assert "Get-Message 'ModsFailed' $LogPath" in after_catch
@@ -194,18 +194,18 @@ def test_a_failure_while_the_mods_are_built_is_a_warning_and_the_game_starts_any
 
 
 def test_a_mod_is_taken_out_by_the_name_of_its_folder_and_nothing_else_goes():
-    body = body_of_function(read_packaging_file("play.ps1"), "Remove-InstalledMods")
+    body = body_of_function(read_packaging_file("play.ps1"), "Remove-InstalledMod")
     assert "foreach ($modId in $ModIds)" in body
     assert "Join-Path $InstalledModsDirectory ($modId + '.mgm')" in body
 
 
 def test_playing_without_mods_takes_out_all_the_mods_of_the_package_and_does_not_read_the_settings():
     script = read_packaging_file("play.ps1")
-    body = body_of_function(script, "Initialize-Mods")
-    without_mods, reading, _ = body.partition("$settings = Get-PlayerSettings")
+    body = body_of_function(script, "Initialize-ModSetup")
+    without_mods, reading, _ = body.partition("$settings = Get-SettingsFromFile")
     assert reading  # the settings are read, but only after the case of -NoMods
     assert re.search(
-        r"if \(\$NoMods\) \{\s+Remove-InstalledMods -ModIds \$AllModIds\s+.*?\s+return\s+\}",
+        r"if \(\$NoMods\) \{\s+Remove-InstalledMod -ModIds \$AllModIds\s+.*?\s+return\s+\}",
         without_mods,
         re.DOTALL,
     )
@@ -214,20 +214,20 @@ def test_playing_without_mods_takes_out_all_the_mods_of_the_package_and_does_not
 
 
 def test_the_mods_that_the_settings_turn_off_are_taken_out_before_the_others_are_built():
-    body = body_of_function(read_packaging_file("play.ps1"), "Initialize-Mods")
-    assert "$enabledModIds = @(Get-EnabledModIds -Settings $settings)" in body
+    body = body_of_function(read_packaging_file("play.ps1"), "Initialize-ModSetup")
+    assert "$enabledModIds = @(Get-EnabledModId -Settings $settings)" in body
     assert "$disabledModIds = @($AllModIds | Where-Object { $enabledModIds -notcontains $_ })" in body
-    removing = body.index("Remove-InstalledMods -ModIds $disabledModIds")
-    building = body.index("Install-Mods -BuildDirectory $BuildDirectory -ModIds $enabledModIds")
+    removing = body.index("Remove-InstalledMod -ModIds $disabledModIds")
+    building = body.index("Install-Mod -BuildDirectory $BuildDirectory -ModIds $enabledModIds")
     assert removing < building
     # With every mod turned off there is nothing to build (the build is not even asked for).
-    assert "if ($enabledModIds.Count -gt 0) { Install-Mods" in body
+    assert "if ($enabledModIds.Count -gt 0) { Install-Mod" in body
 
 
 def test_the_mods_are_set_up_once_the_package_and_the_game_are_ready():
     script = read_packaging_file("play.ps1")
-    assert len(re.findall(r"^\s+Initialize-Mods ", script, re.MULTILINE)) == 1
-    assert script.index("Install-GameModule -ModulePath") < script.index("    Initialize-Mods ")
+    assert len(re.findall(r"^\s+Initialize-ModSetup ", script, re.MULTILINE)) == 1
+    assert script.index("Install-GameModule -ModulePath") < script.index("    Initialize-ModSetup ")
 
 
 def test_the_mods_go_where_the_runner_looks_for_them():
@@ -271,7 +271,7 @@ def test_the_speed_is_given_to_the_mod_only_while_it_is_on_and_a_speed_was_chose
 
 
 def test_the_speed_asked_for_on_the_command_line_wins_over_the_saved_one():
-    body = body_of_function(read_packaging_file("play.ps1"), "Initialize-Mods")
+    body = body_of_function(read_packaging_file("play.ps1"), "Initialize-ModSetup")
     saved = body.index("$percent = $settings.PlayerSpeedPercent")
     asked_for = body.index("if ($null -ne $PlayerSpeed) { $percent = $PlayerSpeed }")
     assert saved < asked_for < body.index("Set-PlayerSpeed -Percent $percent")
@@ -549,8 +549,8 @@ def test_the_example_in_the_settings_code_is_a_file_that_the_code_reads_and_writ
     game_minimum = int(library_value("GameSpeedPercentMinimum"))
     game_maximum = int(library_value("GameSpeedPercentMaximum"))
     assert game_minimum <= example["gameSpeedPercent"] <= game_maximum
-    reading = body_of_function(library, "Read-PlayerSettings")
-    writing = body_of_function(library, "Save-PlayerSettings")
+    reading = body_of_function(library, "Read-SettingsFile")
+    writing = body_of_function(library, "Save-SettingsFile")
     for name in example:
         assert f"Properties['{name}']" in reading
     assert "[ordered] @{ mods = $Settings.Mods }" in writing
@@ -593,8 +593,8 @@ def test_the_core_settings_are_changed_one_line_at_a_time_and_kept_otherwise():
 
 def test_the_script_sets_the_speed_of_the_game_with_and_without_mods():
     script = read_packaging_file("play.ps1")
-    body = body_of_function(script, "Initialize-Mods")
-    without_mods, _, with_mods = body.partition("$settings = Get-PlayerSettings")
+    body = body_of_function(script, "Initialize-ModSetup")
+    without_mods, _, with_mods = body.partition("$settings = Get-SettingsFromFile")
     assert "Set-GameSpeed -Percent $GameSpeedPercentDefault" in without_mods
     assert "Set-GameSpeed -Percent $settings.GameSpeedPercent" in with_mods
     setting = body_of_function(script, "Set-GameSpeed")
@@ -604,14 +604,15 @@ def test_the_script_sets_the_speed_of_the_game_with_and_without_mods():
 
 def test_the_settings_window_shows_and_saves_the_speed_of_the_game():
     window = read_packaging_file("Settings.ps1")
-    assert "GameSpeedPercent   = [int] $GameSpeedBox.Value" in body_of_function(window, "Get-ChosenSettings")
-    resetting = body_of_function(window, "Reset-ChosenSettings")
+    shown = body_of_function(window, "Get-SettingsFromWindow")
+    assert "GameSpeedPercent   = [int] $GameSpeedBox.Value" in shown
+    resetting = body_of_function(window, "Reset-SettingsWindow")
     assert "$GameSpeedBox.Value = $GameSpeedPercentDefault" in resetting
     assert "-Minimum $GameSpeedPercentMinimum -Maximum $GameSpeedPercentMaximum" in window
 
 
 def test_the_settings_code_never_stops_the_game_for_a_value_it_cannot_use():
-    reading = body_of_function(read_packaging_file("settings-file.ps1"), "Read-PlayerSettings")
+    reading = body_of_function(read_packaging_file("settings-file.ps1"), "Read-SettingsFile")
     assert "catch {" in reading  # a file that is not JSON at all is a problem to report
     assert "$problems.Add(" in reading
     assert "throw" not in reading
@@ -697,7 +698,7 @@ def test_the_window_and_the_script_share_the_code_that_reads_the_settings():
     # about an incomplete package, not a PowerShell error) and before anything uses it.
     checked = script.index("$missingFile = Find-MissingFile")
     loaded = script.index(". $SettingsLibraryPath")
-    used = script.index("Initialize-Mods -BuildDirectory")
+    used = script.index("Initialize-ModSetup -BuildDirectory")
     assert checked < loaded < used
 
 

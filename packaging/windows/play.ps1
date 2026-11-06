@@ -504,9 +504,9 @@ function Install-GameModule {
 # Reads the settings that the player chose in Settings.bat. Whatever cannot be used is reported and
 # left at its default, so that a typing mistake in settings.json never stops the game from starting.
 # While the player has not saved any settings (there is no file) a line says where to choose them.
-function Get-PlayerSettings {
+function Get-SettingsFromFile {
     if (-not (Test-Path -LiteralPath $SettingsPath -PathType Leaf)) { Write-Host (Get-Message 'SettingsHint') }
-    $read = Read-PlayerSettings -Path $SettingsPath -ModIds $AllModIds
+    $read = Read-SettingsFile -Path $SettingsPath -ModIds $AllModIds
     if ($read.Problems.Count -gt 0) {
         $problems = $read.Problems -join '; '
         Add-LogLine ('Settings problems: ' + $problems)
@@ -524,7 +524,7 @@ function Get-PlayerSettings {
 #
 # The mods are an addition to the game, so a failure here is a warning and not an error: the game
 # starts anyway, and the log says what went wrong. What the tools say goes to the log only.
-function Install-Mods {
+function Install-Mod {
     param(
         [Parameter(Mandatory)] [string] $BuildDirectory,
         [Parameter(Mandatory)] [string[]] $ModIds
@@ -569,7 +569,7 @@ function Install-Mods {
 # Takes the given mods out of the player's folder, so that the game is played without them. They
 # are always mods of this package (ids from game.psd1): a mod that the player put there by hand
 # stays.
-function Remove-InstalledMods {
+function Remove-InstalledMod {
     param([AllowEmptyCollection()] [string[]] $ModIds = @())
     foreach ($modId in $ModIds) {
         $installedMod = Join-Path $InstalledModsDirectory ($modId + '.mgm')
@@ -621,31 +621,31 @@ function Set-GameSpeed {
 # speed of the character is given to the speed mod. -PlayerSpeed is for this run only and wins over
 # the speed that was saved. The speed of the whole game is set here too, because it comes from the
 # same settings; with -NoMods the game runs at its normal speed, as it is on the disc.
-function Initialize-Mods {
+function Initialize-ModSetup {
     param([Parameter(Mandatory)] [string] $BuildDirectory)
 
     if ($NoMods) {
-        Remove-InstalledMods -ModIds $AllModIds
+        Remove-InstalledMod -ModIds $AllModIds
         Write-Host (Get-Message 'ModsOff')
         Set-GameSpeed -Percent $GameSpeedPercentDefault
         return
     }
 
-    $settings = Get-PlayerSettings
-    $enabledModIds = @(Get-EnabledModIds -Settings $settings)
+    $settings = Get-SettingsFromFile
+    $enabledModIds = @(Get-EnabledModId -Settings $settings)
     $disabledModIds = @($AllModIds | Where-Object { $enabledModIds -notcontains $_ })
     Add-LogLine ('Mods turned on in the settings: ' + ($enabledModIds -join ', '))
 
     # The mods that are off are taken out first, so that they are not in the game even if the
     # building of the others fails.
-    Remove-InstalledMods -ModIds $disabledModIds
+    Remove-InstalledMod -ModIds $disabledModIds
     if ($enabledModIds.Count -eq 0 -and $disabledModIds.Count -gt 0) {
         Write-Host (Get-Message 'AllModsTurnedOff')
     }
     elseif ($disabledModIds.Count -gt 0) {
         Write-Host (Get-Message 'ModsTurnedOff' ($disabledModIds -join ', '))
     }
-    if ($enabledModIds.Count -gt 0) { Install-Mods -BuildDirectory $BuildDirectory -ModIds $enabledModIds }
+    if ($enabledModIds.Count -gt 0) { Install-Mod -BuildDirectory $BuildDirectory -ModIds $enabledModIds }
 
     $percent = $settings.PlayerSpeedPercent
     if ($null -ne $PlayerSpeed) { $percent = $PlayerSpeed }
@@ -703,7 +703,7 @@ try {
     $builtModule = New-GameModule -ModulesDirectory $modulesDirectory
     $installedModule = Install-GameModule -ModulePath $builtModule
     Add-LogLine ('Module: ' + $installedModule)
-    Initialize-Mods -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
+    Initialize-ModSetup -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
     Write-Host (Get-Message 'GamePrepared')
 
     if (-not $PrepareOnly) {
