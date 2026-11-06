@@ -60,14 +60,26 @@ entienda qué hace y por qué, sin tener que preguntarle a nadie.
 - Lo que se pueda probar sin el juego se prueba con DOLs sintéticos
   (`tests/synthetic.py`, cuyas codificaciones se comparan con capstone).
 
-### C / C++ (recompilador y runtime, próximas fases)
+### C++ (runtime nativo, `runtime/`)
 
-- C++20 para el runtime, C17 para el código generado.
-- `clang-format` con la configuración que se agregará en esa fase.
-- `snake_case` para funciones y variables, `PascalCase` para tipos,
-  `UPPER_SNAKE_CASE` para constantes y macros.
-- El código generado por el recompilador **no se edita a mano**: si algo
-  está mal, se corrige el recompilador, los símbolos o un parche.
+- C++20, compilado con Clang (el código traducido está escrito para Clang).
+- Formato con `clang-format` 18 (`runtime/.clang-format`) y nombres revisados
+  con `clang-tidy` 18 (`runtime/.clang-tidy`). Antes de hacer commit, con
+  `build/native/runtime` configurado con `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`:
+  ```sh
+  clang-format -i runtime/src/*.cpp runtime/src/*.h runtime/src/*/*.cpp runtime/src/*/*.h
+  run-clang-tidy -p build/native/runtime 'runtime/src/.*\.cpp$'
+  ```
+- `snake_case` para funciones, variables y namespaces; `PascalCase` para
+  tipos; `UPPER_SNAKE_CASE` para constantes, valores de enum y macros. Los
+  miembros privados de una clase terminan en `_`.
+- Los nombres que vienen de fuera se escriben como allá: los de la ABI de
+  WiiCompiled, que el código traducido llama por su nombre (`PPC_ReadSpr`,
+  `Memory::GetPointer`), y los reemplazos nativos, que se llaman como la
+  función del juego que reemplazan más `Native` (`OSLoadContextNative`), para
+  que una búsqueda encuentre las dos.
+- El código generado **no se edita a mano**: si algo está mal, se corrige el
+  traductor, los símbolos o un parche.
 
 ### Estructura del repositorio
 
@@ -81,13 +93,15 @@ Sigue las convenciones de [dtk-template](https://github.com/encounter/dtk-templa
 | `tools/` | Herramientas de análisis. |
 | `tests/` | Pruebas. |
 | `docs/` | Documentación bilingüe. |
-| `recompiler/`, `runtime/`, `patches/` | Fases 1 y 2 (todavía no existen). |
+| `runtime/` | El runtime nativo (fase 2): el código del juego, traducido, corre sobre él sin Dolphin. |
+| `patches/` | Parches opcionales para componentes de terceros (ModernGekko). |
 
 ### Datos del juego
 
-Nunca se suben al repositorio: ni el DOL, ni assets extraídos, ni el código C
-que genere el recompilador (se deriva del código del juego). Como en
-N64Recomp, todo eso se genera en tu máquina a partir de tu propia copia.
+Nunca se suben al repositorio: ni el DOL, ni assets extraídos, ni el código
+que generen el recompilador o el traductor (se deriva del código del juego).
+Como en N64Recomp, todo eso se genera en tu máquina a partir de tu propia
+copia.
 
 ### Commits
 
@@ -152,14 +166,26 @@ it does and why, without having to ask anyone.
 - Whatever can be tested without the game is tested on synthetic DOLs
   (`tests/synthetic.py`, whose encodings are checked against capstone).
 
-### C / C++ (recompiler and runtime, later phases)
+### C++ (native runtime, `runtime/`)
 
-- C++20 for the runtime, C17 for generated code.
-- `clang-format` with the configuration added in that phase.
-- `snake_case` for functions and variables, `PascalCase` for types,
-  `UPPER_SNAKE_CASE` for constants and macros.
-- Recompiler output is **never edited by hand**: if something is wrong, fix
-  the recompiler, the symbols or a patch.
+- C++20, compiled with Clang (the translated code is written for Clang).
+- Formatting with `clang-format` 18 (`runtime/.clang-format`) and names
+  checked with `clang-tidy` 18 (`runtime/.clang-tidy`). Before committing,
+  with `build/native/runtime` configured with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`:
+  ```sh
+  clang-format -i runtime/src/*.cpp runtime/src/*.h runtime/src/*/*.cpp runtime/src/*/*.h
+  run-clang-tidy -p build/native/runtime 'runtime/src/.*\.cpp$'
+  ```
+- `snake_case` for functions, variables and namespaces; `PascalCase` for
+  types; `UPPER_SNAKE_CASE` for constants, enum values and macros. Private
+  members of a class end in `_`.
+- Names that come from elsewhere are spelled as they are there: those of
+  WiiCompiled's ABI, which the translated code calls by name (`PPC_ReadSpr`,
+  `Memory::GetPointer`), and the native replacements, named after the game
+  function they replace plus `Native` (`OSLoadContextNative`), so that a search
+  finds both.
+- Generated code is **never edited by hand**: if something is wrong, fix the
+  translator, the symbols or a patch.
 
 ### Repository layout
 
@@ -173,13 +199,14 @@ Follows the conventions of [dtk-template](https://github.com/encounter/dtk-templ
 | `tools/` | Analysis tools. |
 | `tests/` | Tests. |
 | `docs/` | Bilingual documentation. |
-| `recompiler/`, `runtime/`, `patches/` | Phases 1 and 2 (not there yet). |
+| `runtime/` | The native runtime (phase 2): the game's code, translated, runs on it without Dolphin. |
+| `patches/` | Optional patches for third-party components (ModernGekko). |
 
 ### Game data
 
-Never committed: not the DOL, not extracted assets, not the C code the
-recompiler generates (it is derived from the game's code). As with
-N64Recomp, all of it is generated on your machine from your own copy.
+Never committed: not the DOL, not extracted assets, not the code the
+recompiler or the translator generates (it is derived from the game's code).
+As with N64Recomp, all of it is generated on your machine from your own copy.
 
 ### Commits
 
