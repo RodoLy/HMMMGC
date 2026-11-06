@@ -16,9 +16,10 @@ that belong to one function of the Nintendo SDK only:
 - the bit field it inserts into that state (rlwimi: shift, first bit, last bit);
 - the SDK functions it calls.
 
-The table EVIDENCE holds those facts, one row per function. The tests check that the code has them, and
-that no other function of the GX library does: a row that fitted two functions would not identify either.
-The register numbers are Dolphin's (Source/Core/VideoCommon/BPMemory.h and XFMemory.h).
+The table EVIDENCE holds those facts, one row per function (tools/code_facts.py reads them from the code).
+The tests check that the code has them, and that no other function of the GX library does: a row that
+fitted two functions would not identify either. The register numbers are Dolphin's
+(Source/Core/VideoCommon/BPMemory.h and XFMemory.h).
 
 La base de firmas (tools/sdk_signatures.py) no pudo nombrar estas: algunas tienen la misma forma de código
 que una hermana y se distinguen solo por un inmediato (GXSetTevColorIn y GXSetTevAlphaIn, GXSetLineWidth y
@@ -31,106 +32,26 @@ ninguna otra función de GX los tiene: una fila que sirviera para dos funciones 
 """
 
 import os
-import struct
 import sys
-from collections.abc import Set
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+from code_facts import CodeFacts, Evidence, read_code_facts  # noqa: E402
 from find_library_entry_points import functions_in, stretches_of_library  # noqa: E402
 
 from dol import Dol  # noqa: E402
-from function_finder import INSTRUCTION_SIZE  # noqa: E402
-from ppc import (  # noqa: E402
-    MEMORY_OPCODES,
-    OPCODE_ADD_IMMEDIATE,
-    OPCODE_ADD_IMMEDIATE_SHIFTED,
-    OPCODE_COMPARE_IMMEDIATE,
-    OPCODE_COMPARE_LOGICAL_IMMEDIATE,
-    OPCODE_OR_IMMEDIATE,
-    Instruction,
-)
+from function_finder import find_small_data_bases  # noqa: E402
 from project import SYMBOLS_PATH  # noqa: E402
-from symbols import Symbol, SymbolTable  # noqa: E402
+from symbols import SymbolTable  # noqa: E402
 
 DOL_PATH = os.environ.get("HM_MM_DOL")
 needs_game_files = pytest.mark.skipif(
     not DOL_PATH or not Path(DOL_PATH).is_file(),
     reason="set HM_MM_DOL to your extracted main.dol",
 )
-
-OPCODE_ROTATE_LEFT_THEN_MASK_INSERT = 20  # rlwimi
-# The instructions that carry a 16-bit constant: li/addi, lis/addis, ori and the two compares.
-OPCODES_WITH_A_CONSTANT = {
-    OPCODE_ADD_IMMEDIATE,
-    OPCODE_ADD_IMMEDIATE_SHIFTED,
-    OPCODE_OR_IMMEDIATE,
-    OPCODE_COMPARE_IMMEDIATE,
-    OPCODE_COMPARE_LOGICAL_IMMEDIATE,
-}
-
-# A bit field written with rlwimi: (rotate left by, first bit, last bit), bits numbered from the left.
-InsertedField = tuple[int, int, int]
-
-
-@dataclass(frozen=True)
-class Facts:
-    """What the code of one function holds that identifies it."""
-
-    size: int
-    constants: frozenset[int]  # the 16-bit constants of li, lis, addi, addis, ori, cmpwi and cmplwi
-    offsets: frozenset[int]  # the displacements of loads and stores, signed
-    callees: frozenset[str]  # the names of the functions it calls with bl (placeholders included)
-    inserted_fields: frozenset[InsertedField]
-
-
-def read_facts(dol: Dol, function: Symbol, symbols: SymbolTable) -> Facts:
-    words = struct.unpack(f">{function.size // INSTRUCTION_SIZE}I", dol.read(function.address, function.size))
-    constants, offsets, callees, inserted_fields = set(), set(), set(), set()
-    for index, word in enumerate(words):
-        instruction = Instruction(function.address + index * INSTRUCTION_SIZE, word)
-        if instruction.opcode in OPCODES_WITH_A_CONSTANT:
-            constants.add(instruction.unsigned_immediate)
-        elif instruction.opcode in MEMORY_OPCODES:
-            offsets.add(instruction.displacement)
-        elif instruction.opcode == OPCODE_ROTATE_LEFT_THEN_MASK_INSERT:
-            inserted_fields.add((instruction.shift_amount, instruction.mask_begin, instruction.mask_end))
-        elif instruction.is_call:
-            callee = symbols.by_address.get(instruction.branch_target())
-            callees.add(callee.name if callee else f"0x{instruction.branch_target():08X}")
-    return Facts(
-        function.size,
-        frozenset(constants),
-        frozenset(offsets),
-        frozenset(callees),
-        frozenset(inserted_fields),
-    )
-
-
-@dataclass(frozen=True)
-class Evidence:
-    """The name of a function, where it is, how big it is and the facts that identify it."""
-
-    address: int
-    name: str
-    size: int
-    constants: Set[int] = frozenset()
-    offsets: Set[int] = frozenset()
-    callees: Set[str] = frozenset()
-    inserted_fields: Set[InsertedField] = frozenset()
-
-    def is_met_by(self, facts: Facts) -> bool:
-        return (
-            facts.size == self.size
-            and self.constants <= facts.constants
-            and self.offsets <= facts.offsets
-            and self.callees <= facts.callees
-            and self.inserted_fields <= facts.inserted_fields
-        )
 
 
 # The offsets are into GXData, the state block of the library. The ones that appear in several rows:
@@ -276,10 +197,18 @@ def dol() -> Dol:
 
 
 @pytest.fixture(scope="module")
-def facts_by_address(dol, symbols) -> dict[int, Facts]:
+def small_data_bases(dol) -> dict[int, int]:
+    return find_small_data_bases(dol)
+
+
+@pytest.fixture(scope="module")
+def facts_by_address(dol, symbols, small_data_bases) -> dict[int, CodeFacts]:
     """The facts of every function of the GX library, by address."""
     gx_functions = functions_in(symbols, stretches_of_library(symbols, "GX"))
-    return {function.address: read_facts(dol, function, symbols) for function in gx_functions}
+    return {
+        function.address: read_code_facts(dol, function, symbols, small_data_bases)
+        for function in gx_functions
+    }
 
 
 @needs_game_files
@@ -290,15 +219,8 @@ def test_the_function_has_the_name_the_size_and_the_facts_of_the_table(evidence,
     assert symbol.address == evidence.address
     assert symbol.size == evidence.size
 
-    facts = facts_by_address[evidence.address]
-    assert evidence.constants <= facts.constants, (
-        f"constants not found: {evidence.constants - facts.constants}"
-    )
-    assert evidence.offsets <= facts.offsets, f"offsets not found: {evidence.offsets - facts.offsets}"
-    assert evidence.callees <= facts.callees, f"calls not found: {evidence.callees - facts.callees}"
-    assert evidence.inserted_fields <= facts.inserted_fields, (
-        f"bit fields not found: {evidence.inserted_fields - facts.inserted_fields}"
-    )
+    missing = evidence.missing_facts(facts_by_address[evidence.address])
+    assert not missing, f"not found in the code: {missing}"
 
 
 @needs_game_files
@@ -312,18 +234,22 @@ def test_no_other_function_of_the_gx_library_has_the_same_facts(evidence, facts_
 
 
 @needs_game_files
-def test_the_draw_sync_setter_writes_the_variable_the_token_interrupt_handler_reads(symbols, dol):
+def test_the_draw_sync_setter_writes_the_variable_the_token_interrupt_handler_reads(
+    symbols, dol, small_data_bases
+):
     """The variable at -0x6BE8 off r13 holds the callback of the token (draw sync) interrupt."""
-    setter = read_facts(dol, symbols.by_name("GXSetDrawSyncCallback"), symbols)
-    handler = read_facts(dol, symbols.by_name("GXTokenInterruptHandler"), symbols)
+    setter = read_code_facts(dol, symbols.by_name("GXSetDrawSyncCallback"), symbols, small_data_bases)
+    handler = read_code_facts(dol, symbols.by_name("GXTokenInterruptHandler"), symbols, small_data_bases)
     assert -0x6BE8 in setter.offsets
     assert -0x6BE8 in handler.offsets
 
 
 @needs_game_files
-def test_each_copy_source_setter_writes_the_state_that_its_copy_function_reads(symbols, dol):
-    disp_copy = read_facts(dol, symbols.by_name("GXCopyDisp"), symbols)
-    tex_copy = read_facts(dol, symbols.by_name("GXCopyTex"), symbols)
+def test_each_copy_source_setter_writes_the_state_that_its_copy_function_reads(
+    symbols, dol, small_data_bases
+):
+    disp_copy = read_code_facts(dol, symbols.by_name("GXCopyDisp"), symbols, small_data_bases)
+    tex_copy = read_code_facts(dol, symbols.by_name("GXCopyTex"), symbols, small_data_bases)
     assert {0x1E0, 0x1E4} <= disp_copy.offsets
     assert {0x1F0, 0x1F4} <= tex_copy.offsets
     assert not {0x1F0, 0x1F4} & disp_copy.offsets  # each reads only its own
