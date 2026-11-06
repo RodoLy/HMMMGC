@@ -33,6 +33,10 @@ disco (ISO, GCM o RVZ).
   palabras inventadas sí encontró una laguna de DolRecomp (`mtfsb1`) y un error
   del intérprete de Dolphin (`addme` y `subfme`), que el juego no usa. Los
   límites de todo esto, en [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Fase 2 empezada:** con un runtime propio (`runtime/`), el código del juego
+  ya corre sin nada de Dolphin desde su primera instrucción hasta su bucle de
+  cuadros, y lee sus archivos del disco; todavía no hay imagen, sonido ni
+  control ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -145,6 +149,10 @@ This repository contains no game data. You need your own backup of the disc
   gap in DolRecomp (`mtfsb1`) and a bug in Dolphin's interpreter (`addme` and
   `subfme`), which the game does not use. The limits of all this are in
   [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Phase 2 started:** with a runtime of our own (`runtime/`), the game's code
+  already runs with nothing from Dolphin from its first instruction to its
+  frame loop, and reads its files from the disc; there is no picture, sound or
+  controller yet ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and

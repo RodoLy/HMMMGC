@@ -176,20 +176,25 @@ pieza por pieza, en el orden de arriba)
 - [x] Identificar el SDK por firma (hecho en la fase 0).
 - [x] Análisis estático de viabilidad: qué pide el juego de GX y qué tiene
       aurora ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
+- [x] Primer arranque sin Dolphin: el código del juego, traducido por
+      WiiCompiled, corre con un runtime propio (`runtime/`) desde `__start`
+      hasta su bucle de cuadros y lee sus archivos del disco; todavía sin
+      imagen, sonido ni control ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
 - [ ] Experimento de viabilidad: las llamadas de GX del juego dibujan la
       pantalla de título con aurora. Necesita compilar aurora y una PC con
       GPU; antes hay que decidir cómo se obtiene Dawn en Windows ARM64.
 - [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). Referencia:
       Dolphin para la semántica de GX; Wiicompiled (Mario Kart Wii) para la
       arquitectura de un recomp.
-- [ ] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
-      instantáneas).
+- [x] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
+      instantáneas). En el runtime nativo, la unidad lee el disco extraído.
 - [ ] CARD → archivos de guardado en disco (aurora lee los `.gci` y `.raw` de
       Dolphin).
 - [ ] PAD → SDL gamepad y teclado.
 - [ ] Audio AX → SDL/miniaudio.
-- [ ] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
-      el núcleo de Dolphin.
+- [x] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
+      el núcleo de Dolphin. Este juego tiene un solo hilo; las interrupciones
+      se atienden donde el juego las vuelve a activar.
 - [ ] Quitar el núcleo de Dolphin del runtime; mientras dure la migración,
       comparar contra él (verificador lockstep, capturas de pantalla).
 - [ ] Hito 1.0: jugable de principio a fin a 480p 4:3 sin código de Dolphin.
@@ -634,19 +639,25 @@ by piece, in the order above)
 - [x] Identify the SDK by signature (done in phase 0).
 - [x] Static feasibility analysis: what the game asks of GX and what aurora has
       ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
+- [x] First boot without Dolphin: the game's code, translated by WiiCompiled,
+      runs on a runtime of our own (`runtime/`) from `__start` to its frame
+      loop and reads its files from the disc; no picture, sound or controller
+      yet ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
 - [ ] Feasibility experiment: the game's GX calls draw the title screen with
       aurora. It needs aurora built and a PC with a GPU; how to get Dawn on
       Windows ARM64 has to be decided first.
 - [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). Reference:
       Dolphin for GX semantics; Wiicompiled (Mario Kart Wii) for recomp
       architecture.
-- [ ] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
+- [x] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
+      In the native runtime, the drive reads the extracted disc.
 - [ ] CARD → save files on disk (aurora reads Dolphin's `.gci` and `.raw`
       files).
 - [ ] PAD → SDL gamepad and keyboard.
 - [ ] AX audio → SDL/miniaudio.
-- [ ] Operating system: threads, alarms, interrupts and video retraces without
-      the Dolphin core.
+- [x] Operating system: threads, alarms, interrupts and video retraces without
+      the Dolphin core. This game has a single thread; interrupts are taken
+      where the game turns them back on.
 - [ ] Remove the Dolphin core from the runtime; while the migration lasts,
       compare against it (lockstep verifier, screenshots).
 - [ ] Milestone 1.0: playable start to finish at 480p 4:3 with no Dolphin code.
