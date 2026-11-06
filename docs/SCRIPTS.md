@@ -763,6 +763,19 @@ casa ya tenía cama grande). La partida quedó con el valor 43 en 255, la fecha
 de nacimiento en otoño 20, `save + 0x4808` en 2, el bit 5 en Jamie, el `0xDD`
 marcado y 54 notas.
 
+Después se siguió jugando con las dos. Las copias son del día de la boda, así
+que la primera vez que el jugador habla con Jamie sale la conversación en que
+le pregunta cómo llamarlo (el bit 3 de sus bits de personaje), que va antes
+que las demás; las frases especiales solo salen en la primera conversación
+del día. Con la primera, la mañana del 20 salió esa pregunta y la del 21 la
+frase 10 de Jamie, sobre el embarazo; el bit 4 se apagó. Con la segunda, tras
+el parto el bebé estaba en la cuna de la casa (un actor de tipo 8, el
+personaje 45, que el jugador puede cargar); la mañana del 20 salió la
+pregunta y la del 21 la frase 11, sobre el parto; el bit 5 se apagó. El juego
+elige al hijo sin mirar a la pareja: `fn_80046F7C` escribe en
+`save + 0x22F4` el 45 o el 46 según la bandera `0xC7`, o 126 mientras el
+valor 43 no sea 255.
+
 ### Qué no está verificado
 
 - La prueba usó condiciones escritas a mano sobre un estado guardado, con el
@@ -803,11 +816,10 @@ marcado y 54 notas.
 - El embarazo y el parto de Jamie se probaron con los contadores escritos a
   mano (días de casados, el contador, la amistad y los días de embarazo; en
   la primera prueba también la bandera de la mañana), no en una partida que
-  llegue sola a ellos. Tampoco
-  se vieron las conversaciones que siguen (la frase 10 de Jamie al día
-  siguiente del embarazo, la 11 tras el parto) ni la vida con el hijo cuando
-  la pareja es Jamie: el juego podría elegir algo del hijo por el número de
-  la pareja.
+  llegue sola a ellos. Tampoco se vio al hijo crecer (qué cambia la bandera
+  `0xC7`) ni los eventos del hijo con Jamie de pareja: el de la pareja que
+  pregunta qué día es (`Eve_memo01`, que incluye el cumpleaños del hijo) y la
+  revisión (`Eve_memo04`).
 - **La cama grande.** Tras el parto, Woody trae la cuna y se abre la
   pantalla de muebles, que no se cierra mientras el jugador casado no tenga
   una cama grande (Bed L, los objetos `0x2F5` a `0x2F8`) en la casa
@@ -1584,6 +1596,19 @@ furniture screen closed as soon as it was placed (the house already had a
 big bed). The save data ended with value 43 at 255, the date of birth on
 autumn 20, `save + 0x4808` at 2, bit 5 on Jamie, `0xDD` marked and 54 notes.
 
+Then both were played on. The copies are from the day of the wedding, so the
+first time the player talks to Jamie comes the conversation where Jamie asks
+what to call the player (bit 3 of Jamie's character bits), which goes before
+the others; the special lines only come in the first conversation of the
+day. With the first, on the morning of the 20th came that question and on
+the 21st Jamie's line 10, about the pregnancy; bit 4 was cleared. With the
+second, after the birth the baby was in the crib at home (an actor of type 8,
+character 45, which the player can pick up); on the morning of the 20th came
+the question and on the 21st line 11, about the birth; bit 5 was cleared.
+The game chooses the child without looking at the spouse: `fn_80046F7C`
+writes 45 or 46 to `save + 0x22F4` according to flag `0xC7`, or 126 while
+value 43 is not 255.
+
 ### What is not verified
 
 - The test used hand-written conditions on a saved state, with index 26
@@ -1625,11 +1650,10 @@ autumn 20, `save + 0x4808` at 2, bit 5 on Jamie, `0xDD` marked and 54 notes.
 - Jamie's pregnancy and birth were tried with the counters written by hand
   (days of marriage, the counter, the friendship and the days of pregnancy;
   in the first test also the morning flag), not in a game that reaches them
-  by itself. Nor were the
-  conversations that follow seen (Jamie's line 10 the day after the
-  pregnancy, line 11 after the birth), or life with the child when the spouse
-  is Jamie: the game might choose something about the child by the spouse's
-  number.
+  by itself. Nor was the child seen growing up (what flag `0xC7` changes), or
+  the child's events with Jamie as the spouse: the one where the spouse asks
+  what day it is (`Eve_memo01`, which includes the child's birthday) and the
+  checkup (`Eve_memo04`).
 - **The big bed.** After the birth, Woody brings the crib and the furniture
   screen opens, and it does not close while the married player has no big
   bed (Bed L, items `0x2F5` to `0x2F8`) in the house (`fn_800D9428`; the
