@@ -24,6 +24,12 @@ Wii). Es el mismo camino que esta pista eligió el 2026-11-04, así que el orden
 de abajo se mantiene, ahora con WiiCompiled como referencia de un runtime que
 ya funciona con aurora; falta estudiar cuánto de él sirve para un juego de
 GameCube. Mientras tanto, la base que juega sigue siendo ModernGekko.
+Varios proyectos ya la usan de base: New Super Mario Bros. Wii, KartPad (iOS,
+macOS, Android), DriftDroid (Android) y WebCompiled (navegador). Su traductor
+lee cualquier DOL; lo que hay que poner por juego es el runtime (audio,
+controles, GX, disco). Primer paso: traducir el `main.dol` de este juego con
+su traductor y llevarlo hasta la pantalla de título con su runtime, viendo
+qué le falta para GameCube (memory card en vez de NAND, sin IOS).
 
 **Meta: un port totalmente nativo, sin código de Dolphin.** Hoy es un híbrido:
 el código del juego ya corre recompilado como código nativo en Windows ARM64,
@@ -263,6 +269,12 @@ is the same road that this track chose on 2026-11-04, so the order below
 stays, now with WiiCompiled as the reference of a runtime that already works
 with aurora; how much of it serves a GameCube game is still to be studied.
 Meanwhile, the base that plays is still ModernGekko.
+Several projects already use it as their base: New Super Mario Bros. Wii,
+KartPad (iOS, macOS, Android), DriftDroid (Android) and WebCompiled (browser).
+Its translator reads any DOL; what each game has to add is the runtime (audio,
+input, GX, disc). First step: translate this game's `main.dol` with its
+translator and take it to the title screen with its runtime, seeing what it
+lacks for GameCube (memory card instead of NAND, no IOS).
 
 **Goal: a fully native port, with no Dolphin code.** Today it is a hybrid: the
 game's code already runs recompiled as native code on Windows ARM64, but the
