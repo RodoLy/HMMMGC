@@ -582,14 +582,16 @@ function Remove-InstalledMod {
 # environment of their parent, so the variable reaches the mod whether the game is opened through
 # the launcher or with -Keyboard. With no speed ($null) nothing is set, and the mod uses its own
 # default (or what the player put in the variable by hand). While the mod is off there is nothing to
-# tell, and a speed that was asked for on the command line is reported as without effect.
+# tell, and a speed that was asked for on the command line ($AskedForThisRun) is reported as without
+# effect.
 function Set-PlayerSpeed {
     param(
         [Nullable[int]] $Percent,
-        [Parameter(Mandatory)] [bool] $ModIsOn
+        [Parameter(Mandatory)] [bool] $ModIsOn,
+        [bool] $AskedForThisRun = $false
     )
     if (-not $ModIsOn) {
-        if ($null -ne $PlayerSpeed) { Write-Host (Get-Message 'PlayerSpeedIgnored') }
+        if ($AskedForThisRun) { Write-Host (Get-Message 'PlayerSpeedIgnored') }
         return
     }
     if ($null -eq $Percent) { return }
@@ -620,9 +622,14 @@ function Set-GameSpeed {
 # turn off are taken out of the player's folder (so a mod that was on before stops being on), and the
 # speed of the character is given to the speed mod. -PlayerSpeed is for this run only and wins over
 # the speed that was saved. The speed of the whole game is set here too, because it comes from the
-# same settings; with -NoMods the game runs at its normal speed, as it is on the disc.
+# same settings; with -NoMods the game runs at its normal speed, as it is on the disc. -NoMods and
+# -PlayerSpeed are the parameters of this script, passed on.
 function Initialize-ModSetup {
-    param([Parameter(Mandatory)] [string] $BuildDirectory)
+    param(
+        [Parameter(Mandatory)] [string] $BuildDirectory,
+        [switch] $NoMods,
+        [Nullable[int]] $PlayerSpeed
+    )
 
     if ($NoMods) {
         Remove-InstalledMod -ModIds $AllModIds
@@ -649,7 +656,8 @@ function Initialize-ModSetup {
 
     $percent = $settings.PlayerSpeedPercent
     if ($null -ne $PlayerSpeed) { $percent = $PlayerSpeed }
-    Set-PlayerSpeed -Percent $percent -ModIsOn ($enabledModIds -contains $PlayerSpeedModId)
+    Set-PlayerSpeed -Percent $percent -ModIsOn ($enabledModIds -contains $PlayerSpeedModId) `
+        -AskedForThisRun ($null -ne $PlayerSpeed)
     Set-GameSpeed -Percent $settings.GameSpeedPercent
 }
 
@@ -703,7 +711,8 @@ try {
     $builtModule = New-GameModule -ModulesDirectory $modulesDirectory
     $installedModule = Install-GameModule -ModulePath $builtModule
     Add-LogLine ('Module: ' + $installedModule)
-    Initialize-ModSetup -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build')
+    Initialize-ModSetup -BuildDirectory (Join-Path (Split-Path -Parent $modulesDirectory) 'mods-build') `
+        -NoMods:$NoMods -PlayerSpeed $PlayerSpeed
     Write-Host (Get-Message 'GamePrepared')
 
     if (-not $PrepareOnly) {
