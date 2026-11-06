@@ -40,6 +40,7 @@ def test_encoders_match_capstone():
         ppc_encode.slwi(0, 3, 2): "slwi r0, r3, 2",
         ppc_encode.srwi(3, 9, 31): "srwi r3, r9, 0x1f",
         ppc_encode.rlwinm(5, 6, 0, 21, 19): "rlwinm r5, r6, 0, 0x15, 0x13",
+        ppc_encode.rlwimi(5, 4, 8, 16, 23): "rlwimi r5, r4, 8, 0x10, 0x17",
         ppc_encode.lwzx(0, 4, 0): "lwzx r0, r4, r0",
         ppc_encode.mr(31, 3): "mr r31, r3",
         ppc_encode.or_(9, 10, 8): "or r9, r10, r8",

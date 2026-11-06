@@ -26,6 +26,7 @@ OPCODE_ADDI = 14
 OPCODE_ADDIS = 15
 OPCODE_BC = 16
 OPCODE_B = 18
+OPCODE_RLWIMI = 20
 OPCODE_RLWINM = 21
 OPCODE_ORI = 24
 OPCODE_ANDI_RECORD = 28
@@ -161,6 +162,17 @@ def rlwinm(ra: int, rs: int, shift: int, mask_begin: int, mask_end: int) -> int:
     """
     return (
         (OPCODE_RLWINM << 26) | (rs << 21) | (ra << 16) | (shift << 11) | (mask_begin << 6) | (mask_end << 1)
+    )
+
+
+def rlwimi(ra: int, rs: int, shift: int, mask_begin: int, mask_end: int) -> int:
+    """rlwimi rA, rS, SH, MB, ME: rotate rS left by SH, then put its bits MB through ME into rA.
+
+    The other bits of rA are kept: it is how C code writes a bit field into a word. The bits are
+    numbered as in rlwinm.
+    """
+    return (
+        (OPCODE_RLWIMI << 26) | (rs << 21) | (ra << 16) | (shift << 11) | (mask_begin << 6) | (mask_end << 1)
     )
 
 
