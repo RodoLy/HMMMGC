@@ -11,6 +11,18 @@
 
 namespace aurora_host {
 
+// How the picture is shown, chosen by the player (main.cpp's options).
+struct DisplayOptions {
+    // The internal resolution, as a multiple of the console's (640x528 for this game): 0 follows
+    // the window's size (aurora's default), 3 renders 1920x1584, 6 about 4K. Above the window's
+    // size the picture is scaled down to it, which smooths the edges.
+    float resolution_scale = 0.f;
+    bool fullscreen = false;  // Alt+Enter switches while playing
+};
+
+// Stores the options for initialize(). Called before the game starts.
+void configure(const DisplayOptions& options);
+
 // Opens the window and the graphics device, and starts the first frame. Called before the
 // first function of the game that aurora implements (GXInit, or CARDInit if it comes
 // first); later calls do nothing. Exits the program with an error when no graphics device

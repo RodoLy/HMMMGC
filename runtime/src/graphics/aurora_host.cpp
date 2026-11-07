@@ -9,6 +9,7 @@
 
 #include <aurora/aurora.h>
 #include <aurora/event.h>
+#include <dolphin/vi.h>
 
 #include <SDL3/SDL.h>
 
@@ -36,6 +37,7 @@ bool g_window_closed = false;
 
 // Where aurora keeps its settings (controller mappings, texture replacements) and the
 // memory card, and where it keeps its caches (compiled pipelines).
+DisplayOptions g_display_options;
 std::string g_user_folder;
 std::string g_cache_folder;
 
@@ -105,6 +107,8 @@ void exit_if_window_closed() {
 
 }  // namespace
 
+void configure(const DisplayOptions& options) { g_display_options = options; }
+
 void initialize() {
     if (g_initialized) {
         return;
@@ -125,6 +129,7 @@ void initialize() {
     config.vsync = false;
     config.windowWidth = WINDOW_WIDTH;
     config.windowHeight = WINDOW_HEIGHT;
+    config.startFullscreen = g_display_options.fullscreen;
     config.logCallback = log_from_aurora;
     config.logLevel = LOG_INFO;
     // The game's memory belongs to the runtime (guest_memory.h); aurora needs none of its own.
@@ -141,8 +146,12 @@ void initialize() {
                            info.initializationError != nullptr ? info.initializationError : "unknown error");
         std::exit(EXIT_FAILURE);
     }
-    runtime_log::info("graphics", "aurora is drawing with backend %d in a %ux%u window", static_cast<int>(info.backend),
-                      info.windowSize.width, info.windowSize.height);
+    if (g_display_options.resolution_scale > 0.f) {
+        VISetFrameBufferScale(g_display_options.resolution_scale);
+    }
+    runtime_log::info("graphics", "aurora is drawing with backend %d in a %ux%u window, internal resolution %s",
+                      static_cast<int>(info.backend), info.windowSize.width, info.windowSize.height,
+                      g_display_options.resolution_scale > 0.f ? "fixed" : "following the window");
     g_initialized = true;
     begin_next_frame();
     exit_if_window_closed();
