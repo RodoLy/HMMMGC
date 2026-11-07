@@ -55,7 +55,7 @@ struct Options {
 constexpr const char* USAGE =
     "usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>] [--user-folder <folder>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
-    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--zoom <0.5-2>]";
+    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
 std::vector<std::string> split_mod_list(const std::string& value) {
@@ -96,6 +96,8 @@ Options parse_options(int argc, char** argv) {
             options.display.resolution_scale = std::clamp(std::stof(value), 0.f, 8.f);
         } else if (name == "--fullscreen") {
             options.display.fullscreen = value != "0";
+        } else if (name == "--widescreen") {
+            options.camera.widescreen = value != "0";
         } else if (name == "--zoom") {
             options.camera.zoom = std::stof(value);
         } else {

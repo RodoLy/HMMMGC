@@ -212,9 +212,17 @@ pieza por pieza, en el orden de arriba)
       runtime nativo, aurora dibuja al tamaño de la ventana (pantalla completa
       con Alt+Enter), y `--resolution-scale` la fija en 2 a 8 veces la de la
       consola (6: casi 4K), desde el launcher.
-- [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado. Aurora
-      trae widescreen y escalado, pero el HUD bien anclado y el culling siguen
-      siendo trabajo nuestro (un mod).
+- [x] Widescreen. En el runtime nativo, `--widescreen 1` (desde el launcher)
+      abre una ventana 16:9, aurora estira la imagen a toda la ventana y las
+      proyecciones en perspectiva se estrechan en la misma medida
+      (`graphics/camera_view.h`): el 3D conserva su forma y muestra más a los
+      lados, también en pantalla completa con la forma de la pantalla (16:10).
+      Las capas 2D (fondos, HUD, menús, textos) se estiran, como con los hacks
+      de widescreen de Dolphin. En el camino de la granja no se ve que falten
+      objetos a los lados.
+- [ ] HUD anclado en widescreen: dejar el HUD y los textos en 4:3 sin
+      tocar los fondos 2D a pantalla completa (pide distinguirlos por
+      función del juego).
 - [x] Nivel de zoom: acercar o alejar la cámara del juego, elegido por el
       jugador. En el runtime nativo, `--zoom` (0.5 a 2) cambia el campo de
       visión de las proyecciones en perspectiva (`graphics/camera_view.h`); el
@@ -705,9 +713,17 @@ by piece, in the order above)
       native runtime aurora draws at the window's size (full screen with
       Alt+Enter), and `--resolution-scale` fixes it at 2 to 8 times the
       console's (6: nearly 4K), from the launcher.
-- [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD. Aurora
-      brings widescreen and scaling, but a well-anchored HUD and culling remain
-      our work (a mod).
+- [x] Widescreen. In the native runtime, `--widescreen 1` (from the launcher)
+      opens a 16:9 window, aurora stretches the picture to the whole window and
+      the perspective projections narrow by as much
+      (`graphics/camera_view.h`): the 3D keeps its shape and shows more at the
+      sides, also in full screen with the screen's shape (16:10). The 2D layers
+      (backgrounds, HUD, menus, text) are stretched, as with Dolphin's
+      widescreen hacks. On the path by the farm no objects are seen missing
+      at the sides.
+- [ ] Anchored HUD in widescreen: keep the HUD and text 4:3 without
+      touching the full-screen 2D backgrounds (needs telling them apart by
+      the game's functions).
 - [x] Zoom level: bring the game's camera closer or farther, chosen by the
       player. In the native runtime, `--zoom` (0.5 to 2) changes the field of
       view of the perspective projections (`graphics/camera_view.h`); the HUD

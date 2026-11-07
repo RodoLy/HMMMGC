@@ -20,6 +20,7 @@
       --zoom              the camera's zoom (0.5 to 2: below 1 shows more around the player);
       --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
       --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
+      --widescreen        1 for a widescreen picture (the 3D shows more at the sides);
       HM_MM_PLAYER_SPEED_PERCENT, which the player_speed mod reads;
       --disc       the disc that the ModernGekko package extracted (%LOCALAPPDATA%\HarvestMoonMM\games\G4AEE9).
     What the game prints goes to native.log, next to the program.
@@ -88,6 +89,7 @@ $Texts = @{
         ResolutionAuto = 'As the window (Alt+Enter: full screen)'
         ResolutionTimes = '{0}x the console ({1}x{2})'
         Fullscreen = 'Start in full screen'
+        Widescreen = 'Widescreen (the 3D shows more at the sides; menus and text are stretched)'
         Play        = 'Play'
         Save        = 'Save'
         Close       = 'Close'
@@ -105,6 +107,7 @@ $Texts = @{
         ResolutionAuto = 'Como la ventana (Alt+Enter: pantalla completa)'
         ResolutionTimes = '{0}x la de la consola ({1}x{2})'
         Fullscreen = 'Empezar en pantalla completa'
+        Widescreen = 'Pantalla ancha (el 3D muestra más a los lados; los menús y textos se estiran)'
         Play        = 'Jugar'
         Save        = 'Guardar'
         Close       = 'Cerrar'
@@ -127,7 +130,7 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 function Read-Settings {
     $settings = [ordered] @{
         mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
-        cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false
+        cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false
     }
     foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
@@ -158,6 +161,7 @@ function Read-Settings {
     }
     if ($ResolutionScales -notcontains $settings.resolutionScale) { $settings.resolutionScale = 0 }
     $settings.fullscreen = [bool] $settings.fullscreen
+    $settings.widescreen = [bool] $settings.widescreen
     return $settings
 }
 
@@ -187,7 +191,7 @@ function Start-Game($Settings) {
     $gameSpeed = [int] $Settings.gameSpeedPercent
     # A decimal point whatever the language of Windows: the game reads "0.70", not "0,70".
     $zoom = ([int] $Settings.cameraZoomPercent / 100.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
-    $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen)"
+    $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen) --widescreen $([int] [bool] $Settings.widescreen)"
     $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed $display > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
         -WorkingDirectory $ProgramDirectory -WindowStyle Hidden
@@ -303,6 +307,11 @@ $FullscreenBox.Text = $Text.Fullscreen
 $FullscreenBox.AutoSize = $true
 $FullscreenBox.Checked = [bool] $Settings.fullscreen
 $Layout.Controls.Add($FullscreenBox)
+$WidescreenBox = New-Object System.Windows.Forms.CheckBox
+$WidescreenBox.Text = $Text.Widescreen
+$WidescreenBox.AutoSize = $true
+$WidescreenBox.Checked = [bool] $Settings.widescreen
+$Layout.Controls.Add($WidescreenBox)
 
 # The speed only matters while the speed mod is on.
 $UpdateSpeedEnabled = { $SpeedRow.Enabled = $CheckBoxes[$PlayerSpeedModId].Checked }
@@ -316,6 +325,7 @@ function Get-Choices {
     $Settings.cameraZoomPercent = [int] $ZoomRow.Tag.Value
     $Settings.resolutionScale = $ResolutionScales[$ResolutionList.SelectedIndex]
     $Settings.fullscreen = $FullscreenBox.Checked
+    $Settings.widescreen = $WidescreenBox.Checked
     return $Settings
 }
 

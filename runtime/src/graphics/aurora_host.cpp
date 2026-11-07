@@ -4,6 +4,7 @@
 
 #include "audio/audio_output.h"
 #include "game_clock.h"
+#include "graphics/camera_view.h"
 #include "player_folder.h"
 #include "runtime_log.h"
 
@@ -28,6 +29,7 @@ constexpr const char* WINDOW_TITLE = "Harvest Moon: Magical Melody";
 // copies 640x448 to the screen, and the video interface centres it in the 480 lines
 // with a border above and below; aurora keeps its proportions the same way.)
 constexpr uint32_t WINDOW_WIDTH = 640;
+constexpr uint32_t WIDESCREEN_WINDOW_WIDTH = 854;
 constexpr uint32_t WINDOW_HEIGHT = 480;
 // How long to wait for the window to accept frames again (while it is minimized).
 constexpr auto WAIT_FOR_WINDOW = std::chrono::milliseconds(16);
@@ -127,7 +129,8 @@ void initialize() {
     // The game paces itself on the video interface's retraces (hardware/video_interface.h);
     // waiting for the screen's refresh as well would pace it twice.
     config.vsync = false;
-    config.windowWidth = WINDOW_WIDTH;
+    // A 16:9 window for the widescreen picture: as tall as the 4:3 one, and wider.
+    config.windowWidth = camera_view::widescreen() ? WIDESCREEN_WINDOW_WIDTH : WINDOW_WIDTH;
     config.windowHeight = WINDOW_HEIGHT;
     config.startFullscreen = g_display_options.fullscreen;
     config.logCallback = log_from_aurora;
@@ -146,6 +149,8 @@ void initialize() {
                            info.initializationError != nullptr ? info.initializationError : "unknown error");
         std::exit(EXIT_FAILURE);
     }
+    camera_view::apply_to_aurora();
+    camera_view::set_window_size(info.windowSize.width, info.windowSize.height);
     if (g_display_options.resolution_scale > 0.f) {
         VISetFrameBufferScale(g_display_options.resolution_scale);
     }
@@ -173,6 +178,11 @@ bool process_events() {
     for (const AuroraEvent* event = aurora_update(); event != nullptr && event->type != AURORA_NONE; ++event) {
         if (event->type == AURORA_EXIT) {
             g_window_closed = true;
+        } else if (event->type == AURORA_WINDOW_RESIZED) {
+            const AuroraWindowSize& size = event->windowSize;
+            camera_view::set_window_size(size.width, size.height);
+            runtime_log::info("graphics", "window %ux%u, the game is drawn at %ux%u", size.width, size.height,
+                              size.fb_width, size.fb_height);
         }
     }
     return !g_window_closed;
