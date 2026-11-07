@@ -2,17 +2,20 @@
 
 Comprobaciones sobre las fuentes del runtime nativo que no necesitan compilador.
 
-The translator learns which guest registers a native replacement reads and writes by
-reading its body for `<parameter>->gpr[N]`, taking the parameter's name from the
-PPC_NATIVE_OVERRIDE_VOID marker. If the marker names another parameter than the
-definition, the translator sees no access at all and stops passing the call's arguments
-(the runtime then reads stale registers). These tests keep the two in step, and every
-native at the start of a function of the game.
+The translator learns which functions of the game are replaced by natives, and which guest
+registers each native reads and writes, from the PPC_NATIVE_OVERRIDE markers in the
+runtime's sources. A native that takes the whole register file is read for
+`<parameter>->gpr[N]`, with the parameter named in the marker: if the marker names another
+parameter than the definition, the translator sees no access at all and stops passing the
+call's arguments. A native with C++ parameters is described by the marker's parameter
+list, which the compiler checks against the definition (native_functions.h). These tests
+keep the markers in step with the definitions, every native at the start of a function of
+the game, and each native named after the function it replaces.
 
-El traductor sabe qué registros lee y escribe un reemplazo nativo leyendo su cuerpo, con
-el nombre del parámetro que dice el marcador. Si el marcador nombra otro parámetro, el
-traductor no ve ningún acceso y deja de pasar los argumentos: estas pruebas mantienen los
-dos iguales.
+El traductor sabe qué funciones del juego reemplazan los nativos, y qué registros lee y
+escribe cada uno, por los marcadores PPC_NATIVE_OVERRIDE de las fuentes del runtime. Estas
+pruebas mantienen los marcadores iguales a las definiciones, cada nativo al inicio de una
+función del juego y con el nombre de la función que reemplaza.
 """
 
 import re
@@ -27,10 +30,17 @@ from symbols import SymbolTable  # noqa: E402
 RUNTIME_SOURCES = REPOSITORY_ROOT / "runtime" / "src"
 
 # PPC_NATIVE_OVERRIDE_VOID(8017108C, OSLoadContextNative, (CpuContext * cpu), (cpu));
+# PPC_NATIVE_OVERRIDE(8018F234, GXInitNative, uint32_t, (uint32_t a, uint32_t b), (a, b));
 MARKER = re.compile(
-    r"PPC_NATIVE_OVERRIDE_VOID\(\s*(?P<address>[0-9A-Fa-f]{8})\s*,\s*(?P<symbol>\w+)\s*,"
-    r"\s*\(\s*CpuContext\s*\*\s*(?P<parameter>\w+)\s*\)\s*,\s*\(\s*(?P<argument>\w+)\s*\)\s*\)\s*;"
+    r"PPC_NATIVE_OVERRIDE(?P<void>_VOID)?\(\s*(?P<address>[0-9A-Fa-f]{8})\s*,\s*(?P<symbol>\w+)\s*,"
+    r"(?:\s*(?P<result>\w+)\s*,)?"
+    r"\s*\((?P<parameters>[^)]*)\)\s*,\s*\((?P<arguments>[^)]*)\)\s*\)\s*;"
 )
+REGISTER_FILE_PARAMETER = re.compile(r"^CpuContext\s*\*\s*(?P<name>\w+)$")
+# Functions that symbols.txt does not name yet, with the SDK name their native goes by.
+# OSLoadContext: it restores a context's registers, GQRs and SRR0/SRR1 and returns with
+# rfi; the OS's interrupt and exception handlers end with it.
+NOT_YET_NAMED = {0x8017108C: "OSLoadContext"}
 # The natives this runtime cannot do without (see runtime/src/os/guest_os.h).
 EXPECTED_NATIVES = {
     "OSDisableInterruptsNative",
@@ -48,25 +58,47 @@ def natives() -> list[tuple[Path, re.Match]]:
     return found
 
 
+def parameter_names(parameters: str) -> list[str]:
+    """The names in a C++ parameter list: `uint32_t a, float b` -> ["a", "b"]."""
+    return [parameter.split()[-1].lstrip("*") for parameter in parameters.split(",") if parameter.strip()]
+
+
 def test_the_runtime_replaces_the_functions_it_needs():
     assert {match["symbol"] for _, match in natives()} >= EXPECTED_NATIVES
 
 
-def test_every_marker_names_the_context_parameter_of_its_definition():
+def test_a_marker_has_a_result_type_only_when_it_is_not_void():
+    for _, match in natives():
+        assert (match["result"] is None) == (match["void"] is not None), match[0]
+
+
+def test_every_register_file_marker_names_the_context_parameter_of_its_definition():
     for path, match in natives():
+        register_file = REGISTER_FILE_PARAMETER.match(match["parameters"].strip())
+        if not register_file:
+            continue
         definition = re.search(
             rf"void\s+{match['symbol']}\s*\(\s*CpuContext\s*\*\s*(\w+)\s*\)\s*\{{",
             path.read_text(encoding="utf-8"),
         )
         assert definition, f"{match['symbol']} is not defined in {path.name}"
-        assert definition[1] == match["parameter"] == match["argument"], match[0]
+        assert definition[1] == register_file["name"] == match["arguments"].strip(), match[0]
 
 
-def test_every_native_replaces_a_function_of_the_game_from_its_start():
+def test_every_marker_passes_its_parameters_in_order():
+    for _, match in natives():
+        arguments = [argument.strip() for argument in match["arguments"].split(",") if argument.strip()]
+        assert arguments == parameter_names(match["parameters"]), match[0]
+
+
+def test_every_native_replaces_a_function_of_the_game_from_its_start_and_is_named_after_it():
     table = SymbolTable.read(SYMBOLS_PATH)
     for _, match in natives():
-        symbol = table.by_address.get(int(match["address"], 16))
+        address = int(match["address"], 16)
+        symbol = table.by_address.get(address)
         assert symbol is not None and symbol.kind == "function", match[0]
+        name = NOT_YET_NAMED.get(address, symbol.name)
+        assert match["symbol"] == name + "Native", match[0]
 
 
 def test_no_address_has_two_natives():
