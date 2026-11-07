@@ -38,9 +38,12 @@ IMGUI, TRACY, ABSEIL-CPP).
 Opciones de `hmmm-native`: `--watchdog <segundos>` imprime cada tanto dónde
 está el juego (0 lo apaga), `--user-folder <carpeta>` cambia la carpeta del
 jugador (ver abajo), y `--mods <id,id>` (o `--mods none`) dice qué mods de los
-compilados dentro se activan; sin él, todos. En Windows, `Launcher.bat`
+compilados dentro se activan; sin él, todos. `--game-speed <100-400>` hace correr
+todo el juego más rápido (el reloj de la consola, `game_clock.h`); mientras se
+mantiene `Tab` apretado, va al menos al 300 % (el turbo), y el título de la
+ventana muestra la velocidad. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
-velocidad del personaje y jugar; guarda lo elegido en el mismo `settings.json`
+velocidad del personaje y la del juego, y jugar; guarda lo elegido en el mismo `settings.json`
 que la versión ModernGekko. Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
 
@@ -153,9 +156,12 @@ TRACY, ABSEIL-CPP).
 Options of `hmmm-native`: `--watchdog <seconds>` prints where the game is every
 so often (0 turns it off), `--user-folder <folder>` changes the player folder
 (see below), and `--mods <id,id>` (or `--mods none`) says which of the mods
-compiled in are turned on; without it, all of them. On Windows, `Launcher.bat`
-(`packaging/windows/native/`) opens a window to turn the mods on, choose the
-speed of the character and play; it keeps the choices in the same
+compiled in are turned on; without it, all of them. `--game-speed <100-400>`
+makes the whole game run faster (the console's clock, `game_clock.h`); while
+`Tab` is held it goes at least at 300% (the turbo), and the window's title shows
+the speed. On Windows, `Launcher.bat` (`packaging/windows/native/`) opens a
+window to turn the mods on, choose the speed of the character and of the game,
+and play; it keeps the choices in the same
 `settings.json` as the ModernGekko version. With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
 debugger such as gdb (see `fault_handler.h`).
 

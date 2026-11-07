@@ -3,18 +3,18 @@
 <#
 .SYNOPSIS
     The launcher of the native version (without Dolphin): a window to turn the mods on and off,
-    choose the speed of the character, and start the game.
+    choose the speed of the character and of the whole game, and start the game.
     El launcher de la versión nativa (sin Dolphin): una ventana para activar y desactivar los mods,
-    elegir la velocidad del personaje y arrancar el juego.
+    elegir la velocidad del personaje y la de todo el juego, y arrancar el juego.
 
 .DESCRIPTION
     The choices are kept in settings.json, in the player's folder (%LOCALAPPDATA%\HarvestMoonMM),
     the same file that the settings window of the ModernGekko version (Settings.ps1) writes, so both
-    versions follow the same choices. Values this window does not show (such as gameSpeedPercent)
-    are kept as they are.
+    versions follow the same choices. Values this window does not show are kept as they are.
 
     "Play" saves the choices and starts hmmm-native.exe, next to this script, with:
       --mods       the mods that are on (or "none");
+      --game-speed the speed of the whole game (100 to 400%; Tab held in the game: at least 300%);
       HM_MM_PLAYER_SPEED_PERCENT, which the player_speed mod reads;
       --disc       the disc that the ModernGekko package extracted (%LOCALAPPDATA%\HarvestMoonMM\games\G4AEE9).
     What the game prints goes to native.log, next to the program.
@@ -59,6 +59,10 @@ $PlayerSpeedModId = 'player_speed'
 $PlayerSpeedMinimum = 25
 $PlayerSpeedMaximum = 300
 $PlayerSpeedDefault = 150
+# The same limits as Settings.ps1 and the runtime (game_clock.h): 100 is the console's speed.
+$GameSpeedMinimum = 100
+$GameSpeedMaximum = 400
+$GameSpeedDefault = 100
 
 # -- Texts -----------------------------------------------------------------------------------------
 
@@ -67,6 +71,7 @@ $Texts = @{
         Title       = 'Harvest Moon: Magical Melody (native)'
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Speed of the character (100% is the original game):'
+        GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
         Play        = 'Play'
         Save        = 'Save'
         Close       = 'Close'
@@ -78,6 +83,7 @@ $Texts = @{
         Title       = 'Harvest Moon: Magical Melody (nativo)'
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Velocidad del personaje (100% es la del juego original):'
+        GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
         Play        = 'Jugar'
         Save        = 'Guardar'
         Close       = 'Cerrar'
@@ -91,10 +97,14 @@ $Text = $Texts[$Language]
 
 # -- The settings file -----------------------------------------------------------------------------
 
+function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
+    return ($Value -is [int] -or $Value -is [long]) -and $Value -ge $Minimum -and $Value -le $Maximum
+}
+
 # Reads settings.json as a hashtable: mods (id -> true/false), playerSpeedPercent, and whatever
 # else the file holds, which is written back unchanged.
 function Read-Settings {
-    $settings = [ordered] @{ mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault }
+    $settings = [ordered] @{ mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault }
     foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
         return $settings
@@ -113,9 +123,11 @@ function Read-Settings {
             $settings[$property.Name] = $property.Value
         }
     }
-    $speed = $settings.playerSpeedPercent
-    if (-not ($speed -is [int] -or $speed -is [long]) -or $speed -lt $PlayerSpeedMinimum -or $speed -gt $PlayerSpeedMaximum) {
+    if (-not (Test-WholeNumberInRange $settings.playerSpeedPercent $PlayerSpeedMinimum $PlayerSpeedMaximum)) {
         $settings.playerSpeedPercent = $PlayerSpeedDefault
+    }
+    if (-not (Test-WholeNumberInRange $settings.gameSpeedPercent $GameSpeedMinimum $GameSpeedMaximum)) {
+        $settings.gameSpeedPercent = $GameSpeedDefault
     }
     return $settings
 }
@@ -143,7 +155,8 @@ function Start-Game($Settings) {
     # The game inherits this process's environment: the player_speed mod reads the variable.
     $env:HM_MM_PLAYER_SPEED_PERCENT = [string] $Settings.playerSpeedPercent
     # cmd.exe sends both of the game's output streams to one log file.
-    $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList > `"$LogFile`" 2>&1`""
+    $gameSpeed = [int] $Settings.gameSpeedPercent
+    $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
         -WorkingDirectory $ProgramDirectory -WindowStyle Hidden
     return $true
@@ -190,30 +203,46 @@ $SpeedLabel.AutoSize = $true
 $SpeedLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
 $Layout.Controls.Add($SpeedLabel)
 
-$SpeedRow = New-Object System.Windows.Forms.FlowLayoutPanel
-$SpeedRow.AutoSize = $true
-$Slider = New-Object System.Windows.Forms.TrackBar
-$Slider.Minimum = $PlayerSpeedMinimum
-$Slider.Maximum = $PlayerSpeedMaximum
-$Slider.TickFrequency = 25
-$Slider.SmallChange = 5
-$Slider.LargeChange = 25
-$Slider.Width = 280
-$Slider.Value = [int] $Settings.playerSpeedPercent
-$Number = New-Object System.Windows.Forms.NumericUpDown
-$Number.Minimum = $PlayerSpeedMinimum
-$Number.Maximum = $PlayerSpeedMaximum
-$Number.Increment = 5
-$Number.Width = 60
-$Number.Value = [int] $Settings.playerSpeedPercent
-$Percent = New-Object System.Windows.Forms.Label
-$Percent.Text = '%'
-$Percent.AutoSize = $true
-$Percent.Margin = New-Object System.Windows.Forms.Padding(0, 6, 0, 0)
-$Slider.Add_ValueChanged({ if ($Number.Value -ne $Slider.Value) { $Number.Value = $Slider.Value } })
-$Number.Add_ValueChanged({ if ($Slider.Value -ne $Number.Value) { $Slider.Value = [int] $Number.Value } })
-$SpeedRow.Controls.AddRange(@($Slider, $Number, $Percent))
+# A row with a slider and a number box that follow each other, for a percentage. Returns the
+# row; its number box (the value to read) is the row's Tag.
+function New-PercentRow($Minimum, $Maximum, $Value) {
+    $row = New-Object System.Windows.Forms.FlowLayoutPanel
+    $row.AutoSize = $true
+    $slider = New-Object System.Windows.Forms.TrackBar
+    $slider.Minimum = $Minimum
+    $slider.Maximum = $Maximum
+    $slider.TickFrequency = 25
+    $slider.SmallChange = 5
+    $slider.LargeChange = 25
+    $slider.Width = 280
+    $slider.Value = $Value
+    $number = New-Object System.Windows.Forms.NumericUpDown
+    $number.Minimum = $Minimum
+    $number.Maximum = $Maximum
+    $number.Increment = 5
+    $number.Width = 60
+    $number.Value = $Value
+    $percent = New-Object System.Windows.Forms.Label
+    $percent.Text = '%'
+    $percent.AutoSize = $true
+    $percent.Margin = New-Object System.Windows.Forms.Padding(0, 6, 0, 0)
+    $slider.Add_ValueChanged({ if ($number.Value -ne $slider.Value) { $number.Value = $slider.Value } }.GetNewClosure())
+    $number.Add_ValueChanged({ if ($slider.Value -ne $number.Value) { $slider.Value = [int] $number.Value } }.GetNewClosure())
+    $row.Controls.AddRange(@($slider, $number, $percent))
+    $row.Tag = $number
+    return $row
+}
+
+$SpeedRow = New-PercentRow $PlayerSpeedMinimum $PlayerSpeedMaximum ([int] $Settings.playerSpeedPercent)
 $Layout.Controls.Add($SpeedRow)
+
+$GameSpeedLabel = New-Object System.Windows.Forms.Label
+$GameSpeedLabel.Text = $Text.GameSpeedLabel
+$GameSpeedLabel.AutoSize = $true
+$GameSpeedLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
+$Layout.Controls.Add($GameSpeedLabel)
+$GameSpeedRow = New-PercentRow $GameSpeedMinimum $GameSpeedMaximum ([int] $Settings.gameSpeedPercent)
+$Layout.Controls.Add($GameSpeedRow)
 
 # The speed only matters while the speed mod is on.
 $UpdateSpeedEnabled = { $SpeedRow.Enabled = $CheckBoxes[$PlayerSpeedModId].Checked }
@@ -222,7 +251,8 @@ $CheckBoxes[$PlayerSpeedModId].Add_CheckedChanged($UpdateSpeedEnabled)
 
 function Get-Choices {
     foreach ($mod in $Mods) { $Settings.mods[$mod.Id] = $CheckBoxes[$mod.Id].Checked }
-    $Settings.playerSpeedPercent = [int] $Number.Value
+    $Settings.playerSpeedPercent = [int] $SpeedRow.Tag.Value
+    $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
     return $Settings
 }
 
