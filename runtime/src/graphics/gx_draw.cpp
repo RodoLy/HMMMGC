@@ -71,9 +71,27 @@ struct Recording {
 };
 Recording g_recording;
 
-// The primitives of every display list that aurora recorded, by the guest address of the
-// list. A list that is not here comes from the game's files.
-std::unordered_map<uint32_t, std::vector<RecordedPrimitive>> g_recorded_display_lists;
+// A display list that aurora recorded, with what its bytes were when the recording ended.
+// The game frees lists and reuses their memory (for a model loaded after a cutscene, say),
+// so a list is only taken for the recorded one while its bytes are still the same.
+struct RecordedList {
+    uint32_t size = 0;
+    uint64_t fingerprint = 0;
+    std::vector<RecordedPrimitive> primitives;
+};
+
+// Every display list that aurora recorded, by the guest address of the list. A list that
+// is not here (or no longer matches) comes from the game's files.
+std::unordered_map<uint32_t, RecordedList> g_recorded_display_lists;
+
+// FNV-1a: enough to tell whether the bytes of a list changed.
+uint64_t fingerprint(const uint8_t* bytes, uint32_t size) {
+    uint64_t hash = 0xCBF29CE484222325ull;
+    for (uint32_t i = 0; i < size; ++i) {
+        hash = (hash ^ bytes[i]) * 0x100000001B3ull;
+    }
+    return hash;
+}
 
 uint32_t read_big_endian16(const uint8_t* bytes) { return (uint32_t{bytes[0]} << 8) | bytes[1]; }
 
@@ -284,7 +302,11 @@ uint32_t end_display_list() {
     finish_primitive();
     const uint32_t size = GXEndDisplayList();
     g_recording.active = false;
-    g_recorded_display_lists[g_recording.guest_address] = std::move(g_recording.primitives);
+    const uint8_t* list = guest_memory::host_pointer(g_recording.guest_address, size);
+    if (list != nullptr) {
+        g_recorded_display_lists[g_recording.guest_address] = {size, fingerprint(list, size),
+                                                               std::move(g_recording.primitives)};
+    }
     g_recording.primitives = {};
     return size;
 }
@@ -297,9 +319,13 @@ void call_display_list(uint32_t guest_address, uint32_t size) {
         return;
     }
     ArraySpans spans{};
-    if (const auto recorded = g_recorded_display_lists.find(guest_address);
-        recorded != g_recorded_display_lists.end()) {
-        add_recorded_spans(recorded->second, spans);
+    const auto recorded = g_recorded_display_lists.find(guest_address);
+    if (recorded != g_recorded_display_lists.end() &&
+        (recorded->second.size != size || recorded->second.fingerprint != fingerprint(list, size))) {
+        g_recorded_display_lists.erase(recorded);  // its memory holds another list now
+        find_display_list_spans(list, size, spans);
+    } else if (recorded != g_recorded_display_lists.end()) {
+        add_recorded_spans(recorded->second.primitives, spans);
     } else {
         find_display_list_spans(list, size, spans);
     }
