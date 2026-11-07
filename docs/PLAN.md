@@ -213,7 +213,8 @@ pieza por pieza, en el orden de arriba)
 - [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado. Aurora
       trae widescreen y escalado, pero el HUD bien anclado y el culling siguen
       siendo trabajo nuestro (un mod).
-- [ ] 120 fps. El juego calcula todo por cuadro y presenta 30 por segundo,
+- [ ] 60 y 120 fps (después del hito 1.0). El juego calcula todo por cuadro y
+      presenta 30 por segundo,
       con dos retrazas de video por cuadro (medido en una laptop: 29.97 cuadros
       y 59.94 retrazas por segundo), así que subir la cadencia no es un ajuste:
       hay dos caminos. (a) Interpolar en el
@@ -696,8 +697,8 @@ by piece, in the order above)
 - [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD. Aurora
       brings widescreen and scaling, but a well-anchored HUD and culling remain
       our work (a mod).
-- [ ] 120 fps. The game computes everything per frame and presents 30 a
-      second, with two video retraces per frame (measured on a laptop: 29.97
+- [ ] 60 and 120 fps (after milestone 1.0). The game computes everything per
+      frame and presents 30 a second, with two video retraces per frame (measured on a laptop: 29.97
       frames and 59.94 retraces a second), so raising the rate is not a
       setting: there are two routes. (a) Interpolate
       in the renderer: draw between the previous and the current state
