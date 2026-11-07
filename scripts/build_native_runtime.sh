@@ -6,11 +6,15 @@
 # luego lo compila con el runtime de runtime/.
 #
 # Usage / Uso:
-#   scripts/build_native_runtime.sh
+#   scripts/build_native_runtime.sh [extra cmake arguments for the runtime]
 #   build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
 #
 # Needs git, the .NET 8 SDK (dotnet), clang++, cmake and ninja, and the extracted disc
 # in orig/G4AEE9 (tools/extract_disc.py). Everything is written under build/native.
+# The picture comes from aurora, which downloads its own dependencies when the runtime
+# is configured (Dawn already built, SDL3 and a few libraries); where downloads are not
+# possible, the extra cmake arguments can point it at local copies, for example
+# -DDAWN_SOURCE_DIR=... -DDAWN_BUILD_DIR=... -DFETCHCONTENT_SOURCE_DIR_SDL=...
 #
 # Optional environment variables:
 #   WIICOMPILED_DIR  a WiiCompiled checkout to use instead of cloning one
@@ -98,8 +102,9 @@ compile_runtime() {
     step "Compiling the runtime and the translated game"
     cmake -S "$REPOSITORY_ROOT/runtime" -B "$RUNTIME_BUILD_DIRECTORY" -G Ninja \
         -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-        -DWIICOMPILED_RUNTIME_DIR="$WIICOMPILED_DIRECTORY/runtime" \
-        -DTRANSLATED_GAME_DIR="$TRANSLATED_GAME_DIRECTORY"
+        -DWIICOMPILED_DIR="$WIICOMPILED_DIRECTORY" \
+        -DTRANSLATED_GAME_DIR="$TRANSLATED_GAME_DIRECTORY" \
+        "$@"
     cmake --build "$RUNTIME_BUILD_DIRECTORY"
 }
 
@@ -108,7 +113,7 @@ main() {
     fetch_wiicompiled
     build_translator
     translate_game
-    compile_runtime
+    compile_runtime "$@"
     step "Done"
     printf 'Run it with:\n  %s --disc %s --symbols %s\n' "$RUNTIME_BUILD_DIRECTORY/hmmm-native" \
         "$GAME_DIRECTORY" "$REPOSITORY_ROOT/config/G4AEE9/symbols.txt"
