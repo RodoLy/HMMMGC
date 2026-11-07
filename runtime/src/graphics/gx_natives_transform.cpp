@@ -5,6 +5,7 @@
 // Las funciones de GX de transformación (matrices, proyección, viewport y tijera),
 // reemplazadas por las de aurora.
 
+#include "graphics/camera_view.h"
 #include "graphics/guest_values.h"
 #include "graphics/gx_draw.h"
 #include "native_functions.h"
@@ -23,7 +24,8 @@ constexpr size_t MATRIX_4X4_FLOATS = 16;  // Mtx44
 // GXSetProjection(Mtx44 matrix, GXProjectionType type)
 void GXSetProjectionNative(uint32_t matrix_address, uint32_t type) {
     gx_draw::finish_primitive();
-    const auto matrix = guest_values::read_floats<MATRIX_4X4_FLOATS>(matrix_address);
+    auto matrix = guest_values::read_floats<MATRIX_4X4_FLOATS>(matrix_address);
+    camera_view::adjust_projection(matrix.data(), static_cast<int>(type));  // widescreen and zoom
     GXSetProjection(matrix.data(), static_cast<GXProjectionType>(type));
 }
 PPC_NATIVE_OVERRIDE_VOID(801951F4, GXSetProjectionNative, (uint32_t matrix_address, uint32_t type),

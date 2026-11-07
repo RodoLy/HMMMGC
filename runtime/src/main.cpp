@@ -16,6 +16,7 @@
 #include "fault_handler.h"
 #include "game_clock.h"
 #include "graphics/aurora_host.h"
+#include "graphics/camera_view.h"
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
@@ -48,12 +49,13 @@ struct Options {
     std::optional<std::vector<std::string>> mods;
     unsigned game_speed_percent = 100;  // how fast the whole game runs (game_clock.h)
     aurora_host::DisplayOptions display;
+    camera_view::Options camera;
 };
 
 constexpr const char* USAGE =
     "usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>] [--user-folder <folder>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
-    "                   [--resolution-scale <0-8>] [--fullscreen 1]";
+    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--zoom <0.5-2>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
 std::vector<std::string> split_mod_list(const std::string& value) {
@@ -94,6 +96,8 @@ Options parse_options(int argc, char** argv) {
             options.display.resolution_scale = std::clamp(std::stof(value), 0.f, 8.f);
         } else if (name == "--fullscreen") {
             options.display.fullscreen = value != "0";
+        } else if (name == "--zoom") {
+            options.camera.zoom = std::stof(value);
         } else {
             throw std::runtime_error("unknown option " + name);
         }
@@ -117,6 +121,7 @@ int main(int argc, char** argv) {
 
         game_clock::set_chosen_speed_percent(options.game_speed_percent);
         aurora_host::configure(options.display);
+        camera_view::configure(options.camera);
         guest_memory::initialize();
         fault_handler::install(options.watchdog_seconds);
         hardware_registers::initialize(disc);
