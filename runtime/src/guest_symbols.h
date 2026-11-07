@@ -18,7 +18,8 @@ std::string describe(uint32_t guest_address);
 
 // The game function whose translation contains the host code address `host_address`
 // (translated functions are named func_XXXXXXXX after their guest address), or the host
-// symbol when it is runtime code. Needs the program linked with -rdynamic.
+// symbol when it is runtime code. Needs the program linked with -rdynamic; on Windows it
+// gives the address only.
 std::string describe_host_code(const void* host_address);
 
 }  // namespace guest_symbols

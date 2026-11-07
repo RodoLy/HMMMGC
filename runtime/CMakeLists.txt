@@ -17,6 +17,7 @@ set(TRANSLATED_GAME_DIR "" CACHE PATH "what the translator wrote for main.dol")
 set(X86_CPU_PROFILE "v3" CACHE STRING "x86-64 micro-architecture level of the build (v2 or v3), as WiiCompiled's")
 set(DAWN_SOURCE_DIR "" CACHE PATH "optional: a Dawn source tree, built in DAWN_BUILD_DIR, to use instead of aurora's own")
 set(DAWN_BUILD_DIR "" CACHE PATH "optional: the build of DAWN_SOURCE_DIR (a static libwebgpu_dawn)")
+set(DAWN_PACKAGE_DIR "" CACHE PATH "optional, Windows: an unpacked prebuilt Dawn package (bin/webgpu_dawn.dll)")
 
 set(WIICOMPILED_RUNTIME_DIR "${WIICOMPILED_DIR}/runtime")
 set(AURORA_DIR "${WIICOMPILED_DIR}/aurora-main")
@@ -50,10 +51,21 @@ file(GLOB translated_shards CONFIGURE_DEPENDS
      "${TRANSLATED_GAME_DIR}/build_shards/base_common/*.cpp"
      "${TRANSLATED_GAME_DIR}/build_shards/base_registration/*.cpp"
      "${TRANSLATED_GAME_DIR}/build_shards/base_dispatch/*.cpp")
+# The data blobs are assembly for ELF objects. Windows objects (COFF) name the read-only
+# section differently and have no stack note, so a converted copy is assembled there.
+set(translated_blobs "${TRANSLATED_GAME_DIR}/data_sections_init_blobs.S")
+if(WIN32)
+    file(READ "${translated_blobs}" blobs_assembly)
+    string(REPLACE ".section .rodata,\"a\",@progbits" ".section .rdata,\"dr\"" blobs_assembly "${blobs_assembly}")
+    string(REPLACE ".section .note.GNU-stack,\"\",@progbits" "" blobs_assembly "${blobs_assembly}")
+    set(translated_blobs "${CMAKE_BINARY_DIR}/data_sections_init_blobs_coff.S")
+    file(WRITE "${translated_blobs}" "${blobs_assembly}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${TRANSLATED_GAME_DIR}/data_sections_init_blobs.S")
+endif()
 add_library(translated_game OBJECT
     ${translated_shards}
     "${TRANSLATED_GAME_DIR}/data_sections_init.cpp"
-    "${TRANSLATED_GAME_DIR}/data_sections_init_blobs.S")
+    "${translated_blobs}")
 target_include_directories(translated_game PRIVATE
     "${WIICOMPILED_RUNTIME_DIR}/include"
     "${TRANSLATED_GAME_DIR}"
@@ -81,6 +93,16 @@ if(DAWN_BUILD_DIR)
     set_property(TARGET dawn::webgpu_dawn APPEND PROPERTY INTERFACE_LINK_LIBRARIES Threads::Threads ${CMAKE_DL_LIBS})
     set(Dawn_FOUND TRUE)
     set(AURORA_DAWN_PROVIDER system CACHE STRING "" FORCE)
+elseif(DAWN_PACKAGE_DIR)
+    # The package aurora would download, unpacked beforehand. Its DLL is built with MSVC,
+    # so only its C interface (webgpu.h) is used across it; see src/platform/dawn_mingw.cpp.
+    add_library(dawn::webgpu_dawn SHARED IMPORTED GLOBAL)
+    set_target_properties(dawn::webgpu_dawn PROPERTIES
+        IMPORTED_LOCATION "${DAWN_PACKAGE_DIR}/bin/webgpu_dawn.dll"
+        IMPORTED_IMPLIB "${DAWN_PACKAGE_DIR}/lib/webgpu_dawn.lib"
+        INTERFACE_INCLUDE_DIRECTORIES "${DAWN_PACKAGE_DIR}/include")
+    set(Dawn_FOUND TRUE)
+    set(AURORA_DAWN_PROVIDER system CACHE STRING "" FORCE)
 endif()
 # aurora's graphics, controllers and memory card: the runtime has its own disc and video
 # interface.
@@ -104,5 +126,12 @@ target_compile_options(hmmm-native PRIVATE ${strict_floating_point} -Wall -Wextr
 # GPU's 640x528, the same as for any mode of the game.
 target_link_libraries(hmmm-native PRIVATE translated_game wiicompiled_isa_helpers aurora::core aurora::gx aurora::vi
                                           aurora::pad aurora::card)
-# The crash reports name the translated functions (func_XXXXXXXX) with dladdr.
-target_link_options(hmmm-native PRIVATE -rdynamic)
+if(WIN32)
+    # VirtualAlloc2 and MapViewOfFile3 (guest_memory.cpp), and the stack walk of the crash
+    # reports. The C++ runtime is linked in, so that the program only needs Windows' DLLs.
+    target_link_libraries(hmmm-native PRIVATE onecore dbghelp)
+    target_link_options(hmmm-native PRIVATE -static)
+else()
+    # The crash reports name the translated functions (func_XXXXXXXX) with dladdr.
+    target_link_options(hmmm-native PRIVATE -rdynamic)
+endif()

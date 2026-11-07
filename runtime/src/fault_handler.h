@@ -9,9 +9,12 @@
 // plain host load instead, from the guest view of the registers. That view is kept
 // inaccessible, so the load faults; the handler then writes the register's current value
 // into the view, lets that one instruction run with the page readable (the processor's
-// single-step trap), and closes the page again. This is a Linux x86-64 diagnostic aid of
-// the boot experiment: a finished runtime replaces the functions of the game that read
-// registers this way, as WiiCompiled does, instead of trapping their loads.
+// single-step trap), and closes the page again. Windows on ARM64 has no single-step for
+// a program to use, so there the handler does the load itself: it decodes the faulting
+// instruction, reads the register, and writes the result to the instruction's
+// destination register. These are aids of the port in progress: a finished runtime
+// replaces the functions of the game that read registers this way, as WiiCompiled does,
+// instead of trapping their loads.
 #pragma once
 
 #include <cstddef>

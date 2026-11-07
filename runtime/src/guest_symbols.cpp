@@ -2,7 +2,9 @@
 
 #include "guest_symbols.h"
 
+#if !defined(_WIN32)
 #include <dlfcn.h>
+#endif
 
 #include <algorithm>
 #include <cstdio>
@@ -67,6 +69,12 @@ std::string describe(uint32_t guest_address) {
 }
 
 std::string describe_host_code(const void* host_address) {
+#if defined(_WIN32)
+    // A Windows program has no table of its own symbols to look in: the address alone.
+    char text[32];
+    std::snprintf(text, sizeof(text), "(code at %p)", host_address);
+    return text;
+#else
     Dl_info info{};
     if (host_address == nullptr || dladdr(host_address, &info) == 0 || info.dli_sname == nullptr) {
         return "(unknown code)";
@@ -79,6 +87,7 @@ std::string describe_host_code(const void* host_address) {
         return describe(guest_address);
     }
     return info.dli_sname;
+#endif
 }
 
 }  // namespace guest_symbols
