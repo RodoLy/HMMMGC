@@ -18,7 +18,9 @@
 //
 // The game sends graphics commands by storing them, one value at a time, to a single
 // address; the hardware gathers them into the command FIFO in main memory. The
-// translator turns those stores into these calls, in program order and big-endian.
+// translator turns the stores it recognizes into these calls, in program order and
+// big-endian, and they join the stores that reach the pipe through a pointer in
+// hardware_registers.h, which decides where the commands go.
 
 namespace {
 void send_to_gather_pipe(const uint8_t* bytes, uint32_t size) { hardware_registers::write_to_gather_pipe(bytes, size); }

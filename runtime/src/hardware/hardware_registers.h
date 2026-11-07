@@ -30,7 +30,9 @@ void write(uint32_t guest_address, uint32_t value, unsigned width, const void* h
 // the register image (see fault_handler.h): brings the image up to date first.
 void prepare_trapped_read(uint32_t guest_address, const void* host_caller);
 
-// Graphics commands the game stored to the write-gather pipe, in guest byte order.
+// Graphics commands the game stored to the write-gather pipe, in guest byte order: the
+// stores that the translator recognizes (abi_hooks.cpp) and those that reach the pipe
+// through a pointer (write() above) both end here.
 void write_to_gather_pipe(const uint8_t* bytes, size_t size);
 
 // Interrupt causes pending in the processor interface, and those the game has unmasked.

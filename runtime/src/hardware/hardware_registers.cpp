@@ -3,6 +3,8 @@
 
 #include "hardware/hardware_registers.h"
 
+#include "graphics/aurora_host.h"
+#include "graphics/gx_draw.h"
 #include "guest_symbols.h"
 #include "hardware/audio_interface.h"
 #include "hardware/dsp_interface.h"
@@ -216,7 +218,16 @@ void prepare_trapped_read(uint32_t address, const void* host_caller) {
     log_first_access(address, false, register_image::load(address & ~1u, 2), 2, host_caller);
 }
 
-void write_to_gather_pipe(const uint8_t* bytes, size_t size) { graphics_status::write_to_gather_pipe(bytes, size); }
+void write_to_gather_pipe(const uint8_t* bytes, size_t size) {
+    // From GXInit on, aurora is the GPU: what the game stores in the pipe is the vertices of
+    // its primitives and the commands it writes by itself, and gx_draw.h hands them to
+    // aurora. Before that, the modelled command processor takes it.
+    if (aurora_host::is_initialized()) {
+        gx_draw::write_to_pipe(bytes, static_cast<uint32_t>(size));
+        return;
+    }
+    graphics_status::write_to_gather_pipe(bytes, size);
+}
 
 uint32_t pending_interrupts() { return processor_interface::pending_interrupts(); }
 
