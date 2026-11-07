@@ -82,11 +82,11 @@ if(DAWN_BUILD_DIR)
     set(Dawn_FOUND TRUE)
     set(AURORA_DAWN_PROVIDER system CACHE STRING "" FORCE)
 endif()
-# aurora's graphics and controllers: the runtime has its own disc, memory card and video
+# aurora's graphics, controllers and memory card: the runtime has its own disc and video
 # interface.
 set(AURORA_ENABLE_GX ON CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
-set(AURORA_ENABLE_CARD OFF CACHE BOOL "" FORCE)
+set(AURORA_ENABLE_CARD ON CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_THP OFF CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_RMLUI OFF CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
@@ -103,6 +103,6 @@ target_compile_options(hmmm-native PRIVATE ${strict_floating_point} -Wall -Wextr
 # translated, on the emulated registers), so nothing configures aurora's: it answers the
 # GPU's 640x528, the same as for any mode of the game.
 target_link_libraries(hmmm-native PRIVATE translated_game wiicompiled_isa_helpers aurora::core aurora::gx aurora::vi
-                                          aurora::pad)
+                                          aurora::pad aurora::card)
 # The crash reports name the translated functions (func_XXXXXXXX) with dladdr.
 target_link_options(hmmm-native PRIVATE -rdynamic)

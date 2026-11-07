@@ -40,7 +40,9 @@ REGISTER_FILE_PARAMETER = re.compile(r"^CpuContext\s*\*\s*(?P<name>\w+)$")
 # Functions that symbols.txt does not name yet, with the SDK name their native goes by.
 # OSLoadContext: it restores a context's registers, GQRs and SRR0/SRR1 and returns with
 # rfi; the OS's interrupt and exception handlers end with it.
-NOT_YET_NAMED = {0x8017108C: "OSLoadContext"}
+# CARDSetStatus: right after CARDSetStatusAsync, it calls it with the SDK's synchronous
+# callback and then waits in __CARDSync, as every synchronous CARD function does.
+NOT_YET_NAMED = {0x8017108C: "OSLoadContext", 0x8018ED98: "CARDSetStatus"}
 # The natives this runtime cannot do without (see runtime/src/os/guest_os.h).
 EXPECTED_NATIVES = {
     "OSDisableInterruptsNative",
