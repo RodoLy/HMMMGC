@@ -36,8 +36,9 @@ disco (ISO, GCM o RVZ).
 - **Fase 2 empezada:** con un runtime propio (`runtime/`), el código del juego
   ya corre sin nada de Dolphin desde su primera instrucción hasta su bucle de
   cuadros, lee sus archivos del disco, dibuja con aurora los logos, la intro
-  en 3D y la pantalla de título, y se controla con teclado o gamepad; todavía
-  no hay memory card ni sonido ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
+  en 3D y la pantalla de título, se controla con teclado o gamepad, y carga y
+  guarda partidas en la memory card; todavía no hay sonido
+  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -153,8 +154,8 @@ This repository contains no game data. You need your own backup of the disc
 - **Phase 2 started:** with a runtime of our own (`runtime/`), the game's code
   already runs with nothing from Dolphin from its first instruction to its
   frame loop, reads its files from the disc, draws the logos, the 3D intro and
-  the title screen with aurora, and is played with a keyboard or a gamepad;
-  there is no memory card or sound yet
+  the title screen with aurora, is played with a keyboard or a gamepad, and
+  loads and saves games on the memory card; there is no sound yet
   ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,

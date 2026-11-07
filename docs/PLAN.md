@@ -192,8 +192,8 @@ pieza por pieza, en el orden de arriba)
       un recomp.
 - [x] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
       instantáneas). En el runtime nativo, la unidad lee el disco extraído.
-- [ ] CARD → archivos de guardado en disco (aurora lee los `.gci` y `.raw` de
-      Dolphin).
+- [x] CARD → archivos de guardado en disco: en el runtime nativo, con la
+      biblioteca CARD de aurora y una carpeta de `.gci` como las de Dolphin.
 - [x] PAD → SDL gamepad y teclado: en el runtime nativo, con la biblioteca
       PAD de aurora y las teclas de Dolphin.
 - [ ] Audio AX → SDL/miniaudio.
@@ -673,8 +673,8 @@ by piece, in the order above)
       architecture.
 - [x] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
       In the native runtime, the drive reads the extracted disc.
-- [ ] CARD → save files on disk (aurora reads Dolphin's `.gci` and `.raw`
-      files).
+- [x] CARD → save files on disk: in the native runtime, with aurora's CARD
+      library and a folder of `.gci` files like Dolphin's.
 - [x] PAD → SDL gamepad and keyboard: in the native runtime, with aurora's
       PAD library and Dolphin's keys.
 - [ ] AX audio → SDL/miniaudio.

@@ -36,8 +36,21 @@ que se le pasen al script van a cmake y pueden apuntar a copias locales:
 IMGUI, TRACY, ABSEIL-CPP).
 
 Opciones de `hmmm-native`: `--watchdog <segundos>` imprime cada tanto dónde
-está el juego (0 lo apaga). Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
+está el juego (0 lo apaga), y `--user-folder <carpeta>` cambia la carpeta del
+jugador (ver abajo). Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
+
+### Partidas guardadas
+
+El runtime guarda lo del jugador en su carpeta: `HarvestMoonMM\Native` dentro
+de `%LOCALAPPDATA%` en Windows, y `~/.local/share/HarvestMoonMM/Native` en
+Linux. La memory card del slot A es la carpeta `USA/Card A`, con un archivo
+`.gci` por cada archivo de la tarjeta, como en las carpetas GCI de Dolphin.
+
+Mientras el runtime nativo esté en desarrollo usa su propia tarjeta, aparte de
+la de la versión sobre ModernGekko (`HarvestMoonMM\GC\USA\Card A`), para no
+dañar tus partidas. Para probar una, copia `E9-G4AE-HARVESTMOON.gci` de esa
+carpeta a la del runtime nativo; la original no se toca.
 
 ### Controles
 
@@ -73,6 +86,8 @@ juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
 | `graphics/gx_natives_*.cpp` | Las funciones de GX del juego reemplazadas por las de aurora, por tema (geometría, transformaciones, luces, texturas, TEV, píxeles, copias). |
 | `graphics/guest_values.h` | Lee los valores que el juego pasa por dirección (colores, matrices). |
 | `input/pad_natives.cpp` | Las funciones de control del juego (PAD) reemplazadas por las de aurora: gamepads por SDL y el teclado. |
+| `storage/card_natives.cpp` | Las funciones de memory card del juego (CARD) reemplazadas por las de aurora: una carpeta de archivos `.gci`. |
+| `player_folder.*` | La carpeta del jugador: la memory card y los ajustes y cachés de aurora. |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnóstico: dónde está el juego cuando algo falla. |
 
 Los encabezados de la ABI que comparten el código traducido y el runtime
@@ -118,8 +133,21 @@ the script go to cmake and can point at local copies:
 TRACY, ABSEIL-CPP).
 
 Options of `hmmm-native`: `--watchdog <seconds>` prints where the game is every
-so often (0 turns it off). With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under
-a debugger such as gdb (see `fault_handler.h`).
+so often (0 turns it off), and `--user-folder <folder>` changes the player
+folder (see below). With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
+debugger such as gdb (see `fault_handler.h`).
+
+### Saved games
+
+The runtime keeps the player's things in its folder: `HarvestMoonMM\Native`
+in `%LOCALAPPDATA%` on Windows, and `~/.local/share/HarvestMoonMM/Native` on
+Linux. The memory card in slot A is the folder `USA/Card A`, with one `.gci`
+file for each file on the card, as in Dolphin's GCI folders.
+
+While the native runtime is in progress it uses a card of its own, apart from
+the one of the version on ModernGekko (`HarvestMoonMM\GC\USA\Card A`), so
+that it cannot damage your saves. To try one, copy `E9-G4AE-HARVESTMOON.gci`
+from that folder to the native runtime's; the original is not touched.
 
 ### Controls
 
@@ -155,6 +183,8 @@ plays as controller 1, with the same keys that Dolphin has by default:
 | `graphics/gx_natives_*.cpp` | The game's GX functions replaced by aurora's, by topic (geometry, transforms, lights, textures, TEV, pixels, copies). |
 | `graphics/guest_values.h` | Reads the values the game passes by address (colors, matrices). |
 | `input/pad_natives.cpp` | The game's controller functions (PAD) replaced by aurora's: gamepads through SDL, and the keyboard. |
+| `storage/card_natives.cpp` | The game's memory card functions (CARD) replaced by aurora's: a folder of `.gci` files. |
+| `player_folder.*` | The player folder: the memory card, and aurora's settings and caches. |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnostics: where the game is when something fails. |
 
 The ABI headers that the translated code and the runtime share (`guest_abi/`)

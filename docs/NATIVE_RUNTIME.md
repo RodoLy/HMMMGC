@@ -174,14 +174,40 @@ puerto, el teclado juega como control 1 con las teclas que Dolphin trae de
 fábrica (la tabla está en `runtime/README.md`). Con eso el juego sale de la
 pantalla de título al presionar START y avisa que no encuentra la memory card.
 
+### La memory card, con aurora (2026-11-06)
+
+**Resultado.** Las 15 funciones de CARD a las que llama el juego son nativas
+que llaman a la biblioteca CARD de aurora (`storage/card_natives.cpp`), que
+guarda la tarjeta del slot A como una carpeta de archivos `.gci`, en el
+formato de las carpetas GCI de Dolphin. Con la tarjeta vacía, el juego empieza
+una partida nueva: las preguntas del inicio y la escena en la que el
+protagonista llega al pueblo y conoce al alcalde. Con una copia de una partida
+real, el diario la carga y el juego sigue en la casa del jugador; guardar desde
+el diario reescribe el `.gci`, y la partida guardada se vuelve a cargar.
+
+**Dónde queda.** En la carpeta del jugador (`player_folder.h`): por defecto
+`HarvestMoonMM/Native` dentro de la carpeta de datos de la plataforma
+(`%LOCALAPPDATA%` en Windows), con la tarjeta en `USA/Card A`. Mientras el
+runtime nativo esté en desarrollo tiene su propia tarjeta, aparte de las
+partidas de la versión sobre ModernGekko, para no dañarlas; un `.gci` se puede
+copiar de una a la otra (`runtime/README.md`). aurora guarda ahí también sus
+ajustes, y sus cachés en `Cache/`.
+
+**Cómo.** Las estructuras que el juego pasa por dirección (`CARDFileInfo`,
+`CARDStat`) se copian campo por campo, y los nombres de los archivos salen del
+ID del disco en `0x80000000`, como en el SDK. El juego solo usa las funciones
+que esperan su resultado, así que nunca hay que llamar a una función suya
+desde el runtime. Una de ellas, CARDSetStatus, todavía no tiene nombre en
+`symbols.txt`: es la que llama a CARDSetStatusAsync con `__CARDSyncCallback` y
+luego espera en `__CARDSync`.
+
 ### Qué sigue
 
-1. Memory card: el juego la busca al salir de la pantalla de título, así que
-   es lo siguiente. Tiene que leer y guardar las partidas de Dolphin.
+1. Sonido: el DSP con el microcódigo de AX hecho en nativo, como WiiCompiled.
 2. GX: comparar cuadro por cuadro con la versión sobre ModernGekko (que sigue
    siendo la que se juega mientras tanto) y probarlo en una PC con GPU,
    también en Windows ARM64.
-3. Sonido: el DSP con el microcódigo de AX hecho en nativo, como WiiCompiled.
+3. Un paquete para Windows que se pueda probar en la PC del jugador.
 
 ---
 
@@ -354,11 +380,36 @@ keyboard plays as controller 1 with Dolphin's default keys (the table is in
 `runtime/README.md`). With that the game leaves the title screen when START is
 pressed, and reports that it cannot find the memory card.
 
+### The memory card, with aurora (2026-11-06)
+
+**Result.** The 15 CARD functions that the game calls are natives that call
+aurora's CARD library (`storage/card_natives.cpp`), which keeps the card in
+slot A as a folder of `.gci` files, in the format of Dolphin's GCI folders.
+With the card empty, the game starts a new game: the opening questions and
+the scene where the hero arrives in town and meets the mayor. With a copy of
+a real save, the diary loads it and the game goes on in the player's house;
+saving from the diary rewrites the `.gci`, and the saved game loads again.
+
+**Where it is.** In the player folder (`player_folder.h`): by default
+`HarvestMoonMM/Native` in the platform's data folder (`%LOCALAPPDATA%` on
+Windows), with the card in `USA/Card A`. While the native runtime is in
+progress it has a card of its own, apart from the saves of the version on
+ModernGekko, so that it cannot damage them; a `.gci` can be copied from one to
+the other (`runtime/README.md`). aurora also keeps its settings there, and its
+caches in `Cache/`.
+
+**How.** The structures that the game passes by address (`CARDFileInfo`,
+`CARDStat`) are copied field by field, and the file names come from the disc
+ID at `0x80000000`, as in the SDK. The game only uses the functions that wait
+for their result, so the runtime never has to call a function of the game.
+One of them, CARDSetStatus, has no name in `symbols.txt` yet: it is the one
+that calls CARDSetStatusAsync with `__CARDSyncCallback` and then waits in
+`__CARDSync`.
+
 ### What comes next
 
-1. Memory card: the game looks for it when it leaves the title screen, so it
-   is next. It has to read and write Dolphin's saves.
+1. Sound: the DSP with the AX microcode done natively, as WiiCompiled does.
 2. GX: compare frame by frame with the version on ModernGekko (which is still
    the one that is played in the meantime) and try it on a PC with a GPU,
    Windows ARM64 included.
-3. Sound: the DSP with the AX microcode done natively, as WiiCompiled does.
+3. A package for Windows that can be tried on the player's PC.
