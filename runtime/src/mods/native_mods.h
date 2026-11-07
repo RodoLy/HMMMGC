@@ -14,14 +14,17 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 struct CpuContext;
 
 namespace native_mods {
 
 // Reads the descriptors of the mods compiled in, checks that they are for this game, and
-// runs their on_load. Call once, before the game starts.
-void load();
+// runs their on_load. With `enabled`, only the mods it names are turned on (the launcher
+// passes the player's choice); without it, all of them. Call once, before the game starts.
+void load(const std::vector<std::string>* enabled);
 
 }  // namespace native_mods
 

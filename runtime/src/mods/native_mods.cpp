@@ -12,6 +12,7 @@
 // renamed after the mod, and a null pointer at the end.
 #include "native_mod_list.h"
 
+#include <algorithm>
 #include <cstring>
 #include <unordered_map>
 #include <vector>
@@ -148,13 +149,21 @@ ModernGekkoModFunction no_export(void*, const char*, const char*) { return nullp
 
 }  // namespace
 
-void load() {
+void load(const std::vector<std::string>* enabled) {
     static const ModernGekkoModHostApi HOST_API{MODERNGEKKO_MOD_HOST_ABI_VERSION, nullptr, no_event, no_export};
+    std::vector<std::string> compiled_in;
     for (const ModernGekkoGetModFn* get_mod = COMPILED_IN_MODS; *get_mod != nullptr; ++get_mod) {
         const ModernGekkoModDesc* mod = (*get_mod)();
+        if (mod != nullptr && mod->id != nullptr) {
+            compiled_in.emplace_back(mod->id);
+        }
         if (mod == nullptr || mod->abi_version != MODERNGEKKO_MOD_ABI_VERSION ||
             mod->cpu_state_size != sizeof(CPUState)) {
             runtime_log::warning("mods", "a mod was built for another mod ABI and is not used");
+            continue;
+        }
+        if (enabled != nullptr && std::find(enabled->begin(), enabled->end(), mod->id) == enabled->end()) {
+            runtime_log::info("mods", "%s is turned off", mod->id);
             continue;
         }
         if (std::strncmp(mod->game_id, GAME_ID, sizeof(mod->game_id)) != 0) {
@@ -176,6 +185,11 @@ void load() {
         }
         runtime_log::info("mods", "%s %s: %u patches, %u hooks", mod->id, mod->version, mod->num_patches,
                           mod->num_hooks);
+    }
+    for (const std::string& name : enabled != nullptr ? *enabled : std::vector<std::string>{}) {
+        if (std::find(compiled_in.begin(), compiled_in.end(), name) == compiled_in.end()) {
+            runtime_log::warning("mods", "there is no mod %s in this build", name.c_str());
+        }
     }
 }
 
