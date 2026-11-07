@@ -39,6 +39,8 @@ readonly TRANSLATED_GAME_DIRECTORY="$TRANSLATION_DIRECTORY/game"
 readonly RUNTIME_BUILD_DIRECTORY="$BUILD_DIRECTORY/runtime"
 readonly TRANSLATOR_PROJECT="$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli"
 readonly TRANSLATOR="$TRANSLATOR_PROJECT/bin/Release/net8.0/Translator.Cli.dll"
+# The mods of mods/ that go into the runtime (NATIVE_MODS="" for none).
+readonly NATIVE_MODS="${NATIVE_MODS-jamie_marriage player_speed}"
 
 fail() {
     printf 'error: %s\n' "$*" >&2
@@ -98,12 +100,27 @@ translate_game() {
         --out "$TRANSLATED_GAME_DIRECTORY/build_shards"
 }
 
+# The mods are compiled into the runtime; the translated code gets a call at every place
+# where they act (tools/insert_mod_hooks.py), and the mods' names for the game's functions
+# come from symbols.txt (tools/export_mod_symbols.py).
+mark_mod_hooks() {
+    step "Marking where the mods act: ${NATIVE_MODS:-no mods}"
+    python3 "$REPOSITORY_ROOT/tools/export_mod_symbols.py"
+    local mod_arguments=()
+    local mod_id
+    for mod_id in $NATIVE_MODS; do
+        mod_arguments+=(--mod "$mod_id")
+    done
+    python3 "$REPOSITORY_ROOT/tools/insert_mod_hooks.py" --translation "$TRANSLATED_GAME_DIRECTORY" "${mod_arguments[@]}"
+}
+
 compile_runtime() {
     step "Compiling the runtime and the translated game"
     cmake -S "$REPOSITORY_ROOT/runtime" -B "$RUNTIME_BUILD_DIRECTORY" -G Ninja \
         -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
         -DWIICOMPILED_DIR="$WIICOMPILED_DIRECTORY" \
         -DTRANSLATED_GAME_DIR="$TRANSLATED_GAME_DIRECTORY" \
+        -DNATIVE_MODS="${NATIVE_MODS// /;}" \
         "$@"
     cmake --build "$RUNTIME_BUILD_DIRECTORY"
 }
@@ -113,6 +130,7 @@ main() {
     fetch_wiicompiled
     build_translator
     translate_game
+    mark_mod_hooks
     compile_runtime "$@"
     step "Done"
     printf 'Run it with:\n  %s --disc %s --symbols %s\n' "$RUNTIME_BUILD_DIRECTORY/hmmm-native" \
