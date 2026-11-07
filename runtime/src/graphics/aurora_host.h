@@ -11,9 +11,10 @@
 
 namespace aurora_host {
 
-// Opens the window and the graphics device, and starts the first frame. Call once,
-// before the game's first graphics call. Exits the program with an error when no
-// graphics device can be used.
+// Opens the window and the graphics device, and starts the first frame. Called before the
+// first function of the game that aurora implements (GXInit, or CARDInit if it comes
+// first); later calls do nothing. Exits the program with an error when no graphics device
+// can be used.
 void initialize();
 
 bool is_initialized();

@@ -8,6 +8,7 @@
 // con aurora. Todavía no hay memory card ni sonido; el registro dice lo que hace el juego.
 //
 // Usage: hmmm-native --disc <extracted disc> [--symbols <symbols.txt>] [--watchdog <s>]
+//                    [--user-folder <folder>]
 
 #include "console_boot.h"
 #include "extracted_disc.h"
@@ -15,6 +16,7 @@
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
+#include "player_folder.h"
 #include "runtime_log.h"
 
 #include "guest_abi/guest_abi.h"
@@ -34,7 +36,11 @@ struct Options {
     std::string disc_root;
     std::string symbols_path;
     unsigned watchdog_seconds = 10;
+    std::string user_folder;  // empty: the default player folder (player_folder.h)
 };
+
+constexpr const char* USAGE =
+    "usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>] [--user-folder <folder>]";
 
 Options parse_options(int argc, char** argv) {
     Options options;
@@ -47,12 +53,14 @@ Options parse_options(int argc, char** argv) {
             options.symbols_path = value;
         } else if (name == "--watchdog") {
             options.watchdog_seconds = static_cast<unsigned>(std::stoul(value));
+        } else if (name == "--user-folder") {
+            options.user_folder = value;
         } else {
             throw std::runtime_error("unknown option " + name);
         }
     }
     if (options.disc_root.empty()) {
-        throw std::runtime_error("usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>]");
+        throw std::runtime_error(USAGE);
     }
     return options;
 }
@@ -66,6 +74,7 @@ int main(int argc, char** argv) {
             runtime_log::warning("boot", "could not read the symbols in %s", options.symbols_path.c_str());
         }
         const ExtractedDisc disc(options.disc_root);
+        player_folder::choose(options.user_folder);
 
         guest_memory::initialize();
         fault_handler::install(options.watchdog_seconds);

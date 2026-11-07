@@ -2,6 +2,7 @@
 
 #include "graphics/aurora_host.h"
 
+#include "player_folder.h"
 #include "runtime_log.h"
 
 #include <aurora/aurora.h>
@@ -9,6 +10,8 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
+#include <string>
 #include <thread>
 
 namespace aurora_host {
@@ -25,6 +28,11 @@ constexpr auto WAIT_FOR_WINDOW = std::chrono::milliseconds(16);
 
 bool g_initialized = false;
 bool g_window_closed = false;
+
+// Where aurora keeps its settings (controller mappings, texture replacements) and the
+// memory card, and where it keeps its caches (compiled pipelines).
+std::string g_user_folder;
+std::string g_cache_folder;
 
 void log_from_aurora(AuroraLogLevel level, const char* module, const char* message, unsigned int length) {
     const int text_length = static_cast<int>(length);
@@ -65,6 +73,14 @@ void exit_if_window_closed() {
 }  // namespace
 
 void initialize() {
+    if (g_initialized) {
+        return;
+    }
+    const std::filesystem::path cache_folder = player_folder::path() / "Cache";
+    std::filesystem::create_directories(cache_folder);  // aurora's databases do not create it
+    g_user_folder = player_folder::path().string();
+    g_cache_folder = cache_folder.string();
+
     AuroraConfig config{};
     config.appName = WINDOW_TITLE;
     config.desiredBackend = BACKEND_AUTO;
@@ -81,6 +97,10 @@ void initialize() {
     // The game's memory belongs to the runtime (guest_memory.h); aurora needs none of its own.
     config.mem1Size = 0;
     config.mem2Size = 0;
+    // Given explicitly: aurora's default is a folder named after the window title, which
+    // has a colon, and Windows does not allow one in a folder name.
+    config.userPath = g_user_folder.c_str();
+    config.cachePath = g_cache_folder.c_str();
 
     const AuroraInfo info = aurora_initialize(0, nullptr, &config);
     if (info.initializationStatus != AURORA_INITIALIZATION_SUCCESS) {
