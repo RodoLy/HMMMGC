@@ -5,13 +5,13 @@
 
 #include "cpu_registers.h"
 #include "guest_memory.h"
+#include "hardware/audio_memory.h"
 #include "hardware/processor_interface.h"
 #include "hardware/register_image.h"
 #include "runtime_log.h"
 
 #include <cstring>
 #include <deque>
-#include <vector>
 
 namespace dsp_interface {
 namespace {
@@ -46,7 +46,6 @@ constexpr uint32_t MAIL_FROM_INIT_PROGRAM = 0x80544348u;
 // How long the init program runs, in time-base ticks (Dolphin's measurement).
 constexpr uint64_t INIT_PROGRAM_TICKS = 130;
 
-constexpr uint32_t AUDIO_MEMORY_SIZE = 16u * 1024u * 1024u;
 constexpr uint32_t DMA_ALIGNMENT_MASK = 0x1Fu;  // the DMA moves 32-byte units
 constexpr uint32_t PHYSICAL_ADDRESS_MASK = 0x03FFFFFFu;
 constexpr uint32_t FROM_ARAM_TO_MEMORY = 0x80000000u;
@@ -56,7 +55,6 @@ struct DspState {
     std::deque<uint32_t> mails_from_dsp;
     uint32_t last_mail_from_dsp = 0;
     uint64_t init_program_ends_at = 0;
-    std::vector<uint8_t> audio_memory = std::vector<uint8_t>(AUDIO_MEMORY_SIZE);
 };
 DspState g_dsp;
 
@@ -111,10 +109,10 @@ void run_aram_dma() {
     const uint32_t memory_address =
         register_image::read_pair(ARAM_DMA_MEMORY_ADDRESS) & PHYSICAL_ADDRESS_MASK & ~DMA_ALIGNMENT_MASK;
     const uint32_t aram_address =
-        register_image::read_pair(ARAM_DMA_ARAM_ADDRESS) & (AUDIO_MEMORY_SIZE - 1) & ~DMA_ALIGNMENT_MASK;
+        register_image::read_pair(ARAM_DMA_ARAM_ADDRESS) & (audio_memory::SIZE - 1) & ~DMA_ALIGNMENT_MASK;
     uint8_t* memory = guest_memory::host_pointer(guest_memory::physical_to_cached(memory_address), length);
-    if (memory != nullptr && aram_address + uint64_t{length} <= AUDIO_MEMORY_SIZE) {
-        uint8_t* aram = g_dsp.audio_memory.data() + aram_address;
+    if (memory != nullptr && aram_address + uint64_t{length} <= audio_memory::SIZE) {
+        uint8_t* aram = audio_memory::data() + aram_address;
         if (count & FROM_ARAM_TO_MEMORY) {
             std::memcpy(memory, aram, length);
         } else {
