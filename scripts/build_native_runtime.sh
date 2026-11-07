@@ -69,6 +69,19 @@ fetch_wiicompiled() {
     git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$WIICOMPILED_COMMIT"
 }
 
+# The changes this project makes to aurora (patches/aurora/, explained in patches/README.md),
+# applied once: a patch that is already in place is left alone.
+apply_aurora_patches() {
+    local patch aurora="$WIICOMPILED_DIRECTORY/aurora-main"
+    for patch in "$REPOSITORY_ROOT/patches/aurora/"*.patch; do
+        if git -C "$aurora" apply --reverse --check "$patch" 2> /dev/null; then
+            continue
+        fi
+        step "Applying $(basename "$patch") to aurora"
+        git -C "$aurora" apply "$patch"
+    done
+}
+
 build_translator() {
     # The checkout is pinned, so a translator built once stays valid (and the build would
     # otherwise need NuGet again).
@@ -128,6 +141,7 @@ compile_runtime() {
 main() {
     check_tools
     fetch_wiicompiled
+    apply_aurora_patches
     build_translator
     translate_game
     mark_mod_hooks

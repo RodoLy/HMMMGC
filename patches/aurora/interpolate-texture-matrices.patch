@@ -1,0 +1,56 @@
+diff --git a/lib/gx/frame_interpolation.cpp b/lib/gx/frame_interpolation.cpp
+index bd05bac..448e8a7 100644
+--- a/lib/gx/frame_interpolation.cpp
++++ b/lib/gx/frame_interpolation.cpp
+@@ -149,6 +149,9 @@ struct FrameTransformSnapshot {
+   HashType viewportIdentity = 0;
+   Mat3x4<float> position{};
+   Mat3x4<float> normal{};
++  // Texture matrices, for texture coordinates the game projects from the camera (a
++  // screen-space shadow mask, say): they move with the camera as the transforms do.
++  std::array<Mat3x4<float>, MaxTexMtx> texture{};
+   uint16_t usedMatrixMask = 1;
+   struct IndexedMatrices {
+     std::array<Mat3x4<float>, MaxPnMtx> position{};
+@@ -1329,6 +1332,33 @@ void finalize_frame_interpolation() noexcept {
+           interpolate_projection(previous.projection, current.projection, weight);
+       std::memcpy(task.uniformData + task.projectionOffset, &interpolatedProjection,
+                   sizeof(interpolatedProjection));
++      // Texture matrices sit between the position and normal matrices. Those that changed
++      // a little are mixed like the projection; a large change (a scrolling texture that
++      // wrapped around) is left as it is.
++      for (size_t textureIndex = 0; textureIndex < MaxTexMtx; ++textureIndex) {
++        const auto& before = previous.texture[textureIndex];
++        const auto& now = current.texture[textureIndex];
++        if (std::memcmp(&before, &now, sizeof(now)) == 0) {
++          continue;
++        }
++        const auto* beforeValues = reinterpret_cast<const float*>(&before);
++        const auto* nowValues = reinterpret_cast<const float*>(&now);
++        constexpr size_t kValues = sizeof(Mat3x4<float>) / sizeof(float);
++        bool steady = true;
++        for (size_t i = 0; i < kValues && steady; ++i) {
++          const float largest = std::max(std::abs(beforeValues[i]), std::abs(nowValues[i]));
++          steady = std::abs(nowValues[i] - beforeValues[i]) <= 0.5f * largest + 1.0e-3f;
++        }
++        if (!steady) {
++          continue;
++        }
++        std::array<float, kValues> mixed{};
++        for (size_t i = 0; i < kValues; ++i) {
++          mixed[i] = beforeValues[i] + (nowValues[i] - beforeValues[i]) * weight;
++        }
++        std::memcpy(task.uniformData + task.positionOffset + (MaxPnMtx + textureIndex) * sizeof(Mat3x4<float>),
++                    mixed.data(), sizeof(Mat3x4<float>));
++      }
+ 
+       const auto interpolateMatrixSlot = [&](size_t currentIndex, size_t pairOffset) {
+         if (pairOffset == kNoPreparedPair) {
+@@ -1466,6 +1496,7 @@ std::array<gfx::Range, MaxInterpolatedFrames> record_interpolation_draw(
+   FrameTransformSnapshot snapshot{
+       .projection = projection,
+       .viewportIdentity = viewportIdentity,
++      .texture = g_gxState.texMtxs,
+       .usedMatrixMask = usedPnMtxMask,
+   };
+   if (uniformLayout.indexedMatrices) {
