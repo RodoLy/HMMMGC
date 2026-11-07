@@ -178,14 +178,18 @@ pieza por pieza, en el orden de arriba)
       aurora ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
 - [x] Primer arranque sin Dolphin: el código del juego, traducido por
       WiiCompiled, corre con un runtime propio (`runtime/`) desde `__start`
-      hasta su bucle de cuadros y lee sus archivos del disco; todavía sin
-      imagen, sonido ni control ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
-- [ ] Experimento de viabilidad: las llamadas de GX del juego dibujan la
-      pantalla de título con aurora. Necesita compilar aurora y una PC con
-      GPU; antes hay que decidir cómo se obtiene Dawn en Windows ARM64.
-- [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). Referencia:
-      Dolphin para la semántica de GX; Wiicompiled (Mario Kart Wii) para la
-      arquitectura de un recomp.
+      hasta su bucle de cuadros y lee sus archivos del disco
+      ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
+- [x] Experimento de viabilidad: las llamadas de GX del juego dibujan con
+      aurora los logos, la intro en 3D y la pantalla de título (2026-11-06,
+      con Vulkan por software y Dawn compilado desde su código). aurora trae
+      Dawn ya compilado para Windows ARM64.
+- [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). En curso: 70 de
+      las funciones de GX del juego ya llaman a aurora; faltan las demás que
+      cambian el estado (ver [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)) y
+      comparar con la versión sobre ModernGekko. Referencia: Dolphin para la
+      semántica de GX; Wiicompiled (Mario Kart Wii) para la arquitectura de un
+      recomp.
 - [x] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
       instantáneas). En el runtime nativo, la unidad lee el disco extraído.
 - [ ] CARD → archivos de guardado en disco (aurora lee los `.gci` y `.raw` de
@@ -641,14 +645,17 @@ by piece, in the order above)
       ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
 - [x] First boot without Dolphin: the game's code, translated by WiiCompiled,
       runs on a runtime of our own (`runtime/`) from `__start` to its frame
-      loop and reads its files from the disc; no picture, sound or controller
-      yet ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
-- [ ] Feasibility experiment: the game's GX calls draw the title screen with
-      aurora. It needs aurora built and a PC with a GPU; how to get Dawn on
-      Windows ARM64 has to be decided first.
-- [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). Reference:
-      Dolphin for GX semantics; Wiicompiled (Mario Kart Wii) for recomp
-      architecture.
+      loop and reads its files from the disc
+      ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
+- [x] Feasibility experiment: the game's GX calls draw the logos, the 3D
+      intro and the title screen with aurora (2026-11-06, with software
+      Vulkan and Dawn built from source). aurora ships Dawn already built for
+      Windows ARM64.
+- [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). In
+      progress: 70 of the game's GX functions already call aurora; the other
+      ones that change state are left (see [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)),
+      and comparing with the version on ModernGekko. Reference: Dolphin for GX
+      semantics; Wiicompiled (Mario Kart Wii) for recomp architecture.
 - [x] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
       In the native runtime, the drive reads the extracted disc.
 - [ ] CARD → save files on disk (aurora reads Dolphin's `.gci` and `.raw`

@@ -25,6 +25,16 @@ extraído en `orig/G4AEE9` (`tools/extract_disc.py`). El script baja WiiCompiled
 en la versión que usa el runtime, traduce el juego en `build/native/translation`
 y compila. El C++ traducido sale de tu disco: no se sube nunca.
 
+La imagen sale de [aurora](https://github.com/encounter/aurora) (MIT), que
+viene en la copia de WiiCompiled. Al configurar el runtime, aurora baja Dawn ya
+compilado, SDL3 y unas bibliotecas pequeñas; para la ventana, SDL necesita los
+paquetes de desarrollo de X11 (o Wayland) del sistema, y para dibujar hace
+falta un controlador de Vulkan. Donde no se puede bajar nada, los argumentos
+que se le pasen al script van a cmake y pueden apuntar a copias locales:
+`-DDAWN_SOURCE_DIR=… -DDAWN_BUILD_DIR=…` (un Dawn compilado desde su código) y
+`-DFETCHCONTENT_SOURCE_DIR_<NOMBRE>=…` para las demás (SDL, FMT, XXHASH,
+IMGUI, TRACY, ABSEIL-CPP).
+
 Opciones de `hmmm-native`: `--watchdog <segundos>` imprime cada tanto dónde
 está el juego (0 lo apaga). Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
@@ -43,12 +53,16 @@ depurador como gdb (ver `fault_handler.h`).
 | `abi_hooks.cpp` | El "gather pipe" de gráficos y unos ganchos de los encabezados de WiiCompiled. |
 | `os/guest_os.*` | Interrupciones y el planificador del OS, en nativo. |
 | `hardware/` | Un archivo por dispositivo: PI, VI, DSP, DVD, SI, EXI, AI y el estado del chip gráfico. |
+| `graphics/aurora_host.*` | La ventana y el dispositivo gráfico, por medio de aurora; un cuadro termina en cada copia a la pantalla. |
+| `graphics/gx_draw.*`, `graphics/vertex_layout.*` | Las primitivas y las listas de visualización del juego, entregadas a aurora. |
+| `graphics/gx_natives_*.cpp` | Las funciones de GX del juego reemplazadas por las de aurora, por tema (geometría, transformaciones, luces, texturas, TEV, píxeles, copias). |
+| `graphics/guest_values.h` | Lee los valores que el juego pasa por dirección (colores, matrices). |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnóstico: dónde está el juego cuando algo falla. |
 
 Los encabezados de la ABI que comparten el código traducido y el runtime
 (`guest_abi/`) y dos archivos de ayuda (`fpu_helpers.cpp`, `ppc_quantized.cpp`)
-vienen de WiiCompiled, que es GPL-3.0 como este proyecto; se compilan desde su
-copia, no se copian aquí.
+vienen de WiiCompiled, que es GPL-3.0 como este proyecto, y aurora viene en su
+copia; se compilan desde ahí, no se copian aquí.
 
 El estilo del código (formato con `clang-format`, nombres revisados con
 `clang-tidy`) está en [CONTRIBUTING.md](../CONTRIBUTING.md).
@@ -77,6 +91,16 @@ WiiCompiled at the version the runtime uses, translates the game into
 `build/native/translation` and compiles. The translated C++ comes from your
 disc: it is never committed.
 
+The picture comes from [aurora](https://github.com/encounter/aurora) (MIT),
+which comes in WiiCompiled's checkout. When the runtime is configured, aurora
+downloads Dawn already built, SDL3 and a few small libraries; for the window,
+SDL needs the system's X11 (or Wayland) development packages, and drawing
+needs a Vulkan driver. Where nothing can be downloaded, the arguments given to
+the script go to cmake and can point at local copies:
+`-DDAWN_SOURCE_DIR=… -DDAWN_BUILD_DIR=…` (a Dawn built from source) and
+`-DFETCHCONTENT_SOURCE_DIR_<NAME>=…` for the others (SDL, FMT, XXHASH, IMGUI,
+TRACY, ABSEIL-CPP).
+
 Options of `hmmm-native`: `--watchdog <seconds>` prints where the game is every
 so often (0 turns it off). With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under
 a debugger such as gdb (see `fault_handler.h`).
@@ -95,12 +119,16 @@ a debugger such as gdb (see `fault_handler.h`).
 | `abi_hooks.cpp` | The graphics gather pipe and a few hooks of WiiCompiled's headers. |
 | `os/guest_os.*` | Interrupts and the OS scheduler, natively. |
 | `hardware/` | One file per device: PI, VI, DSP, DVD, SI, EXI, AI and the graphics chip's status. |
+| `graphics/aurora_host.*` | The window and the graphics device, through aurora; a frame ends at each copy to the screen. |
+| `graphics/gx_draw.*`, `graphics/vertex_layout.*` | The game's primitives and display lists, handed to aurora. |
+| `graphics/gx_natives_*.cpp` | The game's GX functions replaced by aurora's, by topic (geometry, transforms, lights, textures, TEV, pixels, copies). |
+| `graphics/guest_values.h` | Reads the values the game passes by address (colors, matrices). |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnostics: where the game is when something fails. |
 
 The ABI headers that the translated code and the runtime share (`guest_abi/`)
 and two helper files (`fpu_helpers.cpp`, `ppc_quantized.cpp`) come from
-WiiCompiled, which is GPL-3.0 like this project; they are compiled from its
-checkout, not copied here.
+WiiCompiled, which is GPL-3.0 like this project, and aurora comes in its
+checkout; they are compiled from there, not copied here.
 
 The code style (formatting with `clang-format`, names checked with
 `clang-tidy`) is in [CONTRIBUTING.md](../CONTRIBUTING.md).

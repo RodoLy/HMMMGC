@@ -35,8 +35,9 @@ disco (ISO, GCM o RVZ).
   límites de todo esto, en [docs/VALIDATION.md](docs/VALIDATION.md).
 - **Fase 2 empezada:** con un runtime propio (`runtime/`), el código del juego
   ya corre sin nada de Dolphin desde su primera instrucción hasta su bucle de
-  cuadros, y lee sus archivos del disco; todavía no hay imagen, sonido ni
-  control ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
+  cuadros, lee sus archivos del disco y dibuja con aurora los logos, la intro
+  en 3D y la pantalla de título; todavía no hay sonido ni control
+  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -151,8 +152,9 @@ This repository contains no game data. You need your own backup of the disc
   [docs/VALIDATION.md](docs/VALIDATION.md).
 - **Phase 2 started:** with a runtime of our own (`runtime/`), the game's code
   already runs with nothing from Dolphin from its first instruction to its
-  frame loop, and reads its files from the disc; there is no picture, sound or
-  controller yet ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
+  frame loop, reads its files from the disc and draws the logos, the 3D intro
+  and the title screen with aurora; there is no sound or controller yet
+  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and

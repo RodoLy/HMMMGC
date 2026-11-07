@@ -113,20 +113,69 @@ scripts/build_native_runtime.sh
 build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
 ```
 
+### La imagen, con aurora (2026-11-06)
+
+**Resultado.** El juego dibuja sin Dolphin: los logos del arranque, la intro en
+3D (el perro, los animales y el molino) y la pantalla de título con «Push
+START». aurora dibuja con WebGPU (Dawn). Se probó en la nube, con Vulkan por
+software (lavapipe de Mesa) y un Dawn compilado desde su código, así que la
+velocidad de ahí no dice nada de la de una PC.
+
+**Cómo.**
+
+- `graphics/aurora_host`: GXInit abre la ventana y el dispositivo gráfico, y
+  GXCopyDisp (la copia de la imagen terminada a la pantalla) cierra el cuadro:
+  aurora lo muestra y abre el siguiente.
+- `graphics/gx_natives_*.cpp`: 70 funciones de GX del juego son nativas que
+  llaman a las de aurora. Reciben los argumentos del juego como parámetros de
+  C++, que el runtime saca de los registros según la convención de llamadas de
+  PowerPC (`native_functions.h`); lo que el juego pasa por dirección (colores,
+  matrices, filtros) se lee de su memoria. Cuatro funciones de GX que solo
+  calculan (GXProject, GXGetYScaleFactor, GXAdjustForOverscan y
+  GXGetTexBufferSize) siguen traducidas.
+- `graphics/gx_draw` y `graphics/vertex_layout`: el juego escribe sus vértices
+  valor por valor en el «gather pipe». Se juntan por primitiva y se le dan a
+  aurora completa, después de decirle cuánto de cada arreglo de vértices usan
+  sus índices: aurora copia eso a la GPU, y el juego nunca lo dice. En una
+  lista de visualización los vértices se guardan como bytes, porque la GPU los
+  lee con la forma de vértice del momento en que la lista corre, y el juego
+  graba las listas de sus modelos al cargarlos, antes de fijar esa forma.
+- El juego copia a la pantalla una imagen de 640x448, y el video la centra en
+  las 480 líneas con un borde arriba y otro abajo. aurora conserva esas
+  proporciones; Dolphin la estira para llenar la ventana.
+
+**Lo que falta de GX.** Unas funciones de GX del juego siguen traducidas y
+cambian el estado del GPU: escriben sus registros directamente, a veces a
+partir de la copia del estado que guarda el SDK, que las nativas ya no
+actualizan. Son GXSetVtxAttrFmtv, GXSetCurrentMtx, GXSetProjectionv,
+GXSetTevDirect, GXSetTevIndirect y las demás de texturas indirectas,
+GXSetTevSwapMode, GXSetTevSwapModeTable, GXSetZTexture, GXSetDstAlpha,
+GXSetFieldMask, GXSetFieldMode, GXSetCoPlanar, GXEnableTexOffsets,
+GXSetCopyClamp, GXSetDispCopyFrame2Field, GXSetScissorBoxOffset, GXFlush, las
+GXPoke*, GXLoadTexObjPreLoaded, GXInitTexCacheRegion, GXInitTlutRegion y una
+de TEV todavía sin nombre (`fn_80194490`). En lo que se ve hasta ahora no se
+nota nada, pero hay que pasarlas a aurora.
+
+**Probarlo.** Con el mismo script. aurora baja Dawn ya compilado y sus otras
+dependencias cuando se configura el runtime; donde no se puede bajar nada, el
+script acepta argumentos extra de cmake para usar copias locales
+(`runtime/README.md`). En una máquina sin pantalla se probó así:
+
+```sh
+Xvfb :99 -screen 0 1024x768x24 &
+DISPLAY=:99 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
+```
+
 ### Qué sigue
 
-1. Imagen: GX con aurora. Hay que compilar aurora con Dawn, y no se puede
-   desde el contenedor de esta sesión (las dependencias de Dawn se bajan de
-   servidores de Google que no responden aquí): GitHub Actions o la
-   computadora del jugador. WiiCompiled reemplaza las funciones de GX por
-   llamadas a aurora; lo que se tome de él (GPL-3.0, como este proyecto) se
-   marca con su origen.
+1. GX: pasar a aurora las funciones de arriba, comparar cuadro por cuadro con
+   la versión sobre ModernGekko (que sigue siendo la que se juega mientras
+   tanto) y probarlo en una PC con GPU, también en Windows ARM64.
 2. Controles: que el SI conteste como un control de GameCube, con el teclado o
-   un gamepad.
+   un gamepad; la pantalla de título espera a que se presione START.
 3. Memory card: que el EXI tenga una tarjeta, guardada en un archivo `.gci`.
 4. Sonido: el DSP con el microcódigo de AX hecho en nativo, como WiiCompiled.
-5. Comparar cuadro por cuadro con la versión sobre ModernGekko, que sigue
-   siendo la que se juega mientras tanto.
 
 ---
 
@@ -238,17 +287,67 @@ scripts/build_native_runtime.sh
 build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
 ```
 
+### The picture, with aurora (2026-11-06)
+
+**Result.** The game draws without Dolphin: the boot logos, the 3D intro (the
+dog, the animals and the windmill) and the title screen with "Push START".
+aurora draws with WebGPU (Dawn). It was tested in the cloud, with software
+Vulkan (Mesa's lavapipe) and a Dawn built from source, so the speed there says
+nothing about the speed on a PC.
+
+**How.**
+
+- `graphics/aurora_host`: GXInit opens the window and the graphics device, and
+  GXCopyDisp (the copy of the finished picture to the screen) closes the
+  frame: aurora shows it and opens the next one.
+- `graphics/gx_natives_*.cpp`: 70 of the game's GX functions are natives that
+  call aurora's. They receive the game's arguments as C++ parameters, which the
+  runtime takes from the registers following the PowerPC calling convention
+  (`native_functions.h`); what the game passes by address (colors, matrices,
+  filters) is read from its memory. Four GX functions that only compute
+  (GXProject, GXGetYScaleFactor, GXAdjustForOverscan and GXGetTexBufferSize)
+  stay translated.
+- `graphics/gx_draw` and `graphics/vertex_layout`: the game writes its
+  vertices value by value to the gather pipe. They are collected per
+  primitive and handed to aurora whole, after telling it how much of each
+  vertex array their indices use: aurora copies that much to the GPU, and the
+  game never says it. In a display list the vertices are kept as bytes,
+  because the GPU reads them with the vertex layout of the moment the list
+  runs, and the game records the lists of its models when it loads them,
+  before setting that layout.
+- The game copies a 640x448 picture to the screen, and the video interface
+  centres it in the 480 lines with a border above and below. aurora keeps
+  those proportions; Dolphin stretches it to fill the window.
+
+**What is left of GX.** A few of the game's GX functions are still translated
+and change the GPU's state: they write its registers directly, sometimes from
+the copy of the state that the SDK keeps, which the natives no longer update.
+They are GXSetVtxAttrFmtv, GXSetCurrentMtx, GXSetProjectionv, GXSetTevDirect,
+GXSetTevIndirect and the other indirect texture functions, GXSetTevSwapMode,
+GXSetTevSwapModeTable, GXSetZTexture, GXSetDstAlpha, GXSetFieldMask,
+GXSetFieldMode, GXSetCoPlanar, GXEnableTexOffsets, GXSetCopyClamp,
+GXSetDispCopyFrame2Field, GXSetScissorBoxOffset, GXFlush, the GXPoke*
+functions, GXLoadTexObjPreLoaded, GXInitTexCacheRegion, GXInitTlutRegion and a
+TEV function not named yet (`fn_80194490`). Nothing shows in what is drawn so
+far, but they have to move to aurora.
+
+**Trying it.** With the same script. aurora downloads Dawn already built and
+its other dependencies when the runtime is configured; where nothing can be
+downloaded, the script takes extra cmake arguments to use local copies
+(`runtime/README.md`). On a machine without a screen it was tested like this:
+
+```sh
+Xvfb :99 -screen 0 1024x768x24 &
+DISPLAY=:99 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+    build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
+```
+
 ### What comes next
 
-1. Picture: GX with aurora. It needs aurora built with Dawn, which cannot be
-   done from this session's container (Dawn's dependencies are downloaded from
-   Google servers that do not answer here): GitHub Actions or the player's
-   computer. WiiCompiled replaces the GX functions with calls to aurora;
-   whatever is taken from it (GPL-3.0, like this project) is marked with where
-   it came from.
+1. GX: move the functions above to aurora, compare frame by frame with the
+   version on ModernGekko (which is still the one that is played in the
+   meantime) and try it on a PC with a GPU, Windows ARM64 included.
 2. Controllers: make the SI answer like a GameCube controller, from the
-   keyboard or a gamepad.
+   keyboard or a gamepad; the title screen waits for START.
 3. Memory card: give the EXI a card, kept in a `.gci` file.
 4. Sound: the DSP with the AX microcode done natively, as WiiCompiled does.
-5. Compare frame by frame with the version on ModernGekko, which is still the
-   one that is played in the meantime.
