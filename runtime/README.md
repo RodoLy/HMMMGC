@@ -99,6 +99,7 @@ juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
 | `input/pad_natives.cpp` | Las funciones de control del juego (PAD) reemplazadas por las de aurora: gamepads por SDL y el teclado. |
 | `storage/card_natives.cpp` | Las funciones de memory card del juego (CARD) reemplazadas por las de aurora: una carpeta de archivos `.gci`. |
 | `player_folder.*` | La carpeta del jugador: la memory card y los ajustes y cachés de aurora. |
+| `mods/native_mods.*` | Los mods de `mods/`, compilados dentro: lee sus descriptores y corre sus *patch* y *hook* donde `tools/insert_mod_hooks.py` marcó el código traducido. `../mod_api/` es el header que usan en lugar del de ModernGekko ([mods/README.md](../mods/README.md)). |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnóstico: dónde está el juego cuando algo falla. |
 
 Los encabezados de la ABI que comparten el código traducido y el runtime
@@ -209,6 +210,7 @@ plays as controller 1, with the same keys that Dolphin has by default:
 | `input/pad_natives.cpp` | The game's controller functions (PAD) replaced by aurora's: gamepads through SDL, and the keyboard. |
 | `storage/card_natives.cpp` | The game's memory card functions (CARD) replaced by aurora's: a folder of `.gci` files. |
 | `player_folder.*` | The player folder: the memory card, and aurora's settings and caches. |
+| `mods/native_mods.*` | The mods of `mods/`, compiled in: reads their descriptors and runs their patches and hooks where `tools/insert_mod_hooks.py` marked the translated code. `../mod_api/` is the header they use instead of ModernGekko's ([mods/README.md](../mods/README.md)). |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnostics: where the game is when something fails. |
 
 The ABI headers that the translated code and the runtime share (`guest_abi/`)

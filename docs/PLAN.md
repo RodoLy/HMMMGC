@@ -245,9 +245,12 @@ pieza por pieza, en el orden de arriba)
       corre el gancho de Jamie). Los *patch* (reemplazar una función) existen
       en la API, pero ningún mod los ha probado todavía dentro del juego.
 - [ ] Carpeta de reemplazo de assets para mods.
-- [ ] Capa de mods en el runtime propio (ganchos y parches por nombre, como los
+- [x] Capa de mods en el runtime propio (ganchos y parches por nombre, como los
       de ModernGekko): el mod de Jamie y los demás se escriben una vez y
-      tienen que seguir funcionando cuando el runtime cambie.
+      tienen que seguir funcionando cuando el runtime cambie. Hecho: el
+      runtime nativo compila los mismos `mod.c` y marca sus ganchos en el
+      código traducido ([mods/README.md](../mods/README.md)); falta probar el
+      mod de Jamie de punta a punta en partidas reales.
 
 **Fase 5 – Release**
 - [ ] Instalador que toma la ISO/RVZ del usuario, verifica hash y extrae.
@@ -727,9 +730,12 @@ by piece, in the order above)
       tells when the Jamie hook will run). *Patches* (replacing a function)
       exist in the API, but no mod has tried one inside the game yet.
 - [ ] Asset-override folder for mods.
-- [ ] Mod layer in the own runtime (hooks and patches by name, like
+- [x] Mod layer in the own runtime (hooks and patches by name, like
       ModernGekko's): the Jamie mod and the others are written once and have
-      to keep working when the runtime changes.
+      to keep working when the runtime changes. Done: the native runtime
+      compiles the same `mod.c` files and marks their hooks in the translated
+      code ([mods/README.md](../mods/README.md)); trying the Jamie mod end to
+      end with real saves is left.
 
 **Phase 5 – Release**
 - [ ] Installer that takes the user's ISO/RVZ, verifies the hash and extracts.
