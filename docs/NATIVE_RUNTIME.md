@@ -165,15 +165,23 @@ DISPLAY=:99 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
     build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
 ```
 
+### Los controles, con aurora (2026-11-06)
+
+PADInit, PADRead, PADReset, PADRecalibrate y PADControlMotor son nativas que
+llaman a la biblioteca PAD de aurora, que lee los gamepads de la PC por medio
+de SDL (`input/pad_natives.cpp`). Mientras no haya un gamepad en el primer
+puerto, el teclado juega como control 1 con las teclas que Dolphin trae de
+fábrica (la tabla está en `runtime/README.md`). Con eso el juego sale de la
+pantalla de título al presionar START y avisa que no encuentra la memory card.
+
 ### Qué sigue
 
-1. GX: comparar cuadro por cuadro con la versión sobre ModernGekko (que sigue
+1. Memory card: el juego la busca al salir de la pantalla de título, así que
+   es lo siguiente. Tiene que leer y guardar las partidas de Dolphin.
+2. GX: comparar cuadro por cuadro con la versión sobre ModernGekko (que sigue
    siendo la que se juega mientras tanto) y probarlo en una PC con GPU,
    también en Windows ARM64.
-2. Controles: que el SI conteste como un control de GameCube, con el teclado o
-   un gamepad; la pantalla de título espera a que se presione START.
-3. Memory card: que el EXI tenga una tarjeta, guardada en un archivo `.gci`.
-4. Sonido: el DSP con el microcódigo de AX hecho en nativo, como WiiCompiled.
+3. Sonido: el DSP con el microcódigo de AX hecho en nativo, como WiiCompiled.
 
 ---
 
@@ -337,12 +345,20 @@ DISPLAY=:99 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
     build/native/runtime/hmmm-native --disc orig/G4AEE9 --symbols config/G4AEE9/symbols.txt
 ```
 
+### The controllers, with aurora (2026-11-06)
+
+PADInit, PADRead, PADReset, PADRecalibrate and PADControlMotor are natives
+that call aurora's PAD library, which reads the PC's gamepads through SDL
+(`input/pad_natives.cpp`). While there is no gamepad on the first port, the
+keyboard plays as controller 1 with Dolphin's default keys (the table is in
+`runtime/README.md`). With that the game leaves the title screen when START is
+pressed, and reports that it cannot find the memory card.
+
 ### What comes next
 
-1. GX: compare frame by frame with the version on ModernGekko (which is still
+1. Memory card: the game looks for it when it leaves the title screen, so it
+   is next. It has to read and write Dolphin's saves.
+2. GX: compare frame by frame with the version on ModernGekko (which is still
    the one that is played in the meantime) and try it on a PC with a GPU,
    Windows ARM64 included.
-2. Controllers: make the SI answer like a GameCube controller, from the
-   keyboard or a gamepad; the title screen waits for START.
-3. Memory card: give the EXI a card, kept in a `.gci` file.
-4. Sound: the DSP with the AX microcode done natively, as WiiCompiled does.
+3. Sound: the DSP with the AX microcode done natively, as WiiCompiled does.

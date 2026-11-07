@@ -39,6 +39,21 @@ Opciones de `hmmm-native`: `--watchdog <segundos>` imprime cada tanto dónde
 está el juego (0 lo apaga). Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
 
+### Controles
+
+Un gamepad conectado a la PC es el control 1. Si no hay ninguno, el teclado
+juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
+
+| Control de GameCube | Tecla |
+|---|---|
+| Stick de control | Flechas |
+| Stick C | I, J, K, L |
+| Cruceta | T, F, G, H |
+| A, B, X, Y | X, Z, C, S |
+| Z | D |
+| L, R | Q, W |
+| START | Enter |
+
 ### Qué hay en `src/`
 
 | Archivo | Qué hace |
@@ -57,6 +72,7 @@ depurador como gdb (ver `fault_handler.h`).
 | `graphics/gx_draw.*`, `graphics/vertex_layout.*` | Las primitivas y las listas de visualización del juego, entregadas a aurora. |
 | `graphics/gx_natives_*.cpp` | Las funciones de GX del juego reemplazadas por las de aurora, por tema (geometría, transformaciones, luces, texturas, TEV, píxeles, copias). |
 | `graphics/guest_values.h` | Lee los valores que el juego pasa por dirección (colores, matrices). |
+| `input/pad_natives.cpp` | Las funciones de control del juego (PAD) reemplazadas por las de aurora: gamepads por SDL y el teclado. |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnóstico: dónde está el juego cuando algo falla. |
 
 Los encabezados de la ABI que comparten el código traducido y el runtime
@@ -105,6 +121,21 @@ Options of `hmmm-native`: `--watchdog <seconds>` prints where the game is every
 so often (0 turns it off). With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under
 a debugger such as gdb (see `fault_handler.h`).
 
+### Controls
+
+A gamepad connected to the PC is controller 1. If there is none, the keyboard
+plays as controller 1, with the same keys that Dolphin has by default:
+
+| GameCube controller | Key |
+|---|---|
+| Control Stick | Arrow keys |
+| C Stick | I, J, K, L |
+| D-Pad | T, F, G, H |
+| A, B, X, Y | X, Z, C, S |
+| Z | D |
+| L, R | Q, W |
+| START | Enter |
+
 ### What is in `src/`
 
 | File | What it does |
@@ -123,6 +154,7 @@ a debugger such as gdb (see `fault_handler.h`).
 | `graphics/gx_draw.*`, `graphics/vertex_layout.*` | The game's primitives and display lists, handed to aurora. |
 | `graphics/gx_natives_*.cpp` | The game's GX functions replaced by aurora's, by topic (geometry, transforms, lights, textures, TEV, pixels, copies). |
 | `graphics/guest_values.h` | Reads the values the game passes by address (colors, matrices). |
+| `input/pad_natives.cpp` | The game's controller functions (PAD) replaced by aurora's: gamepads through SDL, and the keyboard. |
 | `fault_handler.*`, `guest_symbols.*`, `runtime_log.h` | Diagnostics: where the game is when something fails. |
 
 The ABI headers that the translated code and the runtime share (`guest_abi/`)
