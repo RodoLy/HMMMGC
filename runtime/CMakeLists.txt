@@ -116,9 +116,47 @@ set(AURORA_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(AURORA_TARGET_RVL OFF CACHE BOOL "" FORCE)
 add_subdirectory("${AURORA_DIR}" "${CMAKE_BINARY_DIR}/aurora" EXCLUDE_FROM_ALL SYSTEM)
 
+# The game's mods (mods/), compiled in: each one is the same C file that ModernGekko loads
+# as a library, built here against a stand-in of ModernGekko's mod ABI (mod_api/). The
+# translated code must be marked for the same list of mods (tools/insert_mod_hooks.py,
+# which scripts/build_native_runtime.sh runs with NATIVE_MODS).
+set(NATIVE_MODS "jamie_marriage;player_speed" CACHE STRING "the mods in mods/ to compile into the runtime")
+set(MOD_SYMBOL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/../build/G4AEE9_symbols.h" CACHE FILEPATH
+    "G4AEE9_symbols.h, written by tools/export_mod_symbols.py")
+set(mods_directory "${CMAKE_CURRENT_SOURCE_DIR}/../mods")
+set(native_mod_list "${CMAKE_BINARY_DIR}/generated/native_mod_list.h")
+set(native_mod_declarations "")
+set(native_mod_getters "")
+set(native_mod_objects "")
+if(NATIVE_MODS AND NOT EXISTS "${MOD_SYMBOL_HEADER}")
+    message(FATAL_ERROR "MOD_SYMBOL_HEADER: run tools/export_mod_symbols.py first")
+endif()
+get_filename_component(mod_symbol_header_directory "${MOD_SYMBOL_HEADER}" DIRECTORY)
+foreach(mod_id IN LISTS NATIVE_MODS)
+    add_library(native_mod_${mod_id} OBJECT "${mods_directory}/${mod_id}/mod.c")
+    target_include_directories(native_mod_${mod_id} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/mod_api" "${mods_directory}/include" "${mod_symbol_header_directory}")
+    # Every mod exports a function of the same name: here each gets one of its own.
+    target_compile_definitions(native_mod_${mod_id} PRIVATE moderngekko_get_mod=moderngekko_get_mod_${mod_id})
+    target_compile_options(native_mod_${mod_id} PRIVATE -std=c11 -Wall -Wextra)
+    string(APPEND native_mod_declarations "extern \"C\" const ModernGekkoModDesc* moderngekko_get_mod_${mod_id}(void);\n")
+    string(APPEND native_mod_getters "    moderngekko_get_mod_${mod_id},\n")
+    list(APPEND native_mod_objects $<TARGET_OBJECTS:native_mod_${mod_id}>)
+endforeach()
+file(CONFIGURE OUTPUT "${native_mod_list}" CONTENT
+"// Written by runtime/CMakeLists.txt: the mods compiled into the runtime (NATIVE_MODS).
+#pragma once
+#include \"moderngekko/mod_abi.h\"
+${native_mod_declarations}
+static const ModernGekkoGetModFn COMPILED_IN_MODS[] = {
+${native_mod_getters}    nullptr,
+};
+")
+
 file(GLOB_RECURSE runtime_sources CONFIGURE_DEPENDS src/*.cpp)
-add_executable(hmmm-native ${runtime_sources})
-target_include_directories(hmmm-native PRIVATE src "${WIICOMPILED_RUNTIME_DIR}/include")
+add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
+target_include_directories(hmmm-native PRIVATE src "${WIICOMPILED_RUNTIME_DIR}/include" mod_api
+                                               "${CMAKE_BINARY_DIR}/generated")
 target_compile_options(hmmm-native PRIVATE ${strict_floating_point} -Wall -Wextra -Wno-unused-parameter)
 # aurora's graphics ask aurora's video interface (aurora::vi) for the size of the embedded
 # frame buffer. The game keeps the console's own video interface (its VI library runs

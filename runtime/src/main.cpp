@@ -17,6 +17,7 @@
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
+#include "mods/native_mods.h"
 #include "player_folder.h"
 #include "runtime_log.h"
 
@@ -84,6 +85,7 @@ int main(int argc, char** argv) {
 
         InitializeDataSections();
         console_boot::prepare_memory(disc);
+        native_mods::load();
 
         CpuContext& cpu = GetPersistentCpuContext();
         console_boot::prepare_cpu(cpu);
