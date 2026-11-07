@@ -207,9 +207,11 @@ pieza por pieza, en el orden de arriba)
 - [ ] Hito 1.0: jugable de principio a fin a 480p 4:3 sin código de Dolphin.
 
 **Fase 3 – Mejoras**
-- [ ] Resolución interna arbitraria (4K). Con ModernGekko es el ajuste de
-      resolución interna de Dolphin (sin probar todavía en el paquete); con
-      aurora, su escalado de resolución.
+- [x] Resolución interna arbitraria (4K). Con ModernGekko es el ajuste de
+      resolución interna de Dolphin (sin probar todavía en el paquete). En el
+      runtime nativo, aurora dibuja al tamaño de la ventana (pantalla completa
+      con Alt+Enter), y `--resolution-scale` la fija en 2 a 8 veces la de la
+      consola (6: casi 4K), desde el launcher.
 - [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado. Aurora
       trae widescreen y escalado, pero el HUD bien anclado y el culling siguen
       siendo trabajo nuestro (un mod).
@@ -696,9 +698,11 @@ by piece, in the order above)
 - [ ] Milestone 1.0: playable start to finish at 480p 4:3 with no Dolphin code.
 
 **Phase 3 – Enhancements**
-- [ ] Arbitrary internal resolution (4K). With ModernGekko it is Dolphin's
-      internal-resolution setting (not tried in the package yet); with aurora,
-      its resolution scaling.
+- [x] Arbitrary internal resolution (4K). With ModernGekko it is Dolphin's
+      internal-resolution setting (not tried in the package yet). In the
+      native runtime aurora draws at the window's size (full screen with
+      Alt+Enter), and `--resolution-scale` fixes it at 2 to 8 times the
+      console's (6: nearly 4K), from the launcher.
 - [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD. Aurora
       brings widescreen and scaling, but a well-anchored HUD and culling remain
       our work (a mod).

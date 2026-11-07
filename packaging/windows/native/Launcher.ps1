@@ -3,9 +3,11 @@
 <#
 .SYNOPSIS
     The launcher of the native version (without Dolphin): a window to turn the mods on and off,
-    choose the speed of the character and of the whole game, and start the game.
+    choose the speed of the character and of the whole game, the resolution and full screen, and
+    start the game.
     El launcher de la versión nativa (sin Dolphin): una ventana para activar y desactivar los mods,
-    elegir la velocidad del personaje y la de todo el juego, y arrancar el juego.
+    elegir la velocidad del personaje y la de todo el juego, la resolución y la pantalla completa, y
+    arrancar el juego.
 
 .DESCRIPTION
     The choices are kept in settings.json, in the player's folder (%LOCALAPPDATA%\HarvestMoonMM),
@@ -15,6 +17,8 @@
     "Play" saves the choices and starts hmmm-native.exe, next to this script, with:
       --mods       the mods that are on (or "none");
       --game-speed the speed of the whole game (100 to 400%; Tab held in the game: at least 300%);
+      --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
+      --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
       HM_MM_PLAYER_SPEED_PERCENT, which the player_speed mod reads;
       --disc       the disc that the ModernGekko package extracted (%LOCALAPPDATA%\HarvestMoonMM\games\G4AEE9).
     What the game prints goes to native.log, next to the program.
@@ -63,6 +67,8 @@ $PlayerSpeedDefault = 150
 $GameSpeedMinimum = 100
 $GameSpeedMaximum = 400
 $GameSpeedDefault = 100
+# The internal resolutions offered: a multiple of the console's 640x528 (0 follows the window).
+$ResolutionScales = @(0, 2, 3, 4, 6)
 
 # -- Texts -----------------------------------------------------------------------------------------
 
@@ -72,6 +78,10 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Speed of the character (100% is the original game):'
         GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
+        ResolutionLabel = 'Internal resolution:'
+        ResolutionAuto = 'As the window (Alt+Enter: full screen)'
+        ResolutionTimes = '{0}x the console ({1}x{2})'
+        Fullscreen = 'Start in full screen'
         Play        = 'Play'
         Save        = 'Save'
         Close       = 'Close'
@@ -84,6 +94,10 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Velocidad del personaje (100% es la del juego original):'
         GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
+        ResolutionLabel = 'Resolución interna:'
+        ResolutionAuto = 'Como la ventana (Alt+Enter: pantalla completa)'
+        ResolutionTimes = '{0}x la de la consola ({1}x{2})'
+        Fullscreen = 'Empezar en pantalla completa'
         Play        = 'Jugar'
         Save        = 'Guardar'
         Close       = 'Cerrar'
@@ -104,7 +118,10 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 # Reads settings.json as a hashtable: mods (id -> true/false), playerSpeedPercent, and whatever
 # else the file holds, which is written back unchanged.
 function Read-Settings {
-    $settings = [ordered] @{ mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault }
+    $settings = [ordered] @{
+        mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
+        resolutionScale = 0; fullscreen = $false
+    }
     foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
         return $settings
@@ -129,6 +146,8 @@ function Read-Settings {
     if (-not (Test-WholeNumberInRange $settings.gameSpeedPercent $GameSpeedMinimum $GameSpeedMaximum)) {
         $settings.gameSpeedPercent = $GameSpeedDefault
     }
+    if ($ResolutionScales -notcontains $settings.resolutionScale) { $settings.resolutionScale = 0 }
+    $settings.fullscreen = [bool] $settings.fullscreen
     return $settings
 }
 
@@ -156,7 +175,8 @@ function Start-Game($Settings) {
     $env:HM_MM_PLAYER_SPEED_PERCENT = [string] $Settings.playerSpeedPercent
     # cmd.exe sends both of the game's output streams to one log file.
     $gameSpeed = [int] $Settings.gameSpeedPercent
-    $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed > `"$LogFile`" 2>&1`""
+    $display = "--resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen)"
+    $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed $display > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
         -WorkingDirectory $ProgramDirectory -WindowStyle Hidden
     return $true
@@ -244,6 +264,26 @@ $Layout.Controls.Add($GameSpeedLabel)
 $GameSpeedRow = New-PercentRow $GameSpeedMinimum $GameSpeedMaximum ([int] $Settings.gameSpeedPercent)
 $Layout.Controls.Add($GameSpeedRow)
 
+$ResolutionLabel = New-Object System.Windows.Forms.Label
+$ResolutionLabel.Text = $Text.ResolutionLabel
+$ResolutionLabel.AutoSize = $true
+$ResolutionLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
+$Layout.Controls.Add($ResolutionLabel)
+$ResolutionList = New-Object System.Windows.Forms.ComboBox
+$ResolutionList.DropDownStyle = 'DropDownList'
+$ResolutionList.Width = 340
+foreach ($scale in $ResolutionScales) {
+    $label = if ($scale -eq 0) { $Text.ResolutionAuto } else { $Text.ResolutionTimes -f $scale, (640 * $scale), (528 * $scale) }
+    [void] $ResolutionList.Items.Add($label)
+}
+$ResolutionList.SelectedIndex = [array]::IndexOf($ResolutionScales, [int] $Settings.resolutionScale)
+$Layout.Controls.Add($ResolutionList)
+$FullscreenBox = New-Object System.Windows.Forms.CheckBox
+$FullscreenBox.Text = $Text.Fullscreen
+$FullscreenBox.AutoSize = $true
+$FullscreenBox.Checked = [bool] $Settings.fullscreen
+$Layout.Controls.Add($FullscreenBox)
+
 # The speed only matters while the speed mod is on.
 $UpdateSpeedEnabled = { $SpeedRow.Enabled = $CheckBoxes[$PlayerSpeedModId].Checked }
 $CheckBoxes[$PlayerSpeedModId].Add_CheckedChanged($UpdateSpeedEnabled)
@@ -253,6 +293,8 @@ function Get-Choices {
     foreach ($mod in $Mods) { $Settings.mods[$mod.Id] = $CheckBoxes[$mod.Id].Checked }
     $Settings.playerSpeedPercent = [int] $SpeedRow.Tag.Value
     $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
+    $Settings.resolutionScale = $ResolutionScales[$ResolutionList.SelectedIndex]
+    $Settings.fullscreen = $FullscreenBox.Checked
     return $Settings
 }
 

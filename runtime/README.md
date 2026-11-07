@@ -41,7 +41,10 @@ jugador (ver abajo), y `--mods <id,id>` (o `--mods none`) dice qué mods de los
 compilados dentro se activan; sin él, todos. `--game-speed <100-400>` hace correr
 todo el juego más rápido (el reloj de la consola, `game_clock.h`); mientras se
 mantiene `Tab` apretado, va al menos al 300 % (el turbo), y el título de la
-ventana muestra la velocidad. En Windows, `Launcher.bat`
+ventana muestra la velocidad. La resolución interna sigue al tamaño de la ventana
+(Alt+Enter cambia a pantalla completa); `--resolution-scale <n>` la fija en n
+veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
+los bordes, y `--fullscreen 1` empieza en pantalla completa. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
 velocidad del personaje y la del juego, y jugar; guarda lo elegido en el mismo `settings.json`
 que la versión ModernGekko. Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
@@ -159,10 +162,14 @@ so often (0 turns it off), `--user-folder <folder>` changes the player folder
 compiled in are turned on; without it, all of them. `--game-speed <100-400>`
 makes the whole game run faster (the console's clock, `game_clock.h`); while
 `Tab` is held it goes at least at 300% (the turbo), and the window's title shows
-the speed. On Windows, `Launcher.bat` (`packaging/windows/native/`) opens a
-window to turn the mods on, choose the speed of the character and of the game,
-and play; it keeps the choices in the same
-`settings.json` as the ModernGekko version. With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
+the speed. The internal resolution follows the window's size (Alt+Enter
+switches to full screen); `--resolution-scale <n>` fixes it at n times the
+console's (6 is nearly 4K) and scales it down to the window, which smooths the
+edges, and `--fullscreen 1` starts in full screen. On Windows, `Launcher.bat`
+(`packaging/windows/native/`) opens a window to turn the mods on, choose the
+speed of the character and of the game, the resolution and full screen, and
+play; it keeps the choices in the same `settings.json` as the ModernGekko
+version. With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
 debugger such as gdb (see `fault_handler.h`).
 
 ### Saved games
