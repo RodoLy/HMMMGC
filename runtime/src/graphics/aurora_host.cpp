@@ -9,7 +9,10 @@
 #include <aurora/aurora.h>
 #include <aurora/event.h>
 
+#include <SDL3/SDL.h>
+
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <string>
@@ -34,6 +37,27 @@ bool g_window_closed = false;
 // memory card, and where it keeps its caches (compiled pipelines).
 std::string g_user_folder;
 std::string g_cache_folder;
+
+// The frame rate, counted over each second and shown in the window's title (the game
+// presents 30 pictures a second; fewer means the PC is not keeping up).
+struct FrameRate {
+    std::chrono::steady_clock::time_point second_started = std::chrono::steady_clock::now();
+    unsigned frames = 0;
+};
+FrameRate g_frame_rate;
+
+void count_frame() {
+    ++g_frame_rate.frames;
+    const auto now = std::chrono::steady_clock::now();
+    const std::chrono::duration<double> elapsed = now - g_frame_rate.second_started;
+    if (elapsed.count() < 1.0) {
+        return;
+    }
+    char title[96];
+    std::snprintf(title, sizeof(title), "%s - %.0f fps", WINDOW_TITLE, g_frame_rate.frames / elapsed.count());
+    SDL_SetWindowTitle(aurora_get_window(), title);
+    g_frame_rate = FrameRate{now, 0};
+}
 
 void log_from_aurora(AuroraLogLevel level, const char* module, const char* message, unsigned int length) {
     const int text_length = static_cast<int>(length);
@@ -120,6 +144,7 @@ bool is_initialized() { return g_initialized; }
 
 void present_frame() {
     aurora_end_frame();
+    count_frame();
     process_events();
     begin_next_frame();
     exit_if_window_closed();

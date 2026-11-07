@@ -20,8 +20,8 @@ void initialize();
 bool is_initialized();
 
 // Ends the frame that the game has drawn so far, shows it, handles the window's events
-// and starts the next frame. Called when the game copies a finished picture to the
-// screen (GXCopyDisp).
+// and starts the next frame; once a second the window's title shows the frame rate.
+// Called when the game copies a finished picture to the screen (GXCopyDisp).
 void present_frame();
 
 // Gives aurora the pending window events without drawing anything; returns false once
