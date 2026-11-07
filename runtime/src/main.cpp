@@ -1,12 +1,12 @@
 // The native runtime of Harvest Moon: Magical Melody, in progress: runs the game's
 // translated code from its entry point, without Dolphin; it draws, reads the controllers
-// and keeps the memory card through aurora. There is no sound yet; the log says what the
-// game does (docs/NATIVE_RUNTIME.md).
+// and keeps the memory card through aurora, and plays the sound through SDL. The log says
+// what the game does (docs/NATIVE_RUNTIME.md).
 //
 // El runtime nativo de Harvest Moon: Magical Melody, en progreso: corre el código
 // traducido del juego desde su punto de entrada, sin Dolphin; dibuja, lee los controles y
-// guarda en la memory card con aurora. Todavía no hay sonido; el registro dice lo que hace
-// el juego.
+// guarda en la memory card con aurora, y toca el sonido con SDL. El registro dice lo que
+// hace el juego.
 //
 // Usage: hmmm-native --disc <extracted disc> [--symbols <symbols.txt>] [--watchdog <s>]
 //                    [--user-folder <folder>]
