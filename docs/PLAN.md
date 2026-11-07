@@ -228,15 +228,16 @@ pieza por pieza, en el orden de arriba)
       visión de las proyecciones en perspectiva (`graphics/camera_view.h`); el
       HUD no cambia. Desde el launcher.
 - [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
-      nativo, `--frame-rate 60` o `120` (desde el launcher): cada cuadro del
-      juego se graba y se dibuja 2 o 4 veces, las primeras con las matrices de
-      posición, normales y proyección a medio camino entre el cuadro anterior
-      y el actual (`graphics/frame_interpolation.h`). Cada objeto del juego es
-      una matriz y una lista de visualización, así que una matriz se empareja
-      con la del cuadro anterior por la lista que dibuja; en la casa y la
-      granja se emparejan casi todas (469 de 485). Las que saltan (un corte de
-      cámara) se dibujan como están. La imagen va medio cuadro del juego más
-      tarde a 60.
+      nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
+      interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
+      dibujar con las transformaciones de cada dibujo en perspectiva a medio
+      camino entre el cuadro anterior y el actual; el HUD queda igual
+      (`graphics/frame_interpolation.h`). aurora cuenta para un juego a 60, así
+      que su 120 es 60 aquí y su 240 es 120. El runtime le dice cuándo toca cada
+      cuadro del juego, y el registro anota cada 30 s cuántos cuadros se
+      muestran y cuántos dibujos se emparejan. Un primer intento que grababa y
+      repetía los natives de GX en la CPU no llegaba a 60 fps en una laptop y hacía
+      temblar objetos repetidos, como los postes de una cerca.
 - [ ] Notas sobre 60 y 120 fps. El juego calcula todo por cuadro y
       presenta 30 por segundo,
       con dos retrazas de video por cuadro (medido en una laptop: 29.97 cuadros
@@ -738,6 +739,17 @@ by piece, in the order above)
       player. In the native runtime, `--zoom` (0.5 to 2) changes the field of
       view of the perspective projections (`graphics/camera_view.h`); the HUD
       does not change. From the launcher.
+- [x] 60 and 120 fps by interpolation (route (a) below). In the native
+      runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
+      interpolation aurora brings: it keeps each frame on the GPU and draws it
+      again with each perspective draw's transforms part of the way between the
+      frame before and this one; the HUD stays as it is
+      (`graphics/frame_interpolation.h`). aurora counts for a game at 60, so its
+      120 is 60 here and its 240 is 120. The runtime tells it when each game
+      frame is due, and the log notes every 30 s how many frames are shown and
+      how many draws match. A first try that recorded and replayed the GX
+      natives on the CPU did not reach 60 fps on a laptop and made repeated objects, like
+      the posts of a fence, shake.
 - [x] 60 and 120 fps by interpolation (route (a) below). In the native
       runtime, `--frame-rate 60` or `120` (from the launcher): each game frame
       is recorded and drawn 2 or 4 times, the first ones with the position,

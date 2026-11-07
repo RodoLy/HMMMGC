@@ -7,7 +7,6 @@
 // termina un cuadro, así que también le pasa el cuadro a aurora_host.
 
 #include "graphics/aurora_host.h"
-#include "graphics/frame_interpolation.h"
 #include "graphics/guest_values.h"
 #include "graphics/gx_draw.h"
 #include "native_functions.h"
@@ -22,10 +21,7 @@ constexpr int VERTICAL_TAPS = 7;   // GXSetCopyFilter: u8 vfilter[7]
 // GXSetDispCopySrc(u16 left, u16 top, u16 width, u16 height)
 void GXSetDispCopySrcNative(uint32_t left, uint32_t top, uint32_t width, uint32_t height) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] {
-        GXSetDispCopySrc(static_cast<u16>(left), static_cast<u16>(top), static_cast<u16>(width),
-                         static_cast<u16>(height));
-    });
+    GXSetDispCopySrc(static_cast<u16>(left), static_cast<u16>(top), static_cast<u16>(width), static_cast<u16>(height));
 }
 PPC_NATIVE_OVERRIDE_VOID(801920A4, GXSetDispCopySrcNative,
                          (uint32_t left, uint32_t top, uint32_t width, uint32_t height), (left, top, width, height));
@@ -33,10 +29,7 @@ PPC_NATIVE_OVERRIDE_VOID(801920A4, GXSetDispCopySrcNative,
 // GXSetTexCopySrc(u16 left, u16 top, u16 width, u16 height)
 void GXSetTexCopySrcNative(uint32_t left, uint32_t top, uint32_t width, uint32_t height) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] {
-        GXSetTexCopySrc(static_cast<u16>(left), static_cast<u16>(top), static_cast<u16>(width),
-                        static_cast<u16>(height));
-    });
+    GXSetTexCopySrc(static_cast<u16>(left), static_cast<u16>(top), static_cast<u16>(width), static_cast<u16>(height));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192120, GXSetTexCopySrcNative,
                          (uint32_t left, uint32_t top, uint32_t width, uint32_t height), (left, top, width, height));
@@ -44,17 +37,15 @@ PPC_NATIVE_OVERRIDE_VOID(80192120, GXSetTexCopySrcNative,
 // GXSetDispCopyDst(u16 width, u16 height)
 void GXSetDispCopyDstNative(uint32_t width, uint32_t height) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] { GXSetDispCopyDst(static_cast<u16>(width), static_cast<u16>(height)); });
+    GXSetDispCopyDst(static_cast<u16>(width), static_cast<u16>(height));
 }
 PPC_NATIVE_OVERRIDE_VOID(8019219C, GXSetDispCopyDstNative, (uint32_t width, uint32_t height), (width, height));
 
 // GXSetTexCopyDst(u16 width, u16 height, GXTexFmt format, GXBool mipmap)
 void GXSetTexCopyDstNative(uint32_t width, uint32_t height, uint32_t format, uint32_t mipmap) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] {
-        GXSetTexCopyDst(static_cast<u16>(width), static_cast<u16>(height), static_cast<GXTexFmt>(format),
-                        static_cast<GXBool>(mipmap));
-    });
+    GXSetTexCopyDst(static_cast<u16>(width), static_cast<u16>(height), static_cast<GXTexFmt>(format),
+                    static_cast<GXBool>(mipmap));
 }
 PPC_NATIVE_OVERRIDE_VOID(801921D0, GXSetTexCopyDstNative,
                          (uint32_t width, uint32_t height, uint32_t format, uint32_t mipmap),
@@ -63,11 +54,6 @@ PPC_NATIVE_OVERRIDE_VOID(801921D0, GXSetTexCopyDstNative,
 // GXSetDispCopyYScale(f32 scale): returns the number of lines of the copy.
 uint32_t GXSetDispCopyYScaleNative(float scale) {
     gx_draw::finish_primitive();
-    // The game needs the number of lines now; the scale is set again in its place in a
-    // recorded frame.
-    if (frame_interpolation::is_recording()) {
-        frame_interpolation::record([=] { GXSetDispCopyYScale(scale); });
-    }
     return GXSetDispCopyYScale(scale);
 }
 PPC_NATIVE_OVERRIDE(801925B4, GXSetDispCopyYScaleNative, uint32_t, (float scale), (scale));
@@ -75,8 +61,7 @@ PPC_NATIVE_OVERRIDE(801925B4, GXSetDispCopyYScaleNative, uint32_t, (float scale)
 // GXSetCopyClear(GXColor color, u32 depth)
 void GXSetCopyClearNative(uint32_t color_address, uint32_t depth) {
     gx_draw::finish_primitive();
-    const GXColor color = guest_values::read_color(color_address);
-    frame_interpolation::run([=] { GXSetCopyClear(color, depth); });
+    GXSetCopyClear(guest_values::read_color(color_address), depth);
 }
 PPC_NATIVE_OVERRIDE_VOID(80192680, GXSetCopyClearNative, (uint32_t color_address, uint32_t depth),
                          (color_address, depth));
@@ -86,8 +71,8 @@ PPC_NATIVE_OVERRIDE_VOID(80192680, GXSetCopyClearNative, (uint32_t color_address
 void GXSetCopyFilterNative(uint32_t antialias, uint32_t pattern_address, uint32_t vertical_filter,
                            uint32_t taps_address) {
     gx_draw::finish_primitive();
-    std::array<std::array<u8, 2>, SAMPLE_POINTS> pattern{};
-    std::array<u8, VERTICAL_TAPS> taps{};
+    u8 pattern[SAMPLE_POINTS][2]{};
+    u8 taps[VERTICAL_TAPS]{};
     for (int point = 0; point < SAMPLE_POINTS && pattern_address != 0; ++point) {
         pattern[point][0] = guest_memory::read8(pattern_address + static_cast<uint32_t>(point) * 2u);
         pattern[point][1] = guest_memory::read8(pattern_address + static_cast<uint32_t>(point) * 2u + 1u);
@@ -95,10 +80,7 @@ void GXSetCopyFilterNative(uint32_t antialias, uint32_t pattern_address, uint32_
     for (int tap = 0; tap < VERTICAL_TAPS && taps_address != 0; ++tap) {
         taps[tap] = guest_memory::read8(taps_address + static_cast<uint32_t>(tap));
     }
-    frame_interpolation::run([=]() mutable {
-        GXSetCopyFilter(static_cast<GXBool>(antialias), reinterpret_cast<u8(*)[2]>(pattern.data()),
-                        static_cast<GXBool>(vertical_filter), taps.data());
-    });
+    GXSetCopyFilter(static_cast<GXBool>(antialias), pattern, static_cast<GXBool>(vertical_filter), taps);
 }
 PPC_NATIVE_OVERRIDE_VOID(801926F8, GXSetCopyFilterNative,
                          (uint32_t antialias, uint32_t pattern_address, uint32_t vertical_filter,
@@ -108,7 +90,7 @@ PPC_NATIVE_OVERRIDE_VOID(801926F8, GXSetCopyFilterNative,
 // GXSetDispCopyGamma(GXGamma gamma)
 void GXSetDispCopyGammaNative(uint32_t gamma) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] { GXSetDispCopyGamma(static_cast<GXGamma>(gamma)); });
+    GXSetDispCopyGamma(static_cast<GXGamma>(gamma));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192900, GXSetDispCopyGammaNative, (uint32_t gamma), (gamma));
 
@@ -117,14 +99,8 @@ PPC_NATIVE_OVERRIDE_VOID(80192900, GXSetDispCopyGammaNative, (uint32_t gamma), (
 // and shows it when the frame ends, which is now.
 void GXCopyDispNative(uint32_t destination_address, uint32_t clear) {
     gx_draw::finish_primitive();
-    void* destination = const_cast<void*>(guest_values::host_data(destination_address, 1));
-    if (!frame_interpolation::is_recording()) {
-        GXCopyDisp(destination, static_cast<GXBool>(clear));
-        aurora_host::present_frame();
-        return;
-    }
-    frame_interpolation::record([=] { GXCopyDisp(destination, static_cast<GXBool>(clear)); });
-    frame_interpolation::finish_frame(aurora_host::present_frame);
+    GXCopyDisp(const_cast<void*>(guest_values::host_data(destination_address, 1)), static_cast<GXBool>(clear));
+    aurora_host::present_frame();
 }
 PPC_NATIVE_OVERRIDE_VOID(80192914, GXCopyDispNative, (uint32_t destination_address, uint32_t clear),
                          (destination_address, clear));
@@ -134,8 +110,7 @@ PPC_NATIVE_OVERRIDE_VOID(80192914, GXCopyDispNative, (uint32_t destination_addre
 // address.
 void GXCopyTexNative(uint32_t destination_address, uint32_t clear) {
     gx_draw::finish_primitive();
-    void* destination = const_cast<void*>(guest_values::host_data(destination_address, 1));
-    frame_interpolation::run([=] { GXCopyTex(destination, static_cast<GXBool>(clear)); });
+    GXCopyTex(const_cast<void*>(guest_values::host_data(destination_address, 1)), static_cast<GXBool>(clear));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192A7C, GXCopyTexNative, (uint32_t destination_address, uint32_t clear),
                          (destination_address, clear));

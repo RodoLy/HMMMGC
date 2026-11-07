@@ -36,8 +36,4 @@ uint32_t end_display_list();
 // GXCallDisplayList.
 void call_display_list(uint32_t guest_address, uint32_t size);
 
-// Whether the game is building a display list (between GXBeginDisplayList and
-// GXEndDisplayList).
-bool is_building_display_list();
-
 }  // namespace gx_draw

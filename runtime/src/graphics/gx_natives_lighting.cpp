@@ -7,7 +7,6 @@
 // another size and layout on the PC, so each game light gets an aurora light kept here,
 // found by the game light's address.
 
-#include "graphics/frame_interpolation.h"
 #include "graphics/guest_values.h"
 #include "graphics/gx_draw.h"
 #include "native_functions.h"
@@ -37,8 +36,7 @@ PPC_NATIVE_OVERRIDE_VOID(80192C50, GXInitLightColorNative, (uint32_t light_addre
 // GXLoadLightObjImm(GXLightObj* light, GXLightID slot)
 void GXLoadLightObjImmNative(uint32_t light_address, uint32_t slot) {
     gx_draw::finish_primitive();
-    frame_interpolation::run(
-        [light = g_lights[light_address], slot]() mutable { GXLoadLightObjImm(&light, static_cast<GXLightID>(slot)); });
+    GXLoadLightObjImm(&g_lights[light_address], static_cast<GXLightID>(slot));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192C5C, GXLoadLightObjImmNative, (uint32_t light_address, uint32_t slot),
                          (light_address, slot));
@@ -46,8 +44,7 @@ PPC_NATIVE_OVERRIDE_VOID(80192C5C, GXLoadLightObjImmNative, (uint32_t light_addr
 // GXSetChanAmbColor(GXChannelID channel, GXColor color)
 void GXSetChanAmbColorNative(uint32_t channel, uint32_t color_address) {
     gx_draw::finish_primitive();
-    const GXColor color = guest_values::read_color(color_address);
-    frame_interpolation::run([=] { GXSetChanAmbColor(static_cast<GXChannelID>(channel), color); });
+    GXSetChanAmbColor(static_cast<GXChannelID>(channel), guest_values::read_color(color_address));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192CD8, GXSetChanAmbColorNative, (uint32_t channel, uint32_t color_address),
                          (channel, color_address));
@@ -55,8 +52,7 @@ PPC_NATIVE_OVERRIDE_VOID(80192CD8, GXSetChanAmbColorNative, (uint32_t channel, u
 // GXSetChanMatColor(GXChannelID channel, GXColor color)
 void GXSetChanMatColorNative(uint32_t channel, uint32_t color_address) {
     gx_draw::finish_primitive();
-    const GXColor color = guest_values::read_color(color_address);
-    frame_interpolation::run([=] { GXSetChanMatColor(static_cast<GXChannelID>(channel), color); });
+    GXSetChanMatColor(static_cast<GXChannelID>(channel), guest_values::read_color(color_address));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192DC0, GXSetChanMatColorNative, (uint32_t channel, uint32_t color_address),
                          (channel, color_address));
@@ -64,7 +60,7 @@ PPC_NATIVE_OVERRIDE_VOID(80192DC0, GXSetChanMatColorNative, (uint32_t channel, u
 // GXSetNumChans(u8 count)
 void GXSetNumChansNative(uint32_t count) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] { GXSetNumChans(static_cast<u8>(count)); });
+    GXSetNumChans(static_cast<u8>(count));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192EA8, GXSetNumChansNative, (uint32_t count), (count));
 
@@ -73,11 +69,9 @@ PPC_NATIVE_OVERRIDE_VOID(80192EA8, GXSetNumChansNative, (uint32_t count), (count
 void GXSetChanCtrlNative(uint32_t channel, uint32_t enable, uint32_t ambient_source, uint32_t material_source,
                          uint32_t lights, uint32_t diffuse, uint32_t attenuation) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] {
-        GXSetChanCtrl(static_cast<GXChannelID>(channel), static_cast<GXBool>(enable),
-                      static_cast<GXColorSrc>(ambient_source), static_cast<GXColorSrc>(material_source), lights,
-                      static_cast<GXDiffuseFn>(diffuse), static_cast<GXAttnFn>(attenuation));
-    });
+    GXSetChanCtrl(static_cast<GXChannelID>(channel), static_cast<GXBool>(enable),
+                  static_cast<GXColorSrc>(ambient_source), static_cast<GXColorSrc>(material_source), lights,
+                  static_cast<GXDiffuseFn>(diffuse), static_cast<GXAttnFn>(attenuation));
 }
 PPC_NATIVE_OVERRIDE_VOID(80192EE4, GXSetChanCtrlNative,
                          (uint32_t channel, uint32_t enable, uint32_t ambient_source, uint32_t material_source,

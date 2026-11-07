@@ -5,11 +5,13 @@
 #include "audio/audio_output.h"
 #include "game_clock.h"
 #include "graphics/camera_view.h"
+#include "graphics/frame_interpolation.h"
 #include "player_folder.h"
 #include "runtime_log.h"
 
 #include <aurora/aurora.h>
 #include <aurora/event.h>
+#include <aurora/gfx.h>
 #include <dolphin/vi.h>
 
 #include <SDL3/SDL.h>
@@ -59,13 +61,19 @@ void count_frame() {
     if (elapsed.count() < 1.0) {
         return;
     }
+    // With frames made in between, aurora shows them from its render thread: it counts them.
+    double frames_per_second = g_frame_rate.frames / elapsed.count();
+    if (frame_interpolation::is_on()) {
+        AuroraPresentTiming timing{};
+        aurora_get_present_timing(&timing);
+        frames_per_second = timing.framesPerSecond;
+    }
     char title[128];
     const unsigned speed = game_clock::speed_percent();
     if (speed == game_clock::NORMAL_SPEED_PERCENT) {
-        std::snprintf(title, sizeof(title), "%s - %.0f fps", WINDOW_TITLE, g_frame_rate.frames / elapsed.count());
+        std::snprintf(title, sizeof(title), "%s - %.0f fps", WINDOW_TITLE, frames_per_second);
     } else {
-        std::snprintf(title, sizeof(title), "%s - %.0f fps - %u%%", WINDOW_TITLE, g_frame_rate.frames / elapsed.count(),
-                      speed);
+        std::snprintf(title, sizeof(title), "%s - %.0f fps - %u%%", WINDOW_TITLE, frames_per_second, speed);
     }
     SDL_SetWindowTitle(aurora_get_window(), title);
     g_frame_rate = FrameRate{now, 0};
@@ -150,6 +158,7 @@ void initialize() {
         std::exit(EXIT_FAILURE);
     }
     camera_view::apply_to_aurora();
+    frame_interpolation::apply_to_aurora();
     camera_view::set_window_size(info.windowSize.width, info.windowSize.height);
     if (g_display_options.resolution_scale > 0.f) {
         VISetFrameBufferScale(g_display_options.resolution_scale);
@@ -169,6 +178,7 @@ void initialize() {
 bool is_initialized() { return g_initialized; }
 
 void present_frame() {
+    frame_interpolation::schedule_frame();
     aurora_end_frame();
     count_frame();
     process_events();

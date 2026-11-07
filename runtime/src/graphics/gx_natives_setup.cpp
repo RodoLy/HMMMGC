@@ -5,7 +5,6 @@
 // reemplazadas por las de aurora.
 
 #include "graphics/aurora_host.h"
-#include "graphics/frame_interpolation.h"
 #include "graphics/guest_values.h"
 #include "graphics/gx_draw.h"
 #include "native_functions.h"
@@ -33,14 +32,14 @@ PPC_NATIVE_OVERRIDE(8018F234, GXInitNative, uint32_t, (uint32_t fifo_address, ui
 // GXSetMisc(GXMiscToken token, u32 value)
 void GXSetMiscNative(uint32_t token, uint32_t value) {
     gx_draw::finish_primitive();
-    frame_interpolation::run([=] { GXSetMisc(static_cast<GXMiscToken>(token), value); });
+    GXSetMisc(static_cast<GXMiscToken>(token), value);
 }
 PPC_NATIVE_OVERRIDE_VOID(801915C0, GXSetMiscNative, (uint32_t token, uint32_t value), (token, value));
 
 // GXDrawDone(void): waits until the GPU has drawn everything sent so far.
 void GXDrawDoneNative() {
     gx_draw::finish_primitive();
-    frame_interpolation::run([] { GXDrawDone(); });
+    GXDrawDone();
 }
 PPC_NATIVE_OVERRIDE_VOID(80191850, GXDrawDoneNative, (), ());
 

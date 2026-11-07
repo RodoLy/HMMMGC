@@ -3,7 +3,6 @@
 
 #include "graphics/gx_draw.h"
 
-#include "graphics/frame_interpolation.h"
 #include "graphics/vertex_layout.h"
 #include "guest_memory.h"
 #include "runtime_log.h"
@@ -220,49 +219,9 @@ void add_recorded_spans(const std::vector<RecordedPrimitive>& primitives, ArrayS
 // Hands bytes that are not vertices of a primitive drawn right away to aurora's command
 // FIFO (or to the display list it is recording), as they are.
 void write_commands(const uint8_t* bytes, size_t size) {
-    if (frame_interpolation::is_recording()) {
-        frame_interpolation::record([commands = std::vector<uint8_t>(bytes, bytes + size)] {
-            for (const uint8_t byte : commands) {
-                GXCmd1u8(byte);
-            }
-        });
-        return;
-    }
     for (size_t i = 0; i < size; ++i) {
         GXCmd1u8(bytes[i]);
     }
-}
-
-// Hands a primitive drawn right away to aurora, with the arrays its indices use.
-void draw_primitive(const OpenPrimitive& primitive) {
-    vertex_layout::HighestIndices highest;
-    highest.fill(-1);
-    vertex_layout::find_highest_indices(primitive.vertex_format, primitive.vertices.data(), primitive.vertex_count,
-                                        highest);
-    ArraySpans spans{};
-    add_vertex_spans(primitive.vertex_format, highest, spans);
-    publish_arrays(spans);
-    aurora::gx::fifo::submit_raw_draw(static_cast<GXPrimitive>(primitive.primitive),
-                                      static_cast<GXVtxFmt>(primitive.vertex_format), primitive.vertices.data(),
-                                      static_cast<uint16_t>(primitive.vertex_count), primitive.expected_bytes);
-}
-
-// Hands a display list to aurora, with the arrays its draws use.
-void draw_display_list(uint32_t guest_address, uint32_t size) {
-    const uint8_t* list = guest_memory::host_pointer(guest_address, size);
-    ArraySpans spans{};
-    const auto recorded = g_recorded_display_lists.find(guest_address);
-    if (recorded != g_recorded_display_lists.end() &&
-        (recorded->second.size != size || recorded->second.fingerprint != fingerprint(list, size))) {
-        g_recorded_display_lists.erase(recorded);  // its memory holds another list now
-        find_display_list_spans(list, size, spans);
-    } else if (recorded != g_recorded_display_lists.end()) {
-        add_recorded_spans(recorded->second.primitives, spans);
-    } else {
-        find_display_list_spans(list, size, spans);
-    }
-    publish_arrays(spans);
-    GXCallDisplayList(list, size);
 }
 
 }  // namespace
@@ -319,12 +278,16 @@ void finish_primitive() {
                              g_primitive.vertex_count, g_primitive.vertices.size(), g_primitive.expected_bytes);
         return;
     }
-    if (frame_interpolation::is_recording()) {
-        frame_interpolation::mark_draw(0, g_primitive.vertex_count);
-        frame_interpolation::record([primitive = g_primitive] { draw_primitive(primitive); });
-        return;
-    }
-    draw_primitive(g_primitive);
+    vertex_layout::HighestIndices highest;
+    highest.fill(-1);
+    vertex_layout::find_highest_indices(g_primitive.vertex_format, g_primitive.vertices.data(),
+                                        g_primitive.vertex_count, highest);
+    ArraySpans spans{};
+    add_vertex_spans(g_primitive.vertex_format, highest, spans);
+    publish_arrays(spans);
+    aurora::gx::fifo::submit_raw_draw(static_cast<GXPrimitive>(g_primitive.primitive),
+                                      static_cast<GXVtxFmt>(g_primitive.vertex_format), g_primitive.vertices.data(),
+                                      static_cast<uint16_t>(g_primitive.vertex_count), g_primitive.expected_bytes);
 }
 
 void begin_display_list(uint32_t guest_address, uint32_t size) {
@@ -355,16 +318,19 @@ void call_display_list(uint32_t guest_address, uint32_t size) {
         runtime_log::warning("gx", "display list at 0x%08X (%u bytes) is not in memory", guest_address, size);
         return;
     }
-    if (frame_interpolation::is_recording()) {
-        // The list and the arrays it reads stay in the game's memory until the frame is
-        // drawn: the game draws from them again in the next frame.
-        frame_interpolation::mark_draw(guest_address, size);
-        frame_interpolation::record([=] { draw_display_list(guest_address, size); });
-        return;
+    ArraySpans spans{};
+    const auto recorded = g_recorded_display_lists.find(guest_address);
+    if (recorded != g_recorded_display_lists.end() &&
+        (recorded->second.size != size || recorded->second.fingerprint != fingerprint(list, size))) {
+        g_recorded_display_lists.erase(recorded);  // its memory holds another list now
+        find_display_list_spans(list, size, spans);
+    } else if (recorded != g_recorded_display_lists.end()) {
+        add_recorded_spans(recorded->second.primitives, spans);
+    } else {
+        find_display_list_spans(list, size, spans);
     }
-    draw_display_list(guest_address, size);
+    publish_arrays(spans);
+    GXCallDisplayList(list, size);
 }
-
-bool is_building_display_list() { return g_recording.active; }
 
 }  // namespace gx_draw
