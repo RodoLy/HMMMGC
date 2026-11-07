@@ -144,17 +144,15 @@ velocidad de ahí no dice nada de la de una PC.
   las 480 líneas con un borde arriba y otro abajo. aurora conserva esas
   proporciones; Dolphin la estira para llenar la ventana.
 
-**Lo que falta de GX.** Unas funciones de GX del juego siguen traducidas y
-cambian el estado del GPU: escriben sus registros directamente, a veces a
-partir de la copia del estado que guarda el SDK, que las nativas ya no
-actualizan. Son GXSetVtxAttrFmtv, GXSetCurrentMtx, GXSetProjectionv,
-GXSetTevDirect, GXSetTevIndirect y las demás de texturas indirectas,
-GXSetTevSwapMode, GXSetTevSwapModeTable, GXSetZTexture, GXSetDstAlpha,
-GXSetFieldMask, GXSetFieldMode, GXSetCoPlanar, GXEnableTexOffsets,
-GXSetCopyClamp, GXSetDispCopyFrame2Field, GXSetScissorBoxOffset, GXFlush, las
-GXPoke*, GXLoadTexObjPreLoaded, GXInitTexCacheRegion, GXInitTlutRegion y una
-de TEV todavía sin nombre (`fn_80194490`). En lo que se ve hasta ahora no se
-nota nada, pero hay que pasarlas a aurora.
+**El resto de GX.** Además de esas cuatro, el ejecutable trae otras 52
+funciones de GX que siguen traducidas, y el código del juego no llama a
+ninguna: solo las llaman funciones del SDK que ahora son nativas. La
+preparación del estado inicial dentro de GXInit usa casi todas
+(GXSetTevSwapMode, GXSetZTexture, las GXPoke*, etc.), y además GXDrawDone y
+las listas de visualización llaman a GXFlush, y GXLoadTexObj a
+GXLoadTexObjPreLoaded. Se comprobó en el código traducido, contando las
+funciones pequeñas que el traductor copia dentro de quien las llama. Si
+cambian las nativas, hay que repetir esa revisión.
 
 **Probarlo.** Con el mismo script. aurora baja Dawn ya compilado y sus otras
 dependencias cuando se configura el runtime; donde no se puede bajar nada, el
@@ -169,9 +167,9 @@ DISPLAY=:99 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
 
 ### Qué sigue
 
-1. GX: pasar a aurora las funciones de arriba, comparar cuadro por cuadro con
-   la versión sobre ModernGekko (que sigue siendo la que se juega mientras
-   tanto) y probarlo en una PC con GPU, también en Windows ARM64.
+1. GX: comparar cuadro por cuadro con la versión sobre ModernGekko (que sigue
+   siendo la que se juega mientras tanto) y probarlo en una PC con GPU,
+   también en Windows ARM64.
 2. Controles: que el SI conteste como un control de GameCube, con el teclado o
    un gamepad; la pantalla de título espera a que se presione START.
 3. Memory card: que el EXI tenga una tarjeta, guardada en un archivo `.gci`.
@@ -319,17 +317,14 @@ nothing about the speed on a PC.
   centres it in the 480 lines with a border above and below. aurora keeps
   those proportions; Dolphin stretches it to fill the window.
 
-**What is left of GX.** A few of the game's GX functions are still translated
-and change the GPU's state: they write its registers directly, sometimes from
-the copy of the state that the SDK keeps, which the natives no longer update.
-They are GXSetVtxAttrFmtv, GXSetCurrentMtx, GXSetProjectionv, GXSetTevDirect,
-GXSetTevIndirect and the other indirect texture functions, GXSetTevSwapMode,
-GXSetTevSwapModeTable, GXSetZTexture, GXSetDstAlpha, GXSetFieldMask,
-GXSetFieldMode, GXSetCoPlanar, GXEnableTexOffsets, GXSetCopyClamp,
-GXSetDispCopyFrame2Field, GXSetScissorBoxOffset, GXFlush, the GXPoke*
-functions, GXLoadTexObjPreLoaded, GXInitTexCacheRegion, GXInitTlutRegion and a
-TEV function not named yet (`fn_80194490`). Nothing shows in what is drawn so
-far, but they have to move to aurora.
+**The rest of GX.** Besides those four, the executable has 52 more GX
+functions that stay translated, and the game's code calls none of them: only
+SDK functions that are natives now do. The setup of the initial state inside
+GXInit uses nearly all of them (GXSetTevSwapMode, GXSetZTexture, the GXPoke*
+functions, etc.), and GXDrawDone and the display list functions call GXFlush,
+and GXLoadTexObj calls GXLoadTexObjPreLoaded. This was checked in the
+translated code, counting the small functions that the translator copies into
+their callers. If the natives change, that check has to be repeated.
 
 **Trying it.** With the same script. aurora downloads Dawn already built and
 its other dependencies when the runtime is configured; where nothing can be
@@ -344,9 +339,9 @@ DISPLAY=:99 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
 
 ### What comes next
 
-1. GX: move the functions above to aurora, compare frame by frame with the
-   version on ModernGekko (which is still the one that is played in the
-   meantime) and try it on a PC with a GPU, Windows ARM64 included.
+1. GX: compare frame by frame with the version on ModernGekko (which is still
+   the one that is played in the meantime) and try it on a PC with a GPU,
+   Windows ARM64 included.
 2. Controllers: make the SI answer like a GameCube controller, from the
    keyboard or a gamepad; the title screen waits for START.
 3. Memory card: give the EXI a card, kept in a `.gci` file.
