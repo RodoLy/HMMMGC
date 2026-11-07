@@ -3,11 +3,11 @@
 <#
 .SYNOPSIS
     The launcher of the native version (without Dolphin): a window to turn the mods on and off,
-    choose the speed of the character and of the whole game, the resolution and full screen, and
-    start the game.
+    choose the speed of the character and of the whole game, the camera's zoom, the resolution and
+    full screen, and start the game.
     El launcher de la versión nativa (sin Dolphin): una ventana para activar y desactivar los mods,
-    elegir la velocidad del personaje y la de todo el juego, la resolución y la pantalla completa, y
-    arrancar el juego.
+    elegir la velocidad del personaje y la de todo el juego, el zoom de la cámara, la resolución y la
+    pantalla completa, y arrancar el juego.
 
 .DESCRIPTION
     The choices are kept in settings.json, in the player's folder (%LOCALAPPDATA%\HarvestMoonMM),
@@ -17,6 +17,7 @@
     "Play" saves the choices and starts hmmm-native.exe, next to this script, with:
       --mods       the mods that are on (or "none");
       --game-speed the speed of the whole game (100 to 400%; Tab held in the game: at least 300%);
+      --zoom              the camera's zoom (0.5 to 2: below 1 shows more around the player);
       --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
       --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
       HM_MM_PLAYER_SPEED_PERCENT, which the player_speed mod reads;
@@ -67,6 +68,10 @@ $PlayerSpeedDefault = 150
 $GameSpeedMinimum = 100
 $GameSpeedMaximum = 400
 $GameSpeedDefault = 100
+# The camera's zoom, in percent (camera_view.h): 100 is the game's camera, 70 shows more around.
+$ZoomMinimum = 50
+$ZoomMaximum = 200
+$ZoomDefault = 100
 # The internal resolutions offered: a multiple of the console's 640x528 (0 follows the window).
 $ResolutionScales = @(0, 2, 3, 4, 6)
 
@@ -78,6 +83,7 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Speed of the character (100% is the original game):'
         GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
+        ZoomLabel = "Camera zoom (100% is the game's; less shows more around the player):"
         ResolutionLabel = 'Internal resolution:'
         ResolutionAuto = 'As the window (Alt+Enter: full screen)'
         ResolutionTimes = '{0}x the console ({1}x{2})'
@@ -94,6 +100,7 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Velocidad del personaje (100% es la del juego original):'
         GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
+        ZoomLabel = 'Zoom de la cámara (100% es el del juego; menos muestra más alrededor del personaje):'
         ResolutionLabel = 'Resolución interna:'
         ResolutionAuto = 'Como la ventana (Alt+Enter: pantalla completa)'
         ResolutionTimes = '{0}x la de la consola ({1}x{2})'
@@ -120,7 +127,7 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 function Read-Settings {
     $settings = [ordered] @{
         mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
-        resolutionScale = 0; fullscreen = $false
+        cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false
     }
     foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
@@ -145,6 +152,9 @@ function Read-Settings {
     }
     if (-not (Test-WholeNumberInRange $settings.gameSpeedPercent $GameSpeedMinimum $GameSpeedMaximum)) {
         $settings.gameSpeedPercent = $GameSpeedDefault
+    }
+    if (-not (Test-WholeNumberInRange $settings.cameraZoomPercent $ZoomMinimum $ZoomMaximum)) {
+        $settings.cameraZoomPercent = $ZoomDefault
     }
     if ($ResolutionScales -notcontains $settings.resolutionScale) { $settings.resolutionScale = 0 }
     $settings.fullscreen = [bool] $settings.fullscreen
@@ -175,7 +185,9 @@ function Start-Game($Settings) {
     $env:HM_MM_PLAYER_SPEED_PERCENT = [string] $Settings.playerSpeedPercent
     # cmd.exe sends both of the game's output streams to one log file.
     $gameSpeed = [int] $Settings.gameSpeedPercent
-    $display = "--resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen)"
+    # A decimal point whatever the language of Windows: the game reads "0.70", not "0,70".
+    $zoom = ([int] $Settings.cameraZoomPercent / 100.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
+    $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen)"
     $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed $display > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
         -WorkingDirectory $ProgramDirectory -WindowStyle Hidden
@@ -264,6 +276,14 @@ $Layout.Controls.Add($GameSpeedLabel)
 $GameSpeedRow = New-PercentRow $GameSpeedMinimum $GameSpeedMaximum ([int] $Settings.gameSpeedPercent)
 $Layout.Controls.Add($GameSpeedRow)
 
+$ZoomLabel = New-Object System.Windows.Forms.Label
+$ZoomLabel.Text = $Text.ZoomLabel
+$ZoomLabel.AutoSize = $true
+$ZoomLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
+$Layout.Controls.Add($ZoomLabel)
+$ZoomRow = New-PercentRow $ZoomMinimum $ZoomMaximum ([int] $Settings.cameraZoomPercent)
+$Layout.Controls.Add($ZoomRow)
+
 $ResolutionLabel = New-Object System.Windows.Forms.Label
 $ResolutionLabel.Text = $Text.ResolutionLabel
 $ResolutionLabel.AutoSize = $true
@@ -293,6 +313,7 @@ function Get-Choices {
     foreach ($mod in $Mods) { $Settings.mods[$mod.Id] = $CheckBoxes[$mod.Id].Checked }
     $Settings.playerSpeedPercent = [int] $SpeedRow.Tag.Value
     $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
+    $Settings.cameraZoomPercent = [int] $ZoomRow.Tag.Value
     $Settings.resolutionScale = $ResolutionScales[$ResolutionList.SelectedIndex]
     $Settings.fullscreen = $FullscreenBox.Checked
     return $Settings

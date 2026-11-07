@@ -44,7 +44,8 @@ mantiene `Tab` apretado, va al menos al 300 % (el turbo), y el título de la
 ventana muestra la velocidad. La resolución interna sigue al tamaño de la ventana
 (Alt+Enter cambia a pantalla completa); `--resolution-scale <n>` la fija en n
 veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
-los bordes, y `--fullscreen 1` empieza en pantalla completa. En Windows, `Launcher.bat`
+los bordes, y `--fullscreen 1` empieza en pantalla completa. `--zoom <0.5-2>`
+acerca (más de 1) o aleja (menos de 1) la cámara del juego. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
 velocidad del personaje y la del juego, y jugar; guarda lo elegido en el mismo `settings.json`
 que la versión ModernGekko. Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
@@ -165,7 +166,8 @@ makes the whole game run faster (the console's clock, `game_clock.h`); while
 the speed. The internal resolution follows the window's size (Alt+Enter
 switches to full screen); `--resolution-scale <n>` fixes it at n times the
 console's (6 is nearly 4K) and scales it down to the window, which smooths the
-edges, and `--fullscreen 1` starts in full screen. On Windows, `Launcher.bat`
+edges, and `--fullscreen 1` starts in full screen. `--zoom <0.5-2>` brings
+the game's camera closer (above 1) or farther (below 1). On Windows, `Launcher.bat`
 (`packaging/windows/native/`) opens a window to turn the mods on, choose the
 speed of the character and of the game, the resolution and full screen, and
 play; it keeps the choices in the same `settings.json` as the ModernGekko
