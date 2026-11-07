@@ -226,10 +226,28 @@ ráfagas, pero nunca se toca un búfer que el juego no ha llenado. La salida
 lento para mantenerlo, como el mezclador de Dolphin, porque el reloj de la PC
 y el de la tarjeta de sonido nunca van igual.
 
+### Windows ARM64 (2026-11-06)
+
+**Resultado.** El runtime corre en la laptop del jugador (Snapdragon X con
+Windows 11): dibuja con DirectX 12 en la GPU Adreno, suena por WASAPI, carga la
+partida y se juega en el pueblo. El jugador nota que abre y carga mucho más
+rápido que la versión sobre ModernGekko.
+
+**Cómo.** Se compiló en Linux con llvm-mingw para `aarch64-w64-mingw32`, con el
+Dawn ya compilado que aurora usa en Windows (su DLL se usa solo por su
+interfaz de C) y con SDL y las demás bibliotecas compiladas desde su código.
+Windows tiene su propio mapa de memoria (`guest_memory_windows.cpp`) y su
+manejador de fallos (`fault_handler_windows.cpp`): como un programa en Windows
+ARM64 no puede detenerse tras una instrucción, una lectura de registro por
+puntero la hace el manejador, decodificando la carga (`arm64_load.h`). El
+ejecutable lleva el código traducido de su disco, así que solo se le entregó al
+jugador; el paquete público compilará esa parte en la PC de cada jugador.
+
 ### Qué sigue
 
-1. Un paquete para Windows (también ARM64) que se pueda probar en la PC del
-   jugador, con GPU y tarjeta de sonido de verdad.
+1. El paquete público para Windows: las bibliotecas compiladas en GitHub
+   Actions y el código del juego traducido y compilado en la PC del jugador,
+   como ya hace el paquete de ModernGekko.
 2. GX: comparar cuadro por cuadro con la versión sobre ModernGekko (que sigue
    siendo la que se juega mientras tanto).
 
@@ -454,9 +472,27 @@ bursts, but a buffer the game has not filled is never played. The output
 hold it, as Dolphin's mixer does, because the PC's clock and the sound card's
 never run quite together.
 
+### Windows ARM64 (2026-11-06)
+
+**Result.** The runtime runs on the player's laptop (Snapdragon X with
+Windows 11): it draws with DirectX 12 on the Adreno GPU, sounds through
+WASAPI, loads the save and plays in town. The player finds that it starts and
+loads much faster than the version on ModernGekko.
+
+**How.** It was compiled on Linux with llvm-mingw for `aarch64-w64-mingw32`,
+with the prebuilt Dawn that aurora uses on Windows (its DLL is used only
+through its C interface) and with SDL and the other libraries built from
+source. Windows has its own memory mapping (`guest_memory_windows.cpp`) and
+fault handler (`fault_handler_windows.cpp`): as a program on Windows ARM64
+cannot stop after one instruction, a register read through a pointer is done
+by the handler, which decodes the load (`arm64_load.h`). The executable holds
+the code translated from the player's disc, so it was only handed to the
+player; the public package will compile that part on each player's PC.
+
 ### What comes next
 
-1. A package for Windows (ARM64 too) that can be tried on the player's PC,
-   with a real GPU and sound card.
+1. The public package for Windows: the libraries built in GitHub Actions, and
+   the game's code translated and compiled on the player's PC, as the
+   ModernGekko package already does.
 2. GX: compare frame by frame with the version on ModernGekko (which is still
    the one that is played in the meantime).
