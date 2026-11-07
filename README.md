@@ -37,7 +37,8 @@ disco (ISO, GCM o RVZ).
   ya corre sin nada de Dolphin desde su primera instrucción hasta su bucle de
   cuadros, lee sus archivos del disco, dibuja con aurora los logos, la intro
   en 3D y la pantalla de título, se controla con teclado o gamepad, y carga y
-  guarda partidas en la memory card; todavía no hay sonido
+  guarda partidas en la memory card, y toca la música y los efectos con el
+  programa de sonido del DSP hecho en C++
   ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
@@ -155,7 +156,8 @@ This repository contains no game data. You need your own backup of the disc
   already runs with nothing from Dolphin from its first instruction to its
   frame loop, reads its files from the disc, draws the logos, the 3D intro and
   the title screen with aurora, is played with a keyboard or a gamepad, and
-  loads and saves games on the memory card; there is no sound yet
+  loads and saves games on the memory card, and plays the music and sound
+  effects with the DSP's sound program written in C++
   ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,

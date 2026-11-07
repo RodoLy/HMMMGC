@@ -201,13 +201,37 @@ desde el runtime. Una de ellas, CARDSetStatus, todavía no tiene nombre en
 `symbols.txt`: es la que llama a CARDSetStatusAsync con `__CARDSyncCallback` y
 luego espera en `__CARDSync`.
 
+### El sonido (2026-11-06)
+
+**Resultado.** La música y los efectos suenan: la intro, la pantalla de
+título, los menús y la granja, grabados en la máquina de pruebas y escuchados
+por el jugador. En 165 s de juego salieron 165 s de sonido, sin huecos.
+
+**Cómo.** El juego usa AX, la biblioteca de sonido de Nintendo, que le manda
+al DSP de audio un programa propio y, cada 5 ms, una lista de comandos. El
+runtime no ejecuta el código del DSP: como Dolphin, reconoce el programa por un
+hash de su código y corre una versión en C++ (`audio/`), portada de la
+emulación de alto nivel de AX de Dolphin. Esa versión lee las voces de la
+memoria principal y sus muestras de la ARAM (ADPCM o PCM), las convierte a
+32 kHz y las mezcla, y deja el cuadro de sonido en la memoria principal. El DMA
+de audio lo toca desde ahí a 32 kHz e interrumpe al empezar cada búfer; en esa
+interrupción el juego avanza su música (una vez cada 5 ms) y pide el cuadro
+siguiente.
+
+**El ritmo.** El juego atiende las interrupciones donde las vuelve a activar,
+a veces decenas de milisegundos tarde. Por eso el DMA espera a que el juego
+tome la interrupción de cada búfer y luego se pone al día: el sonido sale a
+ráfagas, pero nunca se toca un búfer que el juego no ha llenado. La salida
+(SDL) guarda un margen de 60 ms y toca hasta medio por ciento más rápido o más
+lento para mantenerlo, como el mezclador de Dolphin, porque el reloj de la PC
+y el de la tarjeta de sonido nunca van igual.
+
 ### Qué sigue
 
-1. Sonido: el DSP con el microcódigo de AX hecho en nativo, como WiiCompiled.
+1. Un paquete para Windows (también ARM64) que se pueda probar en la PC del
+   jugador, con GPU y tarjeta de sonido de verdad.
 2. GX: comparar cuadro por cuadro con la versión sobre ModernGekko (que sigue
-   siendo la que se juega mientras tanto) y probarlo en una PC con GPU,
-   también en Windows ARM64.
-3. Un paquete para Windows que se pueda probar en la PC del jugador.
+   siendo la que se juega mientras tanto).
 
 ---
 
@@ -406,10 +430,33 @@ One of them, CARDSetStatus, has no name in `symbols.txt` yet: it is the one
 that calls CARDSetStatusAsync with `__CARDSyncCallback` and then waits in
 `__CARDSync`.
 
+### The sound (2026-11-06)
+
+**Result.** The music and the sound effects play: the intro, the title
+screen, the menus and the farm, recorded on the test machine and listened to
+by the player. In 165 s of play, 165 s of sound came out, with no gaps.
+
+**How.** The game uses AX, Nintendo's sound library, which gives the audio
+DSP a program of its own and, every 5 ms, a command list. The runtime does not
+run the DSP's code: like Dolphin, it recognizes the program by a hash of its
+code and runs a version in C++ (`audio/`), ported from Dolphin's high-level
+emulation of AX. That version reads the voices from main memory and their
+samples from ARAM (ADPCM or PCM), converts them to 32 kHz and mixes them, and
+leaves the frame of sound in main memory. The audio DMA plays it from there at
+32 kHz and interrupts when each buffer starts; in that interrupt the game
+advances its music (once every 5 ms) and asks for the next frame.
+
+**The pace.** The game takes interrupts where it turns them back on,
+sometimes tens of milliseconds late. So the audio DMA waits for the game to
+take each buffer's interrupt and then catches up: the sound comes out in
+bursts, but a buffer the game has not filled is never played. The output
+(SDL) keeps a 60 ms margin and plays up to half a percent faster or slower to
+hold it, as Dolphin's mixer does, because the PC's clock and the sound card's
+never run quite together.
+
 ### What comes next
 
-1. Sound: the DSP with the AX microcode done natively, as WiiCompiled does.
+1. A package for Windows (ARM64 too) that can be tried on the player's PC,
+   with a real GPU and sound card.
 2. GX: compare frame by frame with the version on ModernGekko (which is still
-   the one that is played in the meantime) and try it on a PC with a GPU,
-   Windows ARM64 included.
-3. A package for Windows that can be tried on the player's PC.
+   the one that is played in the meantime).

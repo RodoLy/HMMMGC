@@ -52,6 +52,14 @@ la de la versión sobre ModernGekko (`HarvestMoonMM\GC\USA\Card A`), para no
 dañar tus partidas. Para probar una, copia `E9-G4AE-HARVESTMOON.gci` de esa
 carpeta a la del runtime nativo; la original no se toca.
 
+### Sonido
+
+El sonido sale por el dispositivo de reproducción por defecto, por medio de
+SDL. Si no hay ninguno, el juego sigue sin sonido. En una máquina sin tarjeta
+de sonido, `SDL_AUDIO_DRIVER=disk SDL_AUDIO_DISK_OUTPUT_FILE=<archivo>` lo
+escribe a un archivo: estéreo de 16 bits sin encabezado, a la frecuencia del
+dispositivo que dice el registro (44.1 kHz si nada dice otra cosa).
+
 ### Controles
 
 Un gamepad conectado a la PC es el control 1. Si no hay ninguno, el teclado
@@ -80,7 +88,10 @@ juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
 | `native_functions.h` | Cómo se declara un reemplazo nativo de una función del juego. |
 | `abi_hooks.cpp` | El "gather pipe" de gráficos y unos ganchos de los encabezados de WiiCompiled. |
 | `os/guest_os.*` | Interrupciones y el planificador del OS, en nativo. |
-| `hardware/` | Un archivo por dispositivo: PI, VI, DSP, DVD, SI, EXI, AI y el estado del chip gráfico. |
+| `hardware/` | Un archivo por dispositivo: PI, VI, DSP (con el DMA de audio), DVD, SI, EXI, AI, la memoria de audio (ARAM) y el estado del chip gráfico. |
+| `audio/dsp_programs.*` | Lo que corre en el DSP: su ROM de arranque, y el programa que carga, reconocido por un hash de su código. |
+| `audio/ax_microcode.*`, `audio/ax_voice.*` | El programa de AX del DSP en C++: las listas de comandos y las voces (decodificar, convertir a 32 kHz, mezclar). |
+| `audio/audio_output.*` | La salida de sonido por SDL, con un margen y un control de velocidad. |
 | `graphics/aurora_host.*` | La ventana y el dispositivo gráfico, por medio de aurora; un cuadro termina en cada copia a la pantalla. |
 | `graphics/gx_draw.*`, `graphics/vertex_layout.*` | Las primitivas y las listas de visualización del juego, entregadas a aurora. |
 | `graphics/gx_natives_*.cpp` | Las funciones de GX del juego reemplazadas por las de aurora, por tema (geometría, transformaciones, luces, texturas, TEV, píxeles, copias). |
@@ -93,7 +104,9 @@ juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
 Los encabezados de la ABI que comparten el código traducido y el runtime
 (`guest_abi/`) y dos archivos de ayuda (`fpu_helpers.cpp`, `ppc_quantized.cpp`)
 vienen de WiiCompiled, que es GPL-3.0 como este proyecto, y aurora viene en su
-copia; se compilan desde ahí, no se copian aquí.
+copia; se compilan desde ahí, no se copian aquí. `audio/ax_microcode.*` y
+`audio/ax_voice.*` están portados de la emulación de alto nivel de AX de
+Dolphin (GPL-2.0-or-later), con la misma aritmética.
 
 El estilo del código (formato con `clang-format`, nombres revisados con
 `clang-tidy`) está en [CONTRIBUTING.md](../CONTRIBUTING.md).
@@ -149,6 +162,14 @@ the one of the version on ModernGekko (`HarvestMoonMM\GC\USA\Card A`), so
 that it cannot damage your saves. To try one, copy `E9-G4AE-HARVESTMOON.gci`
 from that folder to the native runtime's; the original is not touched.
 
+### Sound
+
+The sound comes out of the default playback device, through SDL. If there is
+none, the game goes on without sound. On a machine without a sound card,
+`SDL_AUDIO_DRIVER=disk SDL_AUDIO_DISK_OUTPUT_FILE=<file>` writes it to a file:
+16-bit stereo with no header, at the device's rate that the log gives
+(44.1 kHz unless something says otherwise).
+
 ### Controls
 
 A gamepad connected to the PC is controller 1. If there is none, the keyboard
@@ -177,7 +198,10 @@ plays as controller 1, with the same keys that Dolphin has by default:
 | `native_functions.h` | How a native replacement of a game function is declared. |
 | `abi_hooks.cpp` | The graphics gather pipe and a few hooks of WiiCompiled's headers. |
 | `os/guest_os.*` | Interrupts and the OS scheduler, natively. |
-| `hardware/` | One file per device: PI, VI, DSP, DVD, SI, EXI, AI and the graphics chip's status. |
+| `hardware/` | One file per device: PI, VI, DSP (with the audio DMA), DVD, SI, EXI, AI, the audio memory (ARAM) and the graphics chip's status. |
+| `audio/dsp_programs.*` | What runs on the DSP: its boot ROM, and the program it loads, recognized by a hash of its code. |
+| `audio/ax_microcode.*`, `audio/ax_voice.*` | The DSP's AX program in C++: the command lists and the voices (decode, convert to 32 kHz, mix). |
+| `audio/audio_output.*` | The sound output through SDL, with a margin and a speed control. |
 | `graphics/aurora_host.*` | The window and the graphics device, through aurora; a frame ends at each copy to the screen. |
 | `graphics/gx_draw.*`, `graphics/vertex_layout.*` | The game's primitives and display lists, handed to aurora. |
 | `graphics/gx_natives_*.cpp` | The game's GX functions replaced by aurora's, by topic (geometry, transforms, lights, textures, TEV, pixels, copies). |
@@ -190,7 +214,9 @@ plays as controller 1, with the same keys that Dolphin has by default:
 The ABI headers that the translated code and the runtime share (`guest_abi/`)
 and two helper files (`fpu_helpers.cpp`, `ppc_quantized.cpp`) come from
 WiiCompiled, which is GPL-3.0 like this project, and aurora comes in its
-checkout; they are compiled from there, not copied here.
+checkout; they are compiled from there, not copied here. `audio/ax_microcode.*`
+and `audio/ax_voice.*` are ported from Dolphin's high-level emulation of AX
+(GPL-2.0-or-later), with the same arithmetic.
 
 The code style (formatting with `clang-format`, names checked with
 `clang-tidy`) is in [CONTRIBUTING.md](../CONTRIBUTING.md).

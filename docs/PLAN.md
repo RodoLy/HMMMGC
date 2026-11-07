@@ -196,7 +196,9 @@ pieza por pieza, en el orden de arriba)
       biblioteca CARD de aurora y una carpeta de `.gci` como las de Dolphin.
 - [x] PAD → SDL gamepad y teclado: en el runtime nativo, con la biblioteca
       PAD de aurora y las teclas de Dolphin.
-- [ ] Audio AX → SDL/miniaudio.
+- [x] Audio AX → SDL: en el runtime nativo, el programa de AX del DSP en C++
+      (portado de la emulación de alto nivel de Dolphin) y el DMA de audio
+      tocado con SDL.
 - [x] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
       el núcleo de Dolphin. Este juego tiene un solo hilo; las interrupciones
       se atienden donde el juego las vuelve a activar.
@@ -677,7 +679,9 @@ by piece, in the order above)
       library and a folder of `.gci` files like Dolphin's.
 - [x] PAD → SDL gamepad and keyboard: in the native runtime, with aurora's
       PAD library and Dolphin's keys.
-- [ ] AX audio → SDL/miniaudio.
+- [x] AX audio → SDL: in the native runtime, the DSP's AX program in C++
+      (ported from Dolphin's high-level emulation) and the audio DMA played
+      through SDL.
 - [x] Operating system: threads, alarms, interrupts and video retraces without
       the Dolphin core. This game has a single thread; interrupts are taken
       where the game turns them back on.
