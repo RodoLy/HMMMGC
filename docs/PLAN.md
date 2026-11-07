@@ -227,7 +227,17 @@ pieza por pieza, en el orden de arriba)
       jugador. En el runtime nativo, `--zoom` (0.5 a 2) cambia el campo de
       visión de las proyecciones en perspectiva (`graphics/camera_view.h`); el
       HUD no cambia. Desde el launcher.
-- [ ] 60 y 120 fps (después del hito 1.0). El juego calcula todo por cuadro y
+- [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
+      nativo, `--frame-rate 60` o `120` (desde el launcher): cada cuadro del
+      juego se graba y se dibuja 2 o 4 veces, las primeras con las matrices de
+      posición, normales y proyección a medio camino entre el cuadro anterior
+      y el actual (`graphics/frame_interpolation.h`). Cada objeto del juego es
+      una matriz y una lista de visualización, así que una matriz se empareja
+      con la del cuadro anterior por la lista que dibuja; en la casa y la
+      granja se emparejan casi todas (469 de 485). Las que saltan (un corte de
+      cámara) se dibujan como están. La imagen va medio cuadro del juego más
+      tarde a 60.
+- [ ] Notas sobre 60 y 120 fps. El juego calcula todo por cuadro y
       presenta 30 por segundo,
       con dos retrazas de video por cuadro (medido en una laptop: 29.97 cuadros
       y 59.94 retrazas por segundo), así que subir la cadencia no es un ajuste:
@@ -236,7 +246,7 @@ pieza por pieza, en el orden de arriba)
       de los objetos y de la cámara) sin tocar la lógica ni la velocidad del
       juego. Es la idea que permite tasas de cuadros altas en otros recomps
       ([Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp), con
-      RT64) y necesita el renderizador propio de la fase 2. (b) Correr la
+      RT64). (b) Correr la
       lógica a 120 Hz: obliga a escalar todo lo que el juego cuenta por cuadro
       (movimiento, temporizadores, animaciones, audio) y es fácil romper algo.
       Primer paso: separar lo que cuenta cuadros de lo que lee el reloj (la
@@ -728,7 +738,16 @@ by piece, in the order above)
       player. In the native runtime, `--zoom` (0.5 to 2) changes the field of
       view of the perspective projections (`graphics/camera_view.h`); the HUD
       does not change. From the launcher.
-- [ ] 60 and 120 fps (after milestone 1.0). The game computes everything per
+- [x] 60 and 120 fps by interpolation (route (a) below). In the native
+      runtime, `--frame-rate 60` or `120` (from the launcher): each game frame
+      is recorded and drawn 2 or 4 times, the first ones with the position,
+      normal and projection matrices part of the way between the frame before
+      and this one (`graphics/frame_interpolation.h`). Every object of the game
+      is a matrix and a display list, so a matrix is matched with the one of
+      the frame before by the list it draws; in the house and on the farm
+      nearly all match (469 of 485). Those that jump (a camera cut) are drawn
+      as they are. At 60 the picture is half a game frame later.
+- [ ] Notes on 60 and 120 fps. The game computes everything per
       frame and presents 30 a second, with two video retraces per frame (measured on a laptop: 29.97
       frames and 59.94 retraces a second), so raising the rate is not a
       setting: there are two routes. (a) Interpolate
@@ -736,7 +755,7 @@ by piece, in the order above)
       (object and camera positions) without touching the game's logic or
       speed. It is the idea behind high frame rates in other recomps
       ([Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp), with
-      RT64) and needs the own renderer of phase 2. (b) Run the logic at
+      RT64). (b) Run the logic at
       120 Hz: it forces scaling everything the game counts per frame
       (movement, timers, animations, audio) and it is easy to break
       something. First step: tell what counts frames from what reads the

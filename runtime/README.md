@@ -47,10 +47,12 @@ veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
 los bordes, y `--fullscreen 1` empieza en pantalla completa. `--zoom <0.5-2>`
 acerca (más de 1) o aleja (menos de 1) la cámara del juego, y `--widescreen 1`
 da una imagen panorámica: el 3D muestra más a los lados y los menús se estiran.
+`--frame-rate 60` (o `120`) muestra 60 (o 120) cuadros por segundo: el juego
+dibuja 30 y los demás se hacen en medio (`graphics/frame_interpolation.h`).
 En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
 velocidad del personaje y la del juego, la resolución, el zoom, la pantalla
-completa y la panorámica, y jugar; guarda lo elegido en el mismo `settings.json`
+completa, la panorámica y los cuadros por segundo, y jugar; guarda lo elegido en el mismo `settings.json`
 que la versión ModernGekko. Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
 
@@ -172,10 +174,12 @@ console's (6 is nearly 4K) and scales it down to the window, which smooths the
 edges, and `--fullscreen 1` starts in full screen. `--zoom <0.5-2>` brings
 the game's camera closer (above 1) or farther (below 1), and `--widescreen 1`
 gives a widescreen picture: the 3D shows more at the sides and the menus are
-stretched. On Windows, `Launcher.bat`
+stretched. `--frame-rate 60` (or `120`) shows 60 (or 120) frames a second: the
+game draws 30 and the rest are made in between
+(`graphics/frame_interpolation.h`). On Windows, `Launcher.bat`
 (`packaging/windows/native/`) opens a window to turn the mods on, choose the
-speed of the character and of the game, the resolution, zoom, full screen and
-widescreen, and
+speed of the character and of the game, the resolution, zoom, full screen,
+widescreen and frames per second, and
 play; it keeps the choices in the same `settings.json` as the ModernGekko
 version. With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
 debugger such as gdb (see `fault_handler.h`).

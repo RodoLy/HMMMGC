@@ -21,6 +21,7 @@
       --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
       --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
       --widescreen        1 for a widescreen picture (the 3D shows more at the sides);
+      --frame-rate        30, 60 or 120 frames a second (the game draws 30; the rest are made in between);
       HM_MM_PLAYER_SPEED_PERCENT, which the player_speed mod reads;
       --disc       the disc that the ModernGekko package extracted (%LOCALAPPDATA%\HarvestMoonMM\games\G4AEE9).
     What the game prints goes to native.log, next to the program.
@@ -75,6 +76,8 @@ $ZoomMaximum = 200
 $ZoomDefault = 100
 # The internal resolutions offered: a multiple of the console's 640x528 (0 follows the window).
 $ResolutionScales = @(0, 2, 3, 4, 6)
+# The frame rates offered: the game's 30, or 60 and 120 with frames made in between.
+$FrameRates = @(30, 60, 120)
 
 # -- Texts -----------------------------------------------------------------------------------------
 
@@ -86,6 +89,9 @@ $Texts = @{
         GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
         ZoomLabel = "Camera zoom (100% is the game's; less shows more around the player):"
         ResolutionLabel = 'Internal resolution:'
+        FrameRateLabel = 'Frames per second:'
+        FrameRateGame = '30 (as the game)'
+        FrameRateMade = '{0} (frames made in between)'
         ResolutionAuto = 'As the window (Alt+Enter: full screen)'
         ResolutionTimes = '{0}x the console ({1}x{2})'
         Fullscreen = 'Start in full screen'
@@ -104,6 +110,9 @@ $Texts = @{
         GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
         ZoomLabel = 'Zoom de la cámara (100% es el del juego; menos muestra más alrededor del personaje):'
         ResolutionLabel = 'Resolución interna:'
+        FrameRateLabel = 'Cuadros por segundo:'
+        FrameRateGame = '30 (como el juego)'
+        FrameRateMade = '{0} (con cuadros intermedios)'
         ResolutionAuto = 'Como la ventana (Alt+Enter: pantalla completa)'
         ResolutionTimes = '{0}x la de la consola ({1}x{2})'
         Fullscreen = 'Empezar en pantalla completa'
@@ -130,7 +139,7 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 function Read-Settings {
     $settings = [ordered] @{
         mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
-        cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false
+        cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false; frameRate = 30
     }
     foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
@@ -160,6 +169,7 @@ function Read-Settings {
         $settings.cameraZoomPercent = $ZoomDefault
     }
     if ($ResolutionScales -notcontains $settings.resolutionScale) { $settings.resolutionScale = 0 }
+    if ($FrameRates -notcontains $settings.frameRate) { $settings.frameRate = 30 }
     $settings.fullscreen = [bool] $settings.fullscreen
     $settings.widescreen = [bool] $settings.widescreen
     return $settings
@@ -191,7 +201,7 @@ function Start-Game($Settings) {
     $gameSpeed = [int] $Settings.gameSpeedPercent
     # A decimal point whatever the language of Windows: the game reads "0.70", not "0,70".
     $zoom = ([int] $Settings.cameraZoomPercent / 100.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
-    $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen) --widescreen $([int] [bool] $Settings.widescreen)"
+    $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen) --widescreen $([int] [bool] $Settings.widescreen) --frame-rate $([int] $Settings.frameRate)"
     $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed $display > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
         -WorkingDirectory $ProgramDirectory -WindowStyle Hidden
@@ -302,6 +312,21 @@ foreach ($scale in $ResolutionScales) {
 }
 $ResolutionList.SelectedIndex = [array]::IndexOf($ResolutionScales, [int] $Settings.resolutionScale)
 $Layout.Controls.Add($ResolutionList)
+
+$FrameRateLabel = New-Object System.Windows.Forms.Label
+$FrameRateLabel.Text = $Text.FrameRateLabel
+$FrameRateLabel.AutoSize = $true
+$FrameRateLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
+$Layout.Controls.Add($FrameRateLabel)
+$FrameRateList = New-Object System.Windows.Forms.ComboBox
+$FrameRateList.DropDownStyle = 'DropDownList'
+$FrameRateList.Width = 340
+foreach ($rate in $FrameRates) {
+    $label = if ($rate -eq 30) { $Text.FrameRateGame } else { $Text.FrameRateMade -f $rate }
+    [void] $FrameRateList.Items.Add($label)
+}
+$FrameRateList.SelectedIndex = [array]::IndexOf($FrameRates, [int] $Settings.frameRate)
+$Layout.Controls.Add($FrameRateList)
 $FullscreenBox = New-Object System.Windows.Forms.CheckBox
 $FullscreenBox.Text = $Text.Fullscreen
 $FullscreenBox.AutoSize = $true
@@ -324,6 +349,7 @@ function Get-Choices {
     $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
     $Settings.cameraZoomPercent = [int] $ZoomRow.Tag.Value
     $Settings.resolutionScale = $ResolutionScales[$ResolutionList.SelectedIndex]
+    $Settings.frameRate = $FrameRates[$FrameRateList.SelectedIndex]
     $Settings.fullscreen = $FullscreenBox.Checked
     $Settings.widescreen = $WidescreenBox.Checked
     return $Settings

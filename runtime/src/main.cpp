@@ -17,6 +17,7 @@
 #include "game_clock.h"
 #include "graphics/aurora_host.h"
 #include "graphics/camera_view.h"
+#include "graphics/frame_interpolation.h"
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
@@ -50,12 +51,14 @@ struct Options {
     unsigned game_speed_percent = 100;  // how fast the whole game runs (game_clock.h)
     aurora_host::DisplayOptions display;
     camera_view::Options camera;
+    unsigned frame_rate = frame_interpolation::GAME_FRAME_RATE;  // 30, 60 or 120
 };
 
 constexpr const char* USAGE =
     "usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>] [--user-folder <folder>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
-    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]";
+    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]\n"
+    "                   [--frame-rate <30|60|120>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
 std::vector<std::string> split_mod_list(const std::string& value) {
@@ -100,6 +103,8 @@ Options parse_options(int argc, char** argv) {
             options.camera.widescreen = value != "0";
         } else if (name == "--zoom") {
             options.camera.zoom = std::stof(value);
+        } else if (name == "--frame-rate") {
+            options.frame_rate = static_cast<unsigned>(std::stoul(value));
         } else {
             throw std::runtime_error("unknown option " + name);
         }
@@ -124,6 +129,7 @@ int main(int argc, char** argv) {
         game_clock::set_chosen_speed_percent(options.game_speed_percent);
         aurora_host::configure(options.display);
         camera_view::configure(options.camera);
+        frame_interpolation::configure(options.frame_rate);
         guest_memory::initialize();
         fault_handler::install(options.watchdog_seconds);
         hardware_registers::initialize(disc);

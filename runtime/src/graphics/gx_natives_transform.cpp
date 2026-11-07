@@ -6,6 +6,7 @@
 // reemplazadas por las de aurora.
 
 #include "graphics/camera_view.h"
+#include "graphics/frame_interpolation.h"
 #include "graphics/guest_values.h"
 #include "graphics/gx_draw.h"
 #include "native_functions.h"
@@ -26,6 +27,10 @@ void GXSetProjectionNative(uint32_t matrix_address, uint32_t type) {
     gx_draw::finish_primitive();
     auto matrix = guest_values::read_floats<MATRIX_4X4_FLOATS>(matrix_address);
     camera_view::adjust_projection(matrix.data(), static_cast<int>(type));  // widescreen and zoom
+    if (frame_interpolation::is_recording()) {
+        frame_interpolation::record_projection(matrix, type);
+        return;
+    }
     GXSetProjection(matrix.data(), static_cast<GXProjectionType>(type));
 }
 PPC_NATIVE_OVERRIDE_VOID(801951F4, GXSetProjectionNative, (uint32_t matrix_address, uint32_t type),
@@ -35,6 +40,10 @@ PPC_NATIVE_OVERRIDE_VOID(801951F4, GXSetProjectionNative, (uint32_t matrix_addre
 void GXLoadPosMtxImmNative(uint32_t matrix_address, uint32_t slot) {
     gx_draw::finish_primitive();
     const auto matrix = guest_values::read_floats<MATRIX_3X4_FLOATS>(matrix_address);
+    if (frame_interpolation::is_recording()) {
+        frame_interpolation::record_position_matrix(matrix, slot);
+        return;
+    }
     GXLoadPosMtxImm(matrix.data(), slot);
 }
 PPC_NATIVE_OVERRIDE_VOID(80195324, GXLoadPosMtxImmNative, (uint32_t matrix_address, uint32_t slot),
@@ -44,6 +53,10 @@ PPC_NATIVE_OVERRIDE_VOID(80195324, GXLoadPosMtxImmNative, (uint32_t matrix_addre
 void GXLoadNrmMtxImmNative(uint32_t matrix_address, uint32_t slot) {
     gx_draw::finish_primitive();
     const auto matrix = guest_values::read_floats<MATRIX_3X4_FLOATS>(matrix_address);
+    if (frame_interpolation::is_recording()) {
+        frame_interpolation::record_normal_matrix(matrix, slot);
+        return;
+    }
     GXLoadNrmMtxImm(matrix.data(), slot);
 }
 PPC_NATIVE_OVERRIDE_VOID(80195374, GXLoadNrmMtxImmNative, (uint32_t matrix_address, uint32_t slot),
@@ -59,7 +72,7 @@ void GXLoadTexMtxImmNative(uint32_t matrix_address, uint32_t slot, uint32_t type
     } else {
         matrix = guest_values::read_floats<MATRIX_3X4_FLOATS>(matrix_address);
     }
-    GXLoadTexMtxImm(matrix.data(), slot, static_cast<GXTexMtxType>(type));
+    frame_interpolation::run([=] { GXLoadTexMtxImm(matrix.data(), slot, static_cast<GXTexMtxType>(type)); });
 }
 PPC_NATIVE_OVERRIDE_VOID(801953F8, GXLoadTexMtxImmNative, (uint32_t matrix_address, uint32_t slot, uint32_t type),
                          (matrix_address, slot, type));
@@ -69,7 +82,7 @@ PPC_NATIVE_OVERRIDE_VOID(801953F8, GXLoadTexMtxImmNative, (uint32_t matrix_addre
 void GXSetViewportJitterNative(float left, float top, float width, float height, float near_z, float far_z,
                                uint32_t field) {
     gx_draw::finish_primitive();
-    GXSetViewportJitter(left, top, width, height, near_z, far_z, field);
+    frame_interpolation::run([=] { GXSetViewportJitter(left, top, width, height, near_z, far_z, field); });
 }
 PPC_NATIVE_OVERRIDE_VOID(8019553C, GXSetViewportJitterNative,
                          (float left, float top, float width, float height, float near_z, float far_z, uint32_t field),
@@ -78,7 +91,7 @@ PPC_NATIVE_OVERRIDE_VOID(8019553C, GXSetViewportJitterNative,
 // GXSetViewport(f32 left, f32 top, f32 width, f32 height, f32 near_z, f32 far_z)
 void GXSetViewportNative(float left, float top, float width, float height, float near_z, float far_z) {
     gx_draw::finish_primitive();
-    GXSetViewport(left, top, width, height, near_z, far_z);
+    frame_interpolation::run([=] { GXSetViewport(left, top, width, height, near_z, far_z); });
 }
 PPC_NATIVE_OVERRIDE_VOID(80195594, GXSetViewportNative,
                          (float left, float top, float width, float height, float near_z, float far_z),
@@ -87,7 +100,7 @@ PPC_NATIVE_OVERRIDE_VOID(80195594, GXSetViewportNative,
 // GXSetScissor(u32 left, u32 top, u32 width, u32 height)
 void GXSetScissorNative(uint32_t left, uint32_t top, uint32_t width, uint32_t height) {
     gx_draw::finish_primitive();
-    GXSetScissor(left, top, width, height);
+    frame_interpolation::run([=] { GXSetScissor(left, top, width, height); });
 }
 PPC_NATIVE_OVERRIDE_VOID(801955DC, GXSetScissorNative, (uint32_t left, uint32_t top, uint32_t width, uint32_t height),
                          (left, top, width, height));

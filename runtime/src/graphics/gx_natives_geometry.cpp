@@ -4,6 +4,7 @@
 //
 // Las funciones de GX que describen y envían la geometría, reemplazadas por las de aurora.
 
+#include "graphics/frame_interpolation.h"
 #include "graphics/gx_draw.h"
 #include "graphics/vertex_layout.h"
 #include "native_functions.h"
@@ -12,19 +13,36 @@
 
 namespace {
 
+// Runs a change of the vertex layout now and, when the frame is recorded
+// (frame_interpolation.h), again in its place in the frame.
+template <typename Change>
+void set_vertex_layout(const Change& change) {
+    change();
+    if (frame_interpolation::is_recording()) {
+        frame_interpolation::record(change);
+    }
+}
+
 // GXSetVtxDesc(GXAttr attribute, GXAttrType presence)
 void GXSetVtxDescNative(uint32_t attribute, uint32_t presence) {
     gx_draw::finish_primitive();
-    vertex_layout::set_presence(attribute, static_cast<vertex_layout::Presence>(presence));
-    GXSetVtxDesc(static_cast<GXAttr>(attribute), static_cast<GXAttrType>(presence));
+    // The vertex layout is set now, for the primitives the game is about to write, and
+    // again as the frame is drawn, for the display lists drawn then.
+    const auto set = [=] {
+        vertex_layout::set_presence(attribute, static_cast<vertex_layout::Presence>(presence));
+        GXSetVtxDesc(static_cast<GXAttr>(attribute), static_cast<GXAttrType>(presence));
+    };
+    set_vertex_layout(set);
 }
 PPC_NATIVE_OVERRIDE_VOID(801908C8, GXSetVtxDescNative, (uint32_t attribute, uint32_t presence), (attribute, presence));
 
 // GXClearVtxDesc(void)
 void GXClearVtxDescNative() {
     gx_draw::finish_primitive();
-    vertex_layout::clear_presences();
-    GXClearVtxDesc();
+    set_vertex_layout([] {
+        vertex_layout::clear_presences();
+        GXClearVtxDesc();
+    });
 }
 PPC_NATIVE_OVERRIDE_VOID(80190D14, GXClearVtxDescNative, (), ());
 
@@ -33,10 +51,12 @@ PPC_NATIVE_OVERRIDE_VOID(80190D14, GXClearVtxDescNative, (), ());
 void GXSetVtxAttrFmtNative(uint32_t vertex_format, uint32_t attribute, uint32_t component_count,
                            uint32_t component_type, uint32_t fraction_bits) {
     gx_draw::finish_primitive();
-    vertex_layout::set_format(vertex_format, attribute, component_count, component_type);
-    GXSetVtxAttrFmt(static_cast<GXVtxFmt>(vertex_format), static_cast<GXAttr>(attribute),
-                    static_cast<GXCompCnt>(component_count), static_cast<GXCompType>(component_type),
-                    static_cast<u8>(fraction_bits));
+    set_vertex_layout([=] {
+        vertex_layout::set_format(vertex_format, attribute, component_count, component_type);
+        GXSetVtxAttrFmt(static_cast<GXVtxFmt>(vertex_format), static_cast<GXAttr>(attribute),
+                        static_cast<GXCompCnt>(component_count), static_cast<GXCompType>(component_type),
+                        static_cast<u8>(fraction_bits));
+    });
 }
 PPC_NATIVE_OVERRIDE_VOID(80190D4C, GXSetVtxAttrFmtNative,
                          (uint32_t vertex_format, uint32_t attribute, uint32_t component_count, uint32_t component_type,
@@ -47,7 +67,7 @@ PPC_NATIVE_OVERRIDE_VOID(80190D4C, GXSetVtxAttrFmtNative,
 // which the game never gives: gx_draw.h tells aurora at each draw.
 void GXSetArrayNative(uint32_t attribute, uint32_t base_address, uint32_t stride) {
     gx_draw::finish_primitive();
-    vertex_layout::set_array(attribute, base_address, stride & 0xFFu);
+    set_vertex_layout([=] { vertex_layout::set_array(attribute, base_address, stride & 0xFFu); });
 }
 PPC_NATIVE_OVERRIDE_VOID(801912B0, GXSetArrayNative, (uint32_t attribute, uint32_t base_address, uint32_t stride),
                          (attribute, base_address, stride));
@@ -57,8 +77,10 @@ PPC_NATIVE_OVERRIDE_VOID(801912B0, GXSetArrayNative, (uint32_t attribute, uint32
 void GXSetTexCoordGen2Native(uint32_t coordinate, uint32_t function, uint32_t source, uint32_t matrix,
                              uint32_t normalize, uint32_t post_matrix) {
     gx_draw::finish_primitive();
-    GXSetTexCoordGen2(static_cast<GXTexCoordID>(coordinate), static_cast<GXTexGenType>(function),
-                      static_cast<GXTexGenSrc>(source), matrix, static_cast<GXBool>(normalize), post_matrix);
+    frame_interpolation::run([=] {
+        GXSetTexCoordGen2(static_cast<GXTexCoordID>(coordinate), static_cast<GXTexGenType>(function),
+                          static_cast<GXTexGenSrc>(source), matrix, static_cast<GXBool>(normalize), post_matrix);
+    });
 }
 PPC_NATIVE_OVERRIDE_VOID(80191304, GXSetTexCoordGen2Native,
                          (uint32_t coordinate, uint32_t function, uint32_t source, uint32_t matrix, uint32_t normalize,
@@ -68,7 +90,7 @@ PPC_NATIVE_OVERRIDE_VOID(80191304, GXSetTexCoordGen2Native,
 // GXSetNumTexGens(u8 count)
 void GXSetNumTexGensNative(uint32_t count) {
     gx_draw::finish_primitive();
-    GXSetNumTexGens(static_cast<u8>(count));
+    frame_interpolation::run([=] { GXSetNumTexGens(static_cast<u8>(count)); });
 }
 PPC_NATIVE_OVERRIDE_VOID(80191584, GXSetNumTexGensNative, (uint32_t count), (count));
 
@@ -83,7 +105,7 @@ PPC_NATIVE_OVERRIDE_VOID(80191CC0, GXBeginNative, (uint32_t primitive, uint32_t 
 // GXSetPointSize(u8 size, GXTexOffset texture_offsets)
 void GXSetPointSizeNative(uint32_t size, uint32_t texture_offsets) {
     gx_draw::finish_primitive();
-    GXSetPointSize(static_cast<u8>(size), static_cast<GXTexOffset>(texture_offsets));
+    frame_interpolation::run([=] { GXSetPointSize(static_cast<u8>(size), static_cast<GXTexOffset>(texture_offsets)); });
 }
 PPC_NATIVE_OVERRIDE_VOID(80191E58, GXSetPointSizeNative, (uint32_t size, uint32_t texture_offsets),
                          (size, texture_offsets));
@@ -91,14 +113,14 @@ PPC_NATIVE_OVERRIDE_VOID(80191E58, GXSetPointSizeNative, (uint32_t size, uint32_
 // GXSetCullMode(GXCullMode mode)
 void GXSetCullModeNative(uint32_t mode) {
     gx_draw::finish_primitive();
-    GXSetCullMode(static_cast<GXCullMode>(mode));
+    frame_interpolation::run([=] { GXSetCullMode(static_cast<GXCullMode>(mode)); });
 }
 PPC_NATIVE_OVERRIDE_VOID(80191EE0, GXSetCullModeNative, (uint32_t mode), (mode));
 
 // GXSetClipMode(GXClipMode mode)
 void GXSetClipModeNative(uint32_t mode) {
     gx_draw::finish_primitive();
-    GXSetClipMode(static_cast<GXClipMode>(mode));
+    frame_interpolation::run([=] { GXSetClipMode(static_cast<GXClipMode>(mode)); });
 }
 PPC_NATIVE_OVERRIDE_VOID(80195694, GXSetClipModeNative, (uint32_t mode), (mode));
 

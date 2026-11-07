@@ -9,6 +9,7 @@
 // here, found by the game object's address. The images and tables stay in the game's
 // memory: aurora reads them from there, in the console's formats.
 
+#include "graphics/frame_interpolation.h"
 #include "graphics/guest_values.h"
 #include "graphics/gx_draw.h"
 #include "native_functions.h"
@@ -74,7 +75,9 @@ PPC_NATIVE_OVERRIDE_VOID(8019344C, GXInitTexObjLODNative,
 // GXLoadTexObj(GXTexObj* texture, GXTexMapID map)
 void GXLoadTexObjNative(uint32_t texture_address, uint32_t map) {
     gx_draw::finish_primitive();
-    GXLoadTexObj(&g_textures[texture_address], static_cast<GXTexMapID>(map));
+    frame_interpolation::run([texture = g_textures[texture_address], map]() mutable {
+        GXLoadTexObj(&texture, static_cast<GXTexMapID>(map));
+    });
 }
 PPC_NATIVE_OVERRIDE_VOID(8019374C, GXLoadTexObjNative, (uint32_t texture_address, uint32_t map),
                          (texture_address, map));
@@ -91,14 +94,14 @@ PPC_NATIVE_OVERRIDE_VOID(801937A0, GXInitTlutObjNative,
 // GXLoadTlut(GXTlutObj* table, u32 slot)
 void GXLoadTlutNative(uint32_t table_address, uint32_t slot) {
     gx_draw::finish_primitive();
-    GXLoadTlut(&g_color_tables[table_address], slot);
+    frame_interpolation::run([table = g_color_tables[table_address], slot]() mutable { GXLoadTlut(&table, slot); });
 }
 PPC_NATIVE_OVERRIDE_VOID(801937D8, GXLoadTlutNative, (uint32_t table_address, uint32_t slot), (table_address, slot));
 
 // GXInvalidateTexAll(void): the game tells the GPU that images in memory changed.
 void GXInvalidateTexAllNative() {
     gx_draw::finish_primitive();
-    GXInvalidateTexAll();
+    frame_interpolation::run([] { GXInvalidateTexAll(); });
 }
 PPC_NATIVE_OVERRIDE_VOID(8019399C, GXInvalidateTexAllNative, (), ());
 
