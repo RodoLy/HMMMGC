@@ -194,7 +194,8 @@ pieza por pieza, en el orden de arriba)
       instantáneas). En el runtime nativo, la unidad lee el disco extraído.
 - [ ] CARD → archivos de guardado en disco (aurora lee los `.gci` y `.raw` de
       Dolphin).
-- [ ] PAD → SDL gamepad y teclado.
+- [x] PAD → SDL gamepad y teclado: en el runtime nativo, con la biblioteca
+      PAD de aurora y las teclas de Dolphin.
 - [ ] Audio AX → SDL/miniaudio.
 - [x] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
       el núcleo de Dolphin. Este juego tiene un solo hilo; las interrupciones
@@ -248,6 +249,19 @@ pieza por pieza, en el orden de arriba)
 **Fase 5 – Release**
 - [ ] Instalador que toma la ISO/RVZ del usuario, verifica hash y extrae.
 - [ ] Builds Windows/Linux. Sin assets del juego en el repo ni en el release.
+
+**Fase 6 – Las versiones de Wii (USA y Europa)** (futura)
+- [ ] Llevar al mismo runtime las dos versiones de Wii de Magical Melody, con
+      los discos del jugador. aurora ya trae lo de Wii (Wii Remote, NAND, el
+      video de Wii, compilando con `AURORA_TARGET_RVL`), y WiiCompiled las
+      piezas propias de Wii (IOS, guardado en NAND, Wii Remote), así que no se
+      quita nada de eso.
+- [ ] Los reemplazos nativos se escriben una vez, y cada versión trae su tabla
+      de direcciones (`config/<versión>/`), como ya pasa con `config/G4AEE9`.
+- [ ] Darle a la versión de Wii lo que tenía la de GameCube y le faltó (por
+      ejemplo jugar como chica, que según las fuentes consultadas se quitó en
+      Wii): revisar qué datos quedaron en el disco de Wii y traer el resto de
+      la versión de GameCube como mod.
 
 ### Pista B – Mods del juego (en paralelo; con ModernGekko son paquetes `.mgm`)
 
@@ -661,7 +675,8 @@ by piece, in the order above)
       In the native runtime, the drive reads the extracted disc.
 - [ ] CARD → save files on disk (aurora reads Dolphin's `.gci` and `.raw`
       files).
-- [ ] PAD → SDL gamepad and keyboard.
+- [x] PAD → SDL gamepad and keyboard: in the native runtime, with aurora's
+      PAD library and Dolphin's keys.
 - [ ] AX audio → SDL/miniaudio.
 - [x] Operating system: threads, alarms, interrupts and video retraces without
       the Dolphin core. This game has a single thread; interrupts are taken
@@ -714,6 +729,20 @@ by piece, in the order above)
 **Phase 5 – Release**
 - [ ] Installer that takes the user's ISO/RVZ, verifies the hash and extracts.
 - [ ] Windows/Linux builds. No game assets in the repo or the release.
+
+**Phase 6 – The Wii versions (USA and Europe)** (future)
+- [ ] Bring the two Wii versions of Magical Melody to the same runtime, from
+      the player's discs. aurora already has the Wii parts (Wii Remote, NAND,
+      the Wii's video, when built with `AURORA_TARGET_RVL`), and WiiCompiled
+      the Wii's own pieces (IOS, NAND saves, Wii Remote), so none of that is
+      removed.
+- [ ] The native replacements are written once, and each version brings its
+      own table of addresses (`config/<version>/`), as `config/G4AEE9` already
+      does.
+- [ ] Give the Wii version what the GameCube one had and it lacks (for
+      example playing as the girl, which the sources consulted say was removed
+      on the Wii): check which data was left on the Wii disc and bring the rest
+      from the GameCube version as a mod.
 
 ### Track B – Game mods (in parallel; with ModernGekko they are `.mgm` packages)
 
