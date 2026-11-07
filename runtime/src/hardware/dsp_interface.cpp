@@ -3,6 +3,7 @@
 
 #include "hardware/dsp_interface.h"
 
+#include "audio/dsp_programs.h"
 #include "cpu_registers.h"
 #include "guest_memory.h"
 #include "hardware/audio_memory.h"
@@ -17,6 +18,7 @@ namespace dsp_interface {
 namespace {
 
 constexpr uint32_t MAIL_TO_DSP_HIGH = BASE + 0x00;
+constexpr uint32_t MAIL_TO_DSP_LOW = BASE + 0x02;  // writing it sends the mail
 constexpr uint32_t MAIL_FROM_DSP_HIGH = BASE + 0x04;
 constexpr uint32_t MAIL_FROM_DSP_LOW = BASE + 0x06;
 constexpr uint32_t CONTROL = BASE + 0x0A;
@@ -38,10 +40,9 @@ constexpr uint16_t INIT_CODE_RUNNING = 0x0400u;
 constexpr uint16_t INIT = 0x0800u;
 constexpr uint16_t INTERRUPT_STATUS_BITS = AUDIO_DMA_INTERRUPT | ARAM_DMA_INTERRUPT | DSP_INTERRUPT;
 
-// The mails Nintendo's DSP code sends when it starts: the boot ROM after a reset, and the
-// small "init" program that OSInit runs once (Dolphin's DSP-HLE ROM and INIT microcodes
-// send the same values).
-constexpr uint32_t MAIL_FROM_BOOT_ROM = 0x8071FEEDu;
+// The mail of the small "init" program that OSInit runs once on the DSP (Dolphin's
+// DSP-HLE INIT microcode sends the same value). The boot ROM and the game's programs are
+// in audio/dsp_programs.h.
 constexpr uint32_t MAIL_FROM_INIT_PROGRAM = 0x80544348u;
 // How long the init program runs, in time-base ticks (Dolphin's measurement).
 constexpr uint64_t INIT_PROGRAM_TICKS = 130;
@@ -52,6 +53,7 @@ constexpr uint32_t FROM_ARAM_TO_MEMORY = 0x80000000u;
 
 struct DspState {
     uint16_t control = 0;
+    uint16_t mail_to_dsp_high = 0;  // as written: reading the register clears its top bit
     std::deque<uint32_t> mails_from_dsp;
     uint32_t last_mail_from_dsp = 0;
     uint64_t init_program_ends_at = 0;
@@ -66,21 +68,23 @@ void update_interrupt_line() {
     processor_interface::set_interrupt(processor_interface::DSP_INTERRUPT, asserted);
 }
 
-// A program starting on the DSP replaces whatever mails were waiting with its greeting.
-void start_program(uint32_t greeting) {
-    g_dsp.mails_from_dsp.clear();
-    g_dsp.mails_from_dsp.push_back(greeting);
+void raise_interrupt(uint16_t interrupt) {
+    g_dsp.control |= interrupt;
+    update_interrupt_line();
 }
 
 void write_control(uint16_t value) {
     const uint16_t before = g_dsp.control;
     uint16_t control = (before & INTERRUPT_STATUS_BITS & ~value) |  // writing 1 acknowledges
                        (value & ~(INTERRUPT_STATUS_BITS | RESET | INIT_CODE_RUNNING));
+    // A program starting on the DSP replaces whatever mails were waiting with its greeting.
     if (value & RESET) {
-        start_program(MAIL_FROM_BOOT_ROM);
+        g_dsp.mails_from_dsp.clear();
+        dsp_programs::reset();
     }
     if ((before & INIT) && !(value & INIT)) {
-        start_program(MAIL_FROM_INIT_PROGRAM);
+        g_dsp.mails_from_dsp.clear();
+        g_dsp.mails_from_dsp.push_back(MAIL_FROM_INIT_PROGRAM);
         g_dsp.init_program_ends_at = cpu_registers::time_base() + INIT_PROGRAM_TICKS;
     }
     if (before & INIT_CODE_RUNNING) {
@@ -125,11 +129,17 @@ void run_aram_dma() {
     // The count reads back as zero once the transfer is over (its direction bit stays).
     register_image::write16(ARAM_DMA_COUNT, static_cast<uint16_t>((count & FROM_ARAM_TO_MEMORY) >> 16));
     register_image::write16(ARAM_DMA_COUNT + 2, 0);
-    g_dsp.control |= ARAM_DMA_INTERRUPT;
-    update_interrupt_line();
+    raise_interrupt(ARAM_DMA_INTERRUPT);
 }
 
 }  // namespace
+
+void send_mail_to_cpu(uint32_t mail, bool interrupt) {
+    g_dsp.mails_from_dsp.push_back(mail);
+    if (interrupt) {
+        raise_interrupt(DSP_INTERRUPT);
+    }
+}
 
 void write(uint32_t address, uint16_t value) {
     switch (address) {
@@ -142,6 +152,14 @@ void write(uint32_t address, uint16_t value) {
         case ARAM_DMA_COUNT + 2:
             register_image::write16(address, value);
             run_aram_dma();
+            return;
+        case MAIL_TO_DSP_HIGH:
+            register_image::write16(address, value);
+            g_dsp.mail_to_dsp_high = value;
+            return;
+        case MAIL_TO_DSP_LOW:
+            register_image::write16(address, value);
+            dsp_programs::receive_mail((uint32_t{g_dsp.mail_to_dsp_high} << 16) | value);
             return;
         default:
             register_image::write16(address, value);
