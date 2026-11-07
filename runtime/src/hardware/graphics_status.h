@@ -6,9 +6,10 @@
 // interrupciones de su "pixel engine", y el "gather pipe" por el que el juego le manda
 // sus comandos.
 //
-// Nothing draws yet. The commands are stored in the FIFO as on the console, and the two
-// that the game waits for (draw done, and the tokens of GXSetDrawSync) are answered as
-// soon as they are sent.
+// The pipe comes here only until GXInit: from then on aurora is the GPU, and what the game
+// stores in the pipe goes to graphics/gx_draw.h (see hardware_registers.h). Until then the
+// commands are stored in the FIFO as on the console, and the two that the game could wait
+// for (draw done, and the tokens of GXSetDrawSync) are answered as soon as they are sent.
 #pragma once
 
 #include <cstddef>

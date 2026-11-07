@@ -25,7 +25,8 @@ constexpr uint16_t PE_FINISH_INTERRUPT = 0x8u;
 // by a 32-bit word whose top byte is the register: 0x45 is "draw done", 0x47 sets the
 // token and 0x48 sets it and interrupts. Without a parser of the whole command stream,
 // these are recognised as two consecutive stores to the pipe; vertex data that happened
-// to look the same would be taken for them, which is acceptable while nothing draws.
+// to look the same would be taken for them, which is acceptable for what the game sends
+// before GXInit (after it, aurora reads the whole stream).
 constexpr uint8_t LOAD_BP_REGISTER_COMMAND = 0x61;
 constexpr uint8_t BP_DRAW_DONE = 0x45;
 constexpr uint8_t BP_SET_TOKEN = 0x47;
