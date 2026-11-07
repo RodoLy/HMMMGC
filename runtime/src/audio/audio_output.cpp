@@ -2,6 +2,7 @@
 
 #include "audio/audio_output.h"
 
+#include "game_clock.h"
 #include "runtime_log.h"
 
 #include <SDL3/SDL.h>
@@ -73,11 +74,16 @@ bool open_stream(uint32_t sample_rate) {
     return true;
 }
 
+// When the whole game runs faster (game_clock.h) its sound comes that much faster too, and
+// plays that much faster (and higher): the speed control works around the game's speed,
+// and the margin, counted in the game's sound, grows with it.
 void adjust_speed(double queued_milliseconds) {
+    const double game_speed = game_clock::speed_percent() / static_cast<double>(game_clock::NORMAL_SPEED_PERCENT);
     g_output.average_queued_milliseconds += (queued_milliseconds - g_output.average_queued_milliseconds) * AVERAGING;
+    const double target = TARGET_MILLISECONDS * game_speed;
     const double speed =
-        1.0 + std::clamp((g_output.average_queued_milliseconds - TARGET_MILLISECONDS) * SPEED_CHANGE_PER_MILLISECOND,
-                         -MAX_SPEED_CHANGE, MAX_SPEED_CHANGE);
+        game_speed * (1.0 + std::clamp((g_output.average_queued_milliseconds - target) * SPEED_CHANGE_PER_MILLISECOND,
+                                       -MAX_SPEED_CHANGE, MAX_SPEED_CHANGE));
     if (std::abs(speed - g_output.speed) > SPEED_RESOLUTION) {
         g_output.speed = speed;
         SDL_SetAudioStreamFrequencyRatio(g_output.stream, static_cast<float>(speed));

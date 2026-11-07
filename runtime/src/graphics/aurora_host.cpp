@@ -3,6 +3,7 @@
 #include "graphics/aurora_host.h"
 
 #include "audio/audio_output.h"
+#include "game_clock.h"
 #include "player_folder.h"
 #include "runtime_log.h"
 
@@ -38,8 +39,9 @@ bool g_window_closed = false;
 std::string g_user_folder;
 std::string g_cache_folder;
 
-// The frame rate, counted over each second and shown in the window's title (the game
-// presents 30 pictures a second; fewer means the PC is not keeping up).
+// The frame rate, counted over each second and shown in the window's title with the
+// game's speed when it is not 100% (the game presents 30 pictures a second at 100%; fewer
+// means the PC is not keeping up).
 struct FrameRate {
     std::chrono::steady_clock::time_point second_started = std::chrono::steady_clock::now();
     unsigned frames = 0;
@@ -53,8 +55,14 @@ void count_frame() {
     if (elapsed.count() < 1.0) {
         return;
     }
-    char title[96];
-    std::snprintf(title, sizeof(title), "%s - %.0f fps", WINDOW_TITLE, g_frame_rate.frames / elapsed.count());
+    char title[128];
+    const unsigned speed = game_clock::speed_percent();
+    if (speed == game_clock::NORMAL_SPEED_PERCENT) {
+        std::snprintf(title, sizeof(title), "%s - %.0f fps", WINDOW_TITLE, g_frame_rate.frames / elapsed.count());
+    } else {
+        std::snprintf(title, sizeof(title), "%s - %.0f fps - %u%%", WINDOW_TITLE, g_frame_rate.frames / elapsed.count(),
+                      speed);
+    }
     SDL_SetWindowTitle(aurora_get_window(), title);
     g_frame_rate = FrameRate{now, 0};
 }
@@ -146,6 +154,8 @@ void present_frame() {
     aurora_end_frame();
     count_frame();
     process_events();
+    // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while Tab is held.
+    game_clock::set_turbo(SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_TAB]);
     begin_next_frame();
     exit_if_window_closed();
 }

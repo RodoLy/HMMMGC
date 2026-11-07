@@ -8,6 +8,7 @@
 #include "cpu_registers.h"
 
 #include "fault_handler.h"
+#include "game_clock.h"
 #include "guest_memory.h"
 #include "runtime_log.h"
 
@@ -15,7 +16,6 @@
 
 #include <array>
 #include <bitset>
-#include <chrono>
 #include <cstdint>
 #include <cstring>
 
@@ -52,20 +52,14 @@ constexpr uint32_t GEKKO_PROCESSOR_VERSION = 0x00083214u;
 // read back what was last written to them.
 std::array<uint32_t, 1024> g_stored_special_registers{};
 
-const auto RUNTIME_START = std::chrono::steady_clock::now();
 int64_t g_time_base_adjustment = 0;  // what the game's writes to the time base moved it by
 
 uint32_t g_decrementer_written = 0;
 uint64_t g_decrementer_written_at = 0;
 bool g_decrementer_armed = false;  // a value was written and has not run out yet
 
-uint64_t ticks_since_start() {
-    const auto elapsed = std::chrono::steady_clock::now() - RUNTIME_START;
-    const auto nanoseconds =
-        static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count());
-    // 40.5 ticks per microsecond: nanoseconds * 40'500'000 / 1'000'000'000.
-    return nanoseconds * 81u / 2000u;
-}
+// The game's clock, at the speed the player chose (game_clock.h).
+uint64_t ticks_since_start() { return game_clock::elapsed_ticks(); }
 
 void set_time_base(uint64_t value) { g_time_base_adjustment = static_cast<int64_t>(value - ticks_since_start()); }
 

@@ -14,6 +14,7 @@
 #include "console_boot.h"
 #include "extracted_disc.h"
 #include "fault_handler.h"
+#include "game_clock.h"
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
@@ -43,11 +44,12 @@ struct Options {
     std::string user_folder;  // empty: the default player folder (player_folder.h)
     // The mods to turn on, of those compiled in (--mods a,b or --mods none); all when not given.
     std::optional<std::vector<std::string>> mods;
+    unsigned game_speed_percent = 100;  // how fast the whole game runs (game_clock.h)
 };
 
 constexpr const char* USAGE =
     "usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>] [--user-folder <folder>]\n"
-    "                   [--mods <id,id,...> | --mods none]";
+    "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
 std::vector<std::string> split_mod_list(const std::string& value) {
@@ -82,6 +84,8 @@ Options parse_options(int argc, char** argv) {
             options.user_folder = value;
         } else if (name == "--mods") {
             options.mods = split_mod_list(value);
+        } else if (name == "--game-speed") {
+            options.game_speed_percent = static_cast<unsigned>(std::stoul(value));
         } else {
             throw std::runtime_error("unknown option " + name);
         }
@@ -103,6 +107,7 @@ int main(int argc, char** argv) {
         const ExtractedDisc disc(options.disc_root);
         player_folder::choose(options.user_folder);
 
+        game_clock::set_chosen_speed_percent(options.game_speed_percent);
         guest_memory::initialize();
         fault_handler::install(options.watchdog_seconds);
         hardware_registers::initialize(disc);

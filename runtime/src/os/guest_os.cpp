@@ -8,12 +8,12 @@
 
 #include "cpu_registers.h"
 #include "fault_handler.h"
+#include "game_clock.h"
 #include "guest_memory.h"
 #include "hardware/hardware_registers.h"
 #include "native_functions.h"
 #include "runtime_log.h"
 
-#include <chrono>
 #include <thread>
 
 namespace guest_os {
@@ -151,7 +151,7 @@ void sleep_until_next_event() {
     }
     if (next > now) {
         const uint64_t ticks = next - now;
-        std::this_thread::sleep_for(std::chrono::nanoseconds(ticks * 2000u / 81u));
+        std::this_thread::sleep_for(game_clock::real_duration(ticks));
     }
 }
 
