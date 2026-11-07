@@ -10,15 +10,12 @@
 #include "guest_memory.h"
 
 #include "fault_handler.h"
+#include "guest_memory_host.h"
 #include "hardware/hardware_registers.h"
 #include "runtime_log.h"
 
 #include "guest_abi/guest_abi.h"
 
-#include <sys/mman.h>
-#include <unistd.h>
-
-#include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <stdexcept>
@@ -51,25 +48,6 @@ namespace {
 uint8_t* g_flat_base = nullptr;
 uint8_t* g_hardware_register_image = nullptr;
 
-std::string system_error(const char* what) { return std::string(what) + ": " + std::strerror(errno); }
-
-// Maps `size` bytes of the file `fd` (from its start) at guest address `guest_address`.
-void map_shared_view(int fd, uint32_t guest_address, size_t size, int protection) {
-    void* wanted = g_flat_base + guest_address;
-    void* mapped = mmap(wanted, size, protection, MAP_SHARED | MAP_FIXED, fd, 0);
-    if (mapped != wanted) {
-        throw std::runtime_error(system_error("mapping a view of guest memory"));
-    }
-}
-
-int create_memory_file(const char* name, size_t size) {
-    const int fd = memfd_create(name, MFD_CLOEXEC);
-    if (fd < 0 || ftruncate(fd, static_cast<off_t>(size)) != 0) {
-        throw std::runtime_error(system_error("creating a memory file"));
-    }
-    return fd;
-}
-
 // Lets the inline fast paths of the translated code reach a 1 MiB page directly.
 // The bias is `host address - guest address`, plus one so that zero can mean "not
 // mapped, take the slow path". In the flat layout it is the same for every page.
@@ -97,47 +75,21 @@ bool in_range(uint32_t address, size_t length, uint32_t base, uint32_t size) {
 }  // namespace
 
 void initialize() {
-    // Reserve the whole 32-bit guest space without committing memory.
-    void* wanted = reinterpret_cast<void*>(GuestFlat::kFixedFlatGuestBase);
-    void* reserved = mmap(wanted, GuestFlat::kGuestSpaceSize, PROT_NONE,
-                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
-    if (reserved != wanted) {
-        throw std::runtime_error(system_error("reserving the 4 GiB guest address space"));
-    }
-    g_flat_base = static_cast<uint8_t*>(reserved);
+    // HMMM_NATIVE_READABLE_REGISTERS=1 leaves the guest view of the hardware registers
+    // readable (pointer reads then see the last value the runtime wrote), for running
+    // under a debugger, which needs the trap that the register reads use.
+    const bool readable_registers = std::getenv("HMMM_NATIVE_READABLE_REGISTERS") != nullptr;
+    const host::GuestSpace space = host::map_guest_space(readable_registers);
+    g_flat_base = space.flat_base;
+    g_hardware_register_image = space.register_image;
 
-    const int main_memory = create_memory_file("gamecube-main-memory", MAIN_MEMORY_SIZE);
     for (const uint32_t base : {PHYSICAL_MAIN_MEMORY_BASE, CACHED_MAIN_MEMORY_BASE, UNCACHED_MAIN_MEMORY_BASE}) {
-        map_shared_view(main_memory, base, MAIN_MEMORY_SIZE, PROT_READ | PROT_WRITE);
         publish_main_memory_view(base);
     }
-    close(main_memory);
-
     // The locked cache is smaller than a 1 MiB page, so it gets a page-table entry with
     // a limit but no fast-path bias: its accesses take the slow paths below.
-    void* locked_cache = mmap(g_flat_base + LOCKED_CACHE_BASE, LOCKED_CACHE_SIZE, PROT_READ | PROT_WRITE,
-                              MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-    if (locked_cache != g_flat_base + LOCKED_CACHE_BASE) {
-        throw std::runtime_error(system_error("mapping the locked cache"));
-    }
-    MemoryInline::g_pageTable[LOCKED_CACHE_BASE >> MemoryInline::kPageShift] = {static_cast<uint8_t*>(locked_cache),
+    MemoryInline::g_pageTable[LOCKED_CACHE_BASE >> MemoryInline::kPageShift] = {g_flat_base + LOCKED_CACHE_BASE,
                                                                                 LOCKED_CACHE_SIZE};
-
-    // Hardware registers: the guest view stays inaccessible (reads trap, see
-    // fault_handler.h) and the runtime keeps the values in a second, private view.
-    // HMMM_NATIVE_READABLE_REGISTERS=1 leaves the view readable instead (pointer reads then
-    // see the last value the runtime wrote), for running under a debugger, which needs the
-    // trap that the single-step uses.
-    const int registers = create_memory_file("gamecube-hardware-registers", HARDWARE_REGISTERS_SIZE);
-    const bool readable = std::getenv("HMMM_NATIVE_READABLE_REGISTERS") != nullptr;
-    map_shared_view(registers, HARDWARE_REGISTERS_BASE, HARDWARE_REGISTERS_SIZE, readable ? PROT_READ : PROT_NONE);
-    void* image = mmap(nullptr, HARDWARE_REGISTERS_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, registers, 0);
-    if (image == MAP_FAILED) {
-        throw std::runtime_error(system_error("mapping the hardware register image"));
-    }
-    g_hardware_register_image = static_cast<uint8_t*>(image);
-    close(registers);
-
     runtime_log::info("memory",
                       "guest space at %p: MEM1 at 0x00000000/0x80000000/0xC0000000, "
                       "locked cache at 0xE0000000, hardware registers at 0xCC000000",
