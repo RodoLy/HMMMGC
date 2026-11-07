@@ -18,6 +18,7 @@ constexpr uint32_t RATE_48_KHZ = 0x02u;     // AISFR: 48 kHz instead of 32 kHz
 constexpr uint32_t INTERRUPT_MASK = 0x04u;  // AIINTMSK
 constexpr uint32_t INTERRUPT = 0x08u;       // AIINT: acknowledged by writing 1
 constexpr uint32_t RESET_COUNTER = 0x20u;   // SCRESET: writing 1 resets the counter
+constexpr uint32_t DSP_AT_32_KHZ = 0x40u;   // AIDFR: the DSP's sound at 32 kHz instead of 48 kHz
 
 struct CounterState {
     uint32_t value_at_start = 0;  // the counter when it last started or was written
@@ -97,5 +98,7 @@ void advance() {
     }
     g_counter.last_seen = counter;
 }
+
+uint32_t dsp_sample_rate() { return (register_image::read32(CONTROL) & DSP_AT_32_KHZ) ? 32000u : 48000u; }
 
 }  // namespace audio_interface

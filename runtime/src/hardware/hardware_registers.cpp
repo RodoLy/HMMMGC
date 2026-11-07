@@ -17,6 +17,7 @@
 #include "hardware/video_interface.h"
 #include "runtime_log.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <cstring>
@@ -236,9 +237,12 @@ uint32_t enabled_interrupts() { return processor_interface::enabled_interrupts()
 void advance_time() {
     video_interface::advance();
     audio_interface::advance();
+    dsp_interface::advance();
 }
 
-uint64_t next_event_time() { return video_interface::next_field_time(); }
+uint64_t next_event_time() {
+    return std::min(video_interface::next_field_time(), dsp_interface::next_audio_buffer_time());
+}
 
 std::string describe_activity() {
     char text[160];

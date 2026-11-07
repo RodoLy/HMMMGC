@@ -3,14 +3,17 @@
 
 #include "hardware/dsp_interface.h"
 
+#include "audio/audio_output.h"
 #include "audio/dsp_programs.h"
 #include "cpu_registers.h"
 #include "guest_memory.h"
+#include "hardware/audio_interface.h"
 #include "hardware/audio_memory.h"
 #include "hardware/processor_interface.h"
 #include "hardware/register_image.h"
 #include "runtime_log.h"
 
+#include <algorithm>
 #include <cstring>
 #include <deque>
 
@@ -26,6 +29,9 @@ constexpr uint32_t ARAM_MODE = BASE + 0x16;
 constexpr uint32_t ARAM_DMA_MEMORY_ADDRESS = BASE + 0x20;  // high half at 0x20, low half at 0x22
 constexpr uint32_t ARAM_DMA_ARAM_ADDRESS = BASE + 0x24;    // 0x24 and 0x26
 constexpr uint32_t ARAM_DMA_COUNT = BASE + 0x28;           // 0x28 and 0x2A; writing the low half starts it
+constexpr uint32_t AUDIO_DMA_START = BASE + 0x30;          // 0x30 and 0x32: the buffer to play
+constexpr uint32_t AUDIO_DMA_CONTROL = BASE + 0x36;        // enable bit and length in 32-byte blocks
+constexpr uint32_t AUDIO_DMA_BLOCKS_LEFT = BASE + 0x3A;
 
 // Bits of the control register (Dolphin's UDSPControl).
 constexpr uint16_t RESET = 0x0001u;
@@ -51,12 +57,30 @@ constexpr uint32_t DMA_ALIGNMENT_MASK = 0x1Fu;  // the DMA moves 32-byte units
 constexpr uint32_t PHYSICAL_ADDRESS_MASK = 0x03FFFFFFu;
 constexpr uint32_t FROM_ARAM_TO_MEMORY = 0x80000000u;
 
+// The audio DMA reads the buffer to play in blocks of 32 bytes: 8 stereo frames of
+// 16-bit samples.
+constexpr uint16_t AUDIO_DMA_ENABLE = 0x8000u;
+constexpr uint16_t AUDIO_DMA_LENGTH_MASK = 0x7FFFu;
+constexpr uint32_t AUDIO_DMA_BLOCK_BYTES = 32;
+constexpr uint32_t FRAMES_PER_BLOCK = AUDIO_DMA_BLOCK_BYTES / 4;
+// How far the audio DMA may fall behind the time base before it gives up on the sound it
+// missed (a tenth of a second): when the game keeps the interrupts off longer than that,
+// what it missed is skipped instead of played late.
+constexpr uint64_t MAX_TICKS_BEHIND = cpu_registers::TIME_BASE_TICKS_PER_SECOND / 10;
+
+struct AudioDma {
+    uint32_t current_address = 0;  // the block that plays next
+    uint32_t blocks_left = 0;      // in the buffer being played
+    uint64_t next_block_at = 0;    // the time base when it plays
+};
+
 struct DspState {
     uint16_t control = 0;
     uint16_t mail_to_dsp_high = 0;  // as written: reading the register clears its top bit
     std::deque<uint32_t> mails_from_dsp;
     uint32_t last_mail_from_dsp = 0;
     uint64_t init_program_ends_at = 0;
+    AudioDma audio_dma;
 };
 DspState g_dsp;
 
@@ -132,6 +156,64 @@ void run_aram_dma() {
     raise_interrupt(ARAM_DMA_INTERRUPT);
 }
 
+// ---- The audio DMA ----
+//
+// It plays a buffer of the game's memory 32 bytes at a time, at the DSP's sample rate.
+// It interrupts when it starts a buffer (when the game enables it, and each time it goes
+// back to the start), so that the game can prepare the next one while this one plays:
+// the next buffer is whatever the start and length registers say when this one ends.
+//
+// On the console the interrupt arrives on time. Here the game takes interrupts when it
+// lets them in (guest_os.h), which can be tens of milliseconds late, and its handler is
+// what makes the sound of the next buffer (through AX). So the DMA waits at the start of
+// each buffer until the game has taken its interrupt, and catches up when it has: the
+// sound comes out in bursts, which audio_output.h evens out, and never plays a buffer the
+// game has not refilled.
+
+bool audio_dma_enabled() { return (register_image::read16(AUDIO_DMA_CONTROL) & AUDIO_DMA_ENABLE) != 0; }
+
+// The interrupt of the buffer that just started is pending and the game listens for it.
+bool waiting_for_game() {
+    return (g_dsp.control & AUDIO_DMA_INTERRUPT) != 0 && (g_dsp.control & AUDIO_DMA_INTERRUPT_MASK) != 0;
+}
+
+uint64_t ticks_per_block() {
+    return cpu_registers::TIME_BASE_TICKS_PER_SECOND * FRAMES_PER_BLOCK / audio_interface::dsp_sample_rate();
+}
+
+void load_audio_buffer() {
+    g_dsp.audio_dma.current_address =
+        register_image::read_pair(AUDIO_DMA_START) & PHYSICAL_ADDRESS_MASK & ~DMA_ALIGNMENT_MASK;
+    g_dsp.audio_dma.blocks_left = register_image::read16(AUDIO_DMA_CONTROL) & AUDIO_DMA_LENGTH_MASK;
+}
+
+void write_audio_dma_control(uint16_t value) {
+    const bool was_enabled = audio_dma_enabled();
+    register_image::write16(AUDIO_DMA_CONTROL, value);
+    // While a buffer plays, new values only take effect when it ends.
+    if (!was_enabled && (value & AUDIO_DMA_ENABLE)) {
+        load_audio_buffer();
+        g_dsp.audio_dma.next_block_at = cpu_registers::time_base() + ticks_per_block();
+        raise_interrupt(AUDIO_DMA_INTERRUPT);
+    }
+}
+
+void play_audio_block() {
+    const uint8_t* block = guest_memory::host_pointer(guest_memory::physical_to_cached(g_dsp.audio_dma.current_address),
+                                                      AUDIO_DMA_BLOCK_BYTES);
+    if (block != nullptr) {
+        audio_output::play(block, FRAMES_PER_BLOCK, audio_interface::dsp_sample_rate());
+    }
+    if (g_dsp.audio_dma.blocks_left > 0) {
+        --g_dsp.audio_dma.blocks_left;
+        g_dsp.audio_dma.current_address += AUDIO_DMA_BLOCK_BYTES;
+    }
+    if (g_dsp.audio_dma.blocks_left == 0) {
+        load_audio_buffer();
+        raise_interrupt(AUDIO_DMA_INTERRUPT);
+    }
+}
+
 }  // namespace
 
 void send_mail_to_cpu(uint32_t mail, bool interrupt) {
@@ -139,6 +221,29 @@ void send_mail_to_cpu(uint32_t mail, bool interrupt) {
     if (interrupt) {
         raise_interrupt(DSP_INTERRUPT);
     }
+}
+
+void advance() {
+    if (!audio_dma_enabled()) {
+        return;
+    }
+    const uint64_t now = cpu_registers::time_base();
+    if (now > g_dsp.audio_dma.next_block_at + MAX_TICKS_BEHIND) {
+        g_dsp.audio_dma.next_block_at = now;
+    }
+    const uint64_t block_ticks = ticks_per_block();
+    while (g_dsp.audio_dma.next_block_at <= now && !waiting_for_game()) {
+        play_audio_block();
+        g_dsp.audio_dma.next_block_at += block_ticks;
+    }
+}
+
+uint64_t next_audio_buffer_time() {
+    if (!audio_dma_enabled() || waiting_for_game()) {
+        return UINT64_MAX;  // nothing happens until the game takes the interrupt
+    }
+    const uint64_t blocks = std::max<uint32_t>(g_dsp.audio_dma.blocks_left, 1);
+    return g_dsp.audio_dma.next_block_at + (blocks - 1) * ticks_per_block();
 }
 
 void write(uint32_t address, uint16_t value) {
@@ -161,6 +266,11 @@ void write(uint32_t address, uint16_t value) {
             register_image::write16(address, value);
             dsp_programs::receive_mail((uint32_t{g_dsp.mail_to_dsp_high} << 16) | value);
             return;
+        case AUDIO_DMA_CONTROL:
+            write_audio_dma_control(value);
+            return;
+        case AUDIO_DMA_BLOCKS_LEFT:
+            return;  // read only
         default:
             register_image::write16(address, value);
             return;
@@ -195,6 +305,11 @@ void refresh(uint32_t address) {
             return;
         case ARAM_MODE:
             register_image::write16(address, 1);  // ARAM ready
+            return;
+        case AUDIO_DMA_BLOCKS_LEFT:
+            // Counted from zero: the last block reads 0.
+            register_image::write16(
+                address, static_cast<uint16_t>(g_dsp.audio_dma.blocks_left > 0 ? g_dsp.audio_dma.blocks_left - 1 : 0));
             return;
         default:
             return;

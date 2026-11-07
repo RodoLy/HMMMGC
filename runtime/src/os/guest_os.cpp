@@ -310,12 +310,18 @@ void take_pending_interrupts(CpuContext* cpu) {
     // The OS's dispatcher handles one interrupt and returns, so take them one by one. An
     // interrupt the OS keeps masked stays pending in the hardware until the library that
     // owns it unmasks it, hence the bound on the passes.
-    constexpr int MAXIMUM_INTERRUPTS_AT_ONCE = 16;
+    //
+    // After each one the devices advance again: a handler can let a device go on, and the
+    // audio DMA waits for the game to take the interrupt of each buffer before it plays the
+    // next (dsp_interface.h). When the interrupts come in late, the buffers that fell due
+    // meanwhile are caught up here, two passes each (the audio DMA's, then the DSP's).
+    constexpr int MAXIMUM_INTERRUPTS_AT_ONCE = 32;
     for (int pass = 0; pass < MAXIMUM_INTERRUPTS_AT_ONCE; ++pass) {
         if ((hardware_registers::pending_interrupts() & hardware_registers::enabled_interrupts()) == 0) {
             break;
         }
         take_exception(cpu, EXTERNAL_INTERRUPT_EXCEPTION);
+        hardware_registers::advance_time();
     }
 }
 

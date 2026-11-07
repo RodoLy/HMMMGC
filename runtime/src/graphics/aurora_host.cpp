@@ -2,6 +2,7 @@
 
 #include "graphics/aurora_host.h"
 
+#include "audio/audio_output.h"
 #include "player_folder.h"
 #include "runtime_log.h"
 
@@ -136,6 +137,7 @@ bool process_events() {
 void shutdown() {
     if (g_initialized) {
         g_initialized = false;
+        audio_output::shutdown();  // the sound plays through the SDL that aurora started
         aurora_shutdown();
     }
 }

@@ -40,8 +40,8 @@ uint32_t pending_interrupts();
 uint32_t enabled_interrupts();
 
 // Brings the devices that run on their own clock (the video beam, the audio sample
-// counter) up to the current time base, raising the interrupts that came due; and tells
-// when the next one is due.
+// counter, the audio DMA) up to the current time base, raising the interrupts that came
+// due; and tells when the next one is due.
 void advance_time();
 uint64_t next_event_time();
 
