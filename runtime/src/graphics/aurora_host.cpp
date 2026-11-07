@@ -153,6 +153,10 @@ void initialize() {
     camera_view::set_window_size(info.windowSize.width, info.windowSize.height);
     if (g_display_options.resolution_scale > 0.f) {
         VISetFrameBufferScale(g_display_options.resolution_scale);
+        // The picture is drawn larger than the window and reduced to it: averaging every
+        // pixel it covers (rather than the four nearest, bilinear) keeps the edges smooth
+        // without the shimmer of skipped pixels.
+        aurora_set_resampler(SAMPLER_AREA);
     }
     runtime_log::info("graphics", "aurora is drawing with backend %d in a %ux%u window, internal resolution %s",
                       static_cast<int>(info.backend), info.windowSize.width, info.windowSize.height,
