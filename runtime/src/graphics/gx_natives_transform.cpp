@@ -69,6 +69,7 @@ PPC_NATIVE_OVERRIDE_VOID(801953F8, GXLoadTexMtxImmNative, (uint32_t matrix_addre
 void GXSetViewportJitterNative(float left, float top, float width, float height, float near_z, float far_z,
                                uint32_t field) {
     gx_draw::finish_primitive();
+    camera_view::set_viewport(width, height);
     GXSetViewportJitter(left, top, width, height, near_z, far_z, field);
 }
 PPC_NATIVE_OVERRIDE_VOID(8019553C, GXSetViewportJitterNative,
@@ -78,6 +79,7 @@ PPC_NATIVE_OVERRIDE_VOID(8019553C, GXSetViewportJitterNative,
 // GXSetViewport(f32 left, f32 top, f32 width, f32 height, f32 near_z, f32 far_z)
 void GXSetViewportNative(float left, float top, float width, float height, float near_z, float far_z) {
     gx_draw::finish_primitive();
+    camera_view::set_viewport(width, height);
     GXSetViewport(left, top, width, height, near_z, far_z);
 }
 PPC_NATIVE_OVERRIDE_VOID(80195594, GXSetViewportNative,

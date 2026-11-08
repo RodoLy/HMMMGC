@@ -37,8 +37,12 @@ void set_window_size(unsigned width, unsigned height);
 // Whether the picture is 16:9 (the window opens with that shape).
 bool widescreen();
 
+// The viewport the game draws to (GXSetViewport): only the projections of the screen are
+// changed, not those of pictures the game draws for itself (the shadows' depth map).
+void set_viewport(float width, float height);
+
 // Changes a projection matrix (row-major, as GXSetProjection takes it) of the given GX
-// projection type (0 perspective, 1 orthographic) in place.
+// projection type (0 perspective, 1 orthographic) in place, when the viewport is the screen.
 void adjust_projection(float matrix[16], int type);
 
 }  // namespace camera_view

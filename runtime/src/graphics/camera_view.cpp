@@ -15,6 +15,14 @@ constexpr int PERSPECTIVE = 0;
 constexpr float GAME_ASPECT_RATIO = 4.f / 3.f;
 
 Options g_options;
+// Whether the game draws to the whole screen now, rather than to a picture of its own: the
+// depth map of the shadows is drawn from the light into a 256x256 viewport, and widening or
+// zooming that projection would move the shadows. The game sets the viewport before the
+// projection of each pass.
+bool g_viewport_covers_screen = true;
+// The smallest viewport taken as the screen (the game's is 640x448).
+constexpr float SCREEN_VIEWPORT_WIDTH = 600.f;
+constexpr float SCREEN_VIEWPORT_HEIGHT = 400.f;
 // In widescreen, the width of the game's 4:3 picture in the window (3/4 in a 16:9 one).
 float g_four_thirds_in_window = 1.f;
 
@@ -43,8 +51,12 @@ void set_window_size(unsigned width, unsigned height) {
 
 bool widescreen() { return g_options.widescreen; }
 
+void set_viewport(float width, float height) {
+    g_viewport_covers_screen = width >= SCREEN_VIEWPORT_WIDTH && height >= SCREEN_VIEWPORT_HEIGHT;
+}
+
 void adjust_projection(float matrix[16], int type) {
-    if (type != PERSPECTIVE) {
+    if (type != PERSPECTIVE || !g_viewport_covers_screen) {
         return;
     }
     // Rows 0 and 1 map the view's x and y to the screen: their scale and, for an
