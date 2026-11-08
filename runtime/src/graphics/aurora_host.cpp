@@ -4,6 +4,7 @@
 
 #include "audio/audio_output.h"
 #include "game_clock.h"
+#include "game_scene.h"
 #include "graphics/camera_view.h"
 #include "graphics/frame_interpolation.h"
 #include "player_folder.h"
@@ -182,6 +183,8 @@ void present_frame() {
     aurora_end_frame();
     count_frame();
     process_events();
+    // What the next frame shows: the game's camera, or the zoom while walking outdoors.
+    camera_view::follow_scene(game_scene::player_walks_outdoors());
     // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while Tab is held.
     game_clock::set_turbo(SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_TAB]);
     begin_next_frame();

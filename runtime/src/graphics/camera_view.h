@@ -12,7 +12,9 @@
 // it back would leave the full-screen backgrounds 4:3 with bars at the sides.
 // Zoom: a perspective projection's scale is multiplied by the zoom, which narrows (above
 // 1) or widens (below 1) the camera's field of view: 0.7 shows more of the farm around
-// the player, 1.3 brings the camera in. The 2D layer does not change.
+// the player, 1.3 brings the camera in. The 2D layer does not change. The zoom is for
+// walking outdoors (game_scene.h): on the title screen, in cutscenes and in rooms the
+// camera is the game's, and the change goes smoothly over a few frames.
 // Screen lookups: to show the player through what stands in front, the game copies the
 // picture and draws those things again with that copy, looking it up with a texture matrix
 // that it builds from its own projection (the screen position of each vertex). Those
@@ -43,6 +45,11 @@ void set_window_size(unsigned width, unsigned height);
 
 // Whether the picture is 16:9 (the window opens with that shape).
 bool widescreen();
+
+// Called once a frame of the game (aurora_host.cpp), with whether the zoom applies to the
+// next one (game_scene::player_walks_outdoors): the zoom moves a step towards the chosen
+// one, or towards 1.
+void follow_scene(bool zoom_applies);
 
 // The viewport the game draws to (GXSetViewport): only the projections of the screen are
 // changed, not those of pictures the game draws for itself (the shadows' depth map).

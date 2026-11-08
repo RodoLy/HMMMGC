@@ -17,6 +17,20 @@ constexpr int PERSPECTIVE = 0;
 constexpr float GAME_ASPECT_RATIO = 4.f / 3.f;
 
 Options g_options;
+// The zoom now: the chosen one while the player walks outdoors, otherwise 1, reached a step
+// a frame.
+float g_zoom = 1.f;
+// Whether the zoom goes to the chosen one, and for how many frames in a row the player has
+// walked outdoors: the zoom waits for a few, because the game passes through that state for
+// a frame between the title screen and its demo.
+bool g_zooming = false;
+int g_frames_outdoors = 0;
+constexpr int FRAMES_BEFORE_ZOOMING = 10;
+// Each frame of the game covers this part of the way left to the zoom it is going to:
+// about a third of a second from one to the other.
+constexpr float ZOOM_STEP = 0.2f;
+// Closer than this, the zoom is where it goes.
+constexpr float ZOOM_REACHED = 0.002f;
 // Whether the game draws to the whole screen now, rather than to a picture of its own: the
 // depth map of the shadows is drawn from the light into a 256x256 viewport, and widening or
 // zooming that projection would move the shadows. The game sets the viewport before the
@@ -121,6 +135,22 @@ void set_window_size(unsigned width, unsigned height) {
 
 bool widescreen() { return g_options.widescreen; }
 
+void follow_scene(bool zoom_applies) {
+    g_frames_outdoors = zoom_applies ? std::min(g_frames_outdoors + 1, FRAMES_BEFORE_ZOOMING) : 0;
+    const bool zooming = g_frames_outdoors == FRAMES_BEFORE_ZOOMING;
+    if (zooming != g_zooming && g_options.zoom != 1.f) {
+        runtime_log::info("graphics", zooming ? "camera: zoom %.2f, walking outdoors"
+                                              : "camera: the game's (zoom %.2f off: a cutscene, a room or the title)",
+                          g_options.zoom);
+    }
+    g_zooming = zooming;
+    const float goal = zooming ? g_options.zoom : 1.f;
+    g_zoom += (goal - g_zoom) * ZOOM_STEP;
+    if (std::abs(goal - g_zoom) < ZOOM_REACHED) {
+        g_zoom = goal;
+    }
+}
+
 void set_viewport(float width, float height) {
     g_viewport_covers_screen = width >= SCREEN_VIEWPORT_WIDTH && height >= SCREEN_VIEWPORT_HEIGHT;
 }
@@ -134,8 +164,8 @@ void adjust_projection(float matrix[16], int type) {
     }
     // Rows 0 and 1 map the view's x and y to the screen: their scale and, for an
     // off-centre frustum, their offset change together, which keeps the frustum's centre.
-    g_applied_x_scale = g_four_thirds_in_window * g_options.zoom;
-    g_applied_y_scale = g_options.zoom;
+    g_applied_x_scale = g_four_thirds_in_window * g_zoom;
+    g_applied_y_scale = g_zoom;
     for (int column = 0; column < 4; ++column) {
         matrix[column] *= g_applied_x_scale;
         matrix[4 + column] *= g_applied_y_scale;

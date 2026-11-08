@@ -45,7 +45,9 @@ ventana muestra la velocidad. La resolución interna sigue al tamaño de la vent
 (Alt+Enter cambia a pantalla completa); `--resolution-scale <n>` la fija en n
 veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
 los bordes, y `--fullscreen 1` empieza en pantalla completa. `--zoom <0.5-2>`
-acerca (más de 1) o aleja (menos de 1) la cámara del juego, y `--widescreen 1`
+acerca (más de 1) o aleja (menos de 1) la cámara del juego mientras se camina al
+aire libre (en la pantalla de título, las escenas y los cuartos queda la cámara
+del juego, `game_scene.h`), y `--widescreen 1`
 da una imagen panorámica: el 3D muestra más a los lados y los menús se estiran.
 `--frame-rate 60` (o `120`) muestra 60 (o 120) cuadros por segundo: el juego
 dibuja 30 y aurora hace los demás en medio (`graphics/frame_interpolation.h`).
@@ -172,7 +174,9 @@ the speed. The internal resolution follows the window's size (Alt+Enter
 switches to full screen); `--resolution-scale <n>` fixes it at n times the
 console's (6 is nearly 4K) and scales it down to the window, which smooths the
 edges, and `--fullscreen 1` starts in full screen. `--zoom <0.5-2>` brings
-the game's camera closer (above 1) or farther (below 1), and `--widescreen 1`
+the game's camera closer (above 1) or farther (below 1) while walking outdoors
+(the title screen, the cutscenes and the rooms keep the game's camera,
+`game_scene.h`), and `--widescreen 1`
 gives a widescreen picture: the 3D shows more at the sides and the menus are
 stretched. `--frame-rate 60` (or `120`) shows 60 (or 120) frames a second: the
 game draws 30 and aurora makes the rest in between

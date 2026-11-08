@@ -230,7 +230,11 @@ pieza por pieza, en el orden de arriba)
 - [x] Nivel de zoom: acercar o alejar la cámara del juego, elegido por el
       jugador. En el runtime nativo, `--zoom` (0.5 a 2) cambia el campo de
       visión de las proyecciones en perspectiva (`graphics/camera_view.h`); el
-      HUD no cambia. Desde el launcher.
+      HUD no cambia. Desde el launcher. Solo mientras se camina al aire libre:
+      en la pantalla de título (y la demo del perro), en las escenas (los
+      eventos del juego) y en los cuartos queda la cámara del juego, y el cambio
+      va suave en un tercio de segundo (`game_scene.h`). En los cuartos alejarse
+      solo agregaba negro alrededor: el cuarto está hecho para esa cámara.
 - [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
       nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
       interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
@@ -746,7 +750,11 @@ by piece, in the order above)
 - [x] Zoom level: bring the game's camera closer or farther, chosen by the
       player. In the native runtime, `--zoom` (0.5 to 2) changes the field of
       view of the perspective projections (`graphics/camera_view.h`); the HUD
-      does not change. From the launcher.
+      does not change. From the launcher. Only while walking outdoors: the
+      title screen (and the dog's demo), the cutscenes (the game's events) and
+      the rooms keep the game's camera, and the change goes smoothly over a
+      third of a second (`game_scene.h`). In the rooms, zooming out only added
+      black around them: the room is made for that camera.
 - [x] 60 and 120 fps by interpolation (route (a) below). In the native
       runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
       interpolation aurora brings: it keeps each frame on the GPU and draws it

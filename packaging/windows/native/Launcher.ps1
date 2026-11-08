@@ -17,7 +17,7 @@
     "Play" saves the choices and starts hmmm-native.exe, next to this script, with:
       --mods       the mods that are on (or "none");
       --game-speed the speed of the whole game (100 to 400%; Tab held in the game: at least 300%);
-      --zoom              the camera's zoom (0.5 to 2: below 1 shows more around the player);
+      --zoom              the camera's zoom outdoors (0.5 to 2: below 1 shows more around the player);
       --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
       --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
       --widescreen        1 for a widescreen picture (the 3D shows more at the sides);
@@ -87,7 +87,7 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Speed of the character (100% is the original game):'
         GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
-        ZoomLabel = "Camera zoom (100% is the game's; less shows more around the player):"
+        ZoomLabel = "Camera zoom outdoors (100% is the game's; less shows more around the player):"
         ResolutionLabel = 'Internal resolution:'
         FrameRateLabel = 'Frames per second:'
         FrameRateGame = '30 (as the game)'
@@ -108,7 +108,7 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Velocidad del personaje (100% es la del juego original):'
         GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
-        ZoomLabel = 'Zoom de la cámara (100% es el del juego; menos muestra más alrededor del personaje):'
+        ZoomLabel = 'Zoom de la cámara al aire libre (100% es el del juego; menos muestra más alrededor del personaje):'
         ResolutionLabel = 'Resolución interna:'
         FrameRateLabel = 'Cuadros por segundo:'
         FrameRateGame = '30 (como el juego)'
