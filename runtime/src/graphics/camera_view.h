@@ -51,6 +51,14 @@ bool widescreen();
 // one, or towards 1.
 void follow_scene(bool zoom_applies);
 
+// The zoom now (1 when the camera is the game's).
+float zoom();
+
+// How much a perspective projection of the screen is scaled now, horizontally (zoom and
+// widescreen) and vertically (zoom): below 1 the camera shows more than the game's.
+float screen_x_scale();
+float screen_y_scale();
+
 // The viewport the game draws to (GXSetViewport): only the projections of the screen are
 // changed, not those of pictures the game draws for itself (the shadows' depth map).
 void set_viewport(float width, float height);

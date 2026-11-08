@@ -235,6 +235,13 @@ pieza por pieza, en el orden de arriba)
       eventos del juego) y en los cuartos queda la cámara del juego, y el cambio
       va suave en un tercio de segundo (`game_scene.h`). En los cuartos alejarse
       solo agregaba negro alrededor: el cuarto está hecho para esa cámara.
+      Alejado, el juego no dibujaba todo el mapa: arma los lugares al aire libre
+      con piezas de 24 por 24 y solo dibuja las que están a 12 del jugador, y
+      arriba de la pantalla salía negro. Mientras el zoom muestra más que la
+      cámara del juego, el runtime agranda esa distancia en la memoria del
+      juego en la misma proporción en que la cámara ve más lejos
+      (`graphics/map_draw_range.h`; en la granja, unas 30 con zoom 0.5 y 38 en
+      panorámica); con zoom 1 queda la del juego, sin más trabajo.
 - [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
       nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
       interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
@@ -754,7 +761,14 @@ by piece, in the order above)
       title screen (and the dog's demo), the cutscenes (the game's events) and
       the rooms keep the game's camera, and the change goes smoothly over a
       third of a second (`game_scene.h`). In the rooms, zooming out only added
-      black around them: the room is made for that camera.
+      black around them: the room is made for that camera. Zoomed out, the
+      game did not draw the whole map: it builds the places outdoors from
+      pieces of 24 by 24 and draws only those within 12 of the player, and the
+      top of the screen showed black. While the zoom shows more than the game's
+      camera, the runtime widens that distance in the game's memory by as much
+      as the camera sees farther (`graphics/map_draw_range.h`; on the farm,
+      about 30 at zoom 0.5 and 38 in widescreen); at zoom 1 it stays the
+      game's, with no more work.
 - [x] 60 and 120 fps by interpolation (route (a) below). In the native
       runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
       interpolation aurora brings: it keeps each frame on the GPU and draws it

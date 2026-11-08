@@ -29,14 +29,10 @@ constexpr uint32_t AREA_COUNT = 129;
 // made of several.
 constexpr uint32_t FIELD_AREA_COUNT = 16;
 
-bool is_game_pointer(uint32_t address) {
-    return address >= guest_memory::CACHED_MAIN_MEMORY_BASE &&
-           address < guest_memory::CACHED_MAIN_MEMORY_BASE + guest_memory::MAIN_MEMORY_SIZE;
-}
-
 bool no_event_running() {
     const uint32_t manager = guest_memory::read32(EVENT_MANAGER_POINTER);
-    return is_game_pointer(manager) && guest_memory::read32(manager + RUNNING_EVENT_OFFSET) == NO_EVENT;
+    return guest_memory::is_cached_main_memory(manager) &&
+           guest_memory::read32(manager + RUNNING_EVENT_OFFSET) == NO_EVENT;
 }
 
 bool area_is_outdoors() {

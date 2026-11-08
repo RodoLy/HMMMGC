@@ -139,8 +139,9 @@ void follow_scene(bool zoom_applies) {
     g_frames_outdoors = zoom_applies ? std::min(g_frames_outdoors + 1, FRAMES_BEFORE_ZOOMING) : 0;
     const bool zooming = g_frames_outdoors == FRAMES_BEFORE_ZOOMING;
     if (zooming != g_zooming && g_options.zoom != 1.f) {
-        runtime_log::info("graphics", zooming ? "camera: zoom %.2f, walking outdoors"
-                                              : "camera: the game's (zoom %.2f off: a cutscene, a room or the title)",
+        runtime_log::info("graphics",
+                          zooming ? "camera: zoom %.2f, walking outdoors"
+                                  : "camera: the game's (zoom %.2f off: a cutscene, a room or the title)",
                           g_options.zoom);
     }
     g_zooming = zooming;
@@ -150,6 +151,12 @@ void follow_scene(bool zoom_applies) {
         g_zoom = goal;
     }
 }
+
+float zoom() { return g_zoom; }
+
+float screen_x_scale() { return g_four_thirds_in_window * g_zoom; }
+
+float screen_y_scale() { return g_zoom; }
 
 void set_viewport(float width, float height) {
     g_viewport_covers_screen = width >= SCREEN_VIEWPORT_WIDTH && height >= SCREEN_VIEWPORT_HEIGHT;
@@ -164,8 +171,8 @@ void adjust_projection(float matrix[16], int type) {
     }
     // Rows 0 and 1 map the view's x and y to the screen: their scale and, for an
     // off-centre frustum, their offset change together, which keeps the frustum's centre.
-    g_applied_x_scale = g_four_thirds_in_window * g_zoom;
-    g_applied_y_scale = g_zoom;
+    g_applied_x_scale = screen_x_scale();
+    g_applied_y_scale = screen_y_scale();
     for (int column = 0; column < 4; ++column) {
         matrix[column] *= g_applied_x_scale;
         matrix[4 + column] *= g_applied_y_scale;

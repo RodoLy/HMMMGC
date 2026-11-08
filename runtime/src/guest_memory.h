@@ -66,4 +66,10 @@ constexpr uint32_t physical_to_cached(uint32_t physical_address) {
     return (physical_address & 0x1FFFFFFFu) | CACHED_MAIN_MEMORY_BASE;
 }
 
+// Whether an address is in main memory as the game's pointers hold it (cached), for runtime
+// code that follows the game's pointers.
+constexpr bool is_cached_main_memory(uint32_t address) {
+    return address >= CACHED_MAIN_MEMORY_BASE && address - CACHED_MAIN_MEMORY_BASE < MAIN_MEMORY_SIZE;
+}
+
 }  // namespace guest_memory
