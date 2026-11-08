@@ -285,40 +285,6 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
-### `aurora/interpolate-texture-matrices.patch`
-
-Para el runtime nativo, no para ModernGekko, y este sí se aplica solo:
-`scripts/build_native_runtime.sh` lo aplica a la copia de aurora de WiiCompiled
-antes de compilar (si ya está aplicado, lo deja así).
-
-La interpolación de cuadros de aurora (60 y 120 fps,
-`runtime/src/graphics/frame_interpolation.h`) mezcla entre dos cuadros la
-proyección y las matrices de posición y normales de cada dibujo, pero no las de
-textura. Este juego dibuja sus sombras en una textura del tamaño de la pantalla
-y la pone sobre la escena con una matriz de textura que proyecta desde la
-cámara: en los cuadros intermedios la escena estaba a medio camino y la sombra
-no, así que las sombras se movían con la cámara. El parche guarda las matrices
-de textura de cada dibujo y mezcla las que cambiaron poco, igual que la
-proyección; un cambio grande (una textura que se desplaza y da la vuelta) se
-deja como está.
-
-**Falta probar** en la laptop que las sombras ya no se mueven; en Linux
-compila y el juego corre igual.
-
-**Versiones a las que se aplica:** aurora de WiiCompiled `0d5c402` (el
-submódulo `aurora-main`, `33067e3`), la que fija
-`scripts/build_native_runtime.sh`.
-
-**Licencia:** MIT, como aurora.
-
-**Aplicar a mano:**
-
-```bash
-git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/interpolate-texture-matrices.patch"
-```
-
-**Quitar:** el mismo `git apply` con `-R`.
-
 ---
 
 ## English
@@ -599,36 +565,3 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.
-
-
-### `aurora/interpolate-texture-matrices.patch`
-
-For the native runtime, not for ModernGekko, and this one does apply itself:
-`scripts/build_native_runtime.sh` applies it to WiiCompiled's copy of aurora
-before building (if it is already applied, it is left as it is).
-
-aurora's frame interpolation (60 and 120 fps,
-`runtime/src/graphics/frame_interpolation.h`) mixes each draw's projection,
-position and normal matrices between two frames, but not its texture matrices.
-This game draws its shadows into a screen-sized texture and lays it over the
-scene with a texture matrix that projects from the camera: in the frames in
-between, the scene was halfway and the shadow was not, so shadows moved with
-the camera. The patch keeps each draw's texture matrices and mixes those that
-changed a little, as it does the projection; a large change (a scrolling
-texture that wraps around) is left as it is.
-
-**Still to try** on the laptop that shadows no longer move; on Linux it
-builds and the game runs as before.
-
-**Applies to:** WiiCompiled's aurora `0d5c402` (the `aurora-main` submodule,
-`33067e3`), the one `scripts/build_native_runtime.sh` pins.
-
-**License:** MIT, like aurora.
-
-**Apply by hand:**
-
-```bash
-git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/interpolate-texture-matrices.patch"
-```
-
-**Remove:** the same `git apply` with `-R`.
