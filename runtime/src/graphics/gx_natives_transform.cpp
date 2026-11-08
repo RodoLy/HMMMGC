@@ -35,6 +35,7 @@ PPC_NATIVE_OVERRIDE_VOID(801951F4, GXSetProjectionNative, (uint32_t matrix_addre
 void GXLoadPosMtxImmNative(uint32_t matrix_address, uint32_t slot) {
     gx_draw::finish_primitive();
     const auto matrix = guest_values::read_floats<MATRIX_3X4_FLOATS>(matrix_address);
+    camera_view::set_position_matrix(matrix.data(), slot);
     GXLoadPosMtxImm(matrix.data(), slot);
 }
 PPC_NATIVE_OVERRIDE_VOID(80195324, GXLoadPosMtxImmNative, (uint32_t matrix_address, uint32_t slot),
@@ -58,6 +59,7 @@ void GXLoadTexMtxImmNative(uint32_t matrix_address, uint32_t slot, uint32_t type
         std::copy(rows.begin(), rows.end(), matrix.begin());
     } else {
         matrix = guest_values::read_floats<MATRIX_3X4_FLOATS>(matrix_address);
+        camera_view::adjust_texture_matrix(matrix.data(), static_cast<int>(type));  // screen lookups
     }
     GXLoadTexMtxImm(matrix.data(), slot, static_cast<GXTexMtxType>(type));
 }

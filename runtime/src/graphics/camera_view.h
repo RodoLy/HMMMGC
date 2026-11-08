@@ -13,7 +13,14 @@
 // Zoom: a perspective projection's scale is multiplied by the zoom, which narrows (above
 // 1) or widens (below 1) the camera's field of view: 0.7 shows more of the farm around
 // the player, 1.3 brings the camera in. The 2D layer does not change.
+// Screen lookups: to show the player through what stands in front, the game copies the
+// picture and draws those things again with that copy, looking it up with a texture matrix
+// that it builds from its own projection (the screen position of each vertex). Those
+// matrices get the same change as the projection, or the see-through parts would show the
+// picture from somewhere else.
 #pragma once
+
+#include <cstdint>
 
 namespace camera_view {
 
@@ -44,5 +51,13 @@ void set_viewport(float width, float height);
 // Changes a projection matrix (row-major, as GXSetProjection takes it) of the given GX
 // projection type (0 perspective, 1 orthographic) in place, when the viewport is the screen.
 void adjust_projection(float matrix[16], int type);
+
+// A position matrix the game loads (GXLoadPosMtxImm), for adjust_texture_matrix.
+void set_position_matrix(const float matrix[12], uint32_t slot);
+
+// Changes a texture matrix (GXLoadTexMtxImm, row-major) of the given GX type in place when
+// it is a screen lookup of the current draw: the game's projection times the position
+// matrix of slot 0 (loaded first), mapped to the texture.
+void adjust_texture_matrix(float matrix[12], int type);
 
 }  // namespace camera_view

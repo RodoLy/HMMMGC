@@ -219,7 +219,11 @@ pieza por pieza, en el orden de arriba)
       lados, también en pantalla completa con la forma de la pantalla (16:10).
       Las capas 2D (fondos, HUD, menús, textos) se estiran, como con los hacks
       de widescreen de Dolphin. En el camino de la granja no se ve que falten
-      objetos a los lados.
+      objetos a los lados. El mapa de profundidad de las sombras (un viewport
+      de 256x256 desde la luz) no se toca, y las matrices de textura con que el
+      juego busca su copia de la pantalla (las partes que se ven a través,
+      para mostrar al personaje detrás de algo) reciben el mismo cambio que la
+      proyección; si no, las sombras y esas partes salían corridas.
 - [ ] HUD anclado en widescreen: dejar el HUD y los textos en 4:3 sin
       tocar los fondos 2D a pantalla completa (pide distinguirlos por
       función del juego).
@@ -731,7 +735,11 @@ by piece, in the order above)
       sides, also in full screen with the screen's shape (16:10). The 2D layers
       (backgrounds, HUD, menus, text) are stretched, as with Dolphin's
       widescreen hacks. On the path by the farm no objects are seen missing
-      at the sides.
+      at the sides. The shadows' depth map (a 256x256 viewport from the
+      light) is left alone, and the texture matrices with which the game
+      looks up its copy of the screen (the see-through parts that show the
+      character behind something) get the same change as the projection;
+      otherwise the shadows and those parts were shifted.
 - [ ] Anchored HUD in widescreen: keep the HUD and text 4:3 without
       touching the full-screen 2D backgrounds (needs telling them apart by
       the game's functions).
