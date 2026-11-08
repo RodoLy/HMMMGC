@@ -285,6 +285,53 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `aurora/reject-far-interpolation-pairs.patch`
+
+Para el runtime nativo, no para ModernGekko, y este sí se aplica solo:
+`scripts/build_native_runtime.sh` lo aplica a la copia de aurora de WiiCompiled
+antes de compilar (si ya está aplicado, lo deja así).
+
+La interpolación de cuadros de aurora (60 y 120 fps,
+`runtime/src/graphics/frame_interpolation.h`) empareja cada dibujo de un cuadro
+con el del cuadro anterior que dibuja lo mismo, y en los cuadros intermedios lo
+pone a medio camino. Cuando hay varias copias de una malla (los postes de una
+cerca, las plantas), las empareja por cercanía, y acepta cualquier par que se
+mueva menos de 1500 unidades del juego por cuadro. Para este juego eso es mucho:
+la cámara está a unas 800 unidades del personaje, y el juego corre a 30 cuadros,
+así que cada cuadro abarca el doble de movimiento que en un juego a 60. Al
+caminar, un poste que sale de la vista por un borde y otro que entra por el otro
+quedan sin pareja y aurora puede juntarlos; entonces el cuadro intermedio dibuja
+un poste a la mitad del camino entre los dos, por un instante. Es la explicación
+más probable de lo que se vio en la laptop solo con 60 fps: una cerca que
+aparece y desaparece al dar un paso, y plantas fantasma semitransparentes. Aquí
+no se ha podido reproducir todavía.
+
+El parche agrega a los dos lugares donde aurora prepara un par (el dibujo
+normal y el de matrices indexadas) un límite relativo: un dibujo puede moverse
+en un cuadro como mucho la cuarta parte de su distancia a la cámara (o 1 unidad,
+para lo que está pegado a la cámara, como un cielo). El movimiento normal, el de
+la cámara incluido, queda muy por debajo: en una caminata por la granja, menos
+de 1 de cada 1000 pares se movía más del 15 % de su distancia. Un par
+que pasa el límite no se interpola: el dibujo aparece donde está en el cuadro
+del juego.
+
+**Falta probar** en la laptop que el parpadeo se fue; en Linux compila y el
+juego corre igual.
+
+**Versiones a las que se aplica:** aurora de WiiCompiled `0d5c402` (el
+submódulo `aurora-main`, `33067e3`), la que fija
+`scripts/build_native_runtime.sh`.
+
+**Licencia:** MIT, como aurora.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-far-interpolation-pairs.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ---
 
 ## English
@@ -565,3 +612,49 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+
+### `aurora/reject-far-interpolation-pairs.patch`
+
+For the native runtime, not for ModernGekko, and this one does apply itself:
+`scripts/build_native_runtime.sh` applies it to WiiCompiled's copy of aurora
+before building (if it is already applied, it is left as it is).
+
+aurora's frame interpolation (60 and 120 fps,
+`runtime/src/graphics/frame_interpolation.h`) pairs each draw of a frame with
+the draw of the frame before that draws the same thing, and puts it halfway in
+the frames in between. When there are several copies of one mesh (the posts of
+a fence, the plants), it pairs them by nearness, and accepts any pair that
+moves less than 1500 game units per frame. For this game that is a lot: the
+camera is about 800 units from the character, and the game runs at 30 frames,
+so each frame covers twice the movement of a game at 60. While walking, a post
+that leaves the view at one edge and another that enters at the other edge are
+left without partners and aurora can pair them; the frame in between then draws
+a post halfway between the two, for an instant. It is the likeliest
+explanation of what was seen on the laptop only at 60 fps: a fence that
+appears and disappears when taking a step, and see-through ghost plants. It
+has not been reproduced here yet.
+
+The patch adds to the two places where aurora prepares a pair (the ordinary
+draw and the one with indexed matrices) a relative limit: a draw may move in
+one frame at most a quarter of its distance from the camera (or 1 unit, for
+what sits at the camera, like a sky). Ordinary movement, the camera's
+included, stays far below: on a walk across the farm, fewer than 1 in 1000
+pairs moved more than 15% of their distance. A pair past the limit is not
+interpolated: the draw shows where it is in the game's frame.
+
+**Still to try** on the laptop that the flicker is gone; on Linux it builds and
+the game runs as before.
+
+**Applies to:** WiiCompiled's aurora `0d5c402` (the `aurora-main` submodule,
+`33067e3`), the one `scripts/build_native_runtime.sh` pins.
+
+**License:** MIT, like aurora.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-far-interpolation-pairs.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
