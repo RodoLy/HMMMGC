@@ -179,6 +179,19 @@ void adjust_projection(float matrix[16], int type) {
     }
 }
 
+void adjust_projection_numbers(float numbers[7], float viewport_width, float viewport_height) {
+    if (numbers[0] != PERSPECTIVE || viewport_width < SCREEN_VIEWPORT_WIDTH ||
+        viewport_height < SCREEN_VIEWPORT_HEIGHT) {
+        return;
+    }
+    // The entries of rows 0 and 1, as adjust_projection scales them (01, 03 and 13 are 0 in
+    // a perspective projection, and GXProject leaves them out).
+    numbers[1] *= screen_x_scale();
+    numbers[2] *= screen_x_scale();
+    numbers[3] *= screen_y_scale();
+    numbers[4] *= screen_y_scale();
+}
+
 void set_position_matrix(const float matrix[12], uint32_t slot) {
     if (slot == GX_PNMTX0) {
         std::copy(matrix, matrix + 12, g_position_matrix.begin());

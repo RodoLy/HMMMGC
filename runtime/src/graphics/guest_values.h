@@ -1,6 +1,8 @@
-// Reading the values that the game passes to its graphics functions by address.
+// The values that the game passes to its graphics functions by address, and those it asks
+// them for back.
 //
-// Lectura de los valores que el juego pasa por dirección a sus funciones de gráficos.
+// Los valores que el juego pasa por dirección a sus funciones de gráficos, y los que les
+// pide de vuelta.
 //
 // The game's GX calls pass small structures (a GXColor) and matrices by address, in the
 // game's memory and byte order (big-endian). aurora takes them as host values, so the
@@ -26,6 +28,11 @@ inline GXColor read_color(uint32_t guest_address) {
 }
 
 inline float read_float(uint32_t guest_address) { return std::bit_cast<float>(guest_memory::read32(guest_address)); }
+
+// A float the game asked for by address (an output argument).
+inline void write_float(uint32_t guest_address, float value) {
+    guest_memory::write32(guest_address, std::bit_cast<uint32_t>(value));
+}
 
 // `Count` floats in a row: a matrix (3x4 for Mtx, 4x4 for Mtx44, 2x4 for a texture
 // matrix of two rows), row by row.

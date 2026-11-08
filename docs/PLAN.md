@@ -223,7 +223,11 @@ pieza por pieza, en el orden de arriba)
       de 256x256 desde la luz) no se toca, y las matrices de textura con que el
       juego busca su copia de la pantalla (las partes que se ven a través,
       para mostrar al personaje detrás de algo) reciben el mismo cambio que la
-      proyección; si no, las sombras y esas partes salían corridas.
+      proyección; si no, las sombras y esas partes salían corridas. Lo mismo
+      los puntos que el juego proyecta para poner sus marcas 2D sobre la escena
+      (la burbuja sobre la cabeza de un personaje): `GXProject` es un native
+      que hace la misma cuenta que el del juego (igual bit a bit en 2 millones
+      de casos al azar) con la proyección de la pantalla, también con el zoom.
 - [ ] HUD anclado en widescreen: dejar el HUD y los textos en 4:3 sin
       tocar los fondos 2D a pantalla completa (pide distinguirlos por
       función del juego).
@@ -750,7 +754,11 @@ by piece, in the order above)
       light) is left alone, and the texture matrices with which the game
       looks up its copy of the screen (the see-through parts that show the
       character behind something) get the same change as the projection;
-      otherwise the shadows and those parts were shifted.
+      otherwise the shadows and those parts were shifted. So do the points the
+      game projects to put its 2D marks over the scene (the bubble over a
+      character's head): `GXProject` is a native that works it out as the
+      game's does (equal bit for bit on 2 million random cases) with the
+      screen's projection, the zoom's too.
 - [ ] Anchored HUD in widescreen: keep the HUD and text 4:3 without
       touching the full-screen 2D backgrounds (needs telling them apart by
       the game's functions).

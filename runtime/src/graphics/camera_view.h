@@ -15,6 +15,9 @@
 // the player, 1.3 brings the camera in. The 2D layer does not change. The zoom is for
 // walking outdoors (game_scene.h): on the title screen, in cutscenes and in rooms the
 // camera is the game's, and the change goes smoothly over a few frames.
+// Screen marks: the game works out where a point of the scene lands on the screen
+// (GXProject) to draw 2D marks over it, such as the bubble over a character's head; those
+// points get the same change as the picture.
 // Screen lookups: to show the player through what stands in front, the game copies the
 // picture and draws those things again with that copy, looking it up with a texture matrix
 // that it builds from its own projection (the screen position of each vertex). Those
@@ -66,6 +69,11 @@ void set_viewport(float width, float height);
 // Changes a projection matrix (row-major, as GXSetProjection takes it) of the given GX
 // projection type (0 perspective, 1 orthographic) in place, when the viewport is the screen.
 void adjust_projection(float matrix[16], int type);
+
+// Changes the projection of a GXProject call in place, when it is a perspective one and its
+// viewport is the screen: the seven numbers GXGetProjectionv gives (the type, 0 for a
+// perspective one, then the matrix's entries 00, 02, 11, 12, 22 and 23).
+void adjust_projection_numbers(float numbers[7], float viewport_width, float viewport_height);
 
 // A position matrix the game loads (GXLoadPosMtxImm), for adjust_texture_matrix.
 void set_position_matrix(const float matrix[12], uint32_t slot);
