@@ -9,6 +9,7 @@
 #include "graphics/character_range.h"
 #include "graphics/frame_interpolation.h"
 #include "graphics/map_draw_range.h"
+#include "graphics/shadow_range.h"
 #include "player_folder.h"
 #include "runtime_log.h"
 
@@ -186,10 +187,11 @@ void present_frame() {
     count_frame();
     process_events();
     // What the next frame shows: the game's camera, or the zoom while walking outdoors, and
-    // as much of the map and its characters as that shows.
+    // as much of the map, its characters and its shadows as that shows.
     camera_view::follow_scene(game_scene::player_walks_outdoors());
     map_draw_range::update();
     character_range::update();
+    shadow_range::update();
     // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while Tab is held.
     game_clock::set_turbo(SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_TAB]);
     begin_next_frame();

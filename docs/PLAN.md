@@ -263,7 +263,15 @@ pieza por pieza, en el orden de arriba)
       gallinas aparecían de golpe cerca de las orillas. Mientras el zoom
       muestra más, el runtime multiplica esa distancia por cuánto más lejos
       llegan las esquinas de la pantalla (`graphics/character_range.h`; con
-      zoom 0.5 en panorámica, unas 43 unidades).
+      zoom 0.5 en panorámica, unas 43 unidades). Las sombras salen de un mapa de
+      profundidad que el juego dibuja desde la luz, con una cámara propia de 1
+      grado que cubre unas 9 unidades alrededor de donde mira la cámara; más
+      allá, la textura repite sus orillas, y alejado se veían bandas oscuras y
+      sombras estiradas. Mientras el zoom muestra más, el runtime abre esa
+      cámara en lo que llegan más lejos las esquinas de la pantalla en sus ejes
+      (`graphics/shadow_range.h`; con zoom 0.5 en panorámica, unas 3 veces).
+      El mapa no crece, así que esas sombras son más suaves; desde la
+      resolución 3x guardan el detalle de la consola.
 - [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
       nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
       interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
@@ -812,7 +820,15 @@ by piece, in the order above)
       the edges. While the zoom shows more, the runtime multiplies that
       distance by how much farther the screen's corners reach
       (`graphics/character_range.h`; at zoom 0.5 in widescreen, about 43
-      units).
+      units). The shadows come from a depth map the game draws from the light,
+      with a camera of its own of 1 degree that covers about 9 units around
+      where the camera looks; past it the texture repeats its edges, and zoomed
+      out the screen showed dark bands and stretched shadows. While the zoom
+      shows more, the runtime opens that camera by how much farther the
+      screen's corners reach along its axes (`graphics/shadow_range.h`; at zoom
+      0.5 in widescreen, about 3 times). The map does not grow, so those
+      shadows are softer; from an internal resolution of 3x up they keep the
+      console's detail.
 - [x] 60 and 120 fps by interpolation (route (a) below). In the native
       runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
       interpolation aurora brings: it keeps each frame on the GPU and draws it
