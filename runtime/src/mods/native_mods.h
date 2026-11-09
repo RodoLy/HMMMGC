@@ -21,9 +21,12 @@ struct CpuContext;
 
 namespace native_mods {
 
+// The ids of the mods compiled in.
+std::vector<std::string> compiled_in();
+
 // Reads the descriptors of the mods compiled in, checks that they are for this game, and
-// runs their on_load. With `enabled`, only the mods it names are turned on (the launcher
-// passes the player's choice); without it, all of them. Call once, before the game starts.
+// runs their on_load. With `enabled`, only the mods it names are turned on (the player's
+// choice, player_options.h); without it, all of them. Call once, before the game starts.
 void load(const std::vector<std::string>* enabled);
 
 }  // namespace native_mods

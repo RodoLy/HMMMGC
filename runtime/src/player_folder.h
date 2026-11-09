@@ -25,4 +25,9 @@ void choose(const std::string& requested);
 // The chosen folder. choose() must have been called first.
 const std::filesystem::path& path();
 
+// The settings.json that the launcher writes (shared/settings.h), which the runtime reads and
+// writes too (player_options.h): in the HarvestMoonMM folder, above the default player folder,
+// or inside the folder given to choose().
+const std::filesystem::path& settings_file();
+
 }  // namespace player_folder

@@ -9,7 +9,8 @@
 // hace el juego.
 //
 // Usage: hmmm-native --disc <disc image or extracted disc> [--symbols <symbols.txt>] [--watchdog <s>]
-//                    [--user-folder <folder>]
+//                    [--user-folder <folder>] [--settings <settings.json>] and the player's options
+//                    (player_options.h), which are otherwise read from settings.json.
 
 #include "console_boot.h"
 #include "crop_grid.h"
@@ -24,6 +25,7 @@
 #include "hardware/hardware_registers.h"
 #include "mods/native_mods.h"
 #include "player_folder.h"
+#include "player_options.h"
 #include "runtime_log.h"
 
 #include "guest_abi/guest_abi.h"
@@ -32,7 +34,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <optional>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -46,18 +48,17 @@ struct Options {
     std::string disc_root;
     std::string symbols_path;
     unsigned watchdog_seconds = 10;
-    std::string user_folder;  // empty: the default player folder (player_folder.h)
-    // The mods to turn on, of those compiled in (--mods a,b or --mods none); all when not given.
-    std::optional<std::vector<std::string>> mods;
-    unsigned game_speed_percent = 100;  // how fast the whole game runs (game_clock.h)
-    aurora_host::DisplayOptions display;
-    camera_view::Options camera;
-    unsigned frame_rate = frame_interpolation::GAME_FRAME_RATE;  // 30, 60 or 120
+    std::string user_folder;    // empty: the default player folder (player_folder.h)
+    std::string settings_file;  // empty: the launcher's settings.json (player_folder.h)
+    // The player's options that the command line gives (player_options.h): the mods to turn on,
+    // of those compiled in (--mods a,b or --mods none), how fast the whole game runs
+    // (game_clock.h), and the picture.
+    player_options::Given given;
 };
 
 constexpr const char* USAGE =
     "usage: hmmm-native --disc <disc image (.iso, .gcm) or extracted disc> [--symbols <file>] [--watchdog <s>]\n"
-    "                   [--user-folder <folder>]\n"
+    "                   [--user-folder <folder>] [--settings <settings.json>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
     "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]\n"
     "                   [--frame-rate <30|60|120>]";
@@ -93,20 +94,22 @@ Options parse_options(int argc, char** argv) {
             options.watchdog_seconds = static_cast<unsigned>(std::stoul(value));
         } else if (name == "--user-folder") {
             options.user_folder = value;
+        } else if (name == "--settings") {
+            options.settings_file = value;
         } else if (name == "--mods") {
-            options.mods = split_mod_list(value);
+            options.given.mods = split_mod_list(value);
         } else if (name == "--game-speed") {
-            options.game_speed_percent = static_cast<unsigned>(std::stoul(value));
+            options.given.game_speed_percent = static_cast<unsigned>(std::stoul(value));
         } else if (name == "--resolution-scale") {
-            options.display.resolution_scale = std::clamp(std::stof(value), 0.f, 8.f);
+            options.given.resolution_scale = std::clamp(std::stof(value), 0.f, 8.f);
         } else if (name == "--fullscreen") {
-            options.display.fullscreen = value != "0";
+            options.given.fullscreen = value != "0";
         } else if (name == "--widescreen") {
-            options.camera.widescreen = value != "0";
+            options.given.widescreen = value != "0";
         } else if (name == "--zoom") {
-            options.camera.zoom = std::stof(value);
+            options.given.zoom = std::stof(value);
         } else if (name == "--frame-rate") {
-            options.frame_rate = static_cast<unsigned>(std::stoul(value));
+            options.given.frame_rate = static_cast<unsigned>(std::stoul(value));
         } else {
             throw std::runtime_error("unknown option " + name);
         }
@@ -127,11 +130,16 @@ int main(int argc, char** argv) {
         }
         const GameDisc disc(options.disc_root);
         player_folder::choose(options.user_folder);
+        player_options::load(options.settings_file.empty() ? player_folder::settings_file()
+                                                           : std::filesystem::path(options.settings_file),
+                             options.given);
 
-        game_clock::set_chosen_speed_percent(options.game_speed_percent);
-        aurora_host::configure(options.display);
-        camera_view::configure(options.camera);
-        frame_interpolation::configure(options.frame_rate);
+        game_clock::set_chosen_speed_percent(player_options::game_speed_percent());
+        aurora_host::configure({.resolution_scale = player_options::resolution_scale(),
+                                .fullscreen = player_options::fullscreen()});
+        const camera_view::Options camera{.widescreen = player_options::widescreen(), .zoom = player_options::zoom()};
+        camera_view::configure(camera);
+        frame_interpolation::configure(player_options::frame_rate());
         guest_memory::initialize();
         fault_handler::install(options.watchdog_seconds);
         hardware_registers::initialize(disc);
@@ -140,9 +148,15 @@ int main(int argc, char** argv) {
         InitializeDataSections();
         console_boot::prepare_memory(disc);
         // With the game's data in memory: the farm's grid of crops, for the chosen zoom.
-        crop_grid::size_for_view(std::clamp(options.camera.zoom, camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM),
-                                 options.camera.widescreen);
-        native_mods::load(options.mods ? &*options.mods : nullptr);
+        crop_grid::size_for_view(std::clamp(camera.zoom, camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM),
+                                 camera.widescreen);
+        std::vector<std::string> enabled_mods;
+        for (const std::string& id : native_mods::compiled_in()) {
+            if (player_options::mod_enabled(id)) {
+                enabled_mods.push_back(id);
+            }
+        }
+        native_mods::load(&enabled_mods);
 
         CpuContext& cpu = GetPersistentCpuContext();
         console_boot::prepare_cpu(cpu);

@@ -191,6 +191,7 @@ void App::play() {
         paths::utf8(player_.game / paths::from_utf8(prepared_.program)),
         "--disc", prepared_.disc,
         "--symbols", paths::utf8(package_.symbols),
+        "--settings", paths::utf8(player_.settings),
         "--mods", mod_list.empty() ? "none" : mod_list,
         "--game-speed", std::to_string(settings_.number(settings::GAME_SPEED, 100, 100, 400)),
         "--zoom", zoom,

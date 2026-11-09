@@ -11,8 +11,10 @@ namespace {
 
 constexpr const char* PROJECT_FOLDER = "HarvestMoonMM";  // the same as the version on ModernGekko
 constexpr const char* RUNTIME_FOLDER = "Native";
+constexpr const char* SETTINGS_FILE = "settings.json";  // the launcher's (shared/settings.h)
 
 std::filesystem::path g_path;
+std::filesystem::path g_settings_file;
 
 // The platform's folder for application data that stays on this computer.
 std::filesystem::path application_data_folder() {
@@ -38,12 +40,20 @@ std::filesystem::path application_data_folder() {
 }  // namespace
 
 void choose(const std::string& requested) {
-    g_path = requested.empty() ? application_data_folder() / PROJECT_FOLDER / RUNTIME_FOLDER
-                               : std::filesystem::path(requested);
+    if (requested.empty()) {
+        const std::filesystem::path project = application_data_folder() / PROJECT_FOLDER;
+        g_path = project / RUNTIME_FOLDER;
+        g_settings_file = project / SETTINGS_FILE;
+    } else {
+        g_path = std::filesystem::path(requested);
+        g_settings_file = g_path / SETTINGS_FILE;
+    }
     std::filesystem::create_directories(g_path);
     runtime_log::info("player", "player folder: %s", g_path.string().c_str());
 }
 
 const std::filesystem::path& path() { return g_path; }
+
+const std::filesystem::path& settings_file() { return g_settings_file; }
 
 }  // namespace player_folder

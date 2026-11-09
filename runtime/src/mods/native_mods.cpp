@@ -149,6 +149,17 @@ ModernGekkoModFunction no_export(void*, const char*, const char*) { return nullp
 
 }  // namespace
 
+std::vector<std::string> compiled_in() {
+    std::vector<std::string> ids;
+    for (const ModernGekkoGetModFn* get_mod = COMPILED_IN_MODS; *get_mod != nullptr; ++get_mod) {
+        const ModernGekkoModDesc* mod = (*get_mod)();
+        if (mod != nullptr && mod->id != nullptr) {
+            ids.emplace_back(mod->id);
+        }
+    }
+    return ids;
+}
+
 void load(const std::vector<std::string>* enabled) {
     static const ModernGekkoModHostApi HOST_API{MODERNGEKKO_MOD_HOST_ABI_VERSION, nullptr, no_event, no_export};
     std::vector<std::string> compiled_in;

@@ -33,12 +33,12 @@ falta un controlador de Vulkan. Donde no se puede bajar nada, los argumentos
 que se le pasen al script van a cmake y pueden apuntar a copias locales:
 `-DDAWN_SOURCE_DIR=… -DDAWN_BUILD_DIR=…` (un Dawn compilado desde su código) y
 `-DFETCHCONTENT_SOURCE_DIR_<NOMBRE>=…` para las demás (SDL, FMT, XXHASH,
-IMGUI, TRACY, ABSEIL-CPP).
+IMGUI, TRACY, ABSEIL-CPP, NLOHMANN_JSON).
 
 Opciones de `hmmm-native`: `--watchdog <segundos>` imprime cada tanto dónde
 está el juego (0 lo apaga), `--user-folder <carpeta>` cambia la carpeta del
 jugador (ver abajo), y `--mods <id,id>` (o `--mods none`) dice qué mods de los
-compilados dentro se activan; sin él, todos. `--game-speed <100-400>` hace correr
+compilados dentro se activan. `--game-speed <100-400>` hace correr
 todo el juego más rápido (el reloj de la consola, `game_clock.h`); mientras se
 mantiene `Tab` apretado, va al menos al 300 % (el turbo), y el título de la
 ventana muestra la velocidad. La resolución interna sigue al tamaño de la ventana
@@ -51,7 +51,12 @@ del juego, `game_scene.h`), y `--widescreen 1`
 da una imagen panorámica: el 3D muestra más a los lados y los menús se estiran.
 `--frame-rate 60` (o `120`) muestra 60 (o 120) cuadros por segundo: el juego
 dibuja 30 y aurora hace los demás en medio (`graphics/frame_interpolation.h`).
-En Windows, `Launcher.bat`
+Lo que la línea de comandos no dice se lee del `settings.json` del launcher
+(`HarvestMoonMM/settings.json` en la carpeta de datos del sistema, o el que diga
+`--settings <archivo>`; con `--user-folder`, el de esa carpeta), así que el
+juego arrancado a mano juega como lo dejó el launcher; sin ese archivo, cada
+opción vale lo de siempre (todos los mods activos, 100 %, la ventana, 4:3, sin
+zoom, 30 cuadros), `player_options.h`. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
 velocidad del personaje y la del juego, la resolución, el zoom, la pantalla
 completa, la panorámica y los cuadros por segundo, y jugar; guarda lo elegido en el mismo `settings.json`
@@ -163,12 +168,12 @@ needs a Vulkan driver. Where nothing can be downloaded, the arguments given to
 the script go to cmake and can point at local copies:
 `-DDAWN_SOURCE_DIR=… -DDAWN_BUILD_DIR=…` (a Dawn built from source) and
 `-DFETCHCONTENT_SOURCE_DIR_<NAME>=…` for the others (SDL, FMT, XXHASH, IMGUI,
-TRACY, ABSEIL-CPP).
+TRACY, ABSEIL-CPP, NLOHMANN_JSON).
 
 Options of `hmmm-native`: `--watchdog <seconds>` prints where the game is every
 so often (0 turns it off), `--user-folder <folder>` changes the player folder
 (see below), and `--mods <id,id>` (or `--mods none`) says which of the mods
-compiled in are turned on; without it, all of them. `--game-speed <100-400>`
+compiled in are turned on. `--game-speed <100-400>`
 makes the whole game run faster (the console's clock, `game_clock.h`); while
 `Tab` is held it goes at least at 300% (the turbo), and the window's title shows
 the speed. The internal resolution follows the window's size (Alt+Enter
@@ -181,7 +186,13 @@ the game's camera closer (above 1) or farther (below 1) while walking outdoors
 gives a widescreen picture: the 3D shows more at the sides and the menus are
 stretched. `--frame-rate 60` (or `120`) shows 60 (or 120) frames a second: the
 game draws 30 and aurora makes the rest in between
-(`graphics/frame_interpolation.h`). On Windows, `Launcher.bat`
+(`graphics/frame_interpolation.h`). What the command line leaves out is read
+from the launcher's `settings.json` (`HarvestMoonMM/settings.json` in the
+system's data folder, or the one `--settings <file>` names; with
+`--user-folder`, the one in that folder), so the game started by hand plays as
+the launcher left it; without that file, each option is as always (every mod
+on, 100%, the window's resolution, 4:3, no zoom, 30 frames), `player_options.h`.
+On Windows, `Launcher.bat`
 (`packaging/windows/native/`) opens a window to turn the mods on, choose the
 speed of the character and of the game, the resolution, zoom, full screen,
 widescreen and frames per second, and
