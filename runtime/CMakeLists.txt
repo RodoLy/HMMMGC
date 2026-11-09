@@ -14,6 +14,9 @@
 # build with -DTRANSLATED_GAME_DIR=runtime/kit/stub_game, a stand-in of the translated game.
 cmake_minimum_required(VERSION 3.25)
 project(hm_magical_melody_native LANGUAGES C CXX ASM)
+if(WIN32)
+    enable_language(RC)
+endif()
 
 set(WIICOMPILED_DIR "" CACHE PATH "a WiiCompiled checkout: its guest ABI headers and its copy of aurora")
 set(TRANSLATED_GAME_DIR "" CACHE PATH "what the translator wrote for main.dol")
@@ -172,6 +175,8 @@ if(WIN32)
     # reports. The C++ runtime is linked in, so that the program only needs Windows' DLLs.
     target_link_libraries(hmmm-native PRIVATE onecore dbghelp)
     target_link_options(hmmm-native PRIVATE -static)
+    # The manifest: UTF-8 as the program's code page, for paths with any letter.
+    target_sources(hmmm-native PRIVATE windows/hmmm-native.rc)
 else()
     # The crash reports name the translated functions (func_XXXXXXXX) with dladdr.
     target_link_options(hmmm-native PRIVATE -rdynamic)
