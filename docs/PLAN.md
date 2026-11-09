@@ -809,15 +809,6 @@ by piece, in the order above)
       how many draws match. A first try that recorded and replayed the GX
       natives on the CPU did not reach 60 fps on a laptop and made repeated objects, like
       the posts of a fence, shake.
-- [x] 60 and 120 fps by interpolation (route (a) below). In the native
-      runtime, `--frame-rate 60` or `120` (from the launcher): each game frame
-      is recorded and drawn 2 or 4 times, the first ones with the position,
-      normal and projection matrices part of the way between the frame before
-      and this one (`graphics/frame_interpolation.h`). Every object of the game
-      is a matrix and a display list, so a matrix is matched with the one of
-      the frame before by the list it draws; in the house and on the farm
-      nearly all match (469 of 485). Those that jump (a camera cut) are drawn
-      as they are. At 60 the picture is half a game frame later.
 - [ ] Notes on 60 and 120 fps. The game computes everything per
       frame and presents 30 a second, with two video retraces per frame (measured on a laptop: 29.97
       frames and 59.94 retraces a second), so raising the rate is not a
