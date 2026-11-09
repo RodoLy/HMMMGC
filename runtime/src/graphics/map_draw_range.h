@@ -12,9 +12,10 @@
 //
 // While the zoom shows more than the game's camera, the runtime widens that distance in the
 // game's memory by as much as the camera now shows farther: it measures how far from the
-// point the camera looks at the screen's corners reach on the ground, with the zoom and
-// with the game's own projection, and multiplies the 12 by the ratio. With the game's
-// camera (zoom 1, also in widescreen) the distance is the game's, and so is the work.
+// point the camera looks at the screen's corners reach on the ground along the map's axes,
+// with the zoom and with the game's own projection (main_view.h), and multiplies the 12 by
+// the ratio. With the game's camera (zoom 1, also in widescreen) the distance is the
+// game's, and so is the work.
 #pragma once
 
 namespace map_draw_range {
