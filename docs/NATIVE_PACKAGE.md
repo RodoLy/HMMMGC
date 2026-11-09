@@ -60,6 +60,46 @@ En la nube (2 procesadores) la preparación completa, desde el RVZ, tarda unos 3
 minutos: la conversión 3 s, el traductor unos 20 s y la compilación el resto.
 Un procesador de 8 núcleos compila unas cuatro veces más rápido.
 
+### El launcher (`launcher/`)
+
+La ventana que abre el jugador (`HarvestMoonMM.exe`), en C++ con el
+renderizador 2D de SDL3 y Dear ImGui, sin nada del juego. Su aspecto sigue al
+del juego, dibujado con figuras: el cielo, las nubes, las colinas y la cerca de
+la pantalla de título, un letrero de madera con el nombre, botones naranjas
+como el recuadro de la fecha y paneles como los cuadros de diálogo, con una
+letra redondeada (M PLUS Rounded 1c, libre; `launcher/fonts/README.md`). Se usa
+con el ratón, el teclado o un control, y habla español o inglés (como el
+sistema, o lo que se elija).
+
+| Pantalla | Qué hace |
+|---|---|
+| Bienvenida | Pide la imagen del disco del jugador (`.iso`, `.gcm` o `.rvz`; también se puede soltar sobre la ventana o pasar al programa). Si el paquete se actualizó, avisa que hay que preparar el juego otra vez. |
+| Preparando | Corre `tools/prepare_game.py` y muestra sus pasos con palomitas, una barra de progreso, cuánto lleva y, si se quiere, los detalles. Se puede cancelar. Si algo falla, explica por qué (otro juego, otra versión, una imagen comprimida que no se pudo convertir, ...) y deja abrir el registro (`prepare.log`). |
+| Principal | Jugar, Opciones, Mods, Controles y Salir; abajo, el disco y la versión. |
+| Opciones | Resolución interna, pantalla completa, pantalla ancha, cuadros por segundo, zoom de la cámara, velocidad de todo el juego e idioma. |
+| Mods | Como un gestor de mods: a la izquierda la lista con un interruptor por mod, a la derecha la descripción, los ajustes (la velocidad del personaje) y el aviso del mod elegido (con Jamie: no desactivarlo después de casarse con Jamie). Lo leen de los manifiestos `mods/<id>/mod.json`. |
+| Controles | Los controles conectados y el teclado, con la asignación automática del juego (la de aurora, según el tipo de control: Xbox, PlayStation, Nintendo, GameCube) y un control de GameCube dibujado que se ilumina con lo que se presiona. |
+
+Las elecciones se guardan en `settings.json`, en la carpeta del jugador (el
+mismo archivo y los mismos nombres que usaban los paquetes anteriores). «Jugar»
+arranca el programa preparado con esas opciones y esconde el launcher; cuando
+el juego se cierra, el launcher vuelve, y si el juego terminó por un error lo
+dice y deja abrir `native.log`. En Windows los programas se arrancan sin
+ventana de consola, y la preparación en un *job* que termina todo lo que
+empezó si se cancela o si se cierra el launcher.
+
+Dónde queda cada cosa del jugador: `%LOCALAPPDATA%\HarvestMoonMM` en Windows
+(`~/.local/share/HarvestMoonMM` en Linux): `settings.json`, y en `Native` las
+partidas, `native.log`, `prepare.log` y, en `Native/Game`, el programa
+preparado, `prepared.json` y, si hizo falta convertir el disco, su ISO.
+
+Compilarlo (Linux; para Windows, con el *toolchain* de llvm-mingw):
+
+```sh
+cmake -S launcher -B build/launcher -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build build/launcher
+```
+
 ### El kit del runtime (`tools/make_runtime_kit.py`)
 
 El runtime se compila como siempre, pero con un sustituto del juego traducido
@@ -158,6 +198,45 @@ changes.
 In the cloud (2 processors) the whole preparation, from the RVZ, takes about 3
 minutes: the conversion 3 s, the translator about 20 s and the compile the
 rest. An 8-core processor compiles about four times as fast.
+
+### The launcher (`launcher/`)
+
+The window the player opens (`HarvestMoonMM.exe`), in C++ with SDL3's 2D
+renderer and Dear ImGui, with nothing of the game. Its look follows the
+game's, drawn with shapes: the sky, the clouds, the hills and the fence of the
+title screen, a wooden sign with the name, orange buttons like the box of the
+date and panels like the dialogue boxes, with a rounded font (M PLUS Rounded
+1c, free; `launcher/fonts/README.md`). It is used with the mouse, the keyboard
+or a controller, and speaks Spanish or English (as the system, or as chosen).
+
+| Screen | What it does |
+|---|---|
+| Welcome | Asks for the player's disc image (`.iso`, `.gcm` or `.rvz`; it can also be dropped on the window or given to the program). If the package was updated, it says that the game has to be prepared again. |
+| Preparing | Runs `tools/prepare_game.py` and shows its steps with check marks, a progress bar, the time so far and, on request, the details. It can be cancelled. If something fails, it explains why (another game, another version, a compressed image that could not be converted, ...) and offers to open the log (`prepare.log`). |
+| Main | Play, Options, Mods, Controls and Exit; below, the disc and the version. |
+| Options | Internal resolution, full screen, widescreen, frames per second, camera zoom, speed of the whole game and language. |
+| Mods | Like a mod manager: on the left the list with a switch for each mod, on the right the chosen mod's description, settings (the character's speed) and warning (with Jamie: not to turn it off after marrying Jamie). They come from the manifests `mods/<id>/mod.json`. |
+| Controls | The connected controllers and the keyboard, with the game's automatic mapping (aurora's, by the kind of controller: Xbox, PlayStation, Nintendo, GameCube) and a drawn GameCube controller that lights up with what is pressed. |
+
+The choices are kept in `settings.json`, in the player's folder (the same file
+and the same names as the earlier packages used). "Play" starts the prepared
+program with those options and hides the launcher; when the game closes, the
+launcher comes back, and if the game ended with an error it says so and offers
+to open `native.log`. On Windows the programs are started without a console
+window, and the preparation in a job that ends everything it started if it is
+cancelled or if the launcher is closed.
+
+Where the player's things go: `%LOCALAPPDATA%\HarvestMoonMM` on Windows
+(`~/.local/share/HarvestMoonMM` on Linux): `settings.json`, and in `Native` the
+saves, `native.log`, `prepare.log` and, in `Native/Game`, the prepared
+program, `prepared.json` and, if the disc had to be converted, its ISO.
+
+Building it (Linux; for Windows, with the llvm-mingw toolchain):
+
+```sh
+cmake -S launcher -B build/launcher -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build build/launcher
+```
 
 ### The runtime kit (`tools/make_runtime_kit.py`)
 

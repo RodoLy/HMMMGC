@@ -144,6 +144,15 @@ estar copiada en línea en otra: la herramienta lo revisa y se detiene si pasa.
 El registro del runtime dice qué mods cargó y la primera vez que el juego
 llega a cada lugar donde actúan.
 
+Cada uno de esos mods tiene además un manifiesto, `mod.json`, que es lo que
+muestra el launcher de la versión nativa en su pantalla de mods: el nombre, una
+línea, la descripción y un aviso opcional, en español y en inglés, la versión
+(la misma que su `mod.c`), los autores y sus ajustes. Un ajuste es un
+porcentaje que el launcher guarda en `settings.json` y le pasa al juego en una
+variable de entorno, que el mod lee al empezar (el de `player_speed`:
+`HM_MM_PLAYER_SPEED_PERCENT`). `tests/test_mod_manifests.py` revisa que
+coincidan con los mods.
+
 ---
 
 ## English
@@ -282,3 +291,12 @@ default `jamie_marriage player_speed`). A hooked function cannot be copied
 inline into another one: the tool checks this and stops if it happens. The
 runtime's log says which mods it loaded and the first time the game reaches
 each place where they act.
+
+Each of those mods also has a manifest, `mod.json`, which is what the native
+version's launcher shows on its mods screen: the name, a line, the description
+and an optional warning, in Spanish and in English, the version (the same as
+its `mod.c`), the authors and its settings. A setting is a percentage that the
+launcher keeps in `settings.json` and passes to the game in an environment
+variable, which the mod reads when it starts (`player_speed`'s:
+`HM_MM_PLAYER_SPEED_PERCENT`). `tests/test_mod_manifests.py` checks that they
+agree with the mods.
