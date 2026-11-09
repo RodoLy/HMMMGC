@@ -7,11 +7,11 @@
 // tiene ahora la pantalla (panorámica y zoom).
 //
 // Zoomed out, the camera shows more of the ground than the game expects, and the game keeps
-// some things only around what its own camera shows, such as the map's pieces
-// (map_draw_range.h). Each of those ranges is widened by how much farther the screen's
-// corners reach now than with the game's projection; this is where both are measured, from
-// the game's main view: its camera's field of view and aspect ratio, and the view matrix
-// it drew the last frame with.
+// some things only around what its own camera shows: the map's pieces (map_draw_range.h)
+// and the characters (character_range.h). Each of those ranges is widened by how much
+// farther the screen's corners reach now than with the game's projection; this is where
+// both are measured, from the game's main view: its camera's field of view and aspect
+// ratio, and the view matrix it drew the last frame with.
 #pragma once
 
 #include <algorithm>

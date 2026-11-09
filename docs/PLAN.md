@@ -256,7 +256,14 @@ pieza por pieza, en el orden de arriba)
       propia (`crop_grid.h`; con zoom 0.5, 41 por 41 y hasta 16 casillas a los
       lados, y 51 por 51 y 21 en panorámica). El tamaño se elige al abrir el
       juego, con el zoom del launcher; con zoom 1 o más cerca queda el cuadro
-      del juego.
+      del juego. Y con los personajes (gente, niños, mascotas y animales de
+      granja): cada uno se esconde y se detiene si está a más de unas 14
+      unidades del punto que sigue la cámara (el juego compara con 25 una
+      medida que es raíz de 3 veces la distancia), y alejado la gente y las
+      gallinas aparecían de golpe cerca de las orillas. Mientras el zoom
+      muestra más, el runtime multiplica esa distancia por cuánto más lejos
+      llegan las esquinas de la pantalla (`graphics/character_range.h`; con
+      zoom 0.5 en panorámica, unas 43 unidades).
 - [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
       nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
       interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
@@ -797,7 +804,15 @@ by piece, in the order above)
       which puts them in memory of its own (`crop_grid.h`; at zoom 0.5, 41 by
       41 and up to 16 tiles to the sides, and 51 by 51 and 21 in widescreen).
       The size is chosen when the game opens, with the launcher's zoom; at zoom
-      1 or closer the game's square stays.
+      1 or closer the game's square stays. So with the characters (people,
+      children, pets and farm animals): each one hides and stops when it is
+      more than about 14 units from the point the camera follows (the game
+      compares with 25 a measure that is the square root of 3 times the
+      distance), and zoomed out people and chickens appeared from nowhere near
+      the edges. While the zoom shows more, the runtime multiplies that
+      distance by how much farther the screen's corners reach
+      (`graphics/character_range.h`; at zoom 0.5 in widescreen, about 43
+      units).
 - [x] 60 and 120 fps by interpolation (route (a) below). In the native
       runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
       interpolation aurora brings: it keeps each frame on the GPU and draws it
