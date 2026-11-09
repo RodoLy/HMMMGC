@@ -35,7 +35,10 @@ The kit's layout:
     lib/          the runtime's objects and libraries, as the link command names them
     include/      the headers the translated game is compiled with (WiiCompiled's guest ABI)
                   and the header of the names of the game's functions for the mods
-    bin/          the files the program needs beside it (on Windows, Dawn's DLLs)
+    bin/          the DLLs the program needs beside it (on Windows): those of
+                  --runtime-files-directory (Dawn's), and those that the program and they
+                  import, from the build (libpng's and zlib's) or from --dll-directory (the
+                  Visual C++ runtime that Dawn uses)
 
 Usage / Uso:
     python3 tools/make_runtime_kit.py --build-directory build/native/runtime-kit \\
@@ -52,6 +55,10 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from windows_binaries import WindowsBinaryError, dlls_in, needed_dlls  # noqa: E402
 
 REPOSITORY = Path(__file__).resolve().parent.parent
 STUB_GAME_DIRECTORY = REPOSITORY / "runtime" / "kit" / "stub_game"
@@ -209,6 +216,10 @@ def link_arguments(command: list[str], kit: Kit) -> list[str]:
                 arguments.append("{game_objects}")
         elif word.startswith("-Wl,--out-implib,"):
             continue  # an import library of the program, which nothing uses
+        elif word in ("-I", "-isystem", "-idirafter", "-iquote"):
+            next(words)  # the compile flags that CMake also passes to the link, where they do nothing
+        elif re.fullmatch(r"(-I|-isystem|-idirafter|-iquote).+", word):
+            continue
         elif word.startswith("-") or not LINKED_FILE.search(word):
             if Path(word).is_absolute() or word.startswith("-L"):
                 raise KitError(f"the link command has {word}, which the kit cannot carry")
@@ -224,8 +235,54 @@ def link_arguments(command: list[str], kit: Kit) -> list[str]:
     return arguments
 
 
+def runtime_dlls(
+    program: Path,
+    build_directory: Path,
+    runtime_file_directories: Sequence[Path],
+    dll_directories: Sequence[Path],
+) -> dict[str, Path]:
+    """The DLLs to put beside the Windows program, by file name: every DLL of
+    `runtime_file_directories` (Dawn's: some of them are loaded by name, and nothing imports them),
+    and the DLLs that the program and those import, and that those import in turn, taken from the
+    build or from `dll_directories`. Stops when one of them is for another processor or needs a DLL
+    that is in none of those places and is not a part of Windows: the game would not start."""
+    runtime_files: dict[str, Path] = {}
+    available: dict[str, Path] = {}
+    ambiguous: dict[str, list[Path]] = {}  # names of which the build has different DLLs
+    for dll in sorted(build_directory.rglob("*")):
+        if dll.suffix.lower() == ".dll" and dll.is_file():
+            name = dll.name.lower()
+            if name in available and available[name].read_bytes() != dll.read_bytes():
+                ambiguous.setdefault(name, [available[name]]).append(dll)
+            available.setdefault(name, dll)
+    for folders, carried_whole in ((dll_directories, False), (runtime_file_directories, True)):
+        for folder in folders:
+            if not Path(folder).is_dir():
+                raise KitError(f"{folder} is not a folder")
+            for name, dll in dlls_in(Path(folder)).items():
+                available[name] = dll
+                ambiguous.pop(name, None)  # a DLL given wins over those of the build
+                if carried_whole:
+                    runtime_files[name] = dll
+    try:
+        runtime_files.update(needed_dlls([program, *runtime_files.values()], available))
+    except WindowsBinaryError as problem:
+        raise KitError(f"the game would not start on a player's computer: {problem}") from None
+    if used_but_ambiguous := sorted(ambiguous.keys() & runtime_files.keys()):
+        name = used_but_ambiguous[0]
+        raise KitError(
+            f"the build has different {name}, and it is not known which the game uses: {ambiguous[name]}"
+        )
+    return {path.name: path for path in runtime_files.values()}
+
+
 def make_kit(
-    build_directory: Path, wiicompiled_directory: Path, out: Path, dropped_include_directories: Sequence[Path]
+    build_directory: Path,
+    wiicompiled_directory: Path,
+    out: Path,
+    dropped_include_directories: Sequence[Path],
+    runtime_file_directories: Sequence[Path] = (),
+    dll_directories: Sequence[Path] = (),
 ) -> dict:
     system, processor = target_system(build_directory)
     executable = PROGRAM_TARGET + (".exe" if system == "Windows" else "")
@@ -247,14 +304,25 @@ def make_kit(
     rewriter = PathRewriter(kit, wiicompiled_include, dropped_include_directories)
 
     compile_game = compile_command(build_directory, STUB_GAME_DIRECTORY / "data_sections_init.cpp")
-    assemble_game = compile_command(build_directory, STUB_GAME_DIRECTORY / "data_sections_init_blobs.S")
+    # On Windows the build assembles a copy of the blobs converted for COFF (runtime/CMakeLists.txt).
+    blobs = STUB_GAME_DIRECTORY / "data_sections_init_blobs.S"
+    if system == "Windows":
+        blobs = build_directory / "data_sections_init_blobs_coff.S"
+    assemble_game = compile_command(build_directory, blobs)
     link = link_command(build_directory)
 
     shutil.copytree(wiicompiled_include, out / "include", dirs_exist_ok=True)
     shutil.copy2(SYMBOL_HEADER, out / "include" / SYMBOL_HEADER.name)
-    runtime_files = sorted(dll.name for dll in build_directory.glob("*.dll"))
+    dlls: dict[str, Path] = {}
+    if system == "Windows":
+        dlls = runtime_dlls(
+            build_directory / executable, build_directory, runtime_file_directories, dll_directories
+        )
+    elif runtime_file_directories or dll_directories:
+        raise KitError("--runtime-files-directory and --dll-directory are for builds for Windows")
+    runtime_files = sorted(dlls)
     for name in runtime_files:
-        shutil.copy2(build_directory / name, out / "bin" / name)
+        shutil.copy2(dlls[name], out / "bin" / name)
 
     recipe = {
         "format": RECIPE_FORMAT,
@@ -297,6 +365,21 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
         help="an include directory that only the computer that built the kit needs "
         "(the case shims of a cross build); repeat for several",
     )
+    parser.add_argument(
+        "--runtime-files-directory",
+        type=Path,
+        action="append",
+        default=[],
+        help="a folder whose DLLs all go beside the program (Dawn's bin/); repeat for several",
+    )
+    parser.add_argument(
+        "--dll-directory",
+        type=Path,
+        action="append",
+        default=[],
+        help="a folder from which only the DLLs that the program and its runtime files import go beside "
+        "it (the Visual C++ runtime); repeat for several",
+    )
     return parser.parse_args(argv)
 
 
@@ -308,6 +391,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.wiicompiled_directory,
             arguments.out,
             arguments.drop_include_directory,
+            arguments.runtime_files_directory,
+            arguments.dll_directory,
         )
     except (KitError, subprocess.CalledProcessError, OSError) as problem:
         print(f"error: {problem}", file=sys.stderr)

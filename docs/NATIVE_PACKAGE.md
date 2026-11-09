@@ -121,6 +121,14 @@ ninguna receta depende de la computadora que la hizo. Las opciones de
 información de depuración (`-g`) no pasan a la receta: hacían los objetos del
 juego varias veces más grandes y nadie las usa en la computadora del jugador.
 
+En Windows, `bin/` lleva todas las DLL de `--runtime-files-directory` (las de
+Dawn: algunas se cargan por nombre y nadie las importa) y las que importan el
+programa y esas, y lo que esas importan a su vez, tomadas de la compilación
+(libpng y zlib) o de `--dll-directory` (la parte del runtime de Visual C++ que
+usa Dawn). Las lee de los encabezados de cada archivo
+(`tools/windows_binaries.py`), y se detiene si una es para otro procesador o si
+falta una que no es parte de Windows: el juego no arrancaría.
+
 ### Probarlo en Linux
 
 ```sh
@@ -258,6 +266,14 @@ computer replaced by placeholders (`{kit}`, `{translation}`,
 so no recipe depends on the computer that made it. The debugging-information
 options (`-g`) do not go into the recipe: they made the game's objects several
 times bigger, and nobody uses them on the player's computer.
+
+On Windows, `bin/` gets every DLL of `--runtime-files-directory` (Dawn's: some
+of them are loaded by name, and nothing imports them) and those that the
+program and they import, and what those import in turn, taken from the build
+(libpng and zlib) or from `--dll-directory` (the part of the Visual C++ runtime
+that Dawn uses). It reads them from each file's headers
+(`tools/windows_binaries.py`), and stops if one is for another processor or if
+one that is not a part of Windows is missing: the game would not start.
 
 ### Trying it on Linux
 

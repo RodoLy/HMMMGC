@@ -11,6 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+from made_up_windows_binary import write_windows_binary  # noqa: E402
 from make_runtime_kit import (  # noqa: E402
     STUB_GAME_DIRECTORY,
     Kit,
@@ -18,6 +19,7 @@ from make_runtime_kit import (  # noqa: E402
     PathRewriter,
     compile_flags,
     link_arguments,
+    runtime_dlls,
     target_system,
 )
 
@@ -152,3 +154,72 @@ def test_the_target_comes_from_cmake_s_system_file(tmp_path):
     system_file.parent.mkdir(parents=True)
     system_file.write_text('set(CMAKE_SYSTEM_NAME "Windows")\nset(CMAKE_SYSTEM_PROCESSOR "ARM64")\n')
     assert target_system(tmp_path) == ("Windows", "ARM64")
+
+
+def test_the_compile_flags_that_cmake_also_gives_the_link_are_left_out(kit, tmp_path):
+    make_files(kit.build_directory, "a.o")
+    command = [
+        "clang++",
+        "-idirafter",
+        str(tmp_path / "case-shims"),
+        f"-I{tmp_path / 'headers'}",
+        "a.o",
+        "CMakeFiles/translated_game.dir/data_sections_init.cpp.obj",
+        "-o",
+        "hmmm-native.exe",
+    ]
+    assert link_arguments(command, kit) == ["{kit}/lib/000_a.o", "{game_objects}", "-o", "{output}"]
+
+
+def test_the_game_gets_beside_it_every_dll_it_needs_and_only_those(tmp_path):
+    build = tmp_path / "build"
+    program = write_windows_binary(
+        build / "hmmm-native.exe", "arm64", ["KERNEL32.dll", "webgpu_dawn.dll", "libpng16.dll"]
+    )
+    write_windows_binary(build / "_deps" / "png-build" / "libpng16.dll", "arm64", ["libzlib1.dll"])
+    write_windows_binary(
+        build / "_deps" / "zlib-build" / "libzlib1.dll", "arm64", ["api-ms-win-crt-heap-l1-1-0.dll"]
+    )
+    write_windows_binary(build / "_deps" / "other-build" / "unused.dll", "arm64")
+    dawn = tmp_path / "dawn" / "bin"
+    write_windows_binary(dawn / "webgpu_dawn.dll", "arm64", ["MSVCP140.dll", "USER32.dll"])
+    write_windows_binary(dawn / "dxcompiler.dll", "arm64", ["MSVCP140.dll", "VCRUNTIME140.dll"])
+    write_windows_binary(dawn / "dxil.dll", "arm64")  # loaded by name: imported by nothing
+    visual_cpp = tmp_path / "visual-cpp-runtime"
+    write_windows_binary(visual_cpp / "msvcp140.dll", "arm64", ["VCRUNTIME140.dll"])
+    write_windows_binary(visual_cpp / "vcruntime140.dll", "arm64")
+    write_windows_binary(visual_cpp / "concrt140.dll", "arm64")
+    write_windows_binary(visual_cpp / "vcruntime140_1.dll", "x64")  # ARM64EC, for x64 programs only
+    dlls = runtime_dlls(program, build, [dawn], [visual_cpp])
+    assert sorted(dlls) == [
+        "dxcompiler.dll",
+        "dxil.dll",
+        "libpng16.dll",
+        "libzlib1.dll",
+        "msvcp140.dll",
+        "vcruntime140.dll",
+        "webgpu_dawn.dll",
+    ]
+
+
+def test_a_dll_the_game_needs_and_nobody_gives_stops_the_kit(tmp_path):
+    build = tmp_path / "build"
+    program = write_windows_binary(build / "hmmm-native.exe", "x64", ["webgpu_dawn.dll"])
+    dawn = tmp_path / "dawn"
+    write_windows_binary(dawn / "webgpu_dawn.dll", "x64", ["VCRUNTIME140_1.dll"])
+    with pytest.raises(KitError, match="would not start.*VCRUNTIME140_1.dll"):
+        runtime_dlls(program, build, [dawn], [])
+
+
+def test_two_different_dlls_of_the_same_name_in_the_build_stop_the_kit_when_the_game_uses_it(tmp_path):
+    build = tmp_path / "build"
+    program = write_windows_binary(build / "hmmm-native.exe", "x64", ["libpng16.dll"])
+    write_windows_binary(build / "a" / "libpng16.dll", "x64")
+    write_windows_binary(build / "b" / "libpng16.dll", "x64", ["KERNEL32.dll"])
+    # Two of a DLL that nothing imports do not matter.
+    write_windows_binary(build / "a" / "unused.dll", "x64")
+    write_windows_binary(build / "b" / "unused.dll", "x64", ["KERNEL32.dll"])
+    with pytest.raises(KitError, match="different libpng16.dll"):
+        runtime_dlls(program, build, [], [])
+    (build / "b" / "libpng16.dll").unlink()
+    assert sorted(runtime_dlls(program, build, [], [])) == ["libpng16.dll"]
