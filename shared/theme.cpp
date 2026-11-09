@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <numbers>
 
-// The fonts inside the program (launcher/CMakeLists.txt).
+// The fonts inside the program (shared/shared.cmake).
 extern const unsigned char FONT_ROUNDED_MEDIUM[];
 extern const size_t FONT_ROUNDED_MEDIUM_size;
 extern const unsigned char FONT_ROUNDED_EXTRABOLD[];

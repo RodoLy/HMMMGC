@@ -13,6 +13,7 @@
 # It draws with SDL3's 2D renderer and Dear ImGui, the same versions as aurora (WiiCompiled's
 # aurora-main/cmake), and reads JSON with nlohmann/json. They are downloaded when the build is
 # configured; FETCHCONTENT_SOURCE_DIR_SDL, _IMGUI and _NLOHMANN_JSON point it at local copies.
+# Its look, texts, settings and controllers are in shared/ (shared/README.md).
 cmake_minimum_required(VERSION 3.25)
 project(hmmm_launcher LANGUAGES C CXX)
 if(WIN32)
@@ -69,23 +70,7 @@ target_include_directories(launcher_imgui SYSTEM PUBLIC "${imgui_SOURCE_DIR}" "$
 target_compile_definitions(launcher_imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEFINE_MATH_OPERATORS)
 target_link_libraries(launcher_imgui PUBLIC SDL3::SDL3-static)
 
-# The fonts, as C++ arrays inside the program (fonts/README.md says where they come from).
-function(embed_font file symbol)
-    set(source "${CMAKE_CURRENT_SOURCE_DIR}/fonts/${file}")
-    set(output "${CMAKE_CURRENT_BINARY_DIR}/generated/${symbol}.cpp")
-    file(READ "${source}" bytes HEX)
-    string(LENGTH "${bytes}" length)
-    math(EXPR size "${length} / 2")
-    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${bytes}")
-    file(CONFIGURE OUTPUT "${output}" CONTENT
-"// Written by launcher/CMakeLists.txt from fonts/${file}.
-#include <cstddef>
-extern const unsigned char ${symbol}[] = {${bytes}};
-extern const size_t ${symbol}_size = ${size};
-")
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${source}")
-    target_sources(HarvestMoonMM PRIVATE "${output}")
-endfunction()
+include("${CMAKE_CURRENT_SOURCE_DIR}/../shared/shared.cmake")
 
 file(GLOB launcher_sources CONFIGURE_DEPENDS src/*.cpp)
 if(WIN32)
@@ -94,8 +79,7 @@ else()
     list(FILTER launcher_sources EXCLUDE REGEX "_windows\\.cpp$")
 endif()
 add_executable(HarvestMoonMM WIN32 ${launcher_sources})
-embed_font(RoundedMplus1c-Medium-subset.ttf FONT_ROUNDED_MEDIUM)
-embed_font(RoundedMplus1c-ExtraBold-subset.ttf FONT_ROUNDED_EXTRABOLD)
+add_shared_ui(HarvestMoonMM)
 target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PACKAGE_VERSION}")
 target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
 target_link_libraries(HarvestMoonMM PRIVATE launcher_imgui SDL3::SDL3-static nlohmann_json::nlohmann_json)

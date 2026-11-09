@@ -6,7 +6,7 @@
 
 Las letras del launcher: M PLUS Rounded 1c (Rounded M+), una fuente redondeada
 como la de los menús del juego, de licencia libre (SIL Open Font License 1.1,
-en `OFL.txt`). Van dentro del programa (`launcher/CMakeLists.txt` las convierte
+en `OFL.txt`). Van dentro del programa (`shared/shared.cmake` las convierte
 en un arreglo de C++).
 
 Son un subconjunto de los archivos de Google Fonts, con solo los caracteres que
@@ -32,7 +32,7 @@ pyftsubset MPLUSRounded1c-Medium.ttf --output-file=RoundedMplus1c-Medium-subset.
 
 The launcher's lettering: M PLUS Rounded 1c (Rounded M+), a rounded font like
 the one of the game's menus, under a free license (SIL Open Font License 1.1,
-in `OFL.txt`). They go inside the program (`launcher/CMakeLists.txt` turns them
+in `OFL.txt`). They go inside the program (`shared/shared.cmake` turns them
 into a C++ array).
 
 They are a subset of Google Fonts' files, with only the characters the launcher

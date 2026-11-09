@@ -67,7 +67,7 @@ renderizador 2D de SDL3 y Dear ImGui, sin nada del juego. Su aspecto sigue al
 del juego, dibujado con figuras: el cielo, las nubes, las colinas y la cerca de
 la pantalla de título, un letrero de madera con el nombre, botones naranjas
 como el recuadro de la fecha y paneles como los cuadros de diálogo, con una
-letra redondeada (M PLUS Rounded 1c, libre; `launcher/fonts/README.md`). Se usa
+letra redondeada (M PLUS Rounded 1c, libre; `shared/fonts/README.md`). Se usa
 con el ratón, el teclado o un control, y habla español o inglés (como el
 sistema, o lo que se elija).
 
@@ -258,7 +258,7 @@ renderer and Dear ImGui, with nothing of the game. Its look follows the
 game's, drawn with shapes: the sky, the clouds, the hills and the fence of the
 title screen, a wooden sign with the name, orange buttons like the box of the
 date and panels like the dialogue boxes, with a rounded font (M PLUS Rounded
-1c, free; `launcher/fonts/README.md`). It is used with the mouse, the keyboard
+1c, free; `shared/fonts/README.md`). It is used with the mouse, the keyboard
 or a controller, and speaks Spanish or English (as the system, or as chosen).
 
 | Screen | What it does |
