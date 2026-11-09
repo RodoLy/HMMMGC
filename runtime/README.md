@@ -99,7 +99,7 @@ juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
 |---|---|
 | `main.cpp` | Arranca todo y salta al punto de entrada del juego. |
 | `console_boot.*` | Lo que dejan el ROM de arranque y el apploader: los datos de la parte baja de la memoria, la tabla de archivos (FST) y bi2. |
-| `extracted_disc.*` | Lee el disco extraído por desplazamiento, como la unidad. |
+| `game_disc.*` | Lee el disco por desplazamiento, como la unidad: de su imagen (`.iso`, `.gcm`) o de su forma extraída. |
 | `guest_memory.*` | El espacio de direcciones del juego (4 GiB planos), los accesos lentos y la memoria propia del runtime (en 0x81800000). |
 | `cpu_registers.*` | Registros especiales, base de tiempo, decrementador, DMA de la caché bloqueada. |
 | `function_registry.cpp` | Qué función del host corre en cada dirección del juego. |
@@ -230,7 +230,7 @@ plays as controller 1, with the same keys that Dolphin has by default:
 |---|---|
 | `main.cpp` | Starts everything and jumps to the game's entry point. |
 | `console_boot.*` | What the boot ROM and the apploader leave: the low-memory globals, the file system table (FST) and bi2. |
-| `extracted_disc.*` | Reads the extracted disc by offset, as the drive does. |
+| `game_disc.*` | Reads the disc by offset, as the drive does: from its image (`.iso`, `.gcm`) or from its extracted form. |
 | `guest_memory.*` | The game's address space (a flat 4 GiB), the slow accesses and the runtime's own memory (at 0x81800000). |
 | `cpu_registers.*` | Special registers, time base, decrementer, the locked cache's DMA. |
 | `function_registry.cpp` | Which host function runs at each address of the game. |

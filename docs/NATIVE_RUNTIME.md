@@ -31,7 +31,7 @@ con [aurora](https://github.com/encounter/aurora) para los gráficos.
 |---|---:|---:|---:|---|
 | GX (gráficos) | 75 | 62 | 0 | La parte más difícil ya está casi toda. |
 | OS (sistema) | 65 | 19 | 0 | Hilos, alarmas, montón, arena y reinicio. |
-| DVD (disco) | 19 | 3 | 0 | Lectura de archivos del disco extraído. |
+| DVD (disco) | 19 | 3 | 0 | Lectura del disco: de su imagen (`.iso`, `.gcm`) o de su forma extraída. |
 | CARD (memory card) | 17 | 0 | 0 | Wii no la usa: es nueva. Guardar en archivos `.gci`. |
 | EXI (bus de la memory card) | 16 | 1 | 0 | Desaparece si CARD es nativa. |
 | SI (bus de los controles) | 15 | 0 | 0 | Desaparece si PAD es nativa. |
@@ -89,8 +89,8 @@ en el FIFO, pero nadie los dibuja.
 - Hardware (`hardware/`): un modelo pequeño de cada dispositivo que usa el
   arranque: el controlador de interrupciones (PI); el video (VI), con sus
   interrupciones de retrazo a 59.94 Hz; el DSP (buzones, DMA de ARAM y los
-  saludos del ROM del DSP que espera OSInit); el DVD, que lee el disco
-  extraído; el EXI (reloj y SRAM, sin memory cards); el SI (sin controles); el
+  saludos del ROM del DSP que espera OSInit); el DVD, que lee la imagen del
+  disco o el disco extraído; el EXI (reloj y SRAM, sin memory cards); el SI (sin controles); el
   contador de muestras del audio, y el estado del chip gráfico (dibujo
   terminado y tokens). El primer acceso a cada registro queda en el registro
   con la función del juego que lo hizo, y así cada corrida dice qué hardware
@@ -283,7 +283,7 @@ code, with [aurora](https://github.com/encounter/aurora) for the graphics.
 |---|---:|---:|---:|---|
 | GX (graphics) | 75 | 62 | 0 | The hardest part is nearly all there. |
 | OS (system) | 65 | 19 | 0 | Threads, alarms, heap, arena and reset. |
-| DVD (disc) | 19 | 3 | 0 | Reading files of the extracted disc. |
+| DVD (disc) | 19 | 3 | 0 | Reading the disc: from its image (`.iso`, `.gcm`) or from its extracted form. |
 | CARD (memory card) | 17 | 0 | 0 | The Wii does not use it: it is new. Save to `.gci` files. |
 | EXI (memory card bus) | 16 | 1 | 0 | Goes away if CARD is native. |
 | SI (controller bus) | 15 | 0 | 0 | Goes away if PAD is native. |
@@ -341,7 +341,7 @@ nothing draws them.
 - Hardware (`hardware/`): a small model of each device the start-up uses: the
   interrupt controller (PI); the video (VI), with its retrace interrupts at
   59.94 Hz; the DSP (mailboxes, ARAM DMA and the greetings of the DSP's ROM
-  that OSInit waits for); the DVD, which reads the extracted disc; the EXI
+  that OSInit waits for); the DVD, which reads the disc image or the extracted disc; the EXI
   (clock and SRAM, no memory cards); the SI (no controllers); the audio sample
   counter, and the graphics chip's status (draw done and tokens). The first
   access to each register is logged with the game function that made it, so

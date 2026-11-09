@@ -191,7 +191,8 @@ pieza por pieza, en el orden de arriba)
       la semántica de GX; Wiicompiled (Mario Kart Wii) para la arquitectura de
       un recomp.
 - [x] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
-      instantáneas). En el runtime nativo, la unidad lee el disco extraído.
+      instantáneas). En el runtime nativo, la unidad lee la imagen del disco
+      (`.iso`, `.gcm`) o el disco extraído.
 - [x] CARD → archivos de guardado en disco: en el runtime nativo, con la
       biblioteca CARD de aurora y una carpeta de `.gci` como las de Dolphin.
 - [x] PAD → SDL gamepad y teclado: en el runtime nativo, con la biblioteca
@@ -752,7 +753,8 @@ by piece, in the order above)
       Dolphin for GX semantics; Wiicompiled (Mario Kart Wii) for recomp
       architecture.
 - [x] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
-      In the native runtime, the drive reads the extracted disc.
+      In the native runtime, the drive reads the disc image (`.iso`, `.gcm`)
+      or the extracted disc.
 - [x] CARD → save files on disk: in the native runtime, with aurora's CARD
       library and a folder of `.gci` files like Dolphin's.
 - [x] PAD → SDL gamepad and keyboard: in the native runtime, with aurora's

@@ -8,14 +8,14 @@
 // guarda en la memory card con aurora, y toca el sonido con SDL. El registro dice lo que
 // hace el juego.
 //
-// Usage: hmmm-native --disc <extracted disc> [--symbols <symbols.txt>] [--watchdog <s>]
+// Usage: hmmm-native --disc <disc image or extracted disc> [--symbols <symbols.txt>] [--watchdog <s>]
 //                    [--user-folder <folder>]
 
 #include "console_boot.h"
 #include "crop_grid.h"
-#include "extracted_disc.h"
 #include "fault_handler.h"
 #include "game_clock.h"
+#include "game_disc.h"
 #include "graphics/aurora_host.h"
 #include "graphics/camera_view.h"
 #include "graphics/frame_interpolation.h"
@@ -56,7 +56,8 @@ struct Options {
 };
 
 constexpr const char* USAGE =
-    "usage: hmmm-native --disc <extracted disc> [--symbols <file>] [--watchdog <s>] [--user-folder <folder>]\n"
+    "usage: hmmm-native --disc <disc image (.iso, .gcm) or extracted disc> [--symbols <file>] [--watchdog <s>]\n"
+    "                   [--user-folder <folder>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
     "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]\n"
     "                   [--frame-rate <30|60|120>]";
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
         if (!options.symbols_path.empty() && !guest_symbols::load(options.symbols_path)) {
             runtime_log::warning("boot", "could not read the symbols in %s", options.symbols_path.c_str());
         }
-        const ExtractedDisc disc(options.disc_root);
+        const GameDisc disc(options.disc_root);
         player_folder::choose(options.user_folder);
 
         game_clock::set_chosen_speed_percent(options.game_speed_percent);

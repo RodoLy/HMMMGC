@@ -5,7 +5,7 @@
 #include "console_boot.h"
 
 #include "cpu_registers.h"
-#include "extracted_disc.h"
+#include "game_disc.h"
 #include "guest_memory.h"
 #include "runtime_log.h"
 
@@ -63,7 +63,7 @@ uint64_t seconds_since_2000() {
 
 }  // namespace
 
-void prepare_memory(const ExtractedDisc& disc) {
+void prepare_memory(const GameDisc& disc) {
     const auto& header = disc.disc_header();
     std::memcpy(guest_memory::host_pointer(GLOBALS, DISC_ID_SIZE), header.data(), DISC_ID_SIZE);
 
@@ -109,7 +109,7 @@ void prepare_cpu(CpuContext& cpu) {
     cpu.gpr[13] = 0x81465320u;
 }
 
-uint32_t entry_point(const ExtractedDisc& disc) {
+uint32_t entry_point(const GameDisc& disc) {
     // The disc header gives where main.dol starts; the DOL header, where its code starts.
     constexpr uint64_t DOL_OFFSET_FIELD = 0x420;
     constexpr uint64_t DOL_ENTRY_POINT_FIELD = 0xE0;

@@ -14,12 +14,12 @@
 #include <cstdint>
 #include <string>
 
-class ExtractedDisc;
+class GameDisc;
 
 namespace hardware_registers {
 
 // `disc` is what the DVD interface reads from; it must outlive the runtime.
-void initialize(const ExtractedDisc& disc);
+void initialize(const GameDisc& disc);
 
 // Accesses of `width` bytes (1, 2 or 4) made by translated code. `host_caller` is a host
 // code address inside the translated function that made it, to name it in the log.

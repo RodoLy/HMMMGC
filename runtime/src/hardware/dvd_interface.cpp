@@ -3,7 +3,7 @@
 
 #include "hardware/dvd_interface.h"
 
-#include "extracted_disc.h"
+#include "game_disc.h"
 #include "guest_memory.h"
 #include "hardware/processor_interface.h"
 #include "hardware/register_image.h"
@@ -41,7 +41,7 @@ constexpr uint32_t READ_COMMAND = 0xA8;
 constexpr uint32_t INQUIRY_COMMAND = 0x12;
 constexpr uint32_t REQUEST_ERROR_COMMAND = 0xE0;
 
-const ExtractedDisc* g_disc = nullptr;
+const GameDisc* g_disc = nullptr;
 std::set<std::string> g_files_read;
 uint64_t g_commands_run = 0;
 
@@ -98,7 +98,7 @@ void run_command() {
 
 }  // namespace
 
-void initialize(const ExtractedDisc& disc) { g_disc = &disc; }
+void initialize(const GameDisc& disc) { g_disc = &disc; }
 
 void write(uint32_t address, uint32_t value) {
     switch (address) {

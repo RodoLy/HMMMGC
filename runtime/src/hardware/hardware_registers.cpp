@@ -156,7 +156,7 @@ void for_each_register(const Block& block, uint32_t address, unsigned width, Vis
 
 }  // namespace
 
-void initialize(const ExtractedDisc& disc) {
+void initialize(const GameDisc& disc) {
     processor_interface::initialize();
     dvd_interface::initialize(disc);
     external_interface::initialize();

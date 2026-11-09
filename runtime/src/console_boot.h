@@ -9,19 +9,19 @@
 
 #include <cstdint>
 
-class ExtractedDisc;
+class GameDisc;
 struct CpuContext;
 
 namespace console_boot {
 
 // Writes the low-memory globals, the FST and bi2 the way they are after a boot on the
 // console (the values were read from a boot of this game under Dolphin).
-void prepare_memory(const ExtractedDisc& disc);
+void prepare_memory(const GameDisc& disc);
 
 // The CPU state the game's entry point starts with.
 void prepare_cpu(CpuContext& cpu);
 
 // The game's entry point, from the header of main.dol.
-uint32_t entry_point(const ExtractedDisc& disc);
+uint32_t entry_point(const GameDisc& disc);
 
 }  // namespace console_boot
