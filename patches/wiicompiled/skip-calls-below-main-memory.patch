@@ -1,0 +1,14 @@
+diff --git a/translator/src/Translator.Cli/Program.cs b/translator/src/Translator.Cli/Program.cs
+index e1164dd..f3c280f 100644
+--- a/translator/src/Translator.Cli/Program.cs
++++ b/translator/src/Translator.Cli/Program.cs
+@@ -800,6 +800,9 @@ int RunTranslateRecursive(string[] argsTail)
+ 
+             foreach (var target in discoveryTargets)
+             {
++                // A call to an address below main memory (0x80000000), such as the jump to the
++                // debugger at 0x60 that the GameCube's OS makes ("bla 0x60"), has no code to translate.
++                if (target < 0x80000000u) continue;
+                 knownBaseFunctionEntryPoints.Add(target);
+                 if (visited.Add(target))
+                 {

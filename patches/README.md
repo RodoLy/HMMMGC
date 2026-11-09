@@ -285,6 +285,35 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `wiicompiled/skip-calls-below-main-memory.patch`
+
+Para el runtime nativo, no para ModernGekko: `scripts/build_native_runtime.sh`
+lo aplica solo al traductor de WiiCompiled antes de compilarlo (si ya está
+aplicado, lo deja así) y vuelve a compilar el traductor cuando lo acaba de
+aplicar.
+
+El traductor sigue las llamadas del juego para encontrar las funciones que
+tiene que traducir. El sistema operativo de la GameCube salta al depurador con
+una llamada a la dirección `0x60` (`bla 0x60`, en `fn_8016F6B0`), que está por
+debajo de la memoria principal (`0x80000000`): ahí no hay código del juego.
+Sin el parche, el traductor la toma como una función más y la traducción se
+detiene con `Address 0x00000060 is outside the loaded RAM image`. El parche no
+sigue las llamadas a direcciones por debajo de `0x80000000`; la llamada misma
+se traduce igual, y el juego nunca la hace (solo con un depurador conectado).
+
+**Versiones a las que se aplica:** WiiCompiled `0d5c402`, la que fija
+`scripts/build_native_runtime.sh`.
+
+**Licencia:** GPL-3.0, como WiiCompiled.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR" apply "$PWD/patches/wiicompiled/skip-calls-below-main-memory.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ### `aurora/reject-far-interpolation-pairs.patch`
 
 Para el runtime nativo, no para ModernGekko, y este sí se aplica solo:
@@ -654,6 +683,35 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.
 
+
+### `wiicompiled/skip-calls-below-main-memory.patch`
+
+For the native runtime, not for ModernGekko: `scripts/build_native_runtime.sh`
+applies it by itself to WiiCompiled's translator before building it (if it is
+already applied, it is left as it is) and builds the translator again when it
+has just applied it.
+
+The translator follows the game's calls to find the functions it has to
+translate. The GameCube's operating system jumps to the debugger with a call to
+address `0x60` (`bla 0x60`, in `fn_8016F6B0`), which is below main memory
+(`0x80000000`): there is no game code there. Without the patch, the translator
+takes it as one more function and the translation stops with
+`Address 0x00000060 is outside the loaded RAM image`. The patch does not follow
+calls to addresses below `0x80000000`; the call itself is translated as before,
+and the game never makes it (only with a debugger attached).
+
+**Applies to:** WiiCompiled `0d5c402`, the one `scripts/build_native_runtime.sh`
+pins.
+
+**License:** GPL-3.0, like WiiCompiled.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR" apply "$PWD/patches/wiicompiled/skip-calls-below-main-memory.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
 
 ### `aurora/reject-far-interpolation-pairs.patch`
 

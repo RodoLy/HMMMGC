@@ -61,35 +61,52 @@ check_tools() {
 }
 
 fetch_wiicompiled() {
-    if [[ -d "$WIICOMPILED_DIRECTORY/translator" ]]; then
-        return
+    if [[ ! -d "$WIICOMPILED_DIRECTORY/translator" ]]; then
+        step "Downloading WiiCompiled $WIICOMPILED_COMMIT"
+        git clone --filter=blob:none --no-checkout "$WIICOMPILED_URL" "$WIICOMPILED_DIRECTORY"
+        git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$WIICOMPILED_COMMIT"
     fi
-    step "Downloading WiiCompiled $WIICOMPILED_COMMIT"
-    git clone --filter=blob:none --no-checkout "$WIICOMPILED_URL" "$WIICOMPILED_DIRECTORY"
-    git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$WIICOMPILED_COMMIT"
+    # aurora is a submodule of WiiCompiled, at the commit that WiiCompiled pins.
+    if [[ ! -f "$WIICOMPILED_DIRECTORY/aurora-main/CMakeLists.txt" ]]; then
+        step "Downloading WiiCompiled's aurora"
+        git -C "$WIICOMPILED_DIRECTORY" submodule update --init aurora-main
+    fi
 }
 
-# The changes this project makes to aurora (patches/aurora/, explained in patches/README.md),
-# applied once: a patch that is already in place is left alone.
-apply_aurora_patches() {
-    local patch aurora="$WIICOMPILED_DIRECTORY/aurora-main"
-    for patch in "$REPOSITORY_ROOT/patches/aurora/"*.patch; do
-        if git -C "$aurora" apply --reverse --check "$patch" 2> /dev/null; then
+# Set by apply_patches when it changed the translator's sources in this run.
+TRANSLATOR_PATCHED=""
+
+# The changes this project makes to WiiCompiled's translator and to aurora (patches/wiicompiled/
+# and patches/aurora/, explained in patches/README.md), applied once: a patch that is already in
+# place is left alone.
+apply_patches() {
+    local directory="$1" patches="$2" name="$3" patch
+    for patch in "$patches"/*.patch; do
+        [[ -f "$patch" ]] || continue
+        if git -C "$directory" apply --reverse --check "$patch" 2> /dev/null; then
             continue
         fi
-        step "Applying $(basename "$patch") to aurora"
-        git -C "$aurora" apply "$patch"
+        step "Applying $(basename "$patch") to $name"
+        git -C "$directory" apply "$patch"
+        if [[ "$name" == "WiiCompiled" ]]; then
+            TRANSLATOR_PATCHED=1
+        fi
     done
 }
 
 build_translator() {
-    # The checkout is pinned, so a translator built once stays valid (and the build would
-    # otherwise need NuGet again).
-    if [[ -f "$TRANSLATOR" ]]; then
+    # The checkout is pinned, so a translator built once stays valid, unless a patch changed
+    # its sources in this run.
+    if [[ -f "$TRANSLATOR" && -z "$TRANSLATOR_PATCHED" ]]; then
         return
     fi
     step "Building the translator"
-    dotnet build "$TRANSLATOR_PROJECT" --configuration Release --nologo --verbosity quiet
+    # Its packages are only downloaded (from NuGet) the first time.
+    local restore=()
+    if [[ -f "$TRANSLATOR_PROJECT/obj/project.assets.json" ]]; then
+        restore=(--no-restore)
+    fi
+    dotnet build "$TRANSLATOR_PROJECT" --configuration Release --nologo --verbosity quiet "${restore[@]}"
 }
 
 translator() {
@@ -149,7 +166,8 @@ compile_runtime() {
 main() {
     check_tools
     fetch_wiicompiled
-    apply_aurora_patches
+    apply_patches "$WIICOMPILED_DIRECTORY" "$REPOSITORY_ROOT/patches/wiicompiled" WiiCompiled
+    apply_patches "$WIICOMPILED_DIRECTORY/aurora-main" "$REPOSITORY_ROOT/patches/aurora" aurora
     build_translator
     translate_game
     size_crop_grid
