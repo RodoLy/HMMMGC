@@ -371,4 +371,64 @@ void draw_controller(ImDrawList* draw, ImVec2 min, ImVec2 size, const State& sta
     letter(at(0.75f, 0.0375f), "Z", IM_COL32(255, 255, 255, 255));
 }
 
+void draw_screen(Gamepads& gamepads, int& selected_device, bool focus) {
+    theme::paragraph(texts::text(Text::ControlsIntro), theme::TEXT_SOFT);
+    const std::vector<Device> devices = gamepads.devices();
+    selected_device = std::clamp(selected_device, 0, static_cast<int>(devices.size()) - 1);
+    std::vector<std::string> names;
+    for (const Device& device : devices) {
+        names.push_back(device.name);
+    }
+    if (focus) {
+        ImGui::SetKeyboardFocusHere();
+    }
+    theme::choice("device", &selected_device, names, std::min(ImGui::GetContentRegionAvail().x * 0.5f, theme::px(560)));
+    const Device& device = devices[static_cast<size_t>(selected_device)];
+    // Beside it: whether the game maps that controller by itself.
+    ImGui::SameLine(0, theme::px(20));
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + theme::px(10));
+    if (devices.size() == 1) {
+        theme::paragraph(texts::text(Text::NoGamepads), theme::TEXT_SOFT);
+    } else if (device.id != 0) {
+        theme::paragraph(std::string("\xE2\x9C\x93 ") + texts::text(Text::AutomaticMapping), theme::GREEN);
+    } else {
+        ImGui::NewLine();
+    }
+
+    // The controller with what is pressed lit up, and the table of what plays each part.
+    const State state = gamepads.state(device);
+    const float height = ImGui::GetContentRegionAvail().y;
+    const float drawing_width = std::min(ImGui::GetContentRegionAvail().x * 0.5f, height * 1.55f);
+    ImGui::Dummy(ImVec2(drawing_width, height - theme::px(30)));
+    const ImVec2 drawing_min = ImGui::GetItemRectMin();
+    draw_controller(ImGui::GetWindowDrawList(), drawing_min,
+                    ImVec2(drawing_width, std::min(height - theme::px(30), drawing_width / 1.55f)), state);
+    ImGui::SetCursorScreenPos(drawing_min + ImVec2(0, height - theme::px(26)));
+    theme::paragraph(texts::text(Text::TryButtons), theme::TEXT_SOFT);
+    ImGui::SetCursorScreenPos(drawing_min + ImVec2(drawing_width + theme::px(24), 0));
+    ImGui::BeginChild("##bindings", ImVec2(0, height));
+    ImGui::PushFont(theme::fonts().small);
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(theme::px(10), theme::px(3)));
+    if (ImGui::BeginTable("##table", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn(texts::text(Text::GameCubeButton), ImGuiTableColumnFlags_WidthStretch, 0.45f);
+        ImGui::TableSetupColumn(texts::text(Text::YourButton), ImGuiTableColumnFlags_WidthStretch, 0.55f);
+        ImGui::TableHeadersRow();
+        for (size_t index = 0; index < PART_COUNT; ++index) {
+            const auto part = static_cast<Part>(index);
+            ImGui::TableNextRow();
+            if (state.pressed[index]) {
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(255, 220, 140, 200));
+            }
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(part_name(part).c_str());
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(binding(device, part).c_str());
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
+    ImGui::PopFont();
+    ImGui::EndChild();
+}
+
 }  // namespace controls

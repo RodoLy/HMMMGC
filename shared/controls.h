@@ -57,4 +57,10 @@ std::string binding(const Device& device, Part part);
 // parts of `state` lit up.
 void draw_controller(ImDrawList* draw, ImVec2 min, ImVec2 size, const State& state);
 
+// The controls screen of the launcher and of the options menu inside the game, in the space left:
+// the controller chosen among the gamepads and the keyboard (`selected_device`), whether the game
+// maps it by itself, the controller drawn with what is pressed lit up, and what plays each part.
+// `focus` puts the keyboard's and the controller's focus on the choice of the controller.
+void draw_screen(Gamepads& gamepads, int& selected_device, bool focus);
+
 }  // namespace controls

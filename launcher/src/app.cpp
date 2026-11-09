@@ -2,6 +2,7 @@
 
 #include "app.h"
 
+#include "option_rows.h"
 #include "texts.h"
 
 #include <SDL3/SDL_dialog.h>
@@ -13,6 +14,7 @@
 #include <cmath>
 #include <fstream>
 #include <system_error>
+#include <utility>
 
 namespace {
 
@@ -518,136 +520,42 @@ void App::preparing(ImVec2 size, double seconds) {
 void App::options(ImVec2 size) {
     begin_screen(size, text(Text::Options));
     bool changed = false;
-    const auto table = [](const char* id) {
-        return ImGui::BeginTable(id, 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_PadOuterX);
-    };
-    const auto columns = [] {
-        ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthStretch, 0.52f);
-        ImGui::TableSetupColumn("control", ImGuiTableColumnFlags_WidthStretch, 0.48f);
-    };
-
     theme::heading(text(Text::PictureSection));
-    if (table("##picture")) {
-        columns();
-        // Internal resolution.
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        theme::row_label(text(Text::Resolution), text(Text::ResolutionHint));
-        ImGui::TableNextColumn();
-        std::vector<std::string> scales;
-        int scale_index = 0;
-        const int scale = settings_.one_of(settings::RESOLUTION_SCALE, settings::RESOLUTION_SCALES);
-        for (size_t i = 0; i < std::size(settings::RESOLUTION_SCALES); ++i) {
-            const int value = settings::RESOLUTION_SCALES[i];
-            scales.push_back(value == 0 ? text(Text::ResolutionWindow)
-                                        : std::to_string(value) + "x  (" + std::to_string(640 * value) + "\xC3\x97" +
-                                              std::to_string(528 * value) + ")");
-            if (value == scale) {
-                scale_index = static_cast<int>(i);
-            }
-        }
-        if (focus_first_) {
-            ImGui::SetKeyboardFocusHere();
-            focus_first_ = false;
-        }
-        if (theme::choice("resolution", &scale_index, scales, theme::row_control_width())) {
-            settings_.set(settings::RESOLUTION_SCALE, settings::RESOLUTION_SCALES[scale_index]);
-            changed = true;
-        }
-        // Full screen and widescreen.
-        for (const auto& [name, label, hint] : {std::tuple{settings::FULLSCREEN, Text::Fullscreen, Text::FullscreenHint},
-                                                std::tuple{settings::WIDESCREEN, Text::Widescreen, Text::WidescreenHint}}) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            theme::row_label(text(label), text(hint));
-            ImGui::TableNextColumn();
-            bool value = settings_.flag(name, false);
-            if (theme::toggle(name, &value)) {
-                settings_.set(name, value);
-                changed = true;
-            }
-        }
-        // Frames per second.
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        theme::row_label(text(Text::FrameRate));
-        ImGui::TableNextColumn();
-        std::vector<std::string> rates;
-        int rate_index = 0;
-        const int rate = settings_.one_of(settings::FRAME_RATE, settings::FRAME_RATES);
-        for (size_t i = 0; i < std::size(settings::FRAME_RATES); ++i) {
-            const int value = settings::FRAME_RATES[i];
-            rates.push_back(value == 30 ? text(Text::FrameRateGame) : texts::format(Text::FrameRateMade, value));
-            if (value == rate) {
-                rate_index = static_cast<int>(i);
-            }
-        }
-        if (theme::choice("frame rate", &rate_index, rates, theme::row_control_width())) {
-            settings_.set(settings::FRAME_RATE, settings::FRAME_RATES[rate_index]);
-            changed = true;
-        }
-        // Zoom.
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        theme::row_label(text(Text::Zoom), text(Text::ZoomHint));
-        ImGui::TableNextColumn();
-        int zoom = settings_.number(settings::ZOOM, 100, 50, 200);
-        if (theme::percent("zoom", &zoom, 50, 200, 5, theme::row_control_width())) {
-            settings_.set(settings::ZOOM, zoom);
-            changed = true;
-        }
-        ImGui::EndTable();
+    if (option_rows::begin("##picture")) {
+        changed |= option_rows::resolution(settings_, std::exchange(focus_first_, false));
+        changed |= option_rows::fullscreen(settings_);
+        changed |= option_rows::widescreen(settings_);
+        changed |= option_rows::frame_rate(settings_);
+        changed |= option_rows::zoom(settings_);
+        option_rows::end();
     }
-
     theme::heading(text(Text::GameSection));
-    if (table("##game")) {
-        columns();
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        theme::row_label(text(Text::GameSpeed), text(Text::GameSpeedHint));
-        ImGui::TableNextColumn();
-        int speed = settings_.number(settings::GAME_SPEED, 100, 100, 400);
-        if (theme::percent("game speed", &speed, 100, 400, 10, theme::row_control_width())) {
-            settings_.set(settings::GAME_SPEED, speed);
-            changed = true;
-        }
-        ImGui::EndTable();
+    if (option_rows::begin("##game")) {
+        changed |= option_rows::game_speed(settings_);
+        option_rows::end();
     }
-
     theme::heading(text(Text::SoundSection));
-    if (table("##sound")) {
-        columns();
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        theme::row_label(text(Text::Volume), text(Text::VolumeHint));
-        ImGui::TableNextColumn();
-        int volume = settings_.number(settings::VOLUME, 100, 0, 100);
-        if (theme::percent("volume", &volume, 0, 100, 5, theme::row_control_width())) {
-            settings_.set(settings::VOLUME, volume);
-            changed = true;
-        }
-        ImGui::EndTable();
+    if (option_rows::begin("##sound")) {
+        changed |= option_rows::volume(settings_);
+        option_rows::end();
     }
 
+    // The language is the launcher's: it changes its texts and the mods' names at once.
     theme::heading(text(Text::LanguageSection));
-    if (table("##language")) {
-        columns();
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        theme::row_label(text(Text::LanguageSection));
-        ImGui::TableNextColumn();
+    if (option_rows::begin("##language")) {
+        option_rows::next_row(text(Text::LanguageSection));
         const std::vector<std::string> codes = {"auto", "es", "en"};
         const std::vector<std::string> names = {text(Text::LanguageAutomatic), "Espa\xC3\xB1ol", "English"};
         const std::string language = settings_.text(settings::LANGUAGE, "auto");
         int language_index = static_cast<int>(std::ranges::find(codes, language) - codes.begin());
         language_index = language_index < static_cast<int>(codes.size()) ? language_index : 0;
-        if (theme::choice("language", &language_index, names, theme::row_control_width())) {
+        if (theme::choice("language", &language_index, names, option_rows::control_width())) {
             settings_.set(settings::LANGUAGE, codes[static_cast<size_t>(language_index)]);
             apply_language();
             mods_ = mods::load(package_.mods, package_mods());
             changed = true;
         }
-        ImGui::EndTable();
+        option_rows::end();
     }
     if (changed) {
         save_settings();
@@ -748,63 +656,6 @@ void App::mods_screen(ImVec2 size) {
 
 void App::controls_screen(ImVec2 size) {
     begin_screen(size, text(Text::Controls));
-    theme::paragraph(text(Text::ControlsIntro), theme::TEXT_SOFT);
-    const std::vector<controls::Device> devices = gamepads_.devices();
-    selected_device_ = std::clamp(selected_device_, 0, static_cast<int>(devices.size()) - 1);
-    std::vector<std::string> names;
-    for (const controls::Device& device : devices) {
-        names.push_back(device.name);
-    }
-    if (focus_first_) {
-        ImGui::SetKeyboardFocusHere();
-        focus_first_ = false;
-    }
-    theme::choice("device", &selected_device_, names, std::min(ImGui::GetContentRegionAvail().x * 0.5f, theme::px(560)));
-    const controls::Device& device = devices[static_cast<size_t>(selected_device_)];
-    // Beside it: whether the game maps that controller by itself.
-    ImGui::SameLine(0, theme::px(20));
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + theme::px(10));
-    if (devices.size() == 1) {
-        theme::paragraph(text(Text::NoGamepads), theme::TEXT_SOFT);
-    } else if (device.id != 0) {
-        theme::paragraph(std::string("\xE2\x9C\x93 ") + text(Text::AutomaticMapping), theme::GREEN);
-    } else {
-        ImGui::NewLine();
-    }
-
-    // The controller with what is pressed lit up, and the table of what plays each part.
-    const controls::State state = gamepads_.state(device);
-    const float height = ImGui::GetContentRegionAvail().y;
-    const float drawing_width = std::min(ImGui::GetContentRegionAvail().x * 0.5f, height * 1.55f);
-    ImGui::Dummy(ImVec2(drawing_width, height - theme::px(30)));
-    const ImVec2 drawing_min = ImGui::GetItemRectMin();
-    controls::draw_controller(ImGui::GetWindowDrawList(), drawing_min,
-                              ImVec2(drawing_width, std::min(height - theme::px(30), drawing_width / 1.55f)), state);
-    ImGui::SetCursorScreenPos(drawing_min + ImVec2(0, height - theme::px(26)));
-    theme::paragraph(text(Text::TryButtons), theme::TEXT_SOFT);
-    ImGui::SetCursorScreenPos(drawing_min + ImVec2(drawing_width + theme::px(24), 0));
-    ImGui::BeginChild("##bindings", ImVec2(0, height));
-    ImGui::PushFont(theme::fonts().small);
-    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(theme::px(10), theme::px(3)));
-    if (ImGui::BeginTable("##table", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
-        ImGui::TableSetupColumn(text(Text::GameCubeButton), ImGuiTableColumnFlags_WidthStretch, 0.45f);
-        ImGui::TableSetupColumn(text(Text::YourButton), ImGuiTableColumnFlags_WidthStretch, 0.55f);
-        ImGui::TableHeadersRow();
-        for (size_t index = 0; index < controls::PART_COUNT; ++index) {
-            const auto part = static_cast<controls::Part>(index);
-            ImGui::TableNextRow();
-            if (state.pressed[index]) {
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(255, 220, 140, 200));
-            }
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(controls::part_name(part).c_str());
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(controls::binding(device, part).c_str());
-        }
-        ImGui::EndTable();
-    }
-    ImGui::PopStyleVar();
-    ImGui::PopFont();
-    ImGui::EndChild();
+    controls::draw_screen(gamepads_, selected_device_, std::exchange(focus_first_, false));
     end_screen(size, true);
 }
