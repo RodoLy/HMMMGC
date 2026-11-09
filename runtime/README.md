@@ -114,6 +114,7 @@ juega como control 1, con las mismas teclas que Dolphin trae de fábrica:
 | `graphics/gx_draw.*`, `graphics/vertex_layout.*` | Las primitivas y las listas de visualización del juego, entregadas a aurora. |
 | `graphics/gx_natives_*.cpp` | Las funciones de GX del juego reemplazadas por las de aurora, por tema (geometría, transformaciones, luces, texturas, TEV, píxeles, copias). |
 | `graphics/guest_values.h` | Lee los valores que el juego pasa por dirección (colores, matrices). |
+| `game_scene.*`, `graphics/camera_view.*`, `graphics/map_draw_range.*`, `crop_grid.*` | La panorámica y el zoom: cuándo aplica el zoom (al caminar al aire libre), las proyecciones, y lo que el juego dibuja de más cuando la cámara ve más lejos (las piezas del mapa, la cuadrícula de cultivos de la granja). |
 | `input/pad_natives.cpp` | Las funciones de control del juego (PAD) reemplazadas por las de aurora: gamepads por SDL y el teclado. |
 | `storage/card_natives.cpp` | Las funciones de memory card del juego (CARD) reemplazadas por las de aurora: una carpeta de archivos `.gci`. |
 | `player_folder.*` | La carpeta del jugador: la memory card y los ajustes y cachés de aurora. |
@@ -244,6 +245,7 @@ plays as controller 1, with the same keys that Dolphin has by default:
 | `graphics/gx_draw.*`, `graphics/vertex_layout.*` | The game's primitives and display lists, handed to aurora. |
 | `graphics/gx_natives_*.cpp` | The game's GX functions replaced by aurora's, by topic (geometry, transforms, lights, textures, TEV, pixels, copies). |
 | `graphics/guest_values.h` | Reads the values the game passes by address (colors, matrices). |
+| `game_scene.*`, `graphics/camera_view.*`, `graphics/map_draw_range.*`, `crop_grid.*` | Widescreen and zoom: when the zoom applies (walking outdoors), the projections, and how much more the game draws when the camera sees farther (the map's pieces, the farm's grid of crops). |
 | `input/pad_natives.cpp` | The game's controller functions (PAD) replaced by aurora's: gamepads through SDL, and the keyboard. |
 | `storage/card_natives.cpp` | The game's memory card functions (CARD) replaced by aurora's: a folder of `.gci` files. |
 | `player_folder.*` | The player folder: the memory card, and aurora's settings and caches. |

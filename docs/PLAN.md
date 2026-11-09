@@ -245,7 +245,18 @@ pieza por pieza, en el orden de arriba)
       cámara del juego, el runtime agranda esa distancia en la memoria del
       juego en la misma proporción en que la cámara ve más lejos
       (`graphics/map_draw_range.h`; en la granja, unas 30 con zoom 0.5 y 38 en
-      panorámica); con zoom 1 queda la del juego, sin más trabajo.
+      panorámica); con zoom 1 queda la del juego, sin más trabajo. Lo mismo con
+      lo que hay sobre la tierra de la granja (cultivos, hierbas, piedras,
+      ramas, tocones): el juego lo arma solo en un cuadro de 25 por 25 casillas
+      alrededor del jugador, casi todo solo hasta 8 casillas a los lados, y
+      alejado las cosas aparecían al caminar. Si el zoom elegido muestra más que
+      la cámara del juego, el runtime le da un cuadro más grande:
+      `tools/size_crop_grid.py` cambia las funciones traducidas que lo usan para
+      que tomen su tamaño y sus tablas del runtime, que las pone en una memoria
+      propia (`crop_grid.h`; con zoom 0.5, 41 por 41 y hasta 16 casillas a los
+      lados, y 51 por 51 y 21 en panorámica). El tamaño se elige al abrir el
+      juego, con el zoom del launcher; con zoom 1 o más cerca queda el cuadro
+      del juego.
 - [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
       nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
       interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
@@ -776,7 +787,17 @@ by piece, in the order above)
       camera, the runtime widens that distance in the game's memory by as much
       as the camera sees farther (`graphics/map_draw_range.h`; on the farm,
       about 30 at zoom 0.5 and 38 in widescreen); at zoom 1 it stays the
-      game's, with no more work.
+      game's, with no more work. So with what stands on the farm's ground
+      (crops, weeds, stones, branches, stumps): the game keeps it only in a
+      square of 25 by 25 tiles around the player, most of it only up to 8 tiles
+      to the sides, and zoomed out things appeared as the player walked. When
+      the chosen zoom shows more than the game's camera, the runtime gives the
+      game a bigger square: `tools/size_crop_grid.py` changes the translated
+      functions that use it to take its size and its tables from the runtime,
+      which puts them in memory of its own (`crop_grid.h`; at zoom 0.5, 41 by
+      41 and up to 16 tiles to the sides, and 51 by 51 and 21 in widescreen).
+      The size is chosen when the game opens, with the launcher's zoom; at zoom
+      1 or closer the game's square stays.
 - [x] 60 and 120 fps by interpolation (route (a) below). In the native
       runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
       interpolation aurora brings: it keeps each frame on the GPU and draws it

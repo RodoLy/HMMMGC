@@ -85,7 +85,7 @@ en el FIFO, pero nadie los dibuja.
   ventana de los registros de hardware (`guest_memory.cpp`). Justo después de la
   memoria principal, en 0x81800000, pone 1 MiB que la consola no tiene: memoria
   propia del runtime para las tablas que le da al juego en lugar de otras más
-  chicas del juego.
+  chicas del juego (la cuadrícula de cultivos de la granja, `crop_grid.h`).
 - Hardware (`hardware/`): un modelo pequeño de cada dispositivo que usa el
   arranque: el controlador de interrupciones (PI); el video (VI), con sus
   interrupciones de retrazo a 59.94 Hz; el DSP (buzones, DMA de ARAM y los
@@ -336,7 +336,8 @@ nothing draws them.
   three views: cached, uncached and physical), the locked cache and the window
   of the hardware registers (`guest_memory.cpp`). Right after the main memory,
   at 0x81800000, it puts 1 MiB the console does not have: the runtime's own
-  memory for the tables it gives the game in place of smaller ones of the game's.
+  memory for the tables it gives the game in place of smaller ones of the game's
+  (the farm's grid of crops, `crop_grid.h`).
 - Hardware (`hardware/`): a small model of each device the start-up uses: the
   interrupt controller (PI); the video (VI), with its retrace interrupts at
   59.94 Hz; the DSP (mailboxes, ARAM DMA and the greetings of the DSP's ROM

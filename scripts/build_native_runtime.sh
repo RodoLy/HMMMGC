@@ -113,6 +113,14 @@ translate_game() {
         --out "$TRANSLATED_GAME_DIRECTORY/build_shards"
 }
 
+# The farm's grid of crops and items is made bigger when the camera is zoomed out: the
+# translated functions that use it take its size and its tables from the runtime
+# (tools/size_crop_grid.py, runtime/src/crop_grid.h).
+size_crop_grid() {
+    step "Letting the runtime size the farm's grid of crops"
+    python3 "$REPOSITORY_ROOT/tools/size_crop_grid.py" --translation "$TRANSLATED_GAME_DIRECTORY"
+}
+
 # The mods are compiled into the runtime; the translated code gets a call at every place
 # where they act (tools/insert_mod_hooks.py), and the mods' names for the game's functions
 # come from symbols.txt (tools/export_mod_symbols.py).
@@ -144,6 +152,7 @@ main() {
     apply_aurora_patches
     build_translator
     translate_game
+    size_crop_grid
     mark_mod_hooks
     compile_runtime "$@"
     step "Done"

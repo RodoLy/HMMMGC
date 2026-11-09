@@ -12,6 +12,7 @@
 //                    [--user-folder <folder>]
 
 #include "console_boot.h"
+#include "crop_grid.h"
 #include "extracted_disc.h"
 #include "fault_handler.h"
 #include "game_clock.h"
@@ -137,6 +138,9 @@ int main(int argc, char** argv) {
 
         InitializeDataSections();
         console_boot::prepare_memory(disc);
+        // With the game's data in memory: the farm's grid of crops, for the chosen zoom.
+        crop_grid::size_for_view(std::clamp(options.camera.zoom, camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM),
+                                 options.camera.widescreen);
         native_mods::load(options.mods ? &*options.mods : nullptr);
 
         CpuContext& cpu = GetPersistentCpuContext();

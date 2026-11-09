@@ -10,7 +10,7 @@
 //   0x00000000  main memory (MEM1, 24 MiB) by physical address, as DMA engines see it
 //   0x80000000  the same memory through the data cache (where the game runs)
 //   0x81800000  1 MiB the console does not have, right after its memory, for tables the
-//               runtime gives the game in place of smaller ones of its own
+//               runtime gives the game in place of smaller ones of its own (crop_grid.h)
 //   0xC0000000  the same memory again, bypassing the cache (hardware buffers)
 //   0xCC000000  the hardware registers (video, audio, disc, controllers, ...)
 //   0xE0000000  the 16 KiB of the data cache that the game can lock as scratch memory
