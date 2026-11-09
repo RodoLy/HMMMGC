@@ -15,6 +15,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 
 namespace guest_memory::host {
 namespace {
@@ -55,10 +56,13 @@ GuestSpace map_guest_space(bool readable_registers) {
     }
     close(main_memory);
 
-    void* locked_cache = mmap(flat_base + LOCKED_CACHE_BASE, LOCKED_CACHE_SIZE, PROT_READ | PROT_WRITE,
-                              MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-    if (locked_cache != flat_base + LOCKED_CACHE_BASE) {
-        throw std::runtime_error(system_error("mapping the locked cache"));
+    for (const auto& [base, size, what] : {std::tuple{RUNTIME_MEMORY_BASE, RUNTIME_MEMORY_SIZE, "the runtime's memory"},
+                                           std::tuple{LOCKED_CACHE_BASE, LOCKED_CACHE_SIZE, "the locked cache"}}) {
+        void* mapped =
+            mmap(flat_base + base, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+        if (mapped != flat_base + base) {
+            throw std::runtime_error(system_error((std::string("mapping ") + what).c_str()));
+        }
     }
 
     const int registers = create_memory_file("gamecube-hardware-registers", HARDWARE_REGISTERS_SIZE);

@@ -47,6 +47,8 @@ namespace {
 
 uint8_t* g_flat_base = nullptr;
 uint8_t* g_hardware_register_image = nullptr;
+// How much of the runtime's memory reserve_runtime_memory has given out.
+uint32_t g_runtime_memory_used = 0;
 
 // Lets the inline fast paths of the translated code reach a 1 MiB page directly.
 // The bias is `host address - guest address`, plus one so that zero can mean "not
@@ -86,13 +88,15 @@ void initialize() {
     for (const uint32_t base : {PHYSICAL_MAIN_MEMORY_BASE, CACHED_MAIN_MEMORY_BASE, UNCACHED_MAIN_MEMORY_BASE}) {
         publish_main_memory_view(base);
     }
+    static_assert(RUNTIME_MEMORY_SIZE == MemoryInline::kPageSize, "the runtime's memory is one page");
+    publish_full_page(RUNTIME_MEMORY_BASE >> MemoryInline::kPageShift);
     // The locked cache is smaller than a 1 MiB page, so it gets a page-table entry with
     // a limit but no fast-path bias: its accesses take the slow paths below.
     MemoryInline::g_pageTable[LOCKED_CACHE_BASE >> MemoryInline::kPageShift] = {g_flat_base + LOCKED_CACHE_BASE,
                                                                                 LOCKED_CACHE_SIZE};
     runtime_log::info("memory",
-                      "guest space at %p: MEM1 at 0x00000000/0x80000000/0xC0000000, "
-                      "locked cache at 0xE0000000, hardware registers at 0xCC000000",
+                      "guest space at %p: MEM1 at 0x00000000/0x80000000/0xC0000000, runtime memory at "
+                      "0x81800000, locked cache at 0xE0000000, hardware registers at 0xCC000000",
                       static_cast<void*>(g_flat_base));
 }
 
@@ -110,10 +114,20 @@ uint8_t* host_pointer(uint32_t guest_address, size_t length) {
             return g_flat_base + guest_address;
         }
     }
-    if (in_range(guest_address, length, LOCKED_CACHE_BASE, LOCKED_CACHE_SIZE)) {
+    if (in_range(guest_address, length, RUNTIME_MEMORY_BASE, RUNTIME_MEMORY_SIZE) ||
+        in_range(guest_address, length, LOCKED_CACHE_BASE, LOCKED_CACHE_SIZE)) {
         return g_flat_base + guest_address;
     }
     return nullptr;
+}
+
+uint32_t reserve_runtime_memory(uint32_t size, uint32_t alignment) {
+    const uint32_t start = (g_runtime_memory_used + alignment - 1) & ~(alignment - 1);
+    if (start > RUNTIME_MEMORY_SIZE || size > RUNTIME_MEMORY_SIZE - start) {
+        throw std::runtime_error("the runtime's memory is used up");
+    }
+    g_runtime_memory_used = start + size;
+    return RUNTIME_MEMORY_BASE + start;
 }
 
 namespace {

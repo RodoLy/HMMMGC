@@ -82,7 +82,10 @@ en el FIFO, pero nadie los dibuja.
 - Memoria: el traductor convierte cada acceso del juego en un acceso a una
   reserva plana de 4 GiB del host. El runtime pone ahí la memoria principal (con
   sus tres vistas: con caché, sin caché y física), la caché bloqueada y la
-  ventana de los registros de hardware (`guest_memory.cpp`).
+  ventana de los registros de hardware (`guest_memory.cpp`). Justo después de la
+  memoria principal, en 0x81800000, pone 1 MiB que la consola no tiene: memoria
+  propia del runtime para las tablas que le da al juego en lugar de otras más
+  chicas del juego.
 - Hardware (`hardware/`): un modelo pequeño de cada dispositivo que usa el
   arranque: el controlador de interrupciones (PI); el video (VI), con sus
   interrupciones de retrazo a 59.94 Hz; el DSP (buzones, DMA de ARAM y los
@@ -331,7 +334,9 @@ nothing draws them.
 - Memory: the translator turns every access of the game into an access to a
   flat 4 GiB host reservation. The runtime maps there the main memory (with its
   three views: cached, uncached and physical), the locked cache and the window
-  of the hardware registers (`guest_memory.cpp`).
+  of the hardware registers (`guest_memory.cpp`). Right after the main memory,
+  at 0x81800000, it puts 1 MiB the console does not have: the runtime's own
+  memory for the tables it gives the game in place of smaller ones of the game's.
 - Hardware (`hardware/`): a small model of each device the start-up uses: the
   interrupt controller (PI); the video (VI), with its retrace interrupts at
   59.94 Hz; the DSP (mailboxes, ARAM DMA and the greetings of the DSP's ROM

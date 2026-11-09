@@ -18,10 +18,10 @@ struct GuestSpace {
 
 // Reserves the 4 GiB guest space at its fixed host address (GuestFlat::kFixedFlatGuestBase)
 // and maps into it: the main memory three times (one memory seen at its physical, cached
-// and uncached addresses), the locked cache, and the hardware registers. The guest view
-// of the registers is inaccessible, or read-only with `readable_registers`; the runtime
-// writes them through a second view, GuestSpace::register_image. Throws
-// std::runtime_error when the host refuses a mapping.
+// and uncached addresses), the runtime's memory, the locked cache, and the hardware
+// registers. The guest view of the registers is inaccessible, or read-only with
+// `readable_registers`; the runtime writes them through a second view,
+// GuestSpace::register_image. Throws std::runtime_error when the host refuses a mapping.
 GuestSpace map_guest_space(bool readable_registers);
 
 }  // namespace guest_memory::host

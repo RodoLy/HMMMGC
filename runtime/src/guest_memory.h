@@ -9,6 +9,8 @@
 //
 //   0x00000000  main memory (MEM1, 24 MiB) by physical address, as DMA engines see it
 //   0x80000000  the same memory through the data cache (where the game runs)
+//   0x81800000  1 MiB the console does not have, right after its memory, for tables the
+//               runtime gives the game in place of smaller ones of its own
 //   0xC0000000  the same memory again, bypassing the cache (hardware buffers)
 //   0xCC000000  the hardware registers (video, audio, disc, controllers, ...)
 //   0xE0000000  the 16 KiB of the data cache that the game can lock as scratch memory
@@ -31,6 +33,9 @@ inline constexpr uint32_t UNCACHED_MAIN_MEMORY_BASE = 0xC0000000u;
 inline constexpr uint32_t LOCKED_CACHE_BASE = 0xE0000000u;
 inline constexpr uint32_t LOCKED_CACHE_SIZE = 16u * 1024u;
 
+inline constexpr uint32_t RUNTIME_MEMORY_BASE = 0x81800000u;
+inline constexpr uint32_t RUNTIME_MEMORY_SIZE = 1024u * 1024u;
+
 inline constexpr uint32_t HARDWARE_REGISTERS_BASE = 0xCC000000u;
 inline constexpr uint32_t HARDWARE_REGISTERS_SIZE = 0x00010000u;
 
@@ -39,8 +44,14 @@ inline constexpr uint32_t HARDWARE_REGISTERS_SIZE = 0x00010000u;
 void initialize();
 
 // The host address where the guest bytes [guest_address, guest_address + length) live,
-// or nullptr when that range is not entirely ordinary memory (RAM or locked cache).
+// or nullptr when that range is not entirely ordinary memory (RAM, the runtime's memory
+// or the locked cache).
 uint8_t* host_pointer(uint32_t guest_address, size_t length);
+
+// Sets aside `size` bytes of the runtime's memory (at RUNTIME_MEMORY_BASE, zeroed) and
+// gives their guest address, aligned to `alignment` (a power of two). Throws
+// std::runtime_error when it is used up. Call after initialize().
+uint32_t reserve_runtime_memory(uint32_t size, uint32_t alignment);
 
 bool is_hardware_register(uint32_t guest_address);
 

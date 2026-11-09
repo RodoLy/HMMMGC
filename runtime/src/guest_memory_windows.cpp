@@ -54,6 +54,15 @@ void map_view_in_place(HANDLE section, uint8_t* address, size_t size, ULONG prot
     }
 }
 
+// Puts plain zeroed memory in the place of the placeholder piece at `address`.
+void map_memory_in_place(uint8_t* address, size_t size, const char* what) {
+    split_placeholder(address, size);
+    if (VirtualAlloc2(GetCurrentProcess(), address, size, MEM_RESERVE | MEM_COMMIT | MEM_REPLACE_PLACEHOLDER,
+                      PAGE_READWRITE, nullptr, 0) != address) {
+        throw std::runtime_error(system_error(what));
+    }
+}
+
 }  // namespace
 
 GuestSpace map_guest_space(bool readable_registers) {
@@ -71,12 +80,8 @@ GuestSpace map_guest_space(bool readable_registers) {
     }
     CloseHandle(main_memory);  // the views keep the section alive
 
-    split_placeholder(flat_base + LOCKED_CACHE_BASE, ALLOCATION_GRANULARITY);
-    if (VirtualAlloc2(GetCurrentProcess(), flat_base + LOCKED_CACHE_BASE, ALLOCATION_GRANULARITY,
-                      MEM_RESERVE | MEM_COMMIT | MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, nullptr,
-                      0) != flat_base + LOCKED_CACHE_BASE) {
-        throw std::runtime_error(system_error("mapping the locked cache"));
-    }
+    map_memory_in_place(flat_base + RUNTIME_MEMORY_BASE, RUNTIME_MEMORY_SIZE, "mapping the runtime's memory");
+    map_memory_in_place(flat_base + LOCKED_CACHE_BASE, ALLOCATION_GRANULARITY, "mapping the locked cache");
 
     // A view cannot be mapped inaccessible: it is mapped read-only and then closed.
     HANDLE registers = create_section(HARDWARE_REGISTERS_SIZE);
