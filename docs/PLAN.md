@@ -485,6 +485,20 @@ de otras recompilaciones (por ejemplo Zelda64Recomp): una ventana propia donde
 se carga el juego, se activan los mods y se ajusta todo, en lugar de los
 `.bat` y `.ps1` sueltos de hoy.
 
+**Para la versión nativa (2026-11-09):** el launcher es propio, `launcher/`
+([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), en C++ con SDL3 y Dear ImGui y con el
+estilo del juego. Ya hace, para la versión nativa: C0; C1 (elegir la imagen,
+también RVZ, comprobarla y preparar el juego mostrando los pasos, el progreso y
+el registro, con errores claros); C2 sin mods de la comunidad (lista con
+interruptor, descripción y ajustes, con el diseño de un gestor de mods); C4 la
+asignación automática según el tipo de control y la vista en vivo, sin
+reasignar todavía; C5 resolución, pantalla completa, pantalla ancha, cuadros
+por segundo, zoom, velocidad e idioma; C6 (el paquete nativo solo tiene
+`HarvestMoonMM.exe`); y C8 con capturas en Linux. El paquete lo arma el
+workflow `package-native-windows.yml`, para ARM64 y x64, al publicar una
+versión. Falta: reasignar botones, mods de la comunidad, C7 y el menú de
+opciones dentro del juego.
+
 **Decisión: no se escribe un launcher desde cero.** ModernGekko ya trae uno
 (`tools/moderngekko_launcher.cpp`, en C++ con SDL3 y Dear ImGui) con selección
 de la imagen del disco y extracción, controles, API gráfica, resolución,
@@ -1044,6 +1058,19 @@ by piece, in the order above)
 of other recompilations (for example Zelda64Recomp): a window of its own where
 the game is loaded, mods are turned on and everything is adjusted, instead of
 today's loose `.bat` and `.ps1` files.
+
+**For the native version (2026-11-09):** the launcher is our own, `launcher/`
+([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), in C++ with SDL3 and Dear ImGui and
+in the game's style. For the native version it already does: C0; C1 (choosing
+the image, RVZ too, checking it and preparing the game showing the steps, the
+progress and the log, with clear errors); C2 without community mods (a list
+with switches, description and settings, laid out like a mod manager); C4 the
+automatic mapping by the kind of controller and the live view, without
+remapping yet; C5 resolution, full screen, widescreen, frames per second, zoom,
+speed and language; C6 (the native package only has `HarvestMoonMM.exe`); and
+C8 with screenshots on Linux. The workflow `package-native-windows.yml` builds
+the package, for ARM64 and x64, when a release is published. Still to do:
+remapping buttons, community mods, C7 and the options menu inside the game.
 
 **Decision: a launcher is not written from scratch.** ModernGekko already
 brings one (`tools/moderngekko_launcher.cpp`, in C++ with SDL3 and Dear ImGui)

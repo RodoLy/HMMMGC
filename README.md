@@ -67,6 +67,12 @@ workflow de GitHub y se juega con `Play.bat`
 ([packaging/windows/README.md](packaging/windows/README.md)). Todavía no se ha
 probado con el juego real.
 
+La versión nativa (sin Dolphin, [docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md))
+tiene su propio paquete para Windows, ARM64 y x64: un launcher con el estilo del
+juego que prepara el juego en tu computadora con tu propio disco (`.iso`,
+`.gcm` o `.rvz`), sin que el paquete lleve nada del juego
+([docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md)).
+
 ### Empezar (herramientas de análisis)
 
 Necesitas Python 3.11+, y Rust para instalar `nodtool`.
@@ -185,6 +191,12 @@ yet, there is an experimental native package, with no WSL and no emulator: a
 GitHub workflow builds it and it is played with `Play.bat`
 ([packaging/windows/README.md](packaging/windows/README.md)). It has not been
 tried with the real game yet.
+
+The native version (without Dolphin, [docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md))
+has its own package for Windows, ARM64 and x64: a launcher in the game's style
+that prepares the game on your computer from your own disc (`.iso`, `.gcm` or
+`.rvz`), without the package carrying anything of the game
+([docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md)).
 
 ### Getting started (analysis tools)
 

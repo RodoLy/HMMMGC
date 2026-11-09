@@ -129,6 +129,50 @@ usa Dawn). Las lee de los encabezados de cada archivo
 (`tools/windows_binaries.py`), y se detiene si una es para otro procesador o si
 falta una que no es parte de Windows: el juego no arrancaría.
 
+### Armar el paquete (`.github/workflows/package-native-windows.yml`)
+
+El workflow corre al publicar una versión en GitHub, y entonces le agrega los
+dos zip, o cuando se pide a mano (los zip quedan como *artifacts*). Primero,
+en una máquina con Windows de cada procesador, copia el runtime de Visual C++
+del Visual Studio que trae (`msvcp140.dll`, `vcruntime140.dll`, …): Dawn y
+nodtool lo usan, no todo Windows lo tiene, y Microsoft deja que vaya junto a
+los programas. Es lo único que se hace en Windows y tarda un minuto o dos.
+Después, para cada procesador, ARM64 y x64, en Linux:
+
+1. Baja WiiCompiled en el commit que fija `scripts/build_native_runtime.sh` y
+   le aplica los parches de `patches/`.
+2. Baja las herramientas con versión y SHA-256 fijos
+   (`tools/fetch_native_package_tools.py`): llvm-mingw para Windows (el que
+   prepara el juego) y para Linux (el que compila para Windows), Python
+   (python-build-standalone), nodtool y Dawn.
+3. Compila el runtime con el sustituto del juego, para Windows
+   (`packaging/native/windows-toolchain.cmake`), y hace el kit, con las DLL
+   que el juego necesita a su lado. El de x64 se compila para `x86-64-v2`
+   (procesadores de unos quince años para acá), y el juego se compila igual en
+   la computadora del jugador.
+4. Compila el launcher, con la versión del paquete.
+5. Publica el traductor como programa de Windows, con su propio .NET.
+6. Junta los textos de las licencias y arma el zip
+   (`tools/package_native_windows.py`), que se niega a terminar si algún
+   archivo parece datos del juego, si el kit pudiera llevar el juego
+   traducido, o si algún programa del paquete no arrancaría: si es para el
+   otro procesador o necesita una DLL que no está a su lado y no es parte de
+   Windows. En Linux no se pueden correr, así que eso se lee de sus
+   encabezados.
+
+| En el paquete | Qué es |
+|---|---|
+| `HarvestMoonMM.exe` | El launcher. |
+| `README.txt`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.txt`, `VERSIONS.txt`, `licenses/` | Las instrucciones, en español e inglés, y las licencias. |
+| `builder/tools`, `builder/config`, `builder/runtime`, `builder/mods` | Las herramientas de la preparación y lo que leen, con la misma estructura que este repositorio. |
+| `builder/kit` | El kit del runtime, con las DLL que van junto al juego: Dawn, libpng, zlib y parte del runtime de Visual C++. |
+| `builder/translator` | El traductor de WiiCompiled, con .NET. |
+| `builder/python`, `builder/llvm-mingw`, `builder/nodtool` | Python, el compilador y nodtool (con la parte del runtime de Visual C++ que usa), recortados a lo que usa la preparación. |
+
+En Windows, el runtime y el launcher llevan un manifiesto que les da UTF-8 como
+página de códigos, para que funcionen las rutas con cualquier letra (un usuario
+llamado «Pérez», por ejemplo).
+
 ### Probarlo en Linux
 
 ```sh
@@ -274,6 +318,49 @@ program and they import, and what those import in turn, taken from the build
 that Dawn uses). It reads them from each file's headers
 (`tools/windows_binaries.py`), and stops if one is for another processor or if
 one that is not a part of Windows is missing: the game would not start.
+
+### Building the package (`.github/workflows/package-native-windows.yml`)
+
+The workflow runs when a release is published on GitHub, and then adds the two
+zips to it, or when asked for (the zips are then kept as artifacts). First, on
+a Windows machine of each processor, it copies the Visual C++ runtime of the
+Visual Studio that comes with it (`msvcp140.dll`, `vcruntime140.dll`, ...):
+Dawn and nodtool use it, not every Windows has it, and Microsoft allows it to
+go beside the programs. It is the only thing done on Windows, and it takes a
+minute or two. Then, for each processor, ARM64 and x64, on Linux:
+
+1. It downloads WiiCompiled at the commit that `scripts/build_native_runtime.sh`
+   pins and applies the patches of `patches/`.
+2. It downloads the tools at fixed versions and SHA-256
+   (`tools/fetch_native_package_tools.py`): llvm-mingw for Windows (the one
+   that prepares the game) and for Linux (the one that builds for Windows),
+   Python (python-build-standalone), nodtool and Dawn.
+3. It builds the runtime with the stand-in game, for Windows
+   (`packaging/native/windows-toolchain.cmake`), and makes the kit, with the
+   DLLs that the game needs beside it. The x64 one is built for `x86-64-v2`
+   (processors of about the last fifteen years), and the game is compiled the
+   same way on the player's computer.
+4. It builds the launcher, with the package's version.
+5. It publishes the translator as a Windows program, with its own .NET.
+6. It gathers the license texts and assembles the zip
+   (`tools/package_native_windows.py`), which refuses to finish if a file looks
+   like game data, if the kit could carry the translated game, or if one of
+   the package's programs would not start: if it is for the other processor or
+   needs a DLL that is not beside it and is not a part of Windows. They cannot
+   be run on Linux, so that is read from their headers.
+
+| In the package | What it is |
+|---|---|
+| `HarvestMoonMM.exe` | The launcher. |
+| `README.txt`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.txt`, `VERSIONS.txt`, `licenses/` | The instructions, in Spanish and English, and the licenses. |
+| `builder/tools`, `builder/config`, `builder/runtime`, `builder/mods` | The preparation's tools and what they read, laid out like this repository. |
+| `builder/kit` | The runtime kit, with the DLLs that go beside the game: Dawn, libpng, zlib and part of the Visual C++ runtime. |
+| `builder/translator` | WiiCompiled's translator, with .NET. |
+| `builder/python`, `builder/llvm-mingw`, `builder/nodtool` | Python, the compiler and nodtool (with the part of the Visual C++ runtime it uses), trimmed to what the preparation uses. |
+
+On Windows, the runtime and the launcher carry a manifest that gives them UTF-8
+as their code page, so that paths with any letter work (a user named "Pérez",
+for example).
 
 ### Trying it on Linux
 

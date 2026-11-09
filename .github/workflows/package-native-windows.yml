@@ -1,0 +1,262 @@
+name: Native Windows packages
+
+# Builds the packages of the native version for Windows, for ARM64 and for x64: the launcher, the
+# runtime compiled without the game (the kit) and everything that prepares the game on the player's
+# computer from the player's own disc (docs/NATIVE_PACKAGE.md). No game data is involved at any
+# point: the game is made on each player's computer.
+#
+# It runs when a release is published, and then adds the two zips to it, or when asked for:
+# Actions tab > Native Windows packages > Run workflow (the zips are then kept as artifacts). Both
+# packages are built on Linux, for Windows; only the Visual C++ runtime, which Dawn and nodtool use,
+# is taken from a Windows runner, the only place where it is.
+#
+# Arma los paquetes de la versión nativa para Windows (ARM64 y x64). Corre al publicar una versión,
+# y entonces le agrega los dos zip, o cuando se pide a mano. Se arman en Linux; solo el runtime de
+# Visual C++ se toma de una máquina con Windows. No toca datos del juego en ningún momento.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The DLLs of the Visual C++ runtime (msvcp140.dll, vcruntime140.dll, ...), which not every
+  # Windows has: they go beside the programs that use them, as Microsoft allows for its
+  # redistributable files. From the Visual Studio of the runner of each processor; a minute or two.
+  visual-cpp-runtime:
+    name: Visual C++ runtime ${{ matrix.architecture }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - architecture: arm64
+            runner: windows-11-arm
+          - architecture: x64
+            runner: windows-latest
+    steps:
+      - name: Copy the runtime of the runner's Visual Studio
+        shell: pwsh
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $studio = & $vswhere -latest -products * -property installationPath
+          # The version of the runtime that this Visual Studio installs, or else its newest one.
+          $versionFile = Join-Path $studio 'VC\Auxiliary\Build\Microsoft.VCRedistVersion.default.txt'
+          if (Test-Path $versionFile) {
+              $version = (Get-Content $versionFile).Trim()
+          } else {
+              $version = (Get-ChildItem (Join-Path $studio 'VC\Redist\MSVC') -Directory |
+                  Where-Object Name -Match '^\d+(\.\d+)+$' | Sort-Object { [version]$_.Name } | Select-Object -Last 1).Name
+          }
+          $runtime = Get-ChildItem (Join-Path $studio "VC\Redist\MSVC\$version\$env:ARCHITECTURE") -Directory `
+              -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $runtime) { throw "No Visual C++ runtime for $env:ARCHITECTURE in $studio (version $version)" }
+          New-Item -ItemType Directory -Path visual-cpp-runtime | Out-Null
+          Copy-Item (Join-Path $runtime.FullName '*.dll') -Destination visual-cpp-runtime
+          Set-Content -Path visual-cpp-runtime/version.txt -Value "$version ($($runtime.Name))"
+          Get-ChildItem visual-cpp-runtime | Format-Table Name, Length -AutoSize
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-cpp-runtime-${{ matrix.architecture }}
+          path: visual-cpp-runtime
+          retention-days: 1
+          if-no-files-found: error
+
+  package:
+    name: Windows ${{ matrix.architecture }}
+    needs: visual-cpp-runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [arm64, x64]
+    env:
+      ARCHITECTURE: ${{ matrix.architecture }}
+      TOOLS_DIRECTORY: ${{ github.workspace }}/build/tools
+      WIICOMPILED_DIRECTORY: ${{ github.workspace }}/build/wiicompiled
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: visual-cpp-runtime-${{ matrix.architecture }}
+          path: build/visual-cpp-runtime
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install --yes ninja-build
+
+      # The version the launcher shows and the preparation records: the release's tag, or the branch
+      # and the commit. A player's game is prepared again when it changes.
+      - name: Choose the version of the package
+        run: |
+          if [[ -n "$RELEASE_TAG" ]]; then
+            version="$RELEASE_TAG"
+          else
+            version="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "PACKAGE_ZIP=HarvestMoonMM-native-$version-windows-$ARCHITECTURE.zip" >> "$GITHUB_ENV"
+          echo "Version: $version"
+
+      # The same commit as scripts/build_native_runtime.sh, with the same patches.
+      - name: Download WiiCompiled and apply the patches
+        run: |
+          url=$(sed -n 's/^readonly WIICOMPILED_URL="\(.*\)"$/\1/p' scripts/build_native_runtime.sh)
+          commit=$(sed -n 's/^readonly WIICOMPILED_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_native_runtime.sh)
+          [[ -n "$url" && -n "$commit" ]] || { echo "WiiCompiled's address or commit not found" >&2; exit 1; }
+          git clone --filter=blob:none --no-checkout "$url" "$WIICOMPILED_DIRECTORY"
+          git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$commit"
+          git -C "$WIICOMPILED_DIRECTORY" submodule update --init aurora-main
+          for patch in patches/wiicompiled/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY" apply "$GITHUB_WORKSPACE/$patch"
+          done
+          for patch in patches/aurora/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY/aurora-main" apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Download the package's tools (pinned versions, hashes checked)
+        run: |
+          python tools/fetch_native_package_tools.py --architecture "$ARCHITECTURE" \
+            --destination "$TOOLS_DIRECTORY" --cross-compiler
+
+      - name: Write the names of the game's functions for the mods
+        run: python tools/export_mod_symbols.py
+
+      # The runtime as for any build, with a stand-in of the translated game; the kit keeps it all
+      # but the game. x64 is built for every x86-64 processor of the last fifteen years.
+      - name: Build the runtime with the stand-in game
+        run: |
+          extra=()
+          if [[ "$ARCHITECTURE" == x64 ]]; then extra=(-DX86_CPU_PROFILE=v2); fi
+          cmake -S runtime -B build/runtime-kit -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/packaging/native/windows-toolchain.cmake" \
+            -DLLVM_MINGW="$TOOLS_DIRECTORY/cross-compiler" -DHMMM_WINDOWS_ARCHITECTURE="$ARCHITECTURE" \
+            -DCMAKE_BUILD_TYPE=Release "${extra[@]}" \
+            -DWIICOMPILED_DIR="$WIICOMPILED_DIRECTORY" -DTRANSLATED_GAME_DIR="$GITHUB_WORKSPACE/runtime/kit/stub_game" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DDAWN_PACKAGE_DIR="$TOOLS_DIRECTORY/dawn" \
+            -DAURORA_SDL3_LIBUSB=OFF -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=static
+          cmake --build build/runtime-kit
+
+      # With every DLL the game needs beside it: Dawn's, libpng's and zlib's from the build, and the
+      # part of the Visual C++ runtime that Dawn uses. It stops if the game would miss one.
+      - name: Make the runtime kit
+        run: |
+          python tools/make_runtime_kit.py --build-directory build/runtime-kit \
+            --wiicompiled-directory "$WIICOMPILED_DIRECTORY" --out build/kit \
+            --drop-include-directory packaging/native/case-shims \
+            --runtime-files-directory "$TOOLS_DIRECTORY/dawn/bin" --dll-directory build/visual-cpp-runtime
+
+      - name: Build the launcher
+        run: |
+          cmake -S launcher -B build/launcher -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/packaging/native/windows-toolchain.cmake" \
+            -DLLVM_MINGW="$TOOLS_DIRECTORY/cross-compiler" -DHMMM_WINDOWS_ARCHITECTURE="$ARCHITECTURE" \
+            -DCMAKE_BUILD_TYPE=Release -DHMMM_PACKAGE_VERSION="$VERSION"
+          cmake --build build/launcher
+
+      # A Windows program with its own .NET, so that the player installs nothing.
+      - name: Publish the translator for Windows
+        run: |
+          dotnet publish "$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli" --configuration Release \
+            --runtime "win-$ARCHITECTURE" --self-contained true --output build/translator --nologo \
+            -p:NuGetAudit=false
+
+      - name: Gather the license texts
+        run: |
+          licenses=build/licenses
+          mkdir -p "$licenses"
+          for folder in build/runtime-kit/_deps/*-src build/launcher/_deps/*-src; do
+            name=$(basename "$folder" -src)
+            for file in LICENSE LICENSE.txt LICENSE.TXT LICENSE.md LICENSE.MIT COPYING COPYING.txt docs/FTL.TXT; do
+              if [[ -f "$folder/$file" ]]; then cp "$folder/$file" "$licenses/$name-$(basename "$file")"; fi
+            done
+          done
+          cp "$WIICOMPILED_DIRECTORY/LICENSE" "$licenses/WiiCompiled-LICENSE.txt"
+          cp "$WIICOMPILED_DIRECTORY/aurora-main/LICENSE" "$licenses/aurora-LICENSE.txt"
+          cp launcher/fonts/OFL.txt "$licenses/RoundedMplus1c-OFL.txt"
+          dawn_ref=$(sed -n 's/^_aurora_dependency_version(AURORA_DAWN_REF "\([0-9a-f]\{40\}\)".*/\1/p' \
+            "$WIICOMPILED_DIRECTORY/aurora-main/cmake/AuroraDependencyVersions.cmake")
+          curl --fail --silent --show-error --location --retry 3 --output "$licenses/Dawn-LICENSE.txt" \
+            "https://raw.githubusercontent.com/encounter/dawn/$dawn_ref/LICENSE"
+          # dxcompiler.dll and dxil.dll, built from the DirectX Shader Compiler at the commit Dawn pins.
+          curl --fail --silent --show-error --location --retry 3 --output build/dawn-DEPS \
+            "https://raw.githubusercontent.com/encounter/dawn/$dawn_ref/DEPS"
+          dxc_ref=$(sed -n "s|.*/microsoft/DirectXShaderCompiler@\([0-9a-f]\{40\}\)'.*|\1|p" build/dawn-DEPS)
+          [[ -n "$dxc_ref" ]] || { echo "The shader compiler's commit is not in Dawn's DEPS" >&2; exit 1; }
+          for file in LICENSE.TXT ThirdPartyNotices.txt; do
+            curl --fail --silent --show-error --location --retry 3 \
+              --output "$licenses/DirectXShaderCompiler-${file%.*}.txt" \
+              "https://raw.githubusercontent.com/microsoft/DirectXShaderCompiler/$dxc_ref/$file"
+          done
+          nod_version=$(sed -n 's/^NODTOOL_VERSION = "\(.*\)"$/\1/p' tools/fetch_native_package_tools.py)
+          for file in LICENSE-MIT LICENSE-APACHE; do
+            curl --fail --silent --show-error --location --retry 3 --output "$licenses/nod-$file.txt" \
+              "https://raw.githubusercontent.com/encounter/nod/$nod_version/$file"
+          done
+          ls -l "$licenses"
+
+      - name: Assemble the package
+        run: |
+          python tools/package_native_windows.py --architecture "$ARCHITECTURE" \
+            --launcher build/launcher/HarvestMoonMM.exe --kit build/kit --translator build/translator \
+            --python "$TOOLS_DIRECTORY/python" --llvm-mingw "$TOOLS_DIRECTORY/llvm-mingw" \
+            --nodtool "$TOOLS_DIRECTORY/nodtool/nodtool.exe" --visual-cpp-runtime build/visual-cpp-runtime \
+            --licenses-directory build/licenses \
+            --output-directory build/dist --zip "build/dist/$PACKAGE_ZIP" \
+            --version "HMMMGC=$VERSION ($GITHUB_SHA)" \
+            --version "WiiCompiled=$(git -C "$WIICOMPILED_DIRECTORY" rev-parse HEAD)" \
+            --version "aurora=$(git -C "$WIICOMPILED_DIRECTORY/aurora-main" rev-parse HEAD)" \
+            --version "patches=$(cd patches && printf '%s ' wiicompiled/*.patch aurora/*.patch)" \
+            --version ".NET=$(dotnet --version)" \
+            --version "Visual C++ runtime=$(tr -d '\r\n' < build/visual-cpp-runtime/version.txt)"
+          cat "build/dist/HarvestMoonMM-windows-$ARCHITECTURE/VERSIONS.txt"
+          ls -l build/dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HarvestMoonMM-native-windows-${{ matrix.architecture }}
+          path: build/dist/*.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  # Only for a published release: adds the two packages to it. The only job that can write.
+  release:
+    name: Add the packages to the release
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: HarvestMoonMM-native-windows-*
+          merge-multiple: true
+          path: packages
+
+      - name: Upload the zips to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" packages/*.zip --clobber --repo "$GITHUB_REPOSITORY"

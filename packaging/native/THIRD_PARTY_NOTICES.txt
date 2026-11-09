@@ -1,0 +1,83 @@
+Third-party notices / Avisos de terceros
+========================================
+
+This package puts together free software from several authors. The game is NOT
+included. The list says what each part is, where it is in the package, its
+license and where its source is. The license texts are in the "licenses"
+folder, or inside the folder of the part when it brings its own. The exact
+versions are in VERSIONS.txt. The source of this project, and the patches it
+applies to the parts below, is at https://github.com/RodoLy/HMMMGC; if
+anything of that cannot be obtained there, ask for it by opening an issue.
+
+Este paquete junta software libre de varios autores. El juego NO está incluido.
+La lista dice qué es cada parte, dónde está en el paquete, su licencia y dónde
+está su código. Los textos de las licencias están en la carpeta "licenses", o
+dentro de la carpeta de la parte cuando trae los suyos. Las versiones exactas
+están en VERSIONS.txt. El código de este proyecto, y los parches que aplica a
+las partes de abajo, están en https://github.com/RodoLy/HMMMGC; si algo de eso
+no se puede conseguir allí, pídelo abriendo un issue.
+
+
+This project / Este proyecto
+  HarvestMoonMM.exe, builder\tools, builder\runtime, builder\mods,
+  builder\kit (the runtime / el runtime), builder\config
+  License: GPL-3.0-or-later (LICENSE.txt). https://github.com/RodoLy/HMMMGC
+
+WiiCompiled: the translator, the guest ABI headers and two runtime helpers /
+el traductor, los encabezados de la ABI y dos ayudantes del runtime
+  builder\translator, builder\kit
+  License: GPL-3.0 (licenses\WiiCompiled-LICENSE.txt).
+  https://github.com/patchzyy/wiicompiled
+
+aurora: the GameCube's graphics, controllers and memory card on WebGPU / los
+gráficos, controles y memory card de la GameCube sobre WebGPU
+  builder\kit
+  License: MIT (licenses\aurora-LICENSE.txt). https://github.com/encounter/aurora
+
+Dawn (WebGPU), with the DirectX Shader Compiler (dxcompiler.dll, dxil.dll)
+  builder\kit\bin (webgpu_dawn.dll, dxcompiler.dll, dxil.dll)
+  License: BSD-3-Clause (licenses\Dawn-LICENSE.txt); the DirectX Shader
+  Compiler: University of Illinois/NCSA, with the notices of its parts
+  (licenses\DirectXShaderCompiler-LICENSE.txt,
+  licenses\DirectXShaderCompiler-ThirdPartyNotices.txt).
+  https://github.com/encounter/dawn
+  https://github.com/microsoft/DirectXShaderCompiler
+
+Libraries inside the runtime and the launcher / Bibliotecas dentro del runtime
+y del launcher: SDL3 (zlib), Dear ImGui (MIT), nlohmann/json (MIT), fmt (MIT),
+xxHash (BSD-2-Clause), Abseil (Apache-2.0), FreeType (FTL), SQLite (public
+domain), zstd (BSD-3-Clause), Tracy (BSD-3-Clause). Beside the game, in
+builder\kit\bin / Junto al juego: libpng (libpng16.dll, libpng license) and
+zlib-ng (libzlib1.dll, zlib license). Their license texts are in the licenses
+folder.
+
+Microsoft Visual C++ runtime / el runtime de Visual C++ (msvcp140*.dll,
+vcruntime140*.dll), which Dawn and nodtool use / que usan Dawn y nodtool
+  builder\kit\bin, builder\nodtool
+  Microsoft's redistributable files, under the terms of Visual Studio /
+  Archivos redistribuibles de Microsoft, bajo los términos de Visual Studio.
+  https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files
+
+M PLUS Rounded 1c (the launcher's lettering / las letras del launcher)
+  inside HarvestMoonMM.exe
+  License: SIL Open Font License 1.1 (licenses\RoundedMplus1c-OFL.txt).
+  https://github.com/google/fonts
+
+.NET runtime (inside the translator / dentro del traductor)
+  builder\translator
+  License: MIT. https://github.com/dotnet/runtime
+
+llvm-mingw: clang, lld, LLVM and the MinGW-w64 headers and libraries
+  builder\llvm-mingw
+  License: Apache-2.0 with LLVM exceptions, and the licenses of MinGW-w64
+  (LICENSE.TXT in that folder). https://github.com/mstorsjo/llvm-mingw
+
+Python (python-build-standalone)
+  builder\python
+  License: PSF License (LICENSE.txt in that folder).
+  https://github.com/astral-sh/python-build-standalone
+
+nod (nodtool): reads and converts disc images / lee y convierte imágenes de disco
+  builder\nodtool
+  License: MIT or Apache-2.0 (licenses\nod-LICENSE-MIT.txt,
+  licenses\nod-LICENSE-APACHE.txt). https://github.com/encounter/nod
