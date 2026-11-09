@@ -9,6 +9,9 @@
 #         -DWIICOMPILED_DIR=<WiiCompiled checkout> \
 #         -DTRANSLATED_GAME_DIR=<translator output>
 #   cmake --build build/native/runtime
+#
+# The runtime kit that a package carries instead of the game (docs/NATIVE_PACKAGE.md) is this
+# build with -DTRANSLATED_GAME_DIR=runtime/kit/stub_game, a stand-in of the translated game.
 cmake_minimum_required(VERSION 3.25)
 project(hm_magical_melody_native LANGUAGES C CXX ASM)
 
