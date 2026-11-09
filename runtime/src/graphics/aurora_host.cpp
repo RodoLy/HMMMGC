@@ -10,7 +10,9 @@
 #include "graphics/frame_interpolation.h"
 #include "graphics/map_draw_range.h"
 #include "graphics/shadow_range.h"
+#include "in_game_menu.h"
 #include "player_folder.h"
+#include "player_options.h"
 #include "runtime_log.h"
 
 #include <aurora/aurora.h>
@@ -57,6 +59,7 @@ struct FrameRate {
     unsigned frames = 0;
 };
 FrameRate g_frame_rate;
+double g_frames_per_second = 0;  // as last counted
 
 void count_frame() {
     ++g_frame_rate.frames;
@@ -72,6 +75,7 @@ void count_frame() {
         aurora_get_present_timing(&timing);
         frames_per_second = timing.framesPerSecond;
     }
+    g_frames_per_second = frames_per_second;
     char title[128];
     const unsigned speed = game_clock::speed_percent();
     if (speed == game_clock::NORMAL_SPEED_PERCENT) {
@@ -114,9 +118,18 @@ void begin_next_frame() {
 void exit_if_window_closed() {
     if (g_window_closed) {
         runtime_log::info("graphics", "the window was closed");
+        player_options::save_if_changed();  // what the player changed in the options menu
         shutdown();
         std::exit(EXIT_SUCCESS);
     }
+}
+
+// The resampler that reduces a picture drawn larger than the window: averaging every pixel it
+// covers (rather than the four nearest, bilinear) keeps the edges smooth without the shimmer of
+// skipped pixels.
+void apply_resolution_scale(float resolution_scale) {
+    VISetFrameBufferScale(resolution_scale);
+    aurora_set_resampler(resolution_scale > 0.f ? SAMPLER_AREA : SAMPLER_BILINEAR);
 }
 
 }  // namespace
@@ -165,11 +178,7 @@ void initialize() {
     frame_interpolation::apply_to_aurora();
     camera_view::set_window_size(info.windowSize.width, info.windowSize.height);
     if (g_display_options.resolution_scale > 0.f) {
-        VISetFrameBufferScale(g_display_options.resolution_scale);
-        // The picture is drawn larger than the window and reduced to it: averaging every
-        // pixel it covers (rather than the four nearest, bilinear) keeps the edges smooth
-        // without the shimmer of skipped pixels.
-        aurora_set_resampler(SAMPLER_AREA);
+        apply_resolution_scale(g_display_options.resolution_scale);
     }
     runtime_log::info("graphics", "aurora is drawing with backend %d in a %ux%u window, internal resolution %s",
                       static_cast<int>(info.backend), info.windowSize.width, info.windowSize.height,
@@ -182,18 +191,26 @@ void initialize() {
 bool is_initialized() { return g_initialized; }
 
 void present_frame() {
+    in_game_menu::draw();
     frame_interpolation::schedule_frame();
     aurora_end_frame();
     count_frame();
     process_events();
+    if (in_game_menu::quit_requested()) {
+        g_window_closed = true;  // the menu's "Quit the game", as the window's close button
+    }
     // What the next frame shows: the game's camera, or the zoom while walking outdoors, and
     // as much of the map, its characters and its shadows as that shows.
     camera_view::follow_scene(game_scene::player_walks_outdoors());
     map_draw_range::update();
     character_range::update();
     shadow_range::update();
-    // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while Tab is held.
-    game_clock::set_turbo(SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_TAB]);
+    // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while Tab is held (not
+    // while the options menu is open, where Tab moves between its controls).
+    game_clock::set_turbo(!in_game_menu::is_open() && SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_TAB]);
+    // The menu's shortcut on the controller and its lettering for the window's size, before the
+    // next frame starts (and with it ImGui's).
+    in_game_menu::before_frame();
     begin_next_frame();
     exit_if_window_closed();
 }
@@ -202,6 +219,8 @@ bool process_events() {
     for (const AuroraEvent* event = aurora_update(); event != nullptr && event->type != AURORA_NONE; ++event) {
         if (event->type == AURORA_EXIT) {
             g_window_closed = true;
+        } else if (event->type == AURORA_SDL_EVENT) {
+            in_game_menu::handle_event(event->sdl);
         } else if (event->type == AURORA_WINDOW_RESIZED) {
             const AuroraWindowSize& size = event->windowSize;
             camera_view::set_window_size(size.width, size.height);
@@ -210,6 +229,42 @@ bool process_events() {
         }
     }
     return !g_window_closed;
+}
+
+double frames_per_second() { return g_frames_per_second; }
+
+void set_resolution_scale(float resolution_scale) {
+    g_display_options.resolution_scale = resolution_scale;
+    if (g_initialized) {
+        apply_resolution_scale(resolution_scale);
+        runtime_log::info("graphics", "internal resolution %s",
+                          resolution_scale > 0.f ? "fixed" : "following the window");
+    }
+}
+
+void set_fullscreen(bool fullscreen) {
+    g_display_options.fullscreen = fullscreen;
+    if (g_initialized) {
+        aurora_set_display_mode(fullscreen ? AURORA_DISPLAY_MODE_BORDERLESS : AURORA_DISPLAY_MODE_WINDOWED);
+    }
+}
+
+bool is_fullscreen() {
+    return g_initialized ? aurora_get_display_mode() != AURORA_DISPLAY_MODE_WINDOWED : g_display_options.fullscreen;
+}
+
+void set_widescreen(bool widescreen) {
+    camera_view::set_widescreen(widescreen);
+    if (!g_initialized || is_fullscreen()) {
+        return;
+    }
+    SDL_Window* window = aurora_get_window();
+    int width = 0;
+    int height = 0;
+    if (window != nullptr && SDL_GetWindowSize(window, &width, &height) && height > 0) {
+        const int wanted = widescreen ? height * 16 / 9 : height * 4 / 3;
+        SDL_SetWindowSize(window, wanted, height);
+    }
 }
 
 void shutdown() {

@@ -373,6 +373,7 @@ void draw_controller(ImDrawList* draw, ImVec2 min, ImVec2 size, const State& sta
 
 void draw_screen(Gamepads& gamepads, int& selected_device, bool focus) {
     theme::paragraph(texts::text(Text::ControlsIntro), theme::TEXT_SOFT);
+    theme::paragraph(texts::text(Text::GameShortcuts), theme::TEXT_SOFT);
     const std::vector<Device> devices = gamepads.devices();
     selected_device = std::clamp(selected_device, 0, static_cast<int>(devices.size()) - 1);
     std::vector<std::string> names;

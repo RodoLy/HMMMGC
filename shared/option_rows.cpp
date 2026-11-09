@@ -121,6 +121,10 @@ bool frame_rate(settings::Settings& settings, bool focus) {
     return true;
 }
 
+bool show_frame_rate(settings::Settings& settings, bool focus) {
+    return flag_row(settings, settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint, focus);
+}
+
 bool zoom(settings::Settings& settings, bool focus) {
     return percent_row(settings, settings::ZOOM, 100, 50, 200, 5, Text::Zoom, Text::ZoomHint, focus);
 }

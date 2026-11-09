@@ -27,6 +27,9 @@ void configure(unsigned frame_rate);
 // Called by aurora_host.cpp once aurora is running.
 void apply_to_aurora();
 
+// Changes the frame rate while the game runs (the options menu, in_game_menu.h).
+void set_frame_rate(unsigned frame_rate);
+
 // Whether frames are made in between.
 bool is_on();
 

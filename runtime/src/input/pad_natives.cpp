@@ -13,6 +13,7 @@
 //   A: X   B: Z   X: C   Y: S   Z: D   L: Q   R: W   START: Enter
 
 #include "guest_memory.h"
+#include "in_game_menu.h"
 #include "native_functions.h"
 
 #include <SDL3/SDL_scancode.h>
@@ -111,6 +112,8 @@ uint32_t PADReadNative(uint32_t status_address) {
     choose_keyboard_or_gamepad();
     PADStatus statuses[PAD_CHANMAX]{};
     const uint32_t rumble_ports = PADRead(statuses);
+    // Nothing reaches the game while the options menu is open (in_game_menu.h).
+    in_game_menu::hold_back_controllers(statuses);
     for (uint32_t port = 0; port < PAD_CHANMAX; ++port) {
         write_status(status_address + port * GUEST_STATUS_SIZE, statuses[port]);
     }

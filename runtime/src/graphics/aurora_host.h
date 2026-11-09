@@ -31,10 +31,23 @@ void initialize();
 
 bool is_initialized();
 
-// Ends the frame that the game has drawn so far, shows it, handles the window's events
-// and starts the next frame; once a second the window's title shows the frame rate.
-// Called when the game copies a finished picture to the screen (GXCopyDisp).
+// Ends the frame that the game has drawn so far, with the options menu over it
+// (in_game_menu.h), shows it, handles the window's events and starts the next frame; once a
+// second the window's title shows the frame rate. Called when the game copies a finished
+// picture to the screen (GXCopyDisp).
 void present_frame();
+
+// The frames shown each second, as last counted (the window's title shows them too).
+double frames_per_second();
+
+// Change the picture while the game runs (the options menu). The resolution as in
+// DisplayOptions; full screen also changes with Alt+Enter, which is_fullscreen() follows;
+// widescreen is camera_view's, and a window that is not full screen takes its shape (16:9 or
+// 4:3, as tall as it is).
+void set_resolution_scale(float resolution_scale);
+void set_fullscreen(bool fullscreen);
+bool is_fullscreen();
+void set_widescreen(bool widescreen);
 
 // Gives aurora the pending window events without drawing anything; returns false once
 // the player has closed the window.

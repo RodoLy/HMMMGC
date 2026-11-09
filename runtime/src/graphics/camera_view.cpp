@@ -41,6 +41,9 @@ constexpr float SCREEN_VIEWPORT_WIDTH = 600.f;
 constexpr float SCREEN_VIEWPORT_HEIGHT = 400.f;
 // In widescreen, the width of the game's 4:3 picture in the window (3/4 in a 16:9 one).
 float g_four_thirds_in_window = 1.f;
+// The window's size, as aurora last gave it.
+unsigned g_window_width = 0;
+unsigned g_window_height = 0;
 
 // The last projection as the game set it, and how much its rows 0 and 1 were scaled (1
 // when it was left as it is), for the texture matrices built from it.
@@ -128,10 +131,26 @@ void apply_to_aurora() {
 }
 
 void set_window_size(unsigned width, unsigned height) {
+    g_window_width = width;
+    g_window_height = height;
     if (g_options.widescreen && width != 0 && height != 0) {
         g_four_thirds_in_window = GAME_ASPECT_RATIO * static_cast<float>(height) / static_cast<float>(width);
     }
 }
+
+void set_widescreen(bool widescreen) {
+    if (widescreen == g_options.widescreen) {
+        return;
+    }
+    g_options.widescreen = widescreen;
+    // aurora fits the 4:3 picture in the window with bars by default, and stretches it in widescreen.
+    AuroraSetViewportPolicy(widescreen ? AURORA_VIEWPORT_STRETCH : AURORA_VIEWPORT_FIT);
+    g_four_thirds_in_window = 1.f;
+    set_window_size(g_window_width, g_window_height);
+    runtime_log::info("graphics", "camera: %s", widescreen ? "widescreen" : "4:3");
+}
+
+void set_zoom(float zoom) { g_options.zoom = std::clamp(zoom, MINIMUM_ZOOM, MAXIMUM_ZOOM); }
 
 bool widescreen() { return g_options.widescreen; }
 

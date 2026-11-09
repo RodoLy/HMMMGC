@@ -4,7 +4,7 @@
 
 ## Español
 
-Las letras del launcher: M PLUS Rounded 1c (Rounded M+), una fuente redondeada
+Las letras del launcher y del menú de opciones del juego: M PLUS Rounded 1c (Rounded M+), una fuente redondeada
 como la de los menús del juego, de licencia libre (SIL Open Font License 1.1,
 en `OFL.txt`). Van dentro del programa (`shared/shared.cmake` las convierte
 en un arreglo de C++).
@@ -30,7 +30,7 @@ pyftsubset MPLUSRounded1c-Medium.ttf --output-file=RoundedMplus1c-Medium-subset.
 
 ## English
 
-The launcher's lettering: M PLUS Rounded 1c (Rounded M+), a rounded font like
+The lettering of the launcher and of the game's options menu: M PLUS Rounded 1c (Rounded M+), a rounded font like
 the one of the game's menus, under a free license (SIL Open Font License 1.1,
 in `OFL.txt`). They go inside the program (`shared/shared.cmake` turns them
 into a C++ array).

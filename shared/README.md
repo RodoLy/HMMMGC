@@ -4,9 +4,11 @@
 
 ## Español
 
-Lo que comparten los programas de la versión nativa. `shared.cmake` lo compila
-dentro de un programa que ya enlaza Dear ImGui, SDL3 y nlohmann/json
-(`add_shared_ui(<programa>)`).
+Lo que comparten los programas de la versión nativa: el launcher y el menú de
+opciones dentro del juego (`runtime/src/in_game_menu.h`), que se ven, hablan y
+guardan igual. `shared.cmake` lo compila dentro de un programa que ya enlaza
+Dear ImGui, SDL3 y nlohmann/json (`add_shared_ui(<programa>)`); en el juego,
+ImGui es el de aurora, que lo dibuja sobre cada cuadro.
 
 | Archivo | Qué es |
 |---|---|
@@ -19,9 +21,11 @@ dentro de un programa que ya enlaza Dear ImGui, SDL3 y nlohmann/json
 
 ## English
 
-What the programs of the native version share. `shared.cmake` compiles it into
-a program that already links Dear ImGui, SDL3 and nlohmann/json
-(`add_shared_ui(<program>)`).
+What the programs of the native version share: the launcher and the options
+menu inside the game (`runtime/src/in_game_menu.h`), which look, speak and save
+the same. `shared.cmake` compiles it into a program that already links Dear
+ImGui, SDL3 and nlohmann/json (`add_shared_ui(<program>)`); in the game, ImGui
+is aurora's, which draws it over each frame.
 
 | File | What it is |
 |---|---|

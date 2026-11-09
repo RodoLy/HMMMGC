@@ -122,9 +122,10 @@ set(AURORA_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(AURORA_TARGET_RVL OFF CACHE BOOL "" FORCE)
 add_subdirectory("${AURORA_DIR}" "${CMAKE_BINARY_DIR}/aurora" EXCLUDE_FROM_ALL SYSTEM)
 
-# The player's settings.json, which the launcher writes too (shared/settings.h), read with
-# nlohmann/json (MIT) in the launcher's version. It is downloaded when the build is configured;
-# FETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON points it at a local copy.
+# What the launcher shares with the runtime (shared/README.md): the player's settings.json,
+# read with nlohmann/json (MIT) in the launcher's version, and the look, texts and controls of
+# the options menu inside the game, drawn with aurora's Dear ImGui. nlohmann/json is downloaded
+# when the build is configured; FETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON points it at a local copy.
 include(FetchContent)
 FetchContent_Declare(nlohmann_json
     URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
@@ -132,7 +133,7 @@ FetchContent_Declare(nlohmann_json
     DOWNLOAD_EXTRACT_TIMESTAMP FALSE
     EXCLUDE_FROM_ALL)
 FetchContent_MakeAvailable(nlohmann_json)
-set(shared_directory "${CMAKE_CURRENT_SOURCE_DIR}/../shared")
+include("${CMAKE_CURRENT_SOURCE_DIR}/../shared/shared.cmake")
 
 # The game's mods (mods/), compiled in: each one is the same C file that ModernGekko loads
 # as a library, built here against a stand-in of ModernGekko's mod ABI (mod_api/). The
@@ -172,16 +173,17 @@ ${native_mod_getters}    nullptr,
 ")
 
 file(GLOB_RECURSE runtime_sources CONFIGURE_DEPENDS src/*.cpp)
-add_executable(hmmm-native ${runtime_sources} ${native_mod_objects} "${shared_directory}/settings.cpp")
+add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
+add_shared_ui(hmmm-native)
 target_include_directories(hmmm-native PRIVATE src "${WIICOMPILED_RUNTIME_DIR}/include" mod_api
-                                               "${CMAKE_BINARY_DIR}/generated" "${shared_directory}")
+                                               "${CMAKE_BINARY_DIR}/generated")
 target_compile_options(hmmm-native PRIVATE ${strict_floating_point} -Wall -Wextra -Wno-unused-parameter)
 # aurora's graphics ask aurora's video interface (aurora::vi) for the size of the embedded
 # frame buffer. The game keeps the console's own video interface (its VI library runs
 # translated, on the emulated registers), so nothing configures aurora's: it answers the
 # GPU's 640x528, the same as for any mode of the game.
 target_link_libraries(hmmm-native PRIVATE translated_game wiicompiled_isa_helpers aurora::core aurora::gx aurora::vi
-                                          aurora::pad aurora::card nlohmann_json::nlohmann_json)
+                                          aurora::pad aurora::card imgui nlohmann_json::nlohmann_json)
 if(WIN32)
     # VirtualAlloc2 and MapViewOfFile3 (guest_memory.cpp), and the stack walk of the crash
     # reports. The C++ runtime is linked in, so that the program only needs Windows' DLLs.

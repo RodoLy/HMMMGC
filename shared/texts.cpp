@@ -114,6 +114,9 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::FrameRate, "Cuadros por segundo", "Frames per second"},
     {Text::FrameRateGame, "30 (como el juego)", "30 (as the game)"},
     {Text::FrameRateMade, "%d (con cuadros intermedios)", "%d (frames made in between)"},
+    {Text::ShowFrameRate, "Mostrar los cuadros por segundo", "Show the frames per second"},
+    {Text::ShowFrameRateHint, "Arriba a la derecha, sobre el juego.", "At the top right, over the game."},
+    {Text::FrameRateCounter, "%d FPS", "%d FPS"},
     {Text::Zoom, "Zoom de la cámara al aire libre", "Camera zoom outdoors"},
     {Text::ZoomHint, "100% es el del juego; con menos se ve más alrededor del personaje.",
      "100% is the game's; less shows more around the character."},
@@ -123,6 +126,24 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::Volume, "Volumen", "Volume"},
     {Text::VolumeHint, "La música y los sonidos del juego; 0% lo silencia.",
      "The game's music and sounds; 0% mutes it."},
+    {Text::ZoomBeyondStart,
+     "Con este zoom, los cultivos y objetos más lejanos aparecen cuando te acercas a ellos, hasta que vuelvas a "
+     "abrir el juego.",
+     "With this zoom, the farthest crops and items appear as you walk up to them, until you open the game again."},
+
+    {Text::BackToGame, "Volver al juego", "Back to the game"},
+    {Text::QuitGame, "Salir del juego", "Quit the game"},
+    {Text::QuitQuestion, "¿Salir del juego? Lo que no hayas guardado en el juego se pierde.",
+     "Quit the game? Whatever you have not saved in the game is lost."},
+    {Text::QuitYes, "Sí, salir", "Yes, quit"},
+    {Text::QuitNo, "No, seguir jugando", "No, keep playing"},
+    {Text::MenuOpenNote, "Menú abierto: el juego no recibe los controles. F10 o Select para volver.",
+     "Menu open: the game gets no input. F10 or Select to go back."},
+    {Text::GameShortcuts,
+     "En el juego: F10 o el botón Select abren las opciones, Tab acelera (turbo) y Alt+Enter cambia a pantalla "
+     "completa.",
+     "In the game: F10 or the Select button open the options, Tab speeds up (turbo) and Alt+Enter switches to full "
+     "screen."},
     {Text::LanguageAutomatic, "Como el sistema", "As the system"},
 
     {Text::ModsIntro, "Activa o desactiva los mods y elige sus ajustes. Se aplican al jugar.",
@@ -168,7 +189,7 @@ const Table& table() {
         }
         for (size_t i = 0; i < TEXT_COUNT; ++i) {
             if (result.spanish[i] == nullptr || result.english[i] == nullptr) {
-                SDL_Log("launcher: text %zu has no translation", i);
+                SDL_Log("texts: text %zu has no translation", i);
                 result.spanish[i] = result.spanish[i] ? result.spanish[i] : "?";
                 result.english[i] = result.english[i] ? result.english[i] : "?";
             }

@@ -63,6 +63,24 @@ completa, la panorámica y los cuadros por segundo, y jugar; guarda lo elegido e
 que la versión ModernGekko. Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
 
+### Menú de opciones (F10)
+
+Dentro del juego, F10 (o el botón Select del control, si el juego no lo usa)
+abre un menú con el aspecto del launcher (`in_game_menu.h`, con lo de
+`shared/`): la resolución interna, la pantalla completa, la pantalla ancha, los
+cuadros por segundo, el contador de cuadros por segundo, el zoom, la velocidad
+del juego y el volumen, que cambian al momento, y la pantalla de controles. Lo
+que cambia se guarda en `settings.json` al cerrar el menú, y el launcher lo lee
+al volver. Mientras está abierto, el juego sigue pero no recibe nada de los
+controles ni del teclado, y al cerrarlo tampoco hasta que se sueltan los
+botones que lo cerraron. Se mueve con el ratón, las flechas o el control;
+Escape o el botón que es B en el juego regresa, y los botones de hombro del
+control (LB y RB) cambian entre Opciones y Controles. «Salir del juego» pregunta antes, porque lo
+que no se guardó en el juego se pierde. Un zoom más lejano que el del arranque
+avisa que los cultivos más lejanos aparecen al acercarse hasta reiniciar
+(`crop_grid.h`). Para que no corra el reloj del juego, abre antes su propio
+menú (Start).
+
 ### Partidas guardadas
 
 El runtime guarda lo del jugador en su carpeta: `HarvestMoonMM\Native` dentro
@@ -200,6 +218,24 @@ widescreen and frames per second, and
 play; it keeps the choices in the same `settings.json` as the ModernGekko
 version. With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
 debugger such as gdb (see `fault_handler.h`).
+
+### Options menu (F10)
+
+In the game, F10 (or the controller's Select button, when the game does not
+use it) opens a menu that looks like the launcher (`in_game_menu.h`, with what
+is in `shared/`): the internal resolution, full screen, widescreen, frames per
+second, the frame counter, the zoom, the game's speed and the volume, which
+change at once, and the controls screen. What changes is kept in
+`settings.json` when the menu closes, and the launcher reads it when it comes
+back. While it is open the game goes on but gets nothing from the controllers
+or the keyboard, and after it closes neither, until the buttons that closed it
+are let go. It is used with the mouse, the arrow keys or a controller; Escape
+or the button that is B in the game goes back, and the controller's shoulder
+buttons (LB and RB) switch between Options and Controls. "Quit the game" asks first,
+because what was not saved in the game is lost. A zoom farther out than the
+one the game started with warns that the farthest crops appear as the player
+walks up to them until the game is restarted (`crop_grid.h`). To keep the
+game's clock from running, open its own menu (Start) first.
 
 ### Saved games
 

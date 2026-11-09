@@ -27,6 +27,8 @@ Cómo jugar
 
   En Opciones, Mods y Controles se eligen la imagen, los mods y se prueba el
   control. Juega el primer control que conectes; sin control, el teclado.
+  Dentro del juego, F10 (o el botón Select del control) abre las opciones sin
+  salir del juego, y Tab mantenido lo acelera.
 
 Dónde se guarda todo
   En %LOCALAPPDATA%\HarvestMoonMM: tus elecciones (settings.json) y, en la
@@ -69,7 +71,8 @@ How to play
 
   Options, Mods and Controls choose the picture, the mods, and let you try the
   controller. The first controller you connect plays; without one, the
-  keyboard does.
+  keyboard does. In the game, F10 (or the controller's Select button) opens
+  the options without leaving the game, and holding Tab speeds it up.
 
 Where everything is kept
   In %LOCALAPPDATA%\HarvestMoonMM: your choices (settings.json) and, in the

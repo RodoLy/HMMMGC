@@ -196,7 +196,8 @@ bool set_scale(float scale) {
     g_fonts.subtitle = add_font(FONT_ROUNDED_EXTRABOLD, FONT_ROUNDED_EXTRABOLD_size, px(38));
     g_fonts.title = add_font(FONT_ROUNDED_EXTRABOLD, FONT_ROUNDED_EXTRABOLD_size, px(66));
     io.FontDefault = g_fonts.body;
-    io.Fonts->Build();
+    // The atlas is built when the renderer makes the font texture again: the launcher right after
+    // this, aurora at the next frame of the game, when it sees an atlas not built.
     apply_style(scale);
     return true;
 }

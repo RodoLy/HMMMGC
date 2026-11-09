@@ -40,6 +40,11 @@ struct Options {
 // Called before the game starts (main.cpp).
 void configure(const Options& options);
 
+// Change them while the game runs (the options menu, in_game_menu.h): widescreen at the next
+// projection the game sets, the zoom over a few frames, as when the player walks outdoors.
+void set_widescreen(bool widescreen);
+void set_zoom(float zoom);
+
 // Called by aurora_host.cpp once aurora is running.
 void apply_to_aurora();
 

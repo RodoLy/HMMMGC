@@ -80,6 +80,20 @@ void apply_to_aurora() {
     }
 }
 
+void set_frame_rate(unsigned frame_rate) {
+    const bool was_on = is_on();
+    configure(frame_rate);
+    if (is_on()) {
+        apply_to_aurora();
+    } else if (was_on) {
+        // No frames in between, and each frame shown as soon as it comes.
+        aurora_set_frame_interpolation_fps(0);
+        aurora_set_present_schedule(0, 0);
+        runtime_log::info("graphics", "30 frames a second: none made in between");
+    }
+    g_last_frame = Clock::time_point{};  // the schedule starts over with the next frame
+}
+
 bool is_on() { return g_frame_rate > GAME_FRAME_RATE; }
 
 void schedule_frame() {

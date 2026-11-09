@@ -30,7 +30,7 @@ const Fonts& fonts();
 
 // Builds the fonts and the style for a window `scale` times the design's (1 is 1280x720 at
 // 100% of the screen's scaling). True when it changed them; the renderer's font texture must
-// then be made again.
+// then be made again (aurora makes it again by itself in the game).
 bool set_scale(float scale);
 float px(float design_pixels);
 

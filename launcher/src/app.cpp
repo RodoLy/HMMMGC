@@ -226,6 +226,8 @@ void App::update() {
         return;
     }
     game_.reset();
+    // The options menu inside the game keeps in settings.json what the player changed there.
+    settings_ = settings::Settings::load(player_.settings);
     SDL_ShowWindow(window_);
     SDL_RaiseWindow(window_);
     if (*code != 0) {
@@ -526,6 +528,7 @@ void App::options(ImVec2 size) {
         changed |= option_rows::fullscreen(settings_);
         changed |= option_rows::widescreen(settings_);
         changed |= option_rows::frame_rate(settings_);
+        changed |= option_rows::show_frame_rate(settings_);
         changed |= option_rows::zoom(settings_);
         option_rows::end();
     }

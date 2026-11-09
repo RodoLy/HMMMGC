@@ -1,13 +1,15 @@
-// The player's options in the runtime: how fast the game runs, how the picture is shown and
-// which mods are on.
+// The player's options in the runtime: how fast the game runs, how the picture is shown, how
+// loud the sound is and which mods are on.
 //
 // Las opciones del jugador en el runtime: qué tan rápido corre el juego, cómo se muestra la
-// imagen y qué mods están activos.
+// imagen, qué tan fuerte suena y qué mods están activos.
 //
 // Each option is the one the command line gives (main.cpp), or else the one in settings.json,
 // or else its default; so the game started by hand plays as the launcher left it. settings.json
 // is the launcher's file (shared/settings.h, with its names and limits), where
-// player_folder::settings_file() says or where --settings says.
+// player_folder::settings_file() says or where --settings says. The options menu inside the game
+// (in_game_menu.h) changes them while it runs, and they are written back to the file, keeping
+// whatever else it holds (the disc, the language, the mods).
 #pragma once
 
 #include "settings.h"
@@ -42,7 +44,18 @@ bool widescreen();
 float zoom();                   // 0.5 to 2
 unsigned frame_rate();          // 30, 60 or 120
 unsigned volume_percent();      // 0 (silent) to 100 (the game's own)
+bool show_frame_rate();         // over the game, at the top right (in_game_menu.h)
 // Whether the mod `id` is on: in the command line's list, or not turned off in settings.json.
 bool mod_enabled(const std::string& id);
+
+// While the game runs (in_game_menu.h). current() is settings.json as the game runs with it (with
+// what the command line gave), for the menu's rows, which change it; apply_changes() then gives
+// each option that changed to the part of the runtime that uses it, at once.
+settings::Settings& current();
+void apply_changes();
+// Full screen as it is now: Alt+Enter changes it without the menu.
+void note_fullscreen(bool fullscreen);
+// Writes current() to settings.json when the menu changed something since the last time.
+void save_if_changed();
 
 }  // namespace player_options

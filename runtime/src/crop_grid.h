@@ -49,4 +49,9 @@ namespace crop_grid {
 // farm's camera.
 void size_for_view(float zoom, bool widescreen);
 
+// Whether the grid sized when the game started also covers the view of that zoom and shape;
+// when it does not, the crops and items farthest from the player appear as the player walks
+// (the options menu says so, in_game_menu.h).
+bool covers_view(float zoom, bool widescreen);
+
 }  // namespace crop_grid

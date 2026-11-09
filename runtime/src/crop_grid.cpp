@@ -115,6 +115,15 @@ float read_float(uint32_t address) { return std::bit_cast<float>(guest_memory::r
 
 }  // namespace
 
+bool covers_view(float zoom, bool widescreen) {
+    if (zoom >= 1) {
+        return true;
+    }
+    const uint32_t half_size =
+        half_size_for(ground_reach(zoom, widescreen ? WIDESCREEN_ASPECT_RATIO : GAME_ASPECT_RATIO));
+    return 2 * half_size + 1 <= hmmm_crop_grid_size;
+}
+
 void size_for_view(float zoom, bool widescreen) {
     if (zoom >= 1) {
         return;  // the game's camera, or closer: the game's square
