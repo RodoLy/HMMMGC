@@ -228,6 +228,10 @@ pieza por pieza, en el orden de arriba)
       (la burbuja sobre la cabeza de un personaje): `GXProject` es un native
       que hace la misma cuenta que el del juego (igual bit a bit en 2 millones
       de casos al azar) con la proyección de la pantalla, también con el zoom.
+      En la laptop (Adreno X1-45, Direct3D 12), en pantalla ancha a 4x, salían
+      puntos negros en lugares fijos: aurora borraba cada cuadro dibujando
+      sobre la imagen, y ahora usa el borrado propio de la GPU
+      (`patches/aurora/clear-whole-picture-with-render-pass.patch`).
 - [ ] HUD anclado en widescreen: dejar el HUD y los textos en 4:3 sin
       tocar los fondos 2D a pantalla completa (pide distinguirlos por
       función del juego).
@@ -784,7 +788,11 @@ by piece, in the order above)
       game projects to put its 2D marks over the scene (the bubble over a
       character's head): `GXProject` is a native that works it out as the
       game's does (equal bit for bit on 2 million random cases) with the
-      screen's projection, the zoom's too.
+      screen's projection, the zoom's too. On the laptop (Adreno X1-45,
+      Direct3D 12), in widescreen at 4x, black dots showed at fixed places:
+      aurora cleared every frame by drawing over the picture, and now it uses
+      the GPU's own clear
+      (`patches/aurora/clear-whole-picture-with-render-pass.patch`).
 - [ ] Anchored HUD in widescreen: keep the HUD and text 4:3 without
       touching the full-screen 2D backgrounds (needs telling them apart by
       the game's functions).

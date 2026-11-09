@@ -332,6 +332,47 @@ git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-far-inte
 
 **Quitar:** el mismo `git apply` con `-R`.
 
+### `aurora/clear-whole-picture-with-render-pass.patch`
+
+Para el runtime nativo, como el anterior: `scripts/build_native_runtime.sh` lo
+aplica solo a la copia de aurora de WiiCompiled.
+
+Cuando el juego copia la imagen y la borra (`GXCopyTex` con borrado), aurora
+borra con su propio borrado de la GPU solo si el rectángulo es todo el EFB; si
+es una parte, dibuja un triángulo que cubre esa parte. El juego borra cada
+cuadro sus 640x448, y el EFB de aurora mide 640x528: las filas de abajo las
+guarda como espacio de trabajo para efectos de otros juegos. Así que ese
+borrado siempre era un dibujo. En la laptop (Adreno X1-45, Direct3D 12), en
+pantalla ancha a 4x, eso dejaba bloquecitos donde lo que el juego dibujaba
+después no se veía y salía el color de borrado: puntos negros en lugares fijos
+de la pantalla, a 30 y a 60 fps. En 4:3, a otras resoluciones y en la nube
+(Vulkan por software) no pasaba.
+
+El parche borra con el borrado propio de la GPU cuando el rectángulo tiene
+toda la imagen que el juego muestra: todo el EFB menos esas filas de abajo,
+que se borran también. Magical Melody nunca dibuja en ellas (sus viewports son
+de 640x448 y de 256x256 arriba a la izquierda, para las sombras). Un borrado
+más chico (el del mapa de sombras) sigue siendo un dibujo.
+
+**Probado** en la laptop, en pantalla ancha a 4x: con versiones de prueba,
+los puntos salían del color de borrado (rojo, al cambiarlo), no se iban con
+un ancho redondeado a 64 ni a 320 píxeles, y se fueron al borrar toda la
+imagen así, y también al escribir la profundidad de ese dibujo desde el
+shader. Se eligió el primero: el borrado propio de la GPU es además el más
+barato en una GPU por bloques. En Linux el juego se ve igual.
+
+**Versiones a las que se aplica:** las mismas que el parche anterior.
+
+**Licencia:** MIT, como aurora.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/clear-whole-picture-with-render-pass.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ---
 
 ## English
@@ -655,6 +696,46 @@ the ghost plants no longer show. On Linux it builds and the game runs as before.
 
 ```bash
 git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-far-interpolation-pairs.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
+
+### `aurora/clear-whole-picture-with-render-pass.patch`
+
+For the native runtime, like the one before: `scripts/build_native_runtime.sh`
+applies it by itself to WiiCompiled's copy of aurora.
+
+When the game copies the picture and clears it (`GXCopyTex` with a clear),
+aurora clears with the GPU's own clear only when the rectangle is the whole
+EFB; for a part of it, it draws a triangle over that part. The game clears its
+640x448 every frame, and aurora's EFB is 640x528: it keeps the rows below as
+scratch for other games' effects. So that clear was always a draw. On the
+laptop (Adreno X1-45, Direct3D 12), in widescreen at 4x, it left small blocks
+where what the game drew afterwards did not show and the clear color did:
+black dots at fixed places of the screen, at 30 and at 60 fps. It did not
+happen in 4:3, at other resolutions, or in the cloud (software Vulkan).
+
+The patch clears with the GPU's own clear when the rectangle holds all of the
+picture the game shows: all of the EFB but those rows below, which are
+cleared too. Magical Melody never draws to them (its viewports are 640x448,
+and 256x256 at the top left for the shadows). A smaller clear (the shadow
+map's) is still a draw.
+
+**Tried** on the laptop, in widescreen at 4x: with test builds, the dots came
+out in the clear color (red, when it was changed), did not go away with the
+width rounded to 64 or to 320 pixels, and went away when the whole picture was
+cleared this way, and also when that draw wrote its depth from the shader. The
+first was chosen: the GPU's own clear is also the cheapest on a tiled GPU. On
+Linux the game looks the same.
+
+**Applies to:** the same versions as the patch before.
+
+**License:** MIT, like aurora.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/clear-whole-picture-with-render-pass.patch"
 ```
 
 **Remove:** the same `git apply` with `-R`.
