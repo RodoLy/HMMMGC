@@ -7,13 +7,16 @@ The analysis only needs to recognise a handful of instructions: branches
 addresses the code points at), loads/stores, and which registers an
 instruction overwrites. Decoding those by hand is faster and more
 predictable than asking capstone for every word. Capstone is still used to
-print readable listings.
+print readable listings, and only then: the tools that only analyse (such as
+the ones that prepare the game on a player's computer) run without it.
 
 El análisis solo necesita reconocer unas cuantas instrucciones: saltos (para
 encontrar funciones y dónde terminan), pares lis/addi (para saber a qué
 direcciones apunta el código), loads/stores y qué registros sobrescribe cada
 instrucción. Decodificarlas a mano es más rápido y predecible que pedirle a
-capstone cada palabra. Capstone se sigue usando para imprimir listados.
+capstone cada palabra. Capstone se sigue usando para imprimir listados, y solo
+para eso: las herramientas que solo analizan (como las que preparan el juego en
+la computadora de un jugador) corren sin él.
 
 Field names (rD, rS, rA, rB, SIMM, UIMM, BO, LK, AA, SH, MB, ME) follow the
 IBM PowerPC 750CL User's Manual, chapter 12, so they can be looked up
@@ -22,8 +25,7 @@ the same manual's appendix.
 """
 
 from dataclasses import dataclass
-
-import capstone
+from functools import cache
 
 # Primary opcodes live in the top 6 bits of every instruction word.
 OPCODE_PAIRED_SINGLE = 4  # ps_* arithmetic (Gekko)
@@ -362,15 +364,20 @@ class Instruction:
         )
 
 
-_capstone = capstone.Cs(
-    capstone.CS_ARCH_PPC,
-    capstone.CS_MODE_32 | capstone.CS_MODE_BIG_ENDIAN | capstone.CS_MODE_PS,
-)
+@cache
+def _capstone():
+    """Capstone's PowerPC disassembler, made the first time a listing is printed."""
+    import capstone  # only the listings need it
+
+    return capstone.Cs(
+        capstone.CS_ARCH_PPC,
+        capstone.CS_MODE_32 | capstone.CS_MODE_BIG_ENDIAN | capstone.CS_MODE_PS,
+    )
 
 
 def format_instruction(instruction: Instruction) -> str:
     """Readable text for one instruction, or `.word` if capstone cannot
     decode it (data embedded in code, or an unused encoding)."""
-    for decoded in _capstone.disasm(instruction.word.to_bytes(4, "big"), instruction.address, 1):
+    for decoded in _capstone().disasm(instruction.word.to_bytes(4, "big"), instruction.address, 1):
         return f"{decoded.mnemonic:<9}{decoded.op_str}".rstrip()
     return f".word    0x{instruction.word:08X}"
