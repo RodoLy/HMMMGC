@@ -42,3 +42,13 @@ def test_the_project_says_where_the_game_its_small_data_and_the_natives_are(tmp_
     # Relative to the project file, so that the whole translation lives in one folder.
     assert project["workspace_root"] == "."
     assert project["output"]["root"] == "game"
+
+
+def test_paths_with_characters_that_yaml_reads_otherwise_are_kept(tmp_path):
+    # On a player's computer the paths hold their folders' names.
+    folder = tmp_path / "Ana María #2: juegos"
+    dol = folder / "main.dol"
+    natives = folder / "runtime" / "src"
+    project = yaml.safe_load(project_text(dol, natives, 0x80329080, 0x8032A780))
+    assert project["inputs"]["dol"]["path"] == dol.resolve().as_posix()
+    assert project["runtime"]["native_registration_root"] == natives.resolve().as_posix()

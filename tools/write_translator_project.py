@@ -25,6 +25,7 @@ Usage / Uso:
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -56,6 +57,13 @@ def translator_map_lines(table: SymbolTable) -> list[str]:
     return [f"{symbol.address:08X} {symbol.name}" for symbol in table if symbol.kind == "function"]
 
 
+def yaml_path(path: Path) -> str:
+    """A path for the project file, quoted: on a player's computer it holds their folders, whose
+    names may have characters that YAML would read otherwise ("#", ": "). A JSON string is a YAML
+    one."""
+    return json.dumps(path.resolve().as_posix(), ensure_ascii=False)
+
+
 def project_text(
     dol_path: Path, natives_directory: Path, small_data_base: int, small_data_2_base: int
 ) -> str:
@@ -77,7 +85,7 @@ memory:
 
 inputs:
   dol:
-    path: {dol_path.resolve().as_posix()}
+    path: {yaml_path(dol_path)}
 
 translation:
   # The OS reads and writes special registers the translator does not know by number
@@ -88,7 +96,7 @@ translation:
     path: {FUNCTION_MAP_NAME}
 
 runtime:
-  native_registration_root: {natives_directory.resolve().as_posix()}
+  native_registration_root: {yaml_path(natives_directory)}
   native_abi_directories: []
 
 output:
