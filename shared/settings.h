@@ -25,6 +25,7 @@ inline constexpr const char* RESOLUTION_SCALE = "resolutionScale";
 inline constexpr const char* FULLSCREEN = "fullscreen";
 inline constexpr const char* WIDESCREEN = "widescreen";
 inline constexpr const char* FRAME_RATE = "frameRate";
+inline constexpr const char* VOLUME = "volumePercent";  // 0 (silent) to 100 (the game's own)
 inline constexpr const char* LANGUAGE = "language";      // "auto", "es" or "en"
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
 

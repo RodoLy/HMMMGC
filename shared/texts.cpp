@@ -99,6 +99,7 @@ constexpr Translation TRANSLATIONS[] = {
 
     {Text::PictureSection, "Imagen", "Picture"},
     {Text::GameSection, "Juego", "Game"},
+    {Text::SoundSection, "Sonido", "Sound"},
     {Text::LanguageSection, "Idioma", "Language"},
     {Text::Resolution, "Resolución interna", "Internal resolution"},
     {Text::ResolutionWindow, "Como la ventana", "As the window"},
@@ -119,6 +120,9 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::GameSpeed, "Velocidad de todo el juego", "Speed of the whole game"},
     {Text::GameSpeedHint, "100% es la normal. En el juego, mantén Tab para el turbo.",
      "100% is the normal one. In the game, hold Tab for turbo."},
+    {Text::Volume, "Volumen", "Volume"},
+    {Text::VolumeHint, "La música y los sonidos del juego; 0% lo silencia.",
+     "The game's music and sounds; 0% mutes it."},
     {Text::LanguageAutomatic, "Como el sistema", "As the system"},
 
     {Text::ModsIntro, "Activa o desactiva los mods y elige sus ajustes. Se aplican al jugar.",

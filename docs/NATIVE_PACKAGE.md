@@ -76,7 +76,7 @@ sistema, o lo que se elija).
 | Bienvenida | Pide la imagen del disco del jugador (`.iso`, `.gcm` o `.rvz`; también se puede soltar sobre la ventana o pasar al programa). Si el paquete se actualizó, avisa que hay que preparar el juego otra vez. |
 | Preparando | Corre `tools/prepare_game.py` y muestra sus pasos con palomitas, una barra de progreso, cuánto lleva y, si se quiere, los detalles. Se puede cancelar. Si algo falla, explica por qué (otro juego, otra versión, una imagen comprimida que no se pudo convertir, ...) y deja abrir el registro (`prepare.log`). |
 | Principal | Jugar, Opciones, Mods, Controles y Salir; abajo, el disco y la versión. |
-| Opciones | Resolución interna, pantalla completa, pantalla ancha, cuadros por segundo, zoom de la cámara, velocidad de todo el juego e idioma. |
+| Opciones | Resolución interna, pantalla completa, pantalla ancha, cuadros por segundo, zoom de la cámara, velocidad de todo el juego, volumen e idioma. |
 | Mods | Como un gestor de mods: a la izquierda la lista con un interruptor por mod, a la derecha la descripción, los ajustes (la velocidad del personaje) y el aviso del mod elegido (con Jamie: no desactivarlo después de casarse con Jamie). Lo leen de los manifiestos `mods/<id>/mod.json`. |
 | Controles | Los controles conectados y el teclado, con la asignación automática del juego (la de aurora, según el tipo de control: Xbox, PlayStation, Nintendo, GameCube) y un control de GameCube dibujado que se ilumina con lo que se presiona. |
 
@@ -266,7 +266,7 @@ or a controller, and speaks Spanish or English (as the system, or as chosen).
 | Welcome | Asks for the player's disc image (`.iso`, `.gcm` or `.rvz`; it can also be dropped on the window or given to the program). If the package was updated, it says that the game has to be prepared again. |
 | Preparing | Runs `tools/prepare_game.py` and shows its steps with check marks, a progress bar, the time so far and, on request, the details. It can be cancelled. If something fails, it explains why (another game, another version, a compressed image that could not be converted, ...) and offers to open the log (`prepare.log`). |
 | Main | Play, Options, Mods, Controls and Exit; below, the disc and the version. |
-| Options | Internal resolution, full screen, widescreen, frames per second, camera zoom, speed of the whole game and language. |
+| Options | Internal resolution, full screen, widescreen, frames per second, camera zoom, speed of the whole game, volume and language. |
 | Mods | Like a mod manager: on the left the list with a switch for each mod, on the right the chosen mod's description, settings (the character's speed) and warning (with Jamie: not to turn it off after marrying Jamie). They come from the manifests `mods/<id>/mod.json`. |
 | Controls | The connected controllers and the keyboard, with the game's automatic mapping (aurora's, by the kind of controller: Xbox, PlayStation, Nintendo, GameCube) and a drawn GameCube controller that lights up with what is pressed. |
 

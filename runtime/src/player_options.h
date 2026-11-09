@@ -27,6 +27,7 @@ struct Given {
     std::optional<bool> widescreen;
     std::optional<float> zoom;
     std::optional<unsigned> frame_rate;
+    std::optional<unsigned> volume_percent;
     std::optional<std::vector<std::string>> mods;
 };
 
@@ -40,6 +41,7 @@ bool fullscreen();
 bool widescreen();
 float zoom();                   // 0.5 to 2
 unsigned frame_rate();          // 30, 60 or 120
+unsigned volume_percent();      // 0 (silent) to 100 (the game's own)
 // Whether the mod `id` is on: in the command line's list, or not turned off in settings.json.
 bool mod_enabled(const std::string& id);
 

@@ -22,6 +22,10 @@ namespace audio_output {
 // 48 kHz). The device opens with the first call, once aurora has started SDL.
 void play(const uint8_t* frames, uint32_t frame_count, uint32_t sample_rate);
 
+// How loud the sound plays: 0 is silent, 1 the game's own. It changes the sound already waiting
+// too, so it can change while the game runs.
+void set_volume(float volume);
+
 void shutdown();
 
 }  // namespace audio_output

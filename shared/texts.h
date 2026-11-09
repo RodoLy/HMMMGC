@@ -72,6 +72,7 @@ enum class Text {
 
     PictureSection,
     GameSection,
+    SoundSection,
     LanguageSection,
     Resolution,
     ResolutionWindow,
@@ -87,6 +88,8 @@ enum class Text {
     ZoomHint,
     GameSpeed,
     GameSpeedHint,
+    Volume,
+    VolumeHint,
     LanguageAutomatic,
 
     ModsIntro,

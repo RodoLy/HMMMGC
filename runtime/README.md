@@ -51,12 +51,12 @@ del juego, `game_scene.h`), y `--widescreen 1`
 da una imagen panorámica: el 3D muestra más a los lados y los menús se estiran.
 `--frame-rate 60` (o `120`) muestra 60 (o 120) cuadros por segundo: el juego
 dibuja 30 y aurora hace los demás en medio (`graphics/frame_interpolation.h`).
-Lo que la línea de comandos no dice se lee del `settings.json` del launcher
+`--volume <0-100>` baja el sonido (0 lo silencia). Lo que la línea de comandos no dice se lee del `settings.json` del launcher
 (`HarvestMoonMM/settings.json` en la carpeta de datos del sistema, o el que diga
 `--settings <archivo>`; con `--user-folder`, el de esa carpeta), así que el
 juego arrancado a mano juega como lo dejó el launcher; sin ese archivo, cada
 opción vale lo de siempre (todos los mods activos, 100 %, la ventana, 4:3, sin
-zoom, 30 cuadros), `player_options.h`. En Windows, `Launcher.bat`
+zoom, 30 cuadros, todo el volumen), `player_options.h`. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
 velocidad del personaje y la del juego, la resolución, el zoom, la pantalla
 completa, la panorámica y los cuadros por segundo, y jugar; guarda lo elegido en el mismo `settings.json`
@@ -186,12 +186,13 @@ the game's camera closer (above 1) or farther (below 1) while walking outdoors
 gives a widescreen picture: the 3D shows more at the sides and the menus are
 stretched. `--frame-rate 60` (or `120`) shows 60 (or 120) frames a second: the
 game draws 30 and aurora makes the rest in between
-(`graphics/frame_interpolation.h`). What the command line leaves out is read
+(`graphics/frame_interpolation.h`). `--volume <0-100>` lowers the sound (0
+mutes it). What the command line leaves out is read
 from the launcher's `settings.json` (`HarvestMoonMM/settings.json` in the
 system's data folder, or the one `--settings <file>` names; with
 `--user-folder`, the one in that folder), so the game started by hand plays as
 the launcher left it; without that file, each option is as always (every mod
-on, 100%, the window's resolution, 4:3, no zoom, 30 frames), `player_options.h`.
+on, 100%, the window's resolution, 4:3, no zoom, 30 frames, full volume), `player_options.h`.
 On Windows, `Launcher.bat`
 (`packaging/windows/native/`) opens a window to turn the mods on, choose the
 speed of the character and of the game, the resolution, zoom, full screen,

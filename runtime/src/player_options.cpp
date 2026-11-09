@@ -17,6 +17,7 @@ struct Options {
     bool widescreen = false;
     float zoom = 1.f;
     unsigned frame_rate = 30;
+    unsigned volume_percent = 100;
 };
 
 Options g_options;
@@ -38,6 +39,7 @@ void load(const std::filesystem::path& file, const Given& given) {
     options.widescreen = saved.flag(settings::WIDESCREEN, false);
     options.zoom = static_cast<float>(saved.number(settings::ZOOM, 100, 50, 200)) / PERCENT;
     options.frame_rate = static_cast<unsigned>(saved.one_of(settings::FRAME_RATE, settings::FRAME_RATES));
+    options.volume_percent = static_cast<unsigned>(saved.number(settings::VOLUME, 100, 0, 100));
     // What the command line gives goes first.
     options.game_speed_percent = given.game_speed_percent.value_or(options.game_speed_percent);
     options.resolution_scale = given.resolution_scale.value_or(options.resolution_scale);
@@ -45,15 +47,16 @@ void load(const std::filesystem::path& file, const Given& given) {
     options.widescreen = given.widescreen.value_or(options.widescreen);
     options.zoom = given.zoom.value_or(options.zoom);
     options.frame_rate = given.frame_rate.value_or(options.frame_rate);
+    options.volume_percent = std::min(given.volume_percent.value_or(options.volume_percent), 100u);
     g_options = options;
     g_given_mods = given.mods;
 
     runtime_log::info("player", "options (from %s and the command line): game speed %u%%, resolution %s, %s, %s, "
-                      "zoom %.2f, %u frames a second",
+                      "zoom %.2f, %u frames a second, volume %u%%",
                       file.string().c_str(), options.game_speed_percent,
                       options.resolution_scale > 0.f ? "fixed" : "the window's",
                       options.fullscreen ? "full screen" : "windowed", options.widescreen ? "widescreen" : "4:3",
-                      options.zoom, options.frame_rate);
+                      options.zoom, options.frame_rate, options.volume_percent);
 }
 
 unsigned game_speed_percent() { return g_options.game_speed_percent; }
@@ -62,6 +65,7 @@ bool fullscreen() { return g_options.fullscreen; }
 bool widescreen() { return g_options.widescreen; }
 float zoom() { return g_options.zoom; }
 unsigned frame_rate() { return g_options.frame_rate; }
+unsigned volume_percent() { return g_options.volume_percent; }
 
 bool mod_enabled(const std::string& id) {
     if (g_given_mods) {

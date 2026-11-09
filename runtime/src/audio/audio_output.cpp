@@ -48,6 +48,7 @@ struct Output {
     std::vector<int16_t> batch;  // host order, left channel first
 };
 Output g_output;
+float g_volume = 1.f;  // kept apart from the output, which starts over when it closes
 
 bool open_stream(uint32_t sample_rate) {
     if (g_output.failed) {
@@ -66,6 +67,7 @@ bool open_stream(uint32_t sample_rate) {
         return false;
     }
     g_output.sample_rate = sample_rate;
+    SDL_SetAudioStreamGain(g_output.stream, g_volume);
     SDL_AudioSpec device{};
     int device_frames = 0;
     SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(g_output.stream), &device, &device_frames);
@@ -144,6 +146,13 @@ void play(const uint8_t* frames, uint32_t frame_count, uint32_t sample_rate) {
     }
     if (g_output.batch.size() >= BATCH_FRAMES * CHANNELS) {
         flush_batch();
+    }
+}
+
+void set_volume(float volume) {
+    g_volume = std::clamp(volume, 0.f, 1.f);
+    if (g_output.stream != nullptr) {
+        SDL_SetAudioStreamGain(g_output.stream, g_volume);
     }
 }
 

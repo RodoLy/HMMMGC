@@ -199,6 +199,7 @@ void App::play() {
         "--fullscreen", settings_.flag(settings::FULLSCREEN, false) ? "1" : "0",
         "--widescreen", settings_.flag(settings::WIDESCREEN, false) ? "1" : "0",
         "--frame-rate", std::to_string(settings_.one_of(settings::FRAME_RATE, settings::FRAME_RATES)),
+        "--volume", std::to_string(settings_.number(settings::VOLUME, 100, 0, 100)),
     };
     options.environment = std::move(environment);
     options.working_directory = paths::utf8(player_.game);
@@ -608,6 +609,21 @@ void App::options(ImVec2 size) {
         int speed = settings_.number(settings::GAME_SPEED, 100, 100, 400);
         if (theme::percent("game speed", &speed, 100, 400, 10, theme::row_control_width())) {
             settings_.set(settings::GAME_SPEED, speed);
+            changed = true;
+        }
+        ImGui::EndTable();
+    }
+
+    theme::heading(text(Text::SoundSection));
+    if (table("##sound")) {
+        columns();
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        theme::row_label(text(Text::Volume), text(Text::VolumeHint));
+        ImGui::TableNextColumn();
+        int volume = settings_.number(settings::VOLUME, 100, 0, 100);
+        if (theme::percent("volume", &volume, 0, 100, 5, theme::row_control_width())) {
+            settings_.set(settings::VOLUME, volume);
             changed = true;
         }
         ImGui::EndTable();

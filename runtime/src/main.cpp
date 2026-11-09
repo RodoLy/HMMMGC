@@ -12,6 +12,7 @@
 //                    [--user-folder <folder>] [--settings <settings.json>] and the player's options
 //                    (player_options.h), which are otherwise read from settings.json.
 
+#include "audio/audio_output.h"
 #include "console_boot.h"
 #include "crop_grid.h"
 #include "fault_handler.h"
@@ -61,7 +62,7 @@ constexpr const char* USAGE =
     "                   [--user-folder <folder>] [--settings <settings.json>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
     "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]\n"
-    "                   [--frame-rate <30|60|120>]";
+    "                   [--frame-rate <30|60|120>] [--volume <0-100>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
 std::vector<std::string> split_mod_list(const std::string& value) {
@@ -110,6 +111,8 @@ Options parse_options(int argc, char** argv) {
             options.given.zoom = std::stof(value);
         } else if (name == "--frame-rate") {
             options.given.frame_rate = static_cast<unsigned>(std::stoul(value));
+        } else if (name == "--volume") {
+            options.given.volume_percent = static_cast<unsigned>(std::stoul(value));
         } else {
             throw std::runtime_error("unknown option " + name);
         }
@@ -140,6 +143,7 @@ int main(int argc, char** argv) {
         const camera_view::Options camera{.widescreen = player_options::widescreen(), .zoom = player_options::zoom()};
         camera_view::configure(camera);
         frame_interpolation::configure(player_options::frame_rate());
+        audio_output::set_volume(static_cast<float>(player_options::volume_percent()) / 100.f);
         guest_memory::initialize();
         fault_handler::install(options.watchdog_seconds);
         hardware_registers::initialize(disc);
