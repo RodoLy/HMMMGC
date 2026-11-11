@@ -53,7 +53,7 @@ public:
     std::string text(const char* name, const std::string& fallback) const;
     void set(const char* name, const nlohmann::json& value);
 
-    // A mod is on unless the file says it is off.
+    // A mod is off unless the file says it is on: the game is the original one until the player chooses.
     bool mod_enabled(const std::string& id) const;
     void set_mod_enabled(const std::string& id, bool enabled);
 

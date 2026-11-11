@@ -91,7 +91,7 @@ recibe el control.
 | **Personaje más rápido** (0.1.0) | El personaje camina y corre más rápido, de 25% a 300% de la velocidad original (150% de entrada), solo mientras lo controlas tú. |
 | **Sin frenos al cargar** (0.1.0) | En el juego original, con algo en las manos el personaje solo camina. Con este mod, con el stick a fondo avanza a la velocidad de correr. |
 
-Todos están activados mientras la pestaña Mods no los apague. Cómo hacer
+Todos vienen apagados, como el juego original; los enciendes en la pestaña Mods. Cómo hacer
 uno: [mods/README.md](mods/README.md).
 
 #### Casarse con Jamie, funcionando en el juego

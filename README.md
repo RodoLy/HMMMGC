@@ -90,7 +90,7 @@ the controller.
 | **Faster character** (0.1.0) | The character walks and runs faster, from 25% to 300% of the original speed (150% by default), only while you control it. |
 | **No slowdown when carrying** (0.1.0) | In the original game, with something in the hands the character can only walk. With this mod, with the stick fully pushed it moves at running speed. |
 
-All are on unless the Mods tab turns them off. How to make one:
+All come off, like the original game; you turn them on in the Mods tab. How to make one:
 [mods/README.md](mods/README.md).
 
 #### Marry Jamie, working in the game

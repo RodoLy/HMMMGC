@@ -27,7 +27,7 @@ automatización para mantener el stick y leer memoria), y se comprobó con el de
 - El personaje del jugador se mueve con una velocidad que el juego guarda en cada cuadro como
   `dirección × velocidad escalar` y que el cuadro siguiente usa para moverlo. El mod
   [`player_speed`](../mods/player_speed/mod.c) engancha la actualización del jugador
-  (`fn_80049D28`) y multiplica esa velocidad horizontal por un factor: 150 % por defecto, de 25 %
+  (`fn_80049D28`) y multiplica esa velocidad horizontal por un factor: 100 % por defecto (sin cambio), de 25 %
   a 300 %.
 - No cambia ninguna constante del juego ni recuerda nada entre cuadros. Al final de cada cuadro
   el juego vuelve a escribir la velocidad sin multiplicar, así que el factor se aplica una vez
@@ -103,8 +103,8 @@ Lo que sale de ahí:
   [`mods/README.md`](../mods/README.md)), la segunda pasada ya no reconoce la velocidad y la deja
   como está.
 - El factor se lee una vez, al cargar el mod, de la variable de entorno `HM_MM_PLAYER_SPEED_PERCENT`
-  (un número entero, 25 a 300; sin ella, 150). Con un valor inválido el mod escribe una línea en el
-  registro y usa 150. Con el paquete de Windows se da con `Play.bat -PlayerSpeed 200`.
+  (un número entero, 25 a 300; sin ella, 100). Con un valor inválido el mod escribe una línea en el
+  registro y usa 100. Con el paquete de Windows se da con `Play.bat -PlayerSpeed 200`.
 - La animación no cambia: a un factor alto los pies podrían verse resbalar (no se ha visto, las
   pruebas corren sin vídeo).
 
@@ -305,7 +305,7 @@ comprobar con una línea en el registro que el gancho corre.
 - The player's character moves with a velocity that the game stores each frame as
   `direction × scalar speed` and that the next frame uses to move it. The
   [`player_speed`](../mods/player_speed/mod.c) mod hooks the player's update (`fn_80049D28`) and
-  multiplies that horizontal velocity by a factor: 150 % by default, from 25 % to 300 %.
+  multiplies that horizontal velocity by a factor: 100 % by default (no change), from 25 % to 300 %.
 - It does not change any game constant and remembers nothing between frames. At the end of each
   frame the game writes the unscaled velocity again, so the factor is applied once per frame and
   does not build up; and the mod only touches a velocity that is, bit for bit, what the game wrote.
@@ -379,8 +379,8 @@ What follows from that:
   [`mods/README.md`](../mods/README.md)), the second pass no longer recognises the velocity and
   leaves it as it is.
 - The factor is read once, when the mod loads, from the environment variable
-  `HM_MM_PLAYER_SPEED_PERCENT` (a whole number, 25 to 300; 150 without it). With an invalid value
-  the mod writes a line in the log and uses 150. With the Windows package it is given with
+  `HM_MM_PLAYER_SPEED_PERCENT` (a whole number, 25 to 300; 100 without it). With an invalid value
+  the mod writes a line in the log and uses 100. With the Windows package it is given with
   `Play.bat -PlayerSpeed 200`.
 - The animation is not changed: at a high factor the feet might look as if they slide (not seen:
   the tests run without video).

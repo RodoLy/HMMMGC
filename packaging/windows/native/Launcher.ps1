@@ -16,7 +16,6 @@
 
     "Play" saves the choices and starts hmmm-native.exe, next to this script, with:
       --mods       the mods that are on (or "none");
-      --game-speed the speed of the whole game (100 to 400%; Tab held in the game: at least 300%);
       --zoom              the camera's zoom outdoors (0.5 to 1: below 1 shows more around the player);
       --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
       --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
@@ -71,11 +70,7 @@ $PlayerSpeedModId = 'player_speed'
 # The same limits as the player_speed mod and Settings.ps1: 100 is the original game's speed.
 $PlayerSpeedMinimum = 25
 $PlayerSpeedMaximum = 300
-$PlayerSpeedDefault = 150
-# The same limits as Settings.ps1 and the runtime (game_clock.h): 100 is the console's speed.
-$GameSpeedMinimum = 100
-$GameSpeedMaximum = 400
-$GameSpeedDefault = 100
+$PlayerSpeedDefault = 100
 # How far the camera is pulled back outdoors, in percent (settings.h, zoom_for): 0 is the game's camera,
 # 100 the farthest (a zoom of 0.5, camera_view.h).
 $ZoomOutMinimum = 0
@@ -93,7 +88,6 @@ $Texts = @{
         Title       = 'Harvest Moon: Magical Melody (native)'
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Speed of the character (100% is the original game):'
-        GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
         ZoomLabel = "Pull the camera back outdoors (0% is the game's camera; more shows more around the player):"
         ResolutionLabel = 'Internal resolution:'
         FrameRateLabel = 'Frames per second:'
@@ -114,7 +108,6 @@ $Texts = @{
         Title       = 'Harvest Moon: Magical Melody (nativo)'
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Velocidad del personaje (100% es la del juego original):'
-        GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
         ZoomLabel = 'Alejar la cámara al aire libre (0% es la cámara del juego; más muestra más alrededor del personaje):'
         ResolutionLabel = 'Resolución interna:'
         FrameRateLabel = 'Cuadros por segundo:'
@@ -145,10 +138,10 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 # else the file holds, which is written back unchanged.
 function Read-SettingsFile {
     $settings = [ordered] @{
-        mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
+        mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault
         cameraZoomOutPercent = $ZoomOutDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false; frameRate = 30
     }
-    foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
+    foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $false }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
         return $settings
     }
@@ -168,9 +161,6 @@ function Read-SettingsFile {
     }
     if (-not (Test-WholeNumberInRange -Value $settings.playerSpeedPercent -Minimum $PlayerSpeedMinimum -Maximum $PlayerSpeedMaximum)) {
         $settings.playerSpeedPercent = $PlayerSpeedDefault
-    }
-    if (-not (Test-WholeNumberInRange -Value $settings.gameSpeedPercent -Minimum $GameSpeedMinimum -Maximum $GameSpeedMaximum)) {
-        $settings.gameSpeedPercent = $GameSpeedDefault
     }
     if (-not (Test-WholeNumberInRange -Value $settings.cameraZoomOutPercent -Minimum $ZoomOutMinimum -Maximum $ZoomOutMaximum)) {
         $settings.cameraZoomOutPercent = $ZoomOutDefault
@@ -205,11 +195,10 @@ function Start-Game($Settings) {
     # The game inherits this process's environment: the player_speed mod reads the variable.
     $env:HM_MM_PLAYER_SPEED_PERCENT = [string] $Settings.playerSpeedPercent
     # cmd.exe sends both of the game's output streams to one log file.
-    $gameSpeed = [int] $Settings.gameSpeedPercent
     # A decimal point whatever the language of Windows: the game reads "0.70", not "0,70".
     $zoom = (1.0 - [int] $Settings.cameraZoomOutPercent / 200.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
     $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen) --widescreen $([int] [bool] $Settings.widescreen) --frame-rate $([int] $Settings.frameRate)"
-    $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed $display > `"$LogFile`" 2>&1`""
+    $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList $display > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
         -WorkingDirectory $ProgramDirectory -WindowStyle Hidden
     return $true
@@ -289,14 +278,6 @@ function New-PercentRow($Minimum, $Maximum, $Value) {
 $SpeedRow = New-PercentRow -Minimum $PlayerSpeedMinimum -Maximum $PlayerSpeedMaximum -Value ([int] $Settings.playerSpeedPercent)
 $Layout.Controls.Add($SpeedRow)
 
-$GameSpeedLabel = New-Object System.Windows.Forms.Label
-$GameSpeedLabel.Text = $Text.GameSpeedLabel
-$GameSpeedLabel.AutoSize = $true
-$GameSpeedLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
-$Layout.Controls.Add($GameSpeedLabel)
-$GameSpeedRow = New-PercentRow -Minimum $GameSpeedMinimum -Maximum $GameSpeedMaximum -Value ([int] $Settings.gameSpeedPercent)
-$Layout.Controls.Add($GameSpeedRow)
-
 $ZoomLabel = New-Object System.Windows.Forms.Label
 $ZoomLabel.Text = $Text.ZoomLabel
 $ZoomLabel.AutoSize = $true
@@ -353,7 +334,6 @@ $CheckBoxes[$PlayerSpeedModId].Add_CheckedChanged($UpdateSpeedEnabled)
 function Get-SettingsFromWindow {
     foreach ($mod in $Mods) { $Settings.mods[$mod.Id] = $CheckBoxes[$mod.Id].Checked }
     $Settings.playerSpeedPercent = [int] $SpeedRow.Tag.Value
-    $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
     $Settings.cameraZoomOutPercent = [int] $ZoomRow.Tag.Value
     $Settings.resolutionScale = $ResolutionScales[$ResolutionList.SelectedIndex]
     $Settings.frameRate = $FrameRates[$FrameRateList.SelectedIndex]

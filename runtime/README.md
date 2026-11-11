@@ -53,7 +53,7 @@ dibuja 30 y aurora hace los demás en medio (`graphics/frame_interpolation.h`).
 (`HarvestMoonMM/settings.json` en la carpeta de datos del sistema, o el que diga
 `--settings <archivo>`; con `--user-folder`, el de esa carpeta), así que el
 juego arrancado a mano juega como lo dejó el launcher; sin ese archivo, cada
-opción vale lo de siempre (todos los mods activos, 100 %, la ventana, 4:3, sin
+opción vale lo de siempre (ningún mod, 100 %, la ventana, 4:3, sin
 zoom, 30 cuadros, todo el volumen), `player_options.h`. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
 velocidad del personaje y la del juego, la resolución, el zoom, la pantalla
@@ -206,8 +206,7 @@ mutes it). What the command line leaves out is read
 from the launcher's `settings.json` (`HarvestMoonMM/settings.json` in the
 system's data folder, or the one `--settings <file>` names; with
 `--user-folder`, the one in that folder), so the game started by hand plays as
-the launcher left it; without that file, each option is as always (every mod
-on, 100%, the window's resolution, 4:3, no zoom, 30 frames, full volume), `player_options.h`.
+the launcher left it; without that file, each option is as always (no mod, 100%, the window's resolution, 4:3, no zoom, 30 frames, full volume), `player_options.h`.
 On Windows, `Launcher.bat`
 (`packaging/windows/native/`) opens a window to turn the mods on, choose the
 speed of the character and of the game, the resolution, zoom, full screen,

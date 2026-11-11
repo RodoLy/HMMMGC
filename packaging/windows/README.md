@@ -104,17 +104,17 @@ Un mod es un pequeño cambio al juego que se carga al arrancarlo. El paquete tra
 | Mod | Qué hace |
 | --- | --- |
 | `jamie_marriage` | Casarse con Jamie ya no termina el juego: después de la ceremonia sigues jugando. Sin el mod, a la ceremonia le siguen el epílogo y la pantalla de título; con él se ve una vez la escena de las notas musicales y el juego vuelve a juego libre. |
-| `player_speed` | El personaje camina y corre más rápido: por omisión al 150 % de la velocidad original. Solo actúa en juego libre; en las escenas el personaje se mueve como en el original. La animación no cambia, así que con valores altos los pies podrían verse resbalar. |
+| `player_speed` | El personaje camina y corre más rápido: por omisión al 100 % (sin cambio) de la velocidad original. Solo actúa en juego libre; en las escenas el personaje se mueve como en el original. La animación no cambia, así que con valores altos los pies podrían verse resbalar. |
 
 **Para activar o apagar los mods y elegir la velocidad del personaje**, haz doble clic en
 `Settings.bat`. Se abre una ventana con una casilla por cada mod y, para el personaje más rápido, un
 deslizador y una casilla numérica de 25 % (muy lento) a 300 % (tres veces más rápido), donde 100 % es
 la velocidad del juego original. **Guardar** guarda la elección, **Guardar y jugar** la guarda y abre
 el juego con el teclado, **Guardar y abrir el launcher** la guarda y abre el launcher, y **Valores
-originales** vuelve a todos los mods activos y al 150 %. La elección se aplica la próxima vez que se
+originales** vuelve a todos los mods activos y al 100 %. La elección se aplica la próxima vez que se
 arranca el juego con `Play.bat` o `Play-Keyboard.bat`: un juego que ya está abierto no cambia. Detrás
 de la ventana se queda abierta una ventana negra; es normal. Mientras no hayas guardado nada, todos
-los mods están activos y el personaje va al 150 %.
+los mods están activos y el personaje va al 100 %.
 
 **Avance rápido.** En la misma ventana, **Velocidad de todo el juego** hace que todo vaya más rápido,
 incluidas las escenas y los diálogos, como el avance rápido de un emulador: de 100 % (normal) a 400 %.
@@ -131,7 +131,7 @@ editar a mano con un editor de texto:
 ```json
 {
   "mods": { "jamie_marriage": true, "player_speed": true },
-  "playerSpeedPercent": 150,
+  "playerSpeedPercent": 100,
   "gameSpeedPercent": 100
 }
 ```
@@ -319,16 +319,16 @@ A mod is a small change to the game that is loaded when it starts. The package c
 | Mod | What it does |
 | --- | --- |
 | `jamie_marriage` | Marrying Jamie no longer ends the game: you keep playing after the ceremony. Without the mod, the ceremony is followed by the epilogue and the title screen; with it, the notes scene is shown once and the game goes back to free play. |
-| `player_speed` | The character walks and runs faster: by default at 150% of the original speed. It only acts in free play; in cutscenes the character moves as in the original. The animation is not changed, so at high values the feet might look as if they slide. |
+| `player_speed` | The character walks and runs faster: by default at 100% (no change) of the original speed. It only acts in free play; in cutscenes the character moves as in the original. The animation is not changed, so at high values the feet might look as if they slide. |
 
 **To turn the mods on and off and choose how fast the character is**, double-click `Settings.bat`.
 A window opens with a check box for each mod and, for the faster character, a slider and a number box
 from 25% (very slow) to 300% (three times as fast), where 100% is the speed of the original game.
 **Save** saves the choice, **Save and play** saves it and opens the game with the keyboard, **Save and
 open the launcher** saves it and opens the launcher, and **Defaults** goes back to every mod on and
-150%. The choice applies the next time the game is started with `Play.bat` or `Play-Keyboard.bat`: a
+100%. The choice applies the next time the game is started with `Play.bat` or `Play-Keyboard.bat`: a
 game that is already open does not change. A black window stays open behind the settings window; that
-is normal. Until you have saved something, every mod is on and the character goes at 150%.
+is normal. Until you have saved something, every mod is on and the character goes at 100%.
 
 **Fast-forward.** In the same window, **Speed of the whole game** makes everything go faster, scenes
 and dialogues included, like the fast-forward of an emulator: from 100% (normal) to 400%. It is not a
@@ -344,7 +344,7 @@ hand with a text editor:
 ```json
 {
   "mods": { "jamie_marriage": true, "player_speed": true },
-  "playerSpeedPercent": 150,
+  "playerSpeedPercent": 100,
   "gameSpeedPercent": 100
 }
 ```

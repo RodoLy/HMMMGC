@@ -123,7 +123,7 @@
  * chooses it with this environment variable, a whole number between the two limits.
  */
 #define SPEED_PERCENT_VARIABLE "HM_MM_PLAYER_SPEED_PERCENT"
-#define DEFAULT_SPEED_PERCENT 150
+#define DEFAULT_SPEED_PERCENT 100
 #define MINIMUM_SPEED_PERCENT 25
 #define MAXIMUM_SPEED_PERCENT 300
 #define PERCENT_OF_ORIGINAL_SPEED 100.0f

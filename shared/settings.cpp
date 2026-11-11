@@ -74,10 +74,10 @@ void Settings::set(const char* name, const nlohmann::json& value) { document_[na
 bool Settings::mod_enabled(const std::string& id) const {
     const auto mods = document_.find(MODS);
     if (mods == document_.end() || !mods->is_object()) {
-        return true;
+        return false;
     }
     const auto found = mods->find(id);
-    return found == mods->end() || !found->is_boolean() || found->get<bool>();
+    return found != mods->end() && found->is_boolean() && found->get<bool>();
 }
 
 void Settings::set_mod_enabled(const std::string& id, bool enabled) {

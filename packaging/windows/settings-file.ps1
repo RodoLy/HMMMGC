@@ -82,7 +82,7 @@ $PlayerSpeedModId = 'player_speed'
 # these are the numbers of mods\player_speed\mod.c). 100 is the original speed.
 $PlayerSpeedPercentMinimum = 25
 $PlayerSpeedPercentMaximum = 300
-$PlayerSpeedPercentDefault = 150
+$PlayerSpeedPercentDefault = 100
 
 # How fast the whole game may run, in percent of the normal speed. 100 is the normal speed. The
 # limit above is a choice and not a rule of the emulation core: four times the normal speed is more

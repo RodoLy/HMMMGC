@@ -21,7 +21,7 @@
       "environment": "HM_MM_PLAYER_SPEED_PERCENT",
       "minimum": 25,
       "maximum": 300,
-      "default": 150,
+      "default": 100,
       "step": 5,
       "label": {
         "es": "Velocidad del personaje",
