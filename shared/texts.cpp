@@ -124,6 +124,9 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::Zoom, "Alejar la cámara al aire libre", "Pull the camera back outdoors"},
     {Text::ZoomHint, "0% es la cámara del juego; con más se ve más alrededor del personaje.",
      "0% is the game's camera; more shows more around the character."},
+    {Text::SkipLauncher, "Saltar el launcher", "Skip the launcher"},
+    {Text::SkipLauncherHint, "El juego arranca directo. Para ver el launcher, mantén Shift al abrirlo.",
+     "The game starts right away. To see the launcher, hold Shift when opening it."},
     {Text::Volume, "Volumen", "Volume"},
     {Text::VolumeHint, "La música y los sonidos del juego; 0% lo silencia.",
      "The game's music and sounds; 0% mutes it."},
@@ -213,18 +216,6 @@ const Table& table() {
 Language g_language = Language::English;
 
 }  // namespace
-
-Language system_language() {
-    int count = 0;
-    SDL_Locale** locales = SDL_GetPreferredLocales(&count);
-    Language found = Language::English;
-    if (locales != nullptr && count > 0 && locales[0]->language != nullptr &&
-        SDL_strcmp(locales[0]->language, "es") == 0) {
-        found = Language::Spanish;
-    }
-    SDL_free(locales);
-    return found;
-}
 
 void set_language(Language language) { g_language = language; }
 

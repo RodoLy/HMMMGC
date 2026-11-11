@@ -9,8 +9,6 @@ namespace texts {
 
 enum class Language { Spanish, English };
 
-// The language of the computer's preferred locales: Spanish if it comes first, English otherwise.
-Language system_language();
 void set_language(Language language);
 Language language();
 // "es" or "en", as settings.json and the mods' manifests write it.
@@ -94,6 +92,8 @@ enum class Text {
     FrameRateCounter,
     Zoom,
     ZoomHint,
+    SkipLauncher,
+    SkipLauncherHint,
     Volume,
     VolumeHint,
     ZoomBeyondStart,

@@ -67,10 +67,8 @@ void get_ready() {
         return;
     }
     g_ready = true;
-    const std::string language = player_options::current().text(settings::LANGUAGE, "auto");
-    texts::set_language(language == "es"   ? texts::Language::Spanish
-                        : language == "en" ? texts::Language::English
-                                           : texts::system_language());
+    const std::string language = player_options::current().text(settings::LANGUAGE, "en");
+    texts::set_language(language == "es" ? texts::Language::Spanish : texts::Language::English);
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;

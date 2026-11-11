@@ -34,7 +34,9 @@ public:
 
     // `disc`: an image given when the launcher was started (dropped on it), prepared at once.
     // `still`: no animations (to take pictures of the tabs that can be compared).
-    App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still);
+    // `may_skip`: the game starts at once, without the launcher's window, when the player chose that
+    // (and the game is ready, and nothing was asked of the launcher: a disc, a tab).
+    App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still, bool may_skip);
 
     // Draws one frame (between ImGui's NewFrame and Render); `seconds` is the time since the start.
     void frame(double seconds);
@@ -117,6 +119,8 @@ private:
     std::vector<std::string> missing_;
     bool quit_ = false;
     bool still_ = false;
+    // The game was started without showing the window: the launcher goes when the game does.
+    bool started_directly_ = false;
 
     struct Prepared {
         bool exists = false;

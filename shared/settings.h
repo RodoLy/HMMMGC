@@ -26,8 +26,9 @@ inline constexpr const char* FULLSCREEN = "fullscreen";
 inline constexpr const char* WIDESCREEN = "widescreen";
 inline constexpr const char* FRAME_RATE = "frameRate";
 inline constexpr const char* VOLUME = "volumePercent";  // 0 (silent) to 100 (the game's own)
+inline constexpr const char* SKIP_LAUNCHER = "skipLauncher";  // start the game without showing the launcher
 inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the game, at the top right
-inline constexpr const char* LANGUAGE = "language";      // "auto", "es" or "en"
+inline constexpr const char* LANGUAGE = "language";      // "en" (the default) or "es"
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
 
 inline constexpr int RESOLUTIONS[] = {0, 480, 720, 1080, 1440};

@@ -49,7 +49,7 @@ std::string game_code(const std::filesystem::path& disc_image) {
 
 }  // namespace
 
-App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still)
+App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still, bool may_skip)
     : window_(window), package_(paths::find_package()), player_(paths::find_player()), still_(still) {
     settings_ = settings::Settings::load(player_.settings);
     apply_language();
@@ -60,15 +60,18 @@ App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_t
     if (!disc.empty() && missing_.empty()) {
         start_preparation(disc);
     }
+    if (may_skip && disc.empty() && !first_tab && !still && settings_.flag(settings::SKIP_LAUNCHER, false) &&
+        prepared_is_current()) {
+        play();
+        started_directly_ = game_ != nullptr;
+    }
 }
 
 // -- What the launcher knows ----------------------------------------------------------------------
 
 void App::apply_language() {
-    const std::string chosen = settings_.text(settings::LANGUAGE, "auto");
-    texts::set_language(chosen == "es"   ? texts::Language::Spanish
-                        : chosen == "en" ? texts::Language::English
-                                         : texts::system_language());
+    const std::string chosen = settings_.text(settings::LANGUAGE, "en");
+    texts::set_language(chosen == "es" ? texts::Language::Spanish : texts::Language::English);
 }
 
 void App::save_settings() { settings_.save(player_.settings); }
@@ -261,6 +264,11 @@ void App::update() {
         return;
     }
     game_.reset();
+    if (started_directly_ && *code == 0) {
+        quit_ = true;
+        return;
+    }
+    started_directly_ = false;
     // The options menu inside the game keeps in settings.json what the player changed there.
     settings_ = settings::Settings::load(player_.settings);
     SDL_ShowWindow(window_);
@@ -469,6 +477,7 @@ std::vector<App::Row> App::options_rows() {
     choice(settings::FRAME_RATE, settings::FRAME_RATES, {text(Text::FrameRateGame), "60", "120"}, Text::FrameRate,
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
+    flag(settings::SKIP_LAUNCHER, Text::SkipLauncher, Text::SkipLauncherHint);
     percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     return rows;
