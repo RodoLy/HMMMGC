@@ -26,39 +26,46 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::Mods, "Mods", "Mods"},
     {Text::Controls, "Controles", "Controls"},
     {Text::Exit, "Salir", "Exit"},
-    {Text::Back, "Volver", "Back"},
-    {Text::Version, "Versión %s", "Version %s"},
-    {Text::DiscLabel, "Disco: %s", "Disc: %s"},
     {Text::ChangeDisc, "Cambiar el disco", "Change the disc"},
     {Text::OpenLog, "Abrir el registro", "Open the log"},
 
-    {Text::WelcomeTitle, "¡Bienvenido!", "Welcome!"},
-    {Text::WelcomeBody,
-     "Para jugar necesitas tu propia copia del juego: la imagen de tu disco de Harvest Moon: Magical Melody "
-     "de Estados Unidos. La primera vez, el juego se prepara para tu computadora con esa imagen: tarda unos "
-     "minutos y después ya no.",
-     "To play you need your own copy of the game: the image of your disc of Harvest Moon: Magical Melody for "
-     "the USA. The first time, the game is prepared for your computer from that image: it takes a few minutes, "
-     "and then never again."},
-    {Text::WelcomeFormats, "Sirven .iso, .gcm y .rvz (las de Dolphin).",
-     "It can be .iso, .gcm or .rvz (Dolphin's)."},
-    {Text::ChooseDisc, "Elegir la imagen del disco", "Choose the disc image"},
+    {Text::GameTab, "Juego", "Game"},
+    {Text::PanelPicture, "Imagen y sonido", "Picture and sound"},
+    {Text::PanelModsOn, "%d de %d activados", "%d of %d on"},
+    {Text::PanelDevices, "Dispositivos", "Devices"},
+    {Text::DiscBox, "Disco", "Disc"},
+    {Text::StatusReady, "Listo", "Ready"},
+    {Text::StatusNotPrepared, "Sin preparar", "Not prepared"},
+    {Text::StatusPreparing, "Preparando", "Preparing"},
+    {Text::StatusFailed, "Falló", "Failed"},
+    {Text::VersionBox, "versión", "version"},
+    {Text::PlayHint, "Abre el juego con tu disco. En el juego, F10 o Select abren las opciones.",
+     "Opens the game from your disc. In the game, F10 or Select open the options."},
+    {Text::PrepareHint,
+     "El juego todavía no está listo en esta computadora. Se prepara con tu disco y tarda unos minutos.",
+     "The game is not ready on this computer yet. It is prepared from your disc and takes a few minutes."},
+    {Text::ChooseDiscHint,
+     "Elige la imagen de tu disco (el de Estados Unidos): .iso, .gcm o .rvz. También puedes soltarla aquí.",
+     "Choose the image of your disc (the USA one): .iso, .gcm or .rvz. You can also drop it here."},
+    {Text::PreparingRow, "Preparando el juego…", "Preparing the game…"},
+    {Text::PreparingStage, "Preparando el juego… %d de %d: ", "Preparing the game… %d of %d: "},
+    {Text::ChangeDiscHint, "Elige otra imagen del disco. Sirven .iso, .gcm y .rvz (las de Dolphin).",
+     "Choose another disc image. It can be .iso, .gcm or .rvz (Dolphin's)."},
+    {Text::OpenLogHint, "Abre el registro con los detalles de la preparación y de los errores.",
+     "Opens the log with the details of the preparation and of any errors."},
+    {Text::NoLog, "Todavía no hay registro.", "There is no log yet."},
+    {Text::ExitHint, "Cierra el launcher.", "Closes the launcher."},
+    {Text::Opening, "Abriendo el juego…", "Opening the game…"},
+
     {Text::DiscFilter, "Imágenes de disco de GameCube", "GameCube disc images"},
-    {Text::UpdateTitle, "Hay una versión nueva", "There is a new version"},
     {Text::UpdateBody,
      "El port se actualizó, así que el juego se tiene que preparar otra vez con tu disco. Tarda unos minutos.",
      "The port was updated, so the game has to be prepared again from your disc. It takes a few minutes."},
-    {Text::PrepareAgainTitle, "Falta preparar el juego", "The game is not prepared"},
-    {Text::PrepareAgainBody, "El juego todavía no está listo en esta computadora. Se prepara con tu disco: %s",
-     "The game is not ready on this computer yet. It is prepared from your disc: %s"},
     {Text::Prepare, "Preparar el juego", "Prepare the game"},
     {Text::PackageIncomplete,
      "Al paquete le falta una parte (%s). Vuelve a descargarlo y descomprímelo completo.",
      "A part of the package is missing (%s). Download it again and unzip all of it."},
 
-    {Text::PreparingTitle, "Preparando el juego", "Preparing the game"},
-    {Text::PreparingBody, "Solo esta vez: el juego se hace con tu disco, en tu computadora.",
-     "Only this once: the game is made from your disc, on your computer."},
     {Text::StageDisc, "Leer el disco", "Reading the disc"},
     {Text::StageTranslate, "Traducir el código del juego", "Translating the game's code"},
     {Text::StageAdapt, "Ajustar la granja y los mods", "Adjusting the farm and the mods"},
@@ -66,14 +73,10 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::StageLink, "Armar el programa", "Putting the program together"},
     {Text::StageFinish, "Terminar", "Finishing"},
     {Text::StageCount, "%d de %d", "%d of %d"},
-    {Text::Elapsed, "Tiempo: %d:%02d", "Time: %d:%02d"},
-    {Text::ShowDetails, "Ver detalles", "Show details"},
-    {Text::HideDetails, "Ocultar detalles", "Hide details"},
     {Text::Cancel, "Cancelar", "Cancel"},
     {Text::Cancelled, "Se canceló la preparación.", "The preparation was cancelled."},
     {Text::Prepared, "¡Listo! El juego ya está preparado.", "Done! The game is ready."},
     {Text::TryAgain, "Intentar otra vez", "Try again"},
-    {Text::ChooseOther, "Elegir otra imagen", "Choose another image"},
 
     {Text::ErrorNotADisc, "Ese archivo no es una imagen de disco de GameCube.",
      "That file is not a GameCube disc image."},
@@ -100,7 +103,6 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::PictureSection, "Imagen", "Picture"},
     {Text::GameSection, "Juego", "Game"},
     {Text::SoundSection, "Sonido", "Sound"},
-    {Text::LanguageSection, "Idioma", "Language"},
     {Text::Resolution, "Resolución interna", "Internal resolution"},
     {Text::ResolutionWindow, "Como la ventana", "As the window"},
     {Text::ResolutionHint, "Más resolución se ve más nítido y pide más a la tarjeta gráfica.",
@@ -114,6 +116,8 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::FrameRate, "Cuadros por segundo", "Frames per second"},
     {Text::FrameRateGame, "30 (como el juego)", "30 (as the game)"},
     {Text::FrameRateMade, "%d (con cuadros intermedios)", "%d (frames made in between)"},
+    {Text::FrameRateHint, "30 es como el juego; con más, se hacen cuadros intermedios.",
+     "30 is as the game; higher makes frames in between."},
     {Text::ShowFrameRate, "Mostrar los cuadros por segundo", "Show the frames per second"},
     {Text::ShowFrameRateHint, "Arriba a la derecha, sobre el juego.", "At the top right, over the game."},
     {Text::FrameRateCounter, "%d FPS", "%d FPS"},
@@ -144,15 +148,14 @@ constexpr Translation TRANSLATIONS[] = {
      "completa.",
      "In the game: F10 or the Select button open the options, Tab speeds up (turbo) and Alt+Enter switches to full "
      "screen."},
-    {Text::LanguageAutomatic, "Como el sistema", "As the system"},
 
-    {Text::ModsIntro, "Activa o desactiva los mods y elige sus ajustes. Se aplican al jugar.",
-     "Turn the mods on or off and choose their settings. They apply when you play."},
     {Text::ModOn, "Activado", "On"},
     {Text::ModOff, "Desactivado", "Off"},
-    {Text::ModVersion, "Versión %s", "Version %s"},
     {Text::ModNoSettings, "Este mod no tiene ajustes.", "This mod has no settings."},
-    {Text::ModsIncluded, "Los mods vienen con el port.", "The mods come with the port."},
+    {Text::NoManifest, "sin manifiesto", "no manifest"},
+    {Text::NoManifestHint, "Mod sin manifiesto: aparece solo con su id.",
+     "A mod without a manifest: it is listed by its id alone."},
+    {Text::NoDescription, "Este mod no trae descripción.", "This mod comes without a description."},
 
     {Text::ControlsIntro,
      "Juega con el primer control que conectes, con la asignación automática de abajo. Sin control, se "
@@ -171,6 +174,17 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::LeftStick, "Palanca izquierda", "Left stick"},
     {Text::RightStick, "Palanca derecha", "Right stick"},
     {Text::ArrowKeys, "Flechas", "Arrow keys"},
+    {Text::InUse, "En uso", "In use"},
+    {Text::NotInUse, "Sin usar", "Not in use"},
+    {Text::Controller, "Control", "Controller"},
+    {Text::NotConnected, "No conectado", "Not connected"},
+    {Text::KeyboardHint, "Sin control, se juega con el teclado. Las flechas mueven al personaje.",
+     "Without a controller, the keyboard plays. The arrow keys move the character."},
+    {Text::ControllerNoneHint, "No hay controles conectados. Juega el primero que conectes.",
+     "No controllers are connected. The first one you connect plays."},
+    {Text::ControllerHint, "Juega el primer control que conectaste. Presiona sus botones para probarlo.",
+     "The first controller you connected plays. Press its buttons to try it."},
+    {Text::PressedPart, "%s de GameCube: %s en tu control.", "GameCube's %s: %s on your controller."},
 };
 
 constexpr size_t TEXT_COUNT = static_cast<size_t>(Text::Count);
@@ -239,6 +253,12 @@ std::string format(Text which, int value) {
 }
 
 std::string format(Text which, int first, int second) {
+    char buffer[1024];
+    std::snprintf(buffer, sizeof(buffer), text(which), first, second);
+    return buffer;
+}
+
+std::string format(Text which, const char* first, const char* second) {
     char buffer[1024];
     std::snprintf(buffer, sizeof(buffer), text(which), first, second);
     return buffer;

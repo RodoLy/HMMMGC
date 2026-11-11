@@ -1,12 +1,12 @@
-# What the programs of the native version share (shared/README.md): the look after the game's
-# own, its fonts, the texts in Spanish and English, the player's settings.json and the
-# controllers. add_shared_ui(<target>) compiles them into a program that already links Dear
-# ImGui, SDL3 and nlohmann/json.
+# What the programs of the native version share (shared/README.md): the options menu's look
+# after the game's own, its fonts, the texts in Spanish and English, the player's settings.json
+# and the controllers. add_shared_ui(<target>) compiles them into a program that already links
+# Dear ImGui, SDL3 and nlohmann/json.
 #
-# Lo que comparten los programas de la versión nativa: el aspecto a partir del propio juego,
-# sus fuentes, los textos en español e inglés, el settings.json del jugador y los controles.
-# add_shared_ui(<target>) los compila dentro de un programa que ya enlaza Dear ImGui, SDL3 y
-# nlohmann/json.
+# Lo que comparten los programas de la versión nativa: el aspecto del menú de opciones a partir
+# del propio juego, sus fuentes, los textos en español e inglés, el settings.json del jugador y
+# los controles. add_shared_ui(<target>) los compila dentro de un programa que ya enlaza Dear
+# ImGui, SDL3 y nlohmann/json.
 
 set(SHARED_UI_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
 

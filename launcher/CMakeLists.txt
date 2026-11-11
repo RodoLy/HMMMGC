@@ -94,4 +94,6 @@ if(WIN32)
     # screens with scaling. The C++ runtime is linked in, so that only Windows' DLLs are needed.
     target_sources(HarvestMoonMM PRIVATE windows/launcher.rc)
     target_link_options(HarvestMoonMM PRIVATE -static)
+    # The rounded corners of the window without a frame (Windows 11).
+    target_link_libraries(HarvestMoonMM PRIVATE dwmapi)
 endif()

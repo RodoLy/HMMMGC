@@ -63,22 +63,25 @@ Un procesador de 8 núcleos compila unas cuatro veces más rápido.
 ### El launcher (`launcher/`)
 
 La ventana que abre el jugador (`HarvestMoonMM.exe`), en C++ con el
-renderizador 2D de SDL3 y Dear ImGui, sin nada del juego. Su aspecto sigue al
-del juego, dibujado con figuras: el cielo, las nubes, las colinas y la cerca de
-la pantalla de título, un letrero de madera con el nombre, botones naranjas
-como el recuadro de la fecha y paneles como los cuadros de diálogo, con una
-letra redondeada (M PLUS Rounded 1c, libre; `shared/fonts/README.md`). Se usa
-con el ratón, el teclado o un control, y habla español o inglés (como el
-sistema, o lo que se elija).
+renderizador 2D de SDL3 y Dear ImGui, sin nada del juego. Se ve como su diseño
+(«Launcher v4», hecho en Claude Design), pieza por pieza: una ventana sin el
+marco del sistema, con su propia barra de título; arriba, una franja rosa con un
+medallón como de disco, el nombre de la pestaña en letras con contorno, el
+disco, el estado del juego, los idiomas, la salida y la versión; a la
+izquierda, cuatro pestañas; en medio, un panel con sus filas; abajo, un cuadro
+como los de diálogo del juego que dice qué hace la fila elegida; y detrás, un
+fondo de cuadros que se mueve y burbujas con notas. Las letras son Baloo 2 y
+Dosis (libres; `launcher/fonts/README.md`). Al abrirse, las piezas entran con
+animación. Se usa con el ratón, el teclado (flechas, Enter, Q y E para cambiar
+de pestaña, Esc para salir) o un control (cruceta, A, LB y RB), y habla
+español o inglés.
 
-| Pantalla | Qué hace |
+| Pestaña | Qué hace |
 |---|---|
-| Bienvenida | Pide la imagen del disco del jugador (`.iso`, `.gcm` o `.rvz`; también se puede soltar sobre la ventana o pasar al programa). Si el paquete se actualizó, avisa que hay que preparar el juego otra vez. |
-| Preparando | Corre `tools/prepare_game.py` y muestra sus pasos con palomitas, una barra de progreso, cuánto lleva y, si se quiere, los detalles. Se puede cancelar. Si algo falla, explica por qué (otro juego, otra versión, una imagen comprimida que no se pudo convertir, ...) y deja abrir el registro (`prepare.log`). |
-| Principal | Jugar, Opciones, Mods, Controles y Salir; abajo, el disco y la versión. |
-| Opciones | Resolución interna, pantalla completa, pantalla ancha, cuadros por segundo (y si se muestran sobre el juego), zoom de la cámara, velocidad de todo el juego, volumen e idioma. Las mismas filas están en el menú de F10 dentro del juego. |
-| Mods | Como un gestor de mods: a la izquierda la lista con un interruptor por mod, a la derecha la descripción, los ajustes (la velocidad del personaje) y el aviso del mod elegido (con Jamie: no desactivarlo después de casarse con Jamie). Lo leen de los manifiestos `mods/<id>/mod.json`. |
-| Controles | Los controles conectados y el teclado, con la asignación automática del juego (la de aurora, según el tipo de control: Xbox, PlayStation, Nintendo, GameCube) y un control de GameCube dibujado que se ilumina con lo que se presiona. |
+| Juego | Jugar, o Preparar el juego (la primera vez, y otra vez cuando el paquete se actualiza): pide la imagen del disco del jugador (`.iso`, `.gcm` o `.rvz`; también se puede soltar sobre la ventana o pasar al programa) y corre `tools/prepare_game.py`. Mientras tanto, la fila muestra cuánto va y el cuadro de abajo el paso; Esc lo cancela. Si algo falla, el cuadro dice por qué (otro juego, otra versión, una imagen comprimida que no se pudo convertir, ...). Además: Cambiar el disco, Abrir el registro (`prepare.log` o `native.log`, el más nuevo) y Salir. A la derecha, el logotipo del juego, leído del disco del jugador. |
+| Opciones | Resolución interna (como la ventana, 480p, 720p, 1080p o 1440p), pantalla completa, pantalla ancha, cuadros por segundo (y si se muestran sobre el juego), zoom de la cámara, velocidad de todo el juego y volumen. Las mismas opciones están en el menú de F10 dentro del juego. |
+| Mods | A la izquierda, la lista con un interruptor por mod; a la derecha, la descripción del mod elegido, su aviso (con Jamie: no desactivarlo después de casarse con Jamie) y sus ajustes (la velocidad del personaje). Los leen de los manifiestos `mods/<id>/mod.json`. |
+| Controles | El teclado y el control que juega (el primero que se conecte), con la asignación automática del juego (la de aurora, según el tipo de control: Xbox, PlayStation, Nintendo, GameCube). Al presionar un botón del control, el cuadro de abajo dice qué es en el control de GameCube. |
 
 Las elecciones se guardan en `settings.json`, en la carpeta del jugador (el
 mismo archivo y los mismos nombres que usaban los paquetes anteriores). «Jugar»
@@ -254,21 +257,25 @@ rest. An 8-core processor compiles about four times as fast.
 ### The launcher (`launcher/`)
 
 The window the player opens (`HarvestMoonMM.exe`), in C++ with SDL3's 2D
-renderer and Dear ImGui, with nothing of the game. Its look follows the
-game's, drawn with shapes: the sky, the clouds, the hills and the fence of the
-title screen, a wooden sign with the name, orange buttons like the box of the
-date and panels like the dialogue boxes, with a rounded font (M PLUS Rounded
-1c, free; `shared/fonts/README.md`). It is used with the mouse, the keyboard
-or a controller, and speaks Spanish or English (as the system, or as chosen).
+renderer and Dear ImGui, with nothing of the game. It looks as its design
+("Launcher v4", made in Claude Design), piece by piece: a window without the
+system's frame, with its own title bar; at the top, a pink band with a
+medallion like a record, the tab's name in outlined letters, the disc, the
+state of the game, the languages, the exit and the version; on the left, four
+tabs; in the middle, a panel with its rows; at the bottom, a box like the
+game's dialogue boxes that says what the chosen row does; and behind, a moving
+checkerboard and bubbles with notes. The letters are Baloo 2 and Dosis (free;
+`launcher/fonts/README.md`). When it opens, the pieces come in animated. It is
+used with the mouse, the keyboard (arrows, Enter, Q and E to change the tab,
+Esc to leave) or a controller (D-pad, A, LB and RB), and speaks Spanish or
+English.
 
-| Screen | What it does |
+| Tab | What it does |
 |---|---|
-| Welcome | Asks for the player's disc image (`.iso`, `.gcm` or `.rvz`; it can also be dropped on the window or given to the program). If the package was updated, it says that the game has to be prepared again. |
-| Preparing | Runs `tools/prepare_game.py` and shows its steps with check marks, a progress bar, the time so far and, on request, the details. It can be cancelled. If something fails, it explains why (another game, another version, a compressed image that could not be converted, ...) and offers to open the log (`prepare.log`). |
-| Main | Play, Options, Mods, Controls and Exit; below, the disc and the version. |
-| Options | Internal resolution, full screen, widescreen, frames per second (and whether they show over the game), camera zoom, speed of the whole game, volume and language. The same rows are in the F10 menu inside the game. |
-| Mods | Like a mod manager: on the left the list with a switch for each mod, on the right the chosen mod's description, settings (the character's speed) and warning (with Jamie: not to turn it off after marrying Jamie). They come from the manifests `mods/<id>/mod.json`. |
-| Controls | The connected controllers and the keyboard, with the game's automatic mapping (aurora's, by the kind of controller: Xbox, PlayStation, Nintendo, GameCube) and a drawn GameCube controller that lights up with what is pressed. |
+| Game | Play, or Prepare the game (the first time, and again when the package is updated): it asks for the player's disc image (`.iso`, `.gcm` or `.rvz`; it can also be dropped on the window or given to the program) and runs `tools/prepare_game.py`. Meanwhile, the row shows how far it is and the box at the bottom the step; Esc cancels it. If something fails, the box says why (another game, another version, a compressed image that could not be converted, ...). Also: Change the disc, Open the log (`prepare.log` or `native.log`, the newer) and Exit. On the right, the game's logo, read from the player's disc. |
+| Options | Internal resolution (as the window, 480p, 720p, 1080p or 1440p), full screen, widescreen, frames per second (and whether they show over the game), camera zoom, speed of the whole game and volume. The same options are in the F10 menu inside the game. |
+| Mods | On the left, the list with a switch for each mod; on the right, the chosen mod's description, its warning (with Jamie: not to turn it off after marrying Jamie) and its settings (the character's speed). They come from the manifests `mods/<id>/mod.json`. |
+| Controls | The keyboard and the controller that plays (the first one connected), with the game's automatic mapping (aurora's, by the kind of controller: Xbox, PlayStation, Nintendo, GameCube). When a button of the controller is pressed, the box at the bottom says what it is on the GameCube controller. |
 
 The choices are kept in `settings.json`, in the player's folder (the same file
 and the same names as the earlier packages used). "Play" starts the prepared

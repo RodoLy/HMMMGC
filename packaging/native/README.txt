@@ -25,8 +25,9 @@ Cómo jugar
      no. Cuando el paquete se actualiza, se prepara otra vez.
   4. Pulsa Jugar.
 
-  En Opciones, Mods y Controles se eligen la imagen, los mods y se prueba el
-  control. Juega el primer control que conectes; sin control, el teclado.
+  En las pestañas Opciones, Mods y Controles se eligen la imagen y el sonido,
+  los mods, y se prueba el control (Q y E, o LB y RB, cambian de pestaña).
+  Juega el primer control que conectes; sin control, el teclado.
   Dentro del juego, F10 (o el botón Select del control) abre las opciones sin
   salir del juego, y Tab mantenido lo acelera.
 
@@ -69,9 +70,10 @@ How to play
      again. When the package is updated, it is prepared again.
   4. Press Play.
 
-  Options, Mods and Controls choose the picture, the mods, and let you try the
-  controller. The first controller you connect plays; without one, the
-  keyboard does. In the game, F10 (or the controller's Select button) opens
+  The tabs Options, Mods and Controls choose the picture and the sound, the
+  mods, and let you try the controller (Q and E, or LB and RB, change the
+  tab). The first controller you connect plays; without one, the keyboard
+  does. In the game, F10 (or the controller's Select button) opens
   the options without leaving the game, and holding Tab speeds it up.
 
 Where everything is kept

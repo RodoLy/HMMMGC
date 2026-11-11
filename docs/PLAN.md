@@ -485,20 +485,23 @@ de otras recompilaciones (por ejemplo Zelda64Recomp): una ventana propia donde
 se carga el juego, se activan los mods y se ajusta todo, en lugar de los
 `.bat` y `.ps1` sueltos de hoy.
 
-**Para la versión nativa (2026-11-09):** el launcher es propio, `launcher/`
-([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), en C++ con SDL3 y Dear ImGui y con el
-estilo del juego. Ya hace, para la versión nativa: C0; C1 (elegir la imagen,
-también RVZ, comprobarla y preparar el juego mostrando los pasos, el progreso y
-el registro, con errores claros); C2 sin mods de la comunidad (lista con
-interruptor, descripción y ajustes, con el diseño de un gestor de mods); C4 la
-asignación automática según el tipo de control y la vista en vivo, sin
-reasignar todavía; C5 resolución, pantalla completa, pantalla ancha, cuadros
-por segundo, zoom, velocidad, volumen e idioma; C6 (el paquete nativo solo tiene
-`HarvestMoonMM.exe`); y C8 con capturas en Linux. El paquete lo arma el
-workflow `package-native-windows.yml`, para ARM64 y x64, al publicar una
-versión. Dentro del juego, F10 abre un menú de opciones con el mismo aspecto
-y las mismas filas, que cambian al momento (`runtime/README.md`). Falta:
-reasignar botones, mods de la comunidad y C7.
+**Para la versión nativa (2026-11-10):** el launcher es propio, `launcher/`
+([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), en C++ con SDL3 y Dear ImGui, y se ve
+como su diseño («Launcher v4», hecho en Claude Design), con las pestañas Juego,
+Opciones, Mods y Controles. Ya hace, para la versión nativa: C0; C1 (elegir la
+imagen, también RVZ, comprobarla y preparar el juego mostrando el paso y el
+progreso, con errores claros y el registro); C2 sin mods de la comunidad (lista
+con interruptor, descripción, aviso y ajustes, con el diseño de un gestor de
+mods); C4 la asignación automática según el tipo de control y la prueba de los
+botones, sin reasignar todavía; C5 resolución (480p a 1440p, o como la
+ventana), pantalla completa, pantalla ancha, cuadros por segundo, zoom,
+velocidad, volumen e idioma; C6 (el paquete nativo solo tiene
+`HarvestMoonMM.exe`); y C8 con capturas en Linux, comparadas con las del
+diseño. El paquete lo arma el workflow `package-native-windows.yml`, para ARM64
+y x64, al publicar una versión. Dentro del juego, F10 abre un menú con las
+mismas opciones, que cambian al momento, con el aspecto que tenía el launcher
+antes (`runtime/README.md`). Falta: reasignar botones, mods de la comunidad y
+C7.
 
 **Decisión: no se escribe un launcher desde cero.** ModernGekko ya trae uno
 (`tools/moderngekko_launcher.cpp`, en C++ con SDL3 y Dear ImGui) con selección
@@ -1060,20 +1063,22 @@ of other recompilations (for example Zelda64Recomp): a window of its own where
 the game is loaded, mods are turned on and everything is adjusted, instead of
 today's loose `.bat` and `.ps1` files.
 
-**For the native version (2026-11-09):** the launcher is our own, `launcher/`
-([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), in C++ with SDL3 and Dear ImGui and
-in the game's style. For the native version it already does: C0; C1 (choosing
-the image, RVZ too, checking it and preparing the game showing the steps, the
-progress and the log, with clear errors); C2 without community mods (a list
-with switches, description and settings, laid out like a mod manager); C4 the
-automatic mapping by the kind of controller and the live view, without
-remapping yet; C5 resolution, full screen, widescreen, frames per second, zoom,
-speed, volume and language; C6 (the native package only has
-`HarvestMoonMM.exe`); and C8 with screenshots on Linux. The workflow
+**For the native version (2026-11-10):** the launcher is our own, `launcher/`
+([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), in C++ with SDL3 and Dear ImGui, and it
+looks as its design ("Launcher v4", made in Claude Design), with the tabs Game,
+Options, Mods and Controls. For the native version it already does: C0; C1
+(choosing the image, RVZ too, checking it and preparing the game showing the
+step and the progress, with clear errors and the log); C2 without community
+mods (a list with switches, description, warning and settings, laid out like a
+mod manager); C4 the automatic mapping by the kind of controller and trying the
+buttons, without remapping yet; C5 resolution (480p to 1440p, or as the
+window), full screen, widescreen, frames per second, zoom, speed, volume and
+language; C6 (the native package only has `HarvestMoonMM.exe`); and C8 with
+screenshots on Linux, compared with the design's. The workflow
 `package-native-windows.yml` builds the package, for ARM64 and x64, when a
-release is published. In the game, F10 opens an options menu with the same look
-and rows, which change at once (`runtime/README.md`). Still to do: remapping
-buttons, community mods and C7.
+release is published. In the game, F10 opens a menu with the same options,
+which change at once, with the look the launcher had before
+(`runtime/README.md`). Still to do: remapping buttons, community mods and C7.
 
 **Decision: a launcher is not written from scratch.** ModernGekko already
 brings one (`tools/moderngekko_launcher.cpp`, in C++ with SDL3 and Dear ImGui)
