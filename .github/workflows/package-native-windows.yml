@@ -188,8 +188,12 @@ jobs:
 
       # A Windows program with its own .NET, so that the player installs nothing.
       - name: Publish the translator for Windows
+        # MSBuild turns every environment variable into a property, and VERSION (the package's, such as
+        # main-7409ea0) would become the translator's version and fail to parse, so it is taken out here.
+        # MSBuild convierte cada variable de entorno en una propiedad, y VERSION (la del paquete, como
+        # main-7409ea0) pasaría a ser la versión del traductor y no se podría leer, así que aquí se quita.
         run: |
-          dotnet publish "$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli" --configuration Release \
+          env -u VERSION dotnet publish "$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli" --configuration Release \
             --runtime "win-$ARCHITECTURE" --self-contained true --output build/translator --nologo \
             -p:NuGetAudit=false
 
