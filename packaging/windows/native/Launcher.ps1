@@ -32,6 +32,9 @@
     native.log.
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseShouldProcessForStateChangingFunctions', '',
+    Justification = 'The functions build this window and start the game from it, not commands for others to call.')]
 [CmdletBinding()]
 param()
 
@@ -136,7 +139,7 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 
 # Reads settings.json as a hashtable: mods (id -> true/false), playerSpeedPercent, and whatever
 # else the file holds, which is written back unchanged.
-function Read-Settings {
+function Read-SettingsFile {
     $settings = [ordered] @{
         mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
         cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false; frameRate = 30
@@ -159,13 +162,13 @@ function Read-Settings {
             $settings[$property.Name] = $property.Value
         }
     }
-    if (-not (Test-WholeNumberInRange $settings.playerSpeedPercent $PlayerSpeedMinimum $PlayerSpeedMaximum)) {
+    if (-not (Test-WholeNumberInRange -Value $settings.playerSpeedPercent -Minimum $PlayerSpeedMinimum -Maximum $PlayerSpeedMaximum)) {
         $settings.playerSpeedPercent = $PlayerSpeedDefault
     }
-    if (-not (Test-WholeNumberInRange $settings.gameSpeedPercent $GameSpeedMinimum $GameSpeedMaximum)) {
+    if (-not (Test-WholeNumberInRange -Value $settings.gameSpeedPercent -Minimum $GameSpeedMinimum -Maximum $GameSpeedMaximum)) {
         $settings.gameSpeedPercent = $GameSpeedDefault
     }
-    if (-not (Test-WholeNumberInRange $settings.cameraZoomPercent $ZoomMinimum $ZoomMaximum)) {
+    if (-not (Test-WholeNumberInRange -Value $settings.cameraZoomPercent -Minimum $ZoomMinimum -Maximum $ZoomMaximum)) {
         $settings.cameraZoomPercent = $ZoomDefault
     }
     if ($ResolutionScales -notcontains $settings.resolutionScale) { $settings.resolutionScale = 0 }
@@ -175,7 +178,7 @@ function Read-Settings {
     return $settings
 }
 
-function Write-Settings($Settings) {
+function Save-SettingsFile($Settings) {
     New-Item -ItemType Directory -Force -Path $PlayerDirectory | Out-Null
     $json = ($Settings | ConvertTo-Json -Depth 3) + "`r`n"
     $withoutByteOrderMark = New-Object System.Text.UTF8Encoding($false)
@@ -210,7 +213,7 @@ function Start-Game($Settings) {
 
 # -- The window ------------------------------------------------------------------------------------
 
-$Settings = Read-Settings
+$Settings = Read-SettingsFile
 
 $Form = New-Object System.Windows.Forms.Form
 $Form.Text = $Text.Title
@@ -279,7 +282,7 @@ function New-PercentRow($Minimum, $Maximum, $Value) {
     return $row
 }
 
-$SpeedRow = New-PercentRow $PlayerSpeedMinimum $PlayerSpeedMaximum ([int] $Settings.playerSpeedPercent)
+$SpeedRow = New-PercentRow -Minimum $PlayerSpeedMinimum -Maximum $PlayerSpeedMaximum -Value ([int] $Settings.playerSpeedPercent)
 $Layout.Controls.Add($SpeedRow)
 
 $GameSpeedLabel = New-Object System.Windows.Forms.Label
@@ -287,7 +290,7 @@ $GameSpeedLabel.Text = $Text.GameSpeedLabel
 $GameSpeedLabel.AutoSize = $true
 $GameSpeedLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
 $Layout.Controls.Add($GameSpeedLabel)
-$GameSpeedRow = New-PercentRow $GameSpeedMinimum $GameSpeedMaximum ([int] $Settings.gameSpeedPercent)
+$GameSpeedRow = New-PercentRow -Minimum $GameSpeedMinimum -Maximum $GameSpeedMaximum -Value ([int] $Settings.gameSpeedPercent)
 $Layout.Controls.Add($GameSpeedRow)
 
 $ZoomLabel = New-Object System.Windows.Forms.Label
@@ -295,7 +298,7 @@ $ZoomLabel.Text = $Text.ZoomLabel
 $ZoomLabel.AutoSize = $true
 $ZoomLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
 $Layout.Controls.Add($ZoomLabel)
-$ZoomRow = New-PercentRow $ZoomMinimum $ZoomMaximum ([int] $Settings.cameraZoomPercent)
+$ZoomRow = New-PercentRow -Minimum $ZoomMinimum -Maximum $ZoomMaximum -Value ([int] $Settings.cameraZoomPercent)
 $Layout.Controls.Add($ZoomRow)
 
 $ResolutionLabel = New-Object System.Windows.Forms.Label
@@ -343,7 +346,7 @@ $UpdateSpeedEnabled = { $SpeedRow.Enabled = $CheckBoxes[$PlayerSpeedModId].Check
 $CheckBoxes[$PlayerSpeedModId].Add_CheckedChanged($UpdateSpeedEnabled)
 & $UpdateSpeedEnabled
 
-function Get-Choices {
+function Get-SettingsFromWindow {
     foreach ($mod in $Mods) { $Settings.mods[$mod.Id] = $CheckBoxes[$mod.Id].Checked }
     $Settings.playerSpeedPercent = [int] $SpeedRow.Tag.Value
     $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
@@ -362,15 +365,15 @@ $PlayButton = New-Object System.Windows.Forms.Button
 $PlayButton.Text = $Text.Play
 $PlayButton.AutoSize = $true
 $PlayButton.Add_Click({
-    $choices = Get-Choices
-    Write-Settings $choices
+    $choices = Get-SettingsFromWindow
+    Save-SettingsFile $choices
     if (Start-Game $choices) { $Form.Close() }
 })
 $SaveButton = New-Object System.Windows.Forms.Button
 $SaveButton.Text = $Text.Save
 $SaveButton.AutoSize = $true
 $SaveButton.Add_Click({
-    Write-Settings (Get-Choices)
+    Save-SettingsFile (Get-SettingsFromWindow)
     [void] [System.Windows.Forms.MessageBox]::Show($Text.Saved, $Text.Title)
 })
 $CloseButton = New-Object System.Windows.Forms.Button
