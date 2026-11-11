@@ -1,0 +1,18 @@
+{
+  "id": "carry_speed",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Sin frenos al cargar",
+    "en": "No slowdown when carrying"
+  },
+  "summary": {
+    "es": "El personaje corre aunque cargue algo o traiga una herramienta.",
+    "en": "The character runs even when carrying something or holding a tool."
+  },
+  "description": {
+    "es": "En el juego original, con algo en las manos el personaje solo camina: nunca pasa a correr, y va más lento que con las manos vacías. Con este mod, con el stick a fondo avanza a la velocidad de correr, y con medio stick sigue caminando. Funciona junto con «Personaje más rápido».",
+    "en": "In the original game, with something in the hands the character can only walk: it never changes to running, and goes slower than empty-handed. With this mod, with the stick fully pushed it moves at running speed, and with half the stick it still walks. It works together with \"Faster character\"."
+  },
+  "settings": []
+}

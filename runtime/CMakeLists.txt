@@ -139,7 +139,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../shared/shared.cmake")
 # as a library, built here against a stand-in of ModernGekko's mod ABI (mod_api/). The
 # translated code must be marked for the same list of mods (tools/insert_mod_hooks.py,
 # which scripts/build_native_runtime.sh runs with NATIVE_MODS).
-set(NATIVE_MODS "jamie_marriage;player_speed" CACHE STRING "the mods in mods/ to compile into the runtime")
+set(NATIVE_MODS "jamie_marriage;player_speed;carry_speed" CACHE STRING "the mods in mods/ to compile into the runtime")
 set(MOD_SYMBOL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/../build/G4AEE9_symbols.h" CACHE FILEPATH
     "G4AEE9_symbols.h, written by tools/export_mod_symbols.py")
 set(mods_directory "${CMAKE_CURRENT_SOURCE_DIR}/../mods")

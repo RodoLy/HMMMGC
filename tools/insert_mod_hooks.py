@@ -25,7 +25,7 @@ inlined it somewhere or made a state-free copy of it, since those calls would sk
 hook. Running the tool again does nothing new: every insertion carries a marker.
 
 Usage / Uso:
-    python3 tools/insert_mod_hooks.py --mod jamie_marriage --mod player_speed
+    python3 tools/insert_mod_hooks.py --mod jamie_marriage --mod player_speed --mod carry_speed
 """
 
 import argparse
