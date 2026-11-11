@@ -29,7 +29,6 @@ bool widescreen(settings::Settings& settings, bool focus = false);
 bool frame_rate(settings::Settings& settings, bool focus = false);
 bool show_frame_rate(settings::Settings& settings, bool focus = false);
 bool zoom(settings::Settings& settings, bool focus = false);
-bool game_speed(settings::Settings& settings, bool focus = false);
 bool volume(settings::Settings& settings, bool focus = false);
 
 }  // namespace option_rows

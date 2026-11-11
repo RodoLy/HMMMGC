@@ -211,7 +211,6 @@ void App::play() {
         "--symbols", paths::utf8(package_.symbols),
         "--settings", paths::utf8(player_.settings),
         "--mods", mod_list.empty() ? "none" : mod_list,
-        "--game-speed", std::to_string(settings_.number(settings::GAME_SPEED, 100, 100, 400)),
         "--zoom", zoom,
         "--resolution-scale", resolution,
         "--fullscreen", settings_.flag(settings::FULLSCREEN, false) ? "1" : "0",
@@ -471,7 +470,6 @@ std::vector<App::Row> App::options_rows() {
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
     percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
-    percent(settings::GAME_SPEED, 100, 100, 400, 10, Text::GameSpeed, Text::GameSpeedHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     return rows;
 }

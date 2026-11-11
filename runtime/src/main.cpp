@@ -60,7 +60,7 @@ struct Options {
 constexpr const char* USAGE =
     "usage: hmmm-native --disc <disc image (.iso, .gcm) or extracted disc> [--symbols <file>] [--watchdog <s>]\n"
     "                   [--user-folder <folder>] [--settings <settings.json>]\n"
-    "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
+    "                   [--mods <id,id,...> | --mods none]\n"
     "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-1>]\n"
     "                   [--frame-rate <30|60|120>] [--volume <0-100>]";
 
@@ -99,8 +99,6 @@ Options parse_options(int argc, char** argv) {
             options.settings_file = value;
         } else if (name == "--mods") {
             options.given.mods = split_mod_list(value);
-        } else if (name == "--game-speed") {
-            options.given.game_speed_percent = static_cast<unsigned>(std::stoul(value));
         } else if (name == "--resolution-scale") {
             options.given.resolution_scale = std::clamp(std::stof(value), 0.f, 8.f);
         } else if (name == "--fullscreen") {
@@ -137,7 +135,6 @@ int main(int argc, char** argv) {
                                                            : std::filesystem::path(options.settings_file),
                              options.given);
 
-        game_clock::set_chosen_speed_percent(player_options::game_speed_percent());
         aurora_host::configure({.resolution_scale = player_options::resolution_scale(),
                                 .fullscreen = player_options::fullscreen()});
         const camera_view::Options camera{.widescreen = player_options::widescreen(), .zoom = player_options::zoom()};

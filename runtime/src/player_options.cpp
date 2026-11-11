@@ -18,7 +18,6 @@ namespace {
 
 // The options as the game runs with them.
 struct Options {
-    unsigned game_speed_percent = 100;
     float resolution_scale = 0.f;
     bool fullscreen = false;
     bool widescreen = false;
@@ -43,7 +42,6 @@ bool g_unsaved = false;
 // The options that `saved` says, with the launcher's limits: a value out of them is the default.
 Options read(const settings::Settings& saved) {
     Options options;
-    options.game_speed_percent = static_cast<unsigned>(saved.number(settings::GAME_SPEED, 100, 100, 400));
     options.resolution_scale = settings::resolution_scale(saved.one_of(settings::RESOLUTION, settings::RESOLUTIONS));
     options.fullscreen = saved.flag(settings::FULLSCREEN, false);
     options.widescreen = saved.flag(settings::WIDESCREEN, false);
@@ -55,9 +53,6 @@ Options read(const settings::Settings& saved) {
 
 // Writes into the settings what the command line gave, where the file can say it.
 void write_given(settings::Settings& settings, const Given& given) {
-    if (given.game_speed_percent) {
-        settings.set(settings::GAME_SPEED, static_cast<int>(*given.game_speed_percent));
-    }
     if (given.resolution_scale) {
         // The file keeps the lines the game draws (720 for 1.5); a scale that is none of them stays
         // out of it, as it is.
@@ -85,9 +80,9 @@ void write_given(settings::Settings& settings, const Given& given) {
 }
 
 void log_options(const char* when, const Options& options) {
-    runtime_log::info("player", "options %s: game speed %u%%, resolution %s, %s, %s, zoom %.2f, %u frames a second, "
+    runtime_log::info("player", "options %s: resolution %s, %s, %s, zoom %.2f, %u frames a second, "
                       "volume %u%%",
-                      when, options.game_speed_percent, options.resolution_scale > 0.f ? "fixed" : "the window's",
+                      when, options.resolution_scale > 0.f ? "fixed" : "the window's",
                       options.fullscreen ? "full screen" : "windowed", options.widescreen ? "widescreen" : "4:3",
                       options.zoom, options.frame_rate, options.volume_percent);
 }
@@ -101,7 +96,6 @@ void load(const std::filesystem::path& file, const Given& given) {
     write_given(g_settings, given);
     g_from_settings = read(g_settings);
     // What the command line gives goes first.
-    options.game_speed_percent = given.game_speed_percent.value_or(options.game_speed_percent);
     options.resolution_scale = given.resolution_scale.value_or(options.resolution_scale);
     options.fullscreen = given.fullscreen.value_or(options.fullscreen);
     options.widescreen = given.widescreen.value_or(options.widescreen);
@@ -114,7 +108,6 @@ void load(const std::filesystem::path& file, const Given& given) {
     log_options("(from the settings and the command line)", options);
 }
 
-unsigned game_speed_percent() { return g_options.game_speed_percent; }
 float resolution_scale() { return g_options.resolution_scale; }
 bool fullscreen() { return g_options.fullscreen; }
 bool widescreen() { return g_options.widescreen; }
@@ -135,10 +128,6 @@ settings::Settings& current() { return g_settings; }
 void apply_changes() {
     const Options wanted = read(g_settings);
     const Options& before = g_from_settings;
-    if (wanted.game_speed_percent != before.game_speed_percent) {
-        game_clock::set_chosen_speed_percent(wanted.game_speed_percent);
-        g_options.game_speed_percent = wanted.game_speed_percent;
-    }
     if (wanted.resolution_scale != before.resolution_scale) {
         aurora_host::set_resolution_scale(wanted.resolution_scale);
         g_options.resolution_scale = wanted.resolution_scale;

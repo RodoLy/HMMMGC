@@ -38,9 +38,7 @@ IMGUI, TRACY, ABSEIL-CPP, NLOHMANN_JSON).
 Opciones de `hmmm-native`: `--watchdog <segundos>` imprime cada tanto dónde
 está el juego (0 lo apaga), `--user-folder <carpeta>` cambia la carpeta del
 jugador (ver abajo), y `--mods <id,id>` (o `--mods none`) dice qué mods de los
-compilados dentro se activan. `--game-speed <100-400>` hace correr
-todo el juego más rápido (el reloj de la consola, `game_clock.h`); mientras se
-mantiene `Tab` apretado, va al menos al 300 % (el turbo), y el título de la
+compilados dentro se activan. Mientras se mantiene `Tab` apretado, todo el juego va al 300 % (el turbo), y el título de la
 ventana muestra la velocidad. La resolución interna sigue al tamaño de la ventana
 (Alt+Enter cambia a pantalla completa); `--resolution-scale <n>` la fija en n
 veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
@@ -192,9 +190,7 @@ TRACY, ABSEIL-CPP, NLOHMANN_JSON).
 Options of `hmmm-native`: `--watchdog <seconds>` prints where the game is every
 so often (0 turns it off), `--user-folder <folder>` changes the player folder
 (see below), and `--mods <id,id>` (or `--mods none`) says which of the mods
-compiled in are turned on. `--game-speed <100-400>`
-makes the whole game run faster (the console's clock, `game_clock.h`); while
-`Tab` is held it goes at least at 300% (the turbo), and the window's title shows
+compiled in are turned on. While `Tab` is held the whole game goes at 300% (the turbo), and the window's title shows
 the speed. The internal resolution follows the window's size (Alt+Enter
 switches to full screen); `--resolution-scale <n>` fixes it at n times the
 console's (6 is nearly 4K) and scales it down to the window, which smooths the

@@ -94,8 +94,6 @@ enum class Text {
     FrameRateCounter,
     Zoom,
     ZoomHint,
-    GameSpeed,
-    GameSpeedHint,
     Volume,
     VolumeHint,
     ZoomBeyondStart,

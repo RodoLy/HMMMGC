@@ -39,5 +39,5 @@ which draws it over each frame.
 | `fonts/` | The options menu's lettering (M PLUS Rounded 1c, free; see `fonts/README.md`), which goes inside the program. |
 | `texts.h`, `texts.cpp` | Everything they say, in Spanish and in English. |
 | `settings.h`, `settings.cpp` | The player's choices in `settings.json`. |
-| `option_rows.h`, `option_rows.cpp` | The rows of the options (resolution, full screen, widescreen, frames per second, zoom, game speed, volume), with their name, hint and control. |
+| `option_rows.h`, `option_rows.cpp` | The rows of the options (resolution, full screen, widescreen, frames per second, zoom, volume), with their name, hint and control. |
 | `controls.h`, `controls.cpp` | The PC's controllers, how the game maps them, a GameCube controller drawn, and the controls screen. |

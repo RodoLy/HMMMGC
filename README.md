@@ -57,7 +57,7 @@ from it, on your computer, the first time you play.
 | Widescreen | The 3D shows more at the sides. For now the menus and the text are stretched. |
 | Frames per second | 30, as the game, or 60 and 120: the game draws 30 and the rest are made in between. |
 | Pull the camera back | Outdoors, from 0% (the game's camera) to 100% (much more of the farm in view). Rooms and scenes keep the game's camera. |
-| Speed of the whole game | From 100% to 400%, and a turbo: holding Tab goes at least at 300%. |
+| Turbo | Not an option: hold Tab in the game and it goes at 300%. |
 | Full screen | Also with Alt+Enter while playing. |
 | Frame counter and volume | The frames per second over the game, and the volume from 0 to 100%. |
 

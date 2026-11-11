@@ -127,10 +127,6 @@ bool zoom(settings::Settings& settings, bool focus) {
     return percent_row(settings, settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint, focus);
 }
 
-bool game_speed(settings::Settings& settings, bool focus) {
-    return percent_row(settings, settings::GAME_SPEED, 100, 100, 400, 10, Text::GameSpeed, Text::GameSpeedHint, focus);
-}
-
 bool volume(settings::Settings& settings, bool focus) {
     return percent_row(settings, settings::VOLUME, 100, 0, 100, 5, Text::Volume, Text::VolumeHint, focus);
 }

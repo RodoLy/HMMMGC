@@ -23,7 +23,6 @@ namespace player_options {
 
 // What the command line gave; what it leaves out is read from settings.json.
 struct Given {
-    std::optional<unsigned> game_speed_percent;
     std::optional<float> resolution_scale;
     std::optional<bool> fullscreen;
     std::optional<bool> widescreen;
@@ -37,7 +36,6 @@ struct Given {
 // option. Called once, before the game starts.
 void load(const std::filesystem::path& file, const Given& given);
 
-unsigned game_speed_percent();  // 100 to 400
 float resolution_scale();       // 0: the window's; otherwise a multiple of the console's
 bool fullscreen();
 bool widescreen();

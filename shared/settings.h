@@ -19,7 +19,6 @@ namespace settings {
 // The names in the file, and the limits of each value (the same as the runtime's options).
 inline constexpr const char* MODS = "mods";
 inline constexpr const char* PLAYER_SPEED = "playerSpeedPercent";
-inline constexpr const char* GAME_SPEED = "gameSpeedPercent";
 // How far the camera is pulled back outdoors: 0 is the game's camera, 100 the farthest (zoom_for).
 inline constexpr const char* ZOOM_OUT = "cameraZoomOutPercent";
 inline constexpr const char* RESOLUTION = "internalResolution";  // the lines the game draws, 0: the window's

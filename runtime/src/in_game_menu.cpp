@@ -216,7 +216,6 @@ void draw_options_page() {
     }
     theme::heading(text(Text::GameSection));
     if (option_rows::begin("##game")) {
-        changed |= option_rows::game_speed(settings);
         option_rows::end();
     }
     theme::heading(text(Text::SoundSection));
