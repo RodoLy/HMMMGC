@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <iterator>
 #include <span>
 #include <system_error>
 #include <utility>
@@ -30,11 +31,26 @@ bool file_exists(const std::filesystem::path& path) {
     return !path.empty() && std::filesystem::is_regular_file(path, error);
 }
 
+// The code of the game on a GameCube disc image read as it is (an .iso or .gcm): the first six
+// letters of its header, which ends at 0x1C with the magic number of every GameCube disc.
+std::string game_code(const std::filesystem::path& disc_image) {
+    std::ifstream disc(disc_image, std::ios::binary);
+    unsigned char header[0x20] = {};
+    if (!disc.read(reinterpret_cast<char*>(header), sizeof(header))) {
+        return {};
+    }
+    constexpr unsigned char GAMECUBE_MAGIC[] = {0xC2, 0x33, 0x9F, 0x3D};
+    const bool gamecube = std::equal(std::begin(GAMECUBE_MAGIC), std::end(GAMECUBE_MAGIC), header + 0x1C);
+    std::string code(header, header + 6);
+    const bool readable =
+        std::ranges::all_of(code, [](char c) { return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); });
+    return gamecube && readable ? code : "";
+}
+
 }  // namespace
 
-App::App(SDL_Window* window, SDL_Renderer* renderer, const std::string& disc, std::optional<Tab> first_tab, bool still)
-    : window_(window), renderer_(renderer), package_(paths::find_package()), player_(paths::find_player()),
-      still_(still) {
+App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still)
+    : window_(window), package_(paths::find_package()), player_(paths::find_player()), still_(still) {
     settings_ = settings::Settings::load(player_.settings);
     apply_language();
     missing_ = package_.missing();
@@ -43,12 +59,6 @@ App::App(SDL_Window* window, SDL_Renderer* renderer, const std::string& disc, st
     tab_ = first_tab.value_or(Tab::Game);
     if (!disc.empty() && missing_.empty()) {
         start_preparation(disc);
-    }
-}
-
-App::~App() {
-    if (art_texture_ != nullptr) {
-        SDL_DestroyTexture(art_texture_);
     }
 }
 
@@ -516,15 +526,9 @@ void App::watch_controller() {
 
 void App::follow_disc() {
     const std::string disc = prepared_is_current() ? prepared_.disc : remembered_disc();
-    if (disc == art_disc_) {
-        return;
-    }
-    art_disc_ = disc;
-    art_ = disc.empty() ? std::nullopt : disc_art::title_logo(paths::from_utf8(disc));
-    disc_code_ = disc.empty() ? "" : disc_art::game_code(paths::from_utf8(disc)).value_or("");
-    if (art_texture_ != nullptr) {
-        SDL_DestroyTexture(art_texture_);
-        art_texture_ = nullptr;
+    if (disc != shown_disc_) {
+        shown_disc_ = disc;
+        disc_code_ = disc.empty() ? "" : game_code(paths::from_utf8(disc));
     }
 }
 

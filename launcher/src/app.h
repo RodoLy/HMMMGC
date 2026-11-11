@@ -9,7 +9,6 @@
 
 #include "child_process.h"
 #include "controls.h"
-#include "disc_art.h"
 #include "mods.h"
 #include "paths.h"
 #include "preparation.h"
@@ -17,7 +16,6 @@
 
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_events.h>
-#include <SDL3/SDL_render.h>
 #include <SDL3/SDL_video.h>
 
 #include <imgui.h>
@@ -36,8 +34,7 @@ public:
 
     // `disc`: an image given when the launcher was started (dropped on it), prepared at once.
     // `still`: no animations (to take pictures of the tabs that can be compared).
-    App(SDL_Window* window, SDL_Renderer* renderer, const std::string& disc, std::optional<Tab> first_tab, bool still);
-    ~App();
+    App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still);
 
     // Draws one frame (between ImGui's NewFrame and Render); `seconds` is the time since the start.
     void frame(double seconds);
@@ -114,7 +111,6 @@ private:
     void later(std::function<void()> action) { pending_ = std::move(action); }
 
     SDL_Window* window_;
-    SDL_Renderer* renderer_;
     paths::Package package_;
     paths::Player player_;
     settings::Settings settings_;
@@ -159,11 +155,8 @@ private:
     bool mouse_moved_ = false;
     std::function<void()> pending_;
 
-    // The disc the launcher shows (the prepared one, or else the one chosen last), read once: its
-    // code and the art of the game's tab, made the size it is drawn.
-    std::string art_disc_;
+    // The disc the launcher shows (the prepared one, or else the one chosen last) and its code,
+    // read from it once.
+    std::string shown_disc_;
     std::string disc_code_;
-    std::optional<disc_art::Picture> art_;
-    SDL_Texture* art_texture_ = nullptr;
-    float art_scale_ = 0.f;
 };

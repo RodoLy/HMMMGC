@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
     ImGui_ImplSDL3_SetGamepadMode(ImGui_ImplSDL3_GamepadMode_AutoAll);
 
     {
-        App app(window, renderer, arguments.disc, arguments.tab, arguments.still);
+        App app(window, arguments.disc, arguments.tab, arguments.still);
         while (!app.wants_to_quit()) {
             SDL_Event event;
             if (app.game_running()) {

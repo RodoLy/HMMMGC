@@ -821,38 +821,11 @@ void App::draw_mod_details(ImDrawList* draw, const mods::Mod& mod) {
 }
 
 void App::draw_art(ImDrawList* draw) {
-    // A box of diagonal stripes with a dashed border, and in it the game's logo from the disc.
+    // The design's box for the art: diagonal stripes in a dashed border. It stays empty; the game's
+    // own logo is in the game, and the launcher, the project's face, shows nothing of the game.
     const Rect box = at(914.f, 234.f, 270.f, 310.f);
     look::stripes(draw, box, 14.f, rgb(0x221c78), rgb(0x1c1668), 12.f, 6.f);
     look::dashed_border(draw, box, 14.f, 3.f, rgb(0x6a7ce0));
-
-    if (!art_) {
-        return;
-    }
-    // As big as it fits in the box (inside its border and padding), keeping its shape.
-    const float fit = std::min((box.w - 42.f) / static_cast<float>(art_->width),
-                               (box.h - 42.f) / static_cast<float>(art_->height));
-    const ImVec2 size(static_cast<float>(art_->width) * fit, static_cast<float>(art_->height) * fit);
-    if (art_texture_ == nullptr || art_scale_ != look::scale()) {
-        if (art_texture_ != nullptr) {
-            SDL_DestroyTexture(art_texture_);
-        }
-        const int width = static_cast<int>(std::lround(look::to_window(size.x)));
-        const int height = static_cast<int>(std::lround(look::to_window(size.y)));
-        const disc_art::Picture picture = width < art_->width ? disc_art::resized(*art_, width, height) : *art_;
-        art_texture_ = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, picture.width,
-                                         picture.height);
-        if (art_texture_ != nullptr) {
-            SDL_UpdateTexture(art_texture_, nullptr, picture.rgba.data(), picture.width * 4);
-            SDL_SetTextureBlendMode(art_texture_, SDL_BLENDMODE_BLEND);
-            SDL_SetTextureScaleMode(art_texture_, SDL_SCALEMODE_LINEAR);
-        }
-        art_scale_ = look::scale();
-    }
-    if (art_texture_ != nullptr) {
-        const ImVec2 min(box.center_x() - size.x * 0.5f, box.center_y() - size.y * 0.5f);
-        draw->AddImage(reinterpret_cast<ImTextureID>(art_texture_), look::to_window(min), look::to_window(min + size));
-    }
 }
 
 void App::draw_scroll_bar(ImDrawList* draw, int count) {
