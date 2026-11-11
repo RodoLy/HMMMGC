@@ -106,19 +106,17 @@ uno: [mods/README.md](mods/README.md).
   </tr>
   <tr>
     <td><img src="docs/images/jamie-pregnancy.jpg" alt="Jamie en cama en la clínica, y la nota musical por el embarazo"></td>
-    <td><img src="docs/images/jamie-checkup.jpg" alt="Jamie en la clínica con el bebé: Hah! I knew it. Come here, Mia."></td>
+    <td><img src="docs/images/jamie-child-birthday.jpg" alt="Jamie en el cumpleaños del hijo: I used to think birthdays were nothing to celebrate."></td>
   </tr>
   <tr>
     <td align="center">El embarazo, con su nota musical</td>
-    <td align="center">La revisión de Mia en la clínica</td>
+    <td align="center">El cumpleaños del hijo</td>
   </tr>
   <tr>
-    <td><img src="docs/images/jamie-child-birthday.jpg" alt="Jamie en el cumpleaños de su hija: I used to think birthdays were nothing to celebrate."></td>
-    <td><img src="docs/images/jamie-girl-anniversary.jpg" alt="Jamie con la chica en el aniversario: ...You remembered. Humph. Not bad."></td>
+    <td colspan="2" align="center"><img src="docs/images/jamie-girl-anniversary.jpg" width="50%" alt="Jamie con la chica en el aniversario: ...You remembered. Humph. Not bad."></td>
   </tr>
   <tr>
-    <td align="center">El cumpleaños de Mia</td>
-    <td align="center">Jugando como la chica, en el aniversario</td>
+    <td colspan="2" align="center">Jugando como la chica, en el aniversario</td>
   </tr>
 </table>
 

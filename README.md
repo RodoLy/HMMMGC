@@ -105,19 +105,17 @@ Both are on unless the Mods tab turns them off. How to make one:
   </tr>
   <tr>
     <td><img src="docs/images/jamie-pregnancy.jpg" alt="Jamie in bed at the clinic, and the Musical Note for the pregnancy"></td>
-    <td><img src="docs/images/jamie-checkup.jpg" alt="Jamie at the clinic with the baby: Hah! I knew it. Come here, Mia."></td>
+    <td><img src="docs/images/jamie-child-birthday.jpg" alt="Jamie on the child's birthday: I used to think birthdays were nothing to celebrate."></td>
   </tr>
   <tr>
     <td align="center">The pregnancy, with its Musical Note</td>
-    <td align="center">Mia's checkup at the clinic</td>
+    <td align="center">The child's birthday</td>
   </tr>
   <tr>
-    <td><img src="docs/images/jamie-child-birthday.jpg" alt="Jamie on the child's birthday: I used to think birthdays were nothing to celebrate."></td>
-    <td><img src="docs/images/jamie-girl-anniversary.jpg" alt="Jamie with the girl on the anniversary: ...You remembered. Humph. Not bad."></td>
+    <td colspan="2" align="center"><img src="docs/images/jamie-girl-anniversary.jpg" width="50%" alt="Jamie with the girl on the anniversary: ...You remembered. Humph. Not bad."></td>
   </tr>
   <tr>
-    <td align="center">Mia's birthday</td>
-    <td align="center">Playing as the girl, on the anniversary</td>
+    <td colspan="2" align="center">Playing as the girl, on the anniversary</td>
   </tr>
 </table>
 
