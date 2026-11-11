@@ -1,0 +1,63 @@
+diff --git a/lib/gx/frame_interpolation.cpp b/lib/gx/frame_interpolation.cpp
+index bd05bac..7842f35 100644
+--- a/lib/gx/frame_interpolation.cpp
++++ b/lib/gx/frame_interpolation.cpp
+@@ -286,6 +286,15 @@ uint32_t maximum_interpolation_samples() noexcept {
+ 
+ constexpr float kMinimumScale = 1.0e-5f;
+ constexpr float kMaximumTranslationPerFrame = 1500.0f;
++// The gate above is in game units. In a game whose world is small next to it (or that runs at
++// 30 Hz, so that a frame covers twice the movement) it lets different instances of one mesh pair
++// up: when the camera moves, a fence post that leaves the view at one edge and another that
++// enters at the other edge are both leftovers of their group, and an inserted frame would draw a
++// post halfway between them, for one frame. Steady movement, the camera's included, shifts a draw
++// by a small part of its distance from the camera in one frame; anything beyond that part snaps
++// instead. Draws close to the camera's origin (a sky centred on it) may always move this little.
++constexpr float kMaximumTranslationPerFrameOfDistance = 0.25f;
++constexpr float kAlwaysAllowedTranslationPerFrame = 1.0f;
+ constexpr float kMinimumQuaternionDot = 0.70710678f;
+ constexpr size_t kNoPreparedPair = std::numeric_limits<size_t>::max();
+ 
+@@ -435,6 +444,21 @@ struct PreparedTransformInterpolation {
+   }
+ };
+ 
++// Whether a draw moved too far for its distance from the camera to be one object moving
++// (kMaximumTranslationPerFrameOfDistance). Non-finite inputs count as too far.
++bool moved_too_far_for_its_distance(const std::array<float, 3>& previous,
++                                     const std::array<float, 3>& current) noexcept {
++  const auto length = [](const std::array<float, 3>& v) noexcept {
++    return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
++  };
++  const std::array<float, 3> delta{current[0] - previous[0], current[1] - previous[1],
++                                   current[2] - previous[2]};
++  const float allowed = std::max(kMaximumTranslationPerFrameOfDistance *
++                                     std::max(length(previous), length(current)),
++                                 kAlwaysAllowedTranslationPerFrame);
++  return !(length(delta) <= allowed);
++}
++
+ PreparedAffinePair prepare_affine_pair(const Mat3x4<float>& previous,
+                                        const Mat3x4<float>& current) noexcept {
+   PreparedAffinePair pair{.previous = previous, .current = current};
+@@ -459,7 +483,8 @@ PreparedAffinePair prepare_affine_pair(const Mat3x4<float>& previous,
+     translationDeltaSquared += delta * delta;
+   }
+   if (!std::isfinite(translationDeltaSquared) ||
+-      translationDeltaSquared > kMaximumTranslationPerFrame * kMaximumTranslationPerFrame) {
++      translationDeltaSquared > kMaximumTranslationPerFrame * kMaximumTranslationPerFrame ||
++      moved_too_far_for_its_distance(pair.previousTranslation, pair.currentTranslation)) {
+     return pair;
+   }
+ 
+@@ -512,7 +537,9 @@ PreparedAffinePair prepare_indexed_pair(const Mat3x4<float>& previous,
+   const float dz = current.m2.w() - previous.m2.w();
+   const float translationDeltaSquared = dx * dx + dy * dy + dz * dz;
+   if (!(translationDeltaSquared <=
+-        kMaximumTranslationPerFrame * kMaximumTranslationPerFrame)) {
++        kMaximumTranslationPerFrame * kMaximumTranslationPerFrame) ||
++      moved_too_far_for_its_distance({previous.m0.w(), previous.m1.w(), previous.m2.w()},
++                                     {current.m0.w(), current.m1.w(), current.m2.w()})) {
+     return pair;
+   }
+   pair.valid = true;

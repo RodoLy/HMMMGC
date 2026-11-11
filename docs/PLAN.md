@@ -176,32 +176,120 @@ pieza por pieza, en el orden de arriba)
 - [x] Identificar el SDK por firma (hecho en la fase 0).
 - [x] Análisis estático de viabilidad: qué pide el juego de GX y qué tiene
       aurora ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
-- [ ] Experimento de viabilidad: las llamadas de GX del juego dibujan la
-      pantalla de título con aurora. Necesita compilar aurora y una PC con
-      GPU; antes hay que decidir cómo se obtiene Dawn en Windows ARM64.
-- [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). Referencia:
-      Dolphin para la semántica de GX; Wiicompiled (Mario Kart Wii) para la
-      arquitectura de un recomp.
-- [ ] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
-      instantáneas).
-- [ ] CARD → archivos de guardado en disco (aurora lee los `.gci` y `.raw` de
-      Dolphin).
-- [ ] PAD → SDL gamepad y teclado.
-- [ ] Audio AX → SDL/miniaudio.
-- [ ] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
-      el núcleo de Dolphin.
+- [x] Primer arranque sin Dolphin: el código del juego, traducido por
+      WiiCompiled, corre con un runtime propio (`runtime/`) desde `__start`
+      hasta su bucle de cuadros y lee sus archivos del disco
+      ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
+- [x] Experimento de viabilidad: las llamadas de GX del juego dibujan con
+      aurora los logos, la intro en 3D y la pantalla de título (2026-11-06,
+      con Vulkan por software y Dawn compilado desde su código). aurora trae
+      Dawn ya compilado para Windows ARM64.
+- [ ] GX con aurora (WebGPU con Dawn: D3D12, Vulkan y Metal). En curso: las
+      70 funciones de GX a las que llega el juego ya llaman a aurora (ver
+      [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)); falta comparar con la versión
+      sobre ModernGekko y probarlo en una PC con GPU. Referencia: Dolphin para
+      la semántica de GX; Wiicompiled (Mario Kart Wii) para la arquitectura de
+      un recomp.
+- [x] DVD → lectura directa de la carpeta `orig/G4AEE9/files` (esto ya da cargas
+      instantáneas). En el runtime nativo, la unidad lee la imagen del disco
+      (`.iso`, `.gcm`) o el disco extraído.
+- [x] CARD → archivos de guardado en disco: en el runtime nativo, con la
+      biblioteca CARD de aurora y una carpeta de `.gci` como las de Dolphin.
+- [x] PAD → SDL gamepad y teclado: en el runtime nativo, con la biblioteca
+      PAD de aurora y las teclas de Dolphin.
+- [x] Audio AX → SDL: en el runtime nativo, el programa de AX del DSP en C++
+      (portado de la emulación de alto nivel de Dolphin) y el DMA de audio
+      tocado con SDL.
+- [x] Sistema operativo: hilos, alarmas, interrupciones y retrazos de video sin
+      el núcleo de Dolphin. Este juego tiene un solo hilo; las interrupciones
+      se atienden donde el juego las vuelve a activar.
 - [ ] Quitar el núcleo de Dolphin del runtime; mientras dure la migración,
       comparar contra él (verificador lockstep, capturas de pantalla).
 - [ ] Hito 1.0: jugable de principio a fin a 480p 4:3 sin código de Dolphin.
 
 **Fase 3 – Mejoras**
-- [ ] Resolución interna arbitraria (4K). Con ModernGekko es el ajuste de
-      resolución interna de Dolphin (sin probar todavía en el paquete); con
-      aurora, su escalado de resolución.
-- [ ] Widescreen / ultrawide: matriz de proyección, culling, HUD anclado. Aurora
-      trae widescreen y escalado, pero el HUD bien anclado y el culling siguen
-      siendo trabajo nuestro (un mod).
-- [ ] 120 fps. El juego calcula todo por cuadro y presenta 30 por segundo,
+- [x] Resolución interna arbitraria (4K). Con ModernGekko es el ajuste de
+      resolución interna de Dolphin (sin probar todavía en el paquete). En el
+      runtime nativo, aurora dibuja al tamaño de la ventana (pantalla completa
+      con Alt+Enter), y `--resolution-scale` la fija en 2 a 8 veces la de la
+      consola (6: casi 4K), desde el launcher.
+- [x] Widescreen. En el runtime nativo, `--widescreen 1` (desde el launcher)
+      abre una ventana 16:9, aurora estira la imagen a toda la ventana y las
+      proyecciones en perspectiva se estrechan en la misma medida
+      (`graphics/camera_view.h`): el 3D conserva su forma y muestra más a los
+      lados, también en pantalla completa con la forma de la pantalla (16:10).
+      Las capas 2D (fondos, HUD, menús, textos) se estiran, como con los hacks
+      de widescreen de Dolphin. En el camino de la granja no se ve que falten
+      objetos a los lados. El mapa de profundidad de las sombras (un viewport
+      de 256x256 desde la luz) no se toca, y las matrices de textura con que el
+      juego busca su copia de la pantalla (las partes que se ven a través,
+      para mostrar al personaje detrás de algo) reciben el mismo cambio que la
+      proyección; si no, las sombras y esas partes salían corridas. Lo mismo
+      los puntos que el juego proyecta para poner sus marcas 2D sobre la escena
+      (la burbuja sobre la cabeza de un personaje): `GXProject` es un native
+      que hace la misma cuenta que el del juego (igual bit a bit en 2 millones
+      de casos al azar) con la proyección de la pantalla, también con el zoom.
+      En la laptop (Adreno X1-45, Direct3D 12), en pantalla ancha a 4x, salían
+      puntos negros en lugares fijos: aurora borraba cada cuadro dibujando
+      sobre la imagen, y ahora usa el borrado propio de la GPU
+      (`patches/aurora/clear-whole-picture-with-render-pass.patch`).
+- [ ] HUD anclado en widescreen: dejar el HUD y los textos en 4:3 sin
+      tocar los fondos 2D a pantalla completa (pide distinguirlos por
+      función del juego).
+- [x] Nivel de zoom: acercar o alejar la cámara del juego, elegido por el
+      jugador. En el runtime nativo, `--zoom` (0.5 a 2) cambia el campo de
+      visión de las proyecciones en perspectiva (`graphics/camera_view.h`); el
+      HUD no cambia. Desde el launcher. Solo mientras se camina al aire libre:
+      en la pantalla de título (y la demo del perro), en las escenas (los
+      eventos del juego) y en los cuartos queda la cámara del juego, y el cambio
+      va suave en un tercio de segundo (`game_scene.h`). En los cuartos alejarse
+      solo agregaba negro alrededor: el cuarto está hecho para esa cámara.
+      Alejado, el juego no dibujaba todo el mapa: arma los lugares al aire libre
+      con piezas de 24 por 24 y solo dibuja las que están a 12 del jugador, y
+      arriba de la pantalla salía negro. Mientras el zoom muestra más que la
+      cámara del juego, el runtime agranda esa distancia en la memoria del
+      juego en la misma proporción en que la cámara ve más lejos
+      (`graphics/map_draw_range.h`; en la granja, unas 30 con zoom 0.5 y 38 en
+      panorámica); con zoom 1 queda la del juego, sin más trabajo. Lo mismo con
+      lo que hay sobre la tierra de la granja (cultivos, hierbas, piedras,
+      ramas, tocones): el juego lo arma solo en un cuadro de 25 por 25 casillas
+      alrededor del jugador, casi todo solo hasta 8 casillas a los lados, y
+      alejado las cosas aparecían al caminar. Si el zoom elegido muestra más que
+      la cámara del juego, el runtime le da un cuadro más grande:
+      `tools/size_crop_grid.py` cambia las funciones traducidas que lo usan para
+      que tomen su tamaño y sus tablas del runtime, que las pone en una memoria
+      propia (`crop_grid.h`; con zoom 0.5, 41 por 41 y hasta 16 casillas a los
+      lados, y 51 por 51 y 21 en panorámica). El tamaño se elige al abrir el
+      juego, con el zoom del launcher; con zoom 1 o más cerca queda el cuadro
+      del juego. Y con los personajes (gente, niños, mascotas y animales de
+      granja): cada uno se esconde y se detiene si está a más de unas 14
+      unidades del punto que sigue la cámara (el juego compara con 25 una
+      medida que es raíz de 3 veces la distancia), y alejado la gente y las
+      gallinas aparecían de golpe cerca de las orillas. Mientras el zoom
+      muestra más, el runtime multiplica esa distancia por cuánto más lejos
+      llegan las esquinas de la pantalla (`graphics/character_range.h`; con
+      zoom 0.5 en panorámica, unas 43 unidades). Las sombras salen de un mapa de
+      profundidad que el juego dibuja desde la luz, con una cámara propia de 1
+      grado que cubre unas 9 unidades alrededor de donde mira la cámara; más
+      allá, la textura repite sus orillas, y alejado se veían bandas oscuras y
+      sombras estiradas. Mientras el zoom muestra más, el runtime abre esa
+      cámara en lo que llegan más lejos las esquinas de la pantalla en sus ejes
+      (`graphics/shadow_range.h`; con zoom 0.5 en panorámica, unas 3 veces).
+      El mapa no crece, así que esas sombras son más suaves; desde la
+      resolución 3x guardan el detalle de la consola.
+- [x] 60 y 120 fps por interpolación (camino (a) de abajo). En el runtime
+      nativo, `--frame-rate 60` o `120` (desde el launcher) activa la
+      interpolación que trae aurora: guarda cada cuadro en la GPU y lo vuelve a
+      dibujar con las transformaciones de cada dibujo en perspectiva a medio
+      camino entre el cuadro anterior y el actual; el HUD queda igual
+      (`graphics/frame_interpolation.h`). aurora cuenta para un juego a 60, así
+      que su 120 es 60 aquí y su 240 es 120. El runtime le dice cuándo toca cada
+      cuadro del juego, y el registro anota cada 30 s cuántos cuadros se
+      muestran y cuántos dibujos se emparejan. Un primer intento que grababa y
+      repetía los natives de GX en la CPU no llegaba a 60 fps en una laptop y hacía
+      temblar objetos repetidos, como los postes de una cerca.
+- [ ] Notas sobre 60 y 120 fps. El juego calcula todo por cuadro y
+      presenta 30 por segundo,
       con dos retrazas de video por cuadro (medido en una laptop: 29.97 cuadros
       y 59.94 retrazas por segundo), así que subir la cadencia no es un ajuste:
       hay dos caminos. (a) Interpolar en el
@@ -209,7 +297,7 @@ pieza por pieza, en el orden de arriba)
       de los objetos y de la cámara) sin tocar la lógica ni la velocidad del
       juego. Es la idea que permite tasas de cuadros altas en otros recomps
       ([Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp), con
-      RT64) y necesita el renderizador propio de la fase 2. (b) Correr la
+      RT64). (b) Correr la
       lógica a 120 Hz: obliga a escalar todo lo que el juego cuenta por cuadro
       (movimiento, temporizadores, animaciones, audio) y es fácil romper algo.
       Primer paso: separar lo que cuenta cuadros de lo que lee el reloj (la
@@ -232,13 +320,29 @@ pieza por pieza, en el orden de arriba)
       corre el gancho de Jamie). Los *patch* (reemplazar una función) existen
       en la API, pero ningún mod los ha probado todavía dentro del juego.
 - [ ] Carpeta de reemplazo de assets para mods.
-- [ ] Capa de mods en el runtime propio (ganchos y parches por nombre, como los
+- [x] Capa de mods en el runtime propio (ganchos y parches por nombre, como los
       de ModernGekko): el mod de Jamie y los demás se escriben una vez y
-      tienen que seguir funcionando cuando el runtime cambie.
+      tienen que seguir funcionando cuando el runtime cambie. Hecho: el
+      runtime nativo compila los mismos `mod.c` y marca sus ganchos en el
+      código traducido ([mods/README.md](../mods/README.md)); falta probar el
+      mod de Jamie de punta a punta en partidas reales.
 
 **Fase 5 – Release**
 - [ ] Instalador que toma la ISO/RVZ del usuario, verifica hash y extrae.
 - [ ] Builds Windows/Linux. Sin assets del juego en el repo ni en el release.
+
+**Fase 6 – Las versiones de Wii (USA y Europa)** (futura)
+- [ ] Llevar al mismo runtime las dos versiones de Wii de Magical Melody, con
+      los discos del jugador. aurora ya trae lo de Wii (Wii Remote, NAND, el
+      video de Wii, compilando con `AURORA_TARGET_RVL`), y WiiCompiled las
+      piezas propias de Wii (IOS, guardado en NAND, Wii Remote), así que no se
+      quita nada de eso.
+- [ ] Los reemplazos nativos se escriben una vez, y cada versión trae su tabla
+      de direcciones (`config/<versión>/`), como ya pasa con `config/G4AEE9`.
+- [ ] Darle a la versión de Wii lo que tenía la de GameCube y le faltó (por
+      ejemplo jugar como chica, que según las fuentes consultadas se quitó en
+      Wii): revisar qué datos quedaron en el disco de Wii y traer el resto de
+      la versión de GameCube como mod.
 
 ### Pista B – Mods del juego (en paralelo; con ModernGekko son paquetes `.mgm`)
 
@@ -380,6 +484,24 @@ pieza por pieza, en el orden de arriba)
 de otras recompilaciones (por ejemplo Zelda64Recomp): una ventana propia donde
 se carga el juego, se activan los mods y se ajusta todo, en lugar de los
 `.bat` y `.ps1` sueltos de hoy.
+
+**Para la versión nativa (2026-11-10):** el launcher es propio, `launcher/`
+([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), en C++ con SDL3 y Dear ImGui, y se ve
+como su diseño («Launcher v4», hecho en Claude Design), con las pestañas Juego,
+Opciones, Mods y Controles. Ya hace, para la versión nativa: C0; C1 (elegir la
+imagen, también RVZ, comprobarla y preparar el juego mostrando el paso y el
+progreso, con errores claros y el registro); C2 sin mods de la comunidad (lista
+con interruptor, descripción, aviso y ajustes, con el diseño de un gestor de
+mods); C4 la asignación automática según el tipo de control y la prueba de los
+botones, sin reasignar todavía; C5 resolución (480p a 1440p, o como la
+ventana), pantalla completa, pantalla ancha, cuadros por segundo, zoom,
+velocidad, volumen e idioma; C6 (el paquete nativo solo tiene
+`HarvestMoonMM.exe`); y C8 con capturas en Linux, comparadas con las del
+diseño. El paquete lo arma el workflow `package-native-windows.yml`, para ARM64
+y x64, al publicar una versión. Dentro del juego, F10 abre un menú con las
+mismas opciones, que cambian al momento, con el aspecto que tenía el launcher
+antes (`runtime/README.md`). Falta: reasignar botones, mods de la comunidad y
+C7.
 
 **Decisión: no se escribe un launcher desde cero.** ModernGekko ya trae uno
 (`tools/moderngekko_launcher.cpp`, en C++ con SDL3 y Dear ImGui) con selección
@@ -634,39 +756,127 @@ by piece, in the order above)
 - [x] Identify the SDK by signature (done in phase 0).
 - [x] Static feasibility analysis: what the game asks of GX and what aurora has
       ([RECOMPILER_EVALUATION.md](RECOMPILER_EVALUATION.md)).
-- [ ] Feasibility experiment: the game's GX calls draw the title screen with
-      aurora. It needs aurora built and a PC with a GPU; how to get Dawn on
-      Windows ARM64 has to be decided first.
-- [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). Reference:
+- [x] First boot without Dolphin: the game's code, translated by WiiCompiled,
+      runs on a runtime of our own (`runtime/`) from `__start` to its frame
+      loop and reads its files from the disc
+      ([NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)).
+- [x] Feasibility experiment: the game's GX calls draw the logos, the 3D
+      intro and the title screen with aurora (2026-11-06, with software
+      Vulkan and Dawn built from source). aurora ships Dawn already built for
+      Windows ARM64.
+- [ ] GX with aurora (WebGPU with Dawn: D3D12, Vulkan and Metal). In
+      progress: the 70 GX functions that the game reaches already call aurora
+      (see [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md)); comparing with the version
+      on ModernGekko and trying it on a PC with a GPU are left. Reference:
       Dolphin for GX semantics; Wiicompiled (Mario Kart Wii) for recomp
       architecture.
-- [ ] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
-- [ ] CARD → save files on disk (aurora reads Dolphin's `.gci` and `.raw`
-      files).
-- [ ] PAD → SDL gamepad and keyboard.
-- [ ] AX audio → SDL/miniaudio.
-- [ ] Operating system: threads, alarms, interrupts and video retraces without
-      the Dolphin core.
+- [x] DVD → direct reads from `orig/G4AEE9/files` (this alone gives instant loads).
+      In the native runtime, the drive reads the disc image (`.iso`, `.gcm`)
+      or the extracted disc.
+- [x] CARD → save files on disk: in the native runtime, with aurora's CARD
+      library and a folder of `.gci` files like Dolphin's.
+- [x] PAD → SDL gamepad and keyboard: in the native runtime, with aurora's
+      PAD library and Dolphin's keys.
+- [x] AX audio → SDL: in the native runtime, the DSP's AX program in C++
+      (ported from Dolphin's high-level emulation) and the audio DMA played
+      through SDL.
+- [x] Operating system: threads, alarms, interrupts and video retraces without
+      the Dolphin core. This game has a single thread; interrupts are taken
+      where the game turns them back on.
 - [ ] Remove the Dolphin core from the runtime; while the migration lasts,
       compare against it (lockstep verifier, screenshots).
 - [ ] Milestone 1.0: playable start to finish at 480p 4:3 with no Dolphin code.
 
 **Phase 3 – Enhancements**
-- [ ] Arbitrary internal resolution (4K). With ModernGekko it is Dolphin's
-      internal-resolution setting (not tried in the package yet); with aurora,
-      its resolution scaling.
-- [ ] Widescreen / ultrawide: projection matrix, culling, anchored HUD. Aurora
-      brings widescreen and scaling, but a well-anchored HUD and culling remain
-      our work (a mod).
-- [ ] 120 fps. The game computes everything per frame and presents 30 a
-      second, with two video retraces per frame (measured on a laptop: 29.97
+- [x] Arbitrary internal resolution (4K). With ModernGekko it is Dolphin's
+      internal-resolution setting (not tried in the package yet). In the
+      native runtime aurora draws at the window's size (full screen with
+      Alt+Enter), and `--resolution-scale` fixes it at 2 to 8 times the
+      console's (6: nearly 4K), from the launcher.
+- [x] Widescreen. In the native runtime, `--widescreen 1` (from the launcher)
+      opens a 16:9 window, aurora stretches the picture to the whole window and
+      the perspective projections narrow by as much
+      (`graphics/camera_view.h`): the 3D keeps its shape and shows more at the
+      sides, also in full screen with the screen's shape (16:10). The 2D layers
+      (backgrounds, HUD, menus, text) are stretched, as with Dolphin's
+      widescreen hacks. On the path by the farm no objects are seen missing
+      at the sides. The shadows' depth map (a 256x256 viewport from the
+      light) is left alone, and the texture matrices with which the game
+      looks up its copy of the screen (the see-through parts that show the
+      character behind something) get the same change as the projection;
+      otherwise the shadows and those parts were shifted. So do the points the
+      game projects to put its 2D marks over the scene (the bubble over a
+      character's head): `GXProject` is a native that works it out as the
+      game's does (equal bit for bit on 2 million random cases) with the
+      screen's projection, the zoom's too. On the laptop (Adreno X1-45,
+      Direct3D 12), in widescreen at 4x, black dots showed at fixed places:
+      aurora cleared every frame by drawing over the picture, and now it uses
+      the GPU's own clear
+      (`patches/aurora/clear-whole-picture-with-render-pass.patch`).
+- [ ] Anchored HUD in widescreen: keep the HUD and text 4:3 without
+      touching the full-screen 2D backgrounds (needs telling them apart by
+      the game's functions).
+- [x] Zoom level: bring the game's camera closer or farther, chosen by the
+      player. In the native runtime, `--zoom` (0.5 to 2) changes the field of
+      view of the perspective projections (`graphics/camera_view.h`); the HUD
+      does not change. From the launcher. Only while walking outdoors: the
+      title screen (and the dog's demo), the cutscenes (the game's events) and
+      the rooms keep the game's camera, and the change goes smoothly over a
+      third of a second (`game_scene.h`). In the rooms, zooming out only added
+      black around them: the room is made for that camera. Zoomed out, the
+      game did not draw the whole map: it builds the places outdoors from
+      pieces of 24 by 24 and draws only those within 12 of the player, and the
+      top of the screen showed black. While the zoom shows more than the game's
+      camera, the runtime widens that distance in the game's memory by as much
+      as the camera sees farther (`graphics/map_draw_range.h`; on the farm,
+      about 30 at zoom 0.5 and 38 in widescreen); at zoom 1 it stays the
+      game's, with no more work. So with what stands on the farm's ground
+      (crops, weeds, stones, branches, stumps): the game keeps it only in a
+      square of 25 by 25 tiles around the player, most of it only up to 8 tiles
+      to the sides, and zoomed out things appeared as the player walked. When
+      the chosen zoom shows more than the game's camera, the runtime gives the
+      game a bigger square: `tools/size_crop_grid.py` changes the translated
+      functions that use it to take its size and its tables from the runtime,
+      which puts them in memory of its own (`crop_grid.h`; at zoom 0.5, 41 by
+      41 and up to 16 tiles to the sides, and 51 by 51 and 21 in widescreen).
+      The size is chosen when the game opens, with the launcher's zoom; at zoom
+      1 or closer the game's square stays. So with the characters (people,
+      children, pets and farm animals): each one hides and stops when it is
+      more than about 14 units from the point the camera follows (the game
+      compares with 25 a measure that is the square root of 3 times the
+      distance), and zoomed out people and chickens appeared from nowhere near
+      the edges. While the zoom shows more, the runtime multiplies that
+      distance by how much farther the screen's corners reach
+      (`graphics/character_range.h`; at zoom 0.5 in widescreen, about 43
+      units). The shadows come from a depth map the game draws from the light,
+      with a camera of its own of 1 degree that covers about 9 units around
+      where the camera looks; past it the texture repeats its edges, and zoomed
+      out the screen showed dark bands and stretched shadows. While the zoom
+      shows more, the runtime opens that camera by how much farther the
+      screen's corners reach along its axes (`graphics/shadow_range.h`; at zoom
+      0.5 in widescreen, about 3 times). The map does not grow, so those
+      shadows are softer; from an internal resolution of 3x up they keep the
+      console's detail.
+- [x] 60 and 120 fps by interpolation (route (a) below). In the native
+      runtime, `--frame-rate 60` or `120` (from the launcher) turns on the
+      interpolation aurora brings: it keeps each frame on the GPU and draws it
+      again with each perspective draw's transforms part of the way between the
+      frame before and this one; the HUD stays as it is
+      (`graphics/frame_interpolation.h`). aurora counts for a game at 60, so its
+      120 is 60 here and its 240 is 120. The runtime tells it when each game
+      frame is due, and the log notes every 30 s how many frames are shown and
+      how many draws match. A first try that recorded and replayed the GX
+      natives on the CPU did not reach 60 fps on a laptop and made repeated objects, like
+      the posts of a fence, shake.
+- [ ] Notes on 60 and 120 fps. The game computes everything per
+      frame and presents 30 a second, with two video retraces per frame (measured on a laptop: 29.97
       frames and 59.94 retraces a second), so raising the rate is not a
       setting: there are two routes. (a) Interpolate
       in the renderer: draw between the previous and the current state
       (object and camera positions) without touching the game's logic or
       speed. It is the idea behind high frame rates in other recomps
       ([Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp), with
-      RT64) and needs the own renderer of phase 2. (b) Run the logic at
+      RT64). (b) Run the logic at
       120 Hz: it forces scaling everything the game counts per frame
       (movement, timers, animations, audio) and it is easy to break
       something. First step: tell what counts frames from what reads the
@@ -688,13 +898,30 @@ by piece, in the order above)
       tells when the Jamie hook will run). *Patches* (replacing a function)
       exist in the API, but no mod has tried one inside the game yet.
 - [ ] Asset-override folder for mods.
-- [ ] Mod layer in the own runtime (hooks and patches by name, like
+- [x] Mod layer in the own runtime (hooks and patches by name, like
       ModernGekko's): the Jamie mod and the others are written once and have
-      to keep working when the runtime changes.
+      to keep working when the runtime changes. Done: the native runtime
+      compiles the same `mod.c` files and marks their hooks in the translated
+      code ([mods/README.md](../mods/README.md)); trying the Jamie mod end to
+      end with real saves is left.
 
 **Phase 5 – Release**
 - [ ] Installer that takes the user's ISO/RVZ, verifies the hash and extracts.
 - [ ] Windows/Linux builds. No game assets in the repo or the release.
+
+**Phase 6 – The Wii versions (USA and Europe)** (future)
+- [ ] Bring the two Wii versions of Magical Melody to the same runtime, from
+      the player's discs. aurora already has the Wii parts (Wii Remote, NAND,
+      the Wii's video, when built with `AURORA_TARGET_RVL`), and WiiCompiled
+      the Wii's own pieces (IOS, NAND saves, Wii Remote), so none of that is
+      removed.
+- [ ] The native replacements are written once, and each version brings its
+      own table of addresses (`config/<version>/`), as `config/G4AEE9` already
+      does.
+- [ ] Give the Wii version what the GameCube one had and it lacks (for
+      example playing as the girl, which the sources consulted say was removed
+      on the Wii): check which data was left on the Wii disc and bring the rest
+      from the GameCube version as a mod.
 
 ### Track B – Game mods (in parallel; with ModernGekko they are `.mgm` packages)
 
@@ -835,6 +1062,23 @@ by piece, in the order above)
 of other recompilations (for example Zelda64Recomp): a window of its own where
 the game is loaded, mods are turned on and everything is adjusted, instead of
 today's loose `.bat` and `.ps1` files.
+
+**For the native version (2026-11-10):** the launcher is our own, `launcher/`
+([NATIVE_PACKAGE.md](NATIVE_PACKAGE.md)), in C++ with SDL3 and Dear ImGui, and it
+looks as its design ("Launcher v4", made in Claude Design), with the tabs Game,
+Options, Mods and Controls. For the native version it already does: C0; C1
+(choosing the image, RVZ too, checking it and preparing the game showing the
+step and the progress, with clear errors and the log); C2 without community
+mods (a list with switches, description, warning and settings, laid out like a
+mod manager); C4 the automatic mapping by the kind of controller and trying the
+buttons, without remapping yet; C5 resolution (480p to 1440p, or as the
+window), full screen, widescreen, frames per second, zoom, speed, volume and
+language; C6 (the native package only has `HarvestMoonMM.exe`); and C8 with
+screenshots on Linux, compared with the design's. The workflow
+`package-native-windows.yml` builds the package, for ARM64 and x64, when a
+release is published. In the game, F10 opens a menu with the same options,
+which change at once, with the look the launcher had before
+(`runtime/README.md`). Still to do: remapping buttons, community mods and C7.
 
 **Decision: a launcher is not written from scratch.** ModernGekko already
 brings one (`tools/moderngekko_launcher.cpp`, in C++ with SDL3 and Dear ImGui)

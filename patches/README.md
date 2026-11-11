@@ -285,6 +285,123 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 
 **Quitar:** el mismo `git apply` con `-R` y otra vez `ninja`.
 
+### `wiicompiled/skip-calls-below-main-memory.patch`
+
+Para el runtime nativo, no para ModernGekko: `scripts/build_native_runtime.sh`
+lo aplica solo al traductor de WiiCompiled antes de compilarlo (si ya está
+aplicado, lo deja así) y vuelve a compilar el traductor cuando lo acaba de
+aplicar.
+
+El traductor sigue las llamadas del juego para encontrar las funciones que
+tiene que traducir. El sistema operativo de la GameCube salta al depurador con
+una llamada a la dirección `0x60` (`bla 0x60`, en `fn_8016F6B0`), que está por
+debajo de la memoria principal (`0x80000000`): ahí no hay código del juego.
+Sin el parche, el traductor la toma como una función más y la traducción se
+detiene con `Address 0x00000060 is outside the loaded RAM image`. El parche no
+sigue las llamadas a direcciones por debajo de `0x80000000`; la llamada misma
+se traduce igual, y el juego nunca la hace (solo con un depurador conectado).
+
+**Versiones a las que se aplica:** WiiCompiled `0d5c402`, la que fija
+`scripts/build_native_runtime.sh`.
+
+**Licencia:** GPL-3.0, como WiiCompiled.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR" apply "$PWD/patches/wiicompiled/skip-calls-below-main-memory.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
+### `aurora/reject-far-interpolation-pairs.patch`
+
+Para el runtime nativo, no para ModernGekko, y este sí se aplica solo:
+`scripts/build_native_runtime.sh` lo aplica a la copia de aurora de WiiCompiled
+antes de compilar (si ya está aplicado, lo deja así).
+
+La interpolación de cuadros de aurora (60 y 120 fps,
+`runtime/src/graphics/frame_interpolation.h`) empareja cada dibujo de un cuadro
+con el del cuadro anterior que dibuja lo mismo, y en los cuadros intermedios lo
+pone a medio camino. Cuando hay varias copias de una malla (los postes de una
+cerca, las plantas), las empareja por cercanía, y acepta cualquier par que se
+mueva menos de 1500 unidades del juego por cuadro. Para este juego eso es mucho:
+la cámara de la granja está a unas 20 unidades del personaje, y el juego corre a 30 cuadros,
+así que cada cuadro abarca el doble de movimiento que en un juego a 60. Al
+caminar, un poste que sale de la vista por un borde y otro que entra por el otro
+quedan sin pareja y aurora puede juntarlos; entonces el cuadro intermedio dibuja
+un poste a la mitad del camino entre los dos, por un instante. Es la explicación
+más probable de lo que se vio en la laptop solo con 60 fps: una cerca que
+aparece y desaparece al dar un paso, y plantas fantasma semitransparentes. Aquí
+no se ha podido reproducir todavía.
+
+El parche agrega a los dos lugares donde aurora prepara un par (el dibujo
+normal y el de matrices indexadas) un límite relativo: un dibujo puede moverse
+en un cuadro como mucho la cuarta parte de su distancia a la cámara (o 1 unidad,
+para lo que está pegado a la cámara, como un cielo). El movimiento normal, el de
+la cámara incluido, queda muy por debajo: en una caminata por la granja, menos
+de 1 de cada 1000 pares se movía más del 15 % de su distancia. Un par
+que pasa el límite no se interpola: el dibujo aparece donde está en el cuadro
+del juego.
+
+**Probado** en la laptop con 60 fps: la cerca que aparecía y desaparecía y las
+plantas fantasma ya no salen. En Linux compila y el juego corre igual.
+
+**Versiones a las que se aplica:** aurora de WiiCompiled `0d5c402` (el
+submódulo `aurora-main`, `33067e3`), la que fija
+`scripts/build_native_runtime.sh`.
+
+**Licencia:** MIT, como aurora.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-far-interpolation-pairs.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
+### `aurora/clear-whole-picture-with-render-pass.patch`
+
+Para el runtime nativo, como el anterior: `scripts/build_native_runtime.sh` lo
+aplica solo a la copia de aurora de WiiCompiled.
+
+Cuando el juego copia la imagen y la borra (`GXCopyTex` con borrado), aurora
+borra con su propio borrado de la GPU solo si el rectángulo es todo el EFB; si
+es una parte, dibuja un triángulo que cubre esa parte. El juego borra cada
+cuadro sus 640x448, y el EFB de aurora mide 640x528: las filas de abajo las
+guarda como espacio de trabajo para efectos de otros juegos. Así que ese
+borrado siempre era un dibujo. En la laptop (Adreno X1-45, Direct3D 12), en
+pantalla ancha a 4x, eso dejaba bloquecitos donde lo que el juego dibujaba
+después no se veía y salía el color de borrado: puntos negros en lugares fijos
+de la pantalla, a 30 y a 60 fps. En 4:3, a otras resoluciones y en la nube
+(Vulkan por software) no pasaba.
+
+El parche borra con el borrado propio de la GPU cuando el rectángulo tiene
+toda la imagen que el juego muestra: todo el EFB menos esas filas de abajo,
+que se borran también. Magical Melody nunca dibuja en ellas (sus viewports son
+de 640x448 y de 256x256 arriba a la izquierda, para las sombras). Un borrado
+más chico (el del mapa de sombras) sigue siendo un dibujo.
+
+**Probado** en la laptop, en pantalla ancha a 4x: con versiones de prueba,
+los puntos salían del color de borrado (rojo, al cambiarlo), no se iban con
+un ancho redondeado a 64 ni a 320 píxeles, y se fueron al borrar toda la
+imagen así, y también al escribir la profundidad de ese dibujo desde el
+shader. Se eligió el primero: el borrado propio de la GPU es además el más
+barato en una GPU por bloques. En Linux el juego se ve igual.
+
+**Versiones a las que se aplica:** las mismas que el parche anterior.
+
+**Licencia:** MIT, como aurora.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/clear-whole-picture-with-render-pass.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ---
 
 ## English
@@ -565,3 +682,118 @@ ninja -C "$TEMPLATE/lib/ModernGekko/build" moderngekko-run
 ```
 
 **Remove:** the same `git apply` with `-R`, then `ninja` again.
+
+
+### `wiicompiled/skip-calls-below-main-memory.patch`
+
+For the native runtime, not for ModernGekko: `scripts/build_native_runtime.sh`
+applies it by itself to WiiCompiled's translator before building it (if it is
+already applied, it is left as it is) and builds the translator again when it
+has just applied it.
+
+The translator follows the game's calls to find the functions it has to
+translate. The GameCube's operating system jumps to the debugger with a call to
+address `0x60` (`bla 0x60`, in `fn_8016F6B0`), which is below main memory
+(`0x80000000`): there is no game code there. Without the patch, the translator
+takes it as one more function and the translation stops with
+`Address 0x00000060 is outside the loaded RAM image`. The patch does not follow
+calls to addresses below `0x80000000`; the call itself is translated as before,
+and the game never makes it (only with a debugger attached).
+
+**Applies to:** WiiCompiled `0d5c402`, the one `scripts/build_native_runtime.sh`
+pins.
+
+**License:** GPL-3.0, like WiiCompiled.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR" apply "$PWD/patches/wiicompiled/skip-calls-below-main-memory.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
+
+### `aurora/reject-far-interpolation-pairs.patch`
+
+For the native runtime, not for ModernGekko, and this one does apply itself:
+`scripts/build_native_runtime.sh` applies it to WiiCompiled's copy of aurora
+before building (if it is already applied, it is left as it is).
+
+aurora's frame interpolation (60 and 120 fps,
+`runtime/src/graphics/frame_interpolation.h`) pairs each draw of a frame with
+the draw of the frame before that draws the same thing, and puts it halfway in
+the frames in between. When there are several copies of one mesh (the posts of
+a fence, the plants), it pairs them by nearness, and accepts any pair that
+moves less than 1500 game units per frame. For this game that is a lot: the
+farm's camera is about 20 units from the character, and the game runs at 30 frames,
+so each frame covers twice the movement of a game at 60. While walking, a post
+that leaves the view at one edge and another that enters at the other edge are
+left without partners and aurora can pair them; the frame in between then draws
+a post halfway between the two, for an instant. It is the likeliest
+explanation of what was seen on the laptop only at 60 fps: a fence that
+appears and disappears when taking a step, and see-through ghost plants. It
+has not been reproduced here yet.
+
+The patch adds to the two places where aurora prepares a pair (the ordinary
+draw and the one with indexed matrices) a relative limit: a draw may move in
+one frame at most a quarter of its distance from the camera (or 1 unit, for
+what sits at the camera, like a sky). Ordinary movement, the camera's
+included, stays far below: on a walk across the farm, fewer than 1 in 1000
+pairs moved more than 15% of their distance. A pair past the limit is not
+interpolated: the draw shows where it is in the game's frame.
+
+**Tried** on the laptop at 60 fps: the fence that appeared and disappeared and
+the ghost plants no longer show. On Linux it builds and the game runs as before.
+
+**Applies to:** WiiCompiled's aurora `0d5c402` (the `aurora-main` submodule,
+`33067e3`), the one `scripts/build_native_runtime.sh` pins.
+
+**License:** MIT, like aurora.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-far-interpolation-pairs.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
+
+### `aurora/clear-whole-picture-with-render-pass.patch`
+
+For the native runtime, like the one before: `scripts/build_native_runtime.sh`
+applies it by itself to WiiCompiled's copy of aurora.
+
+When the game copies the picture and clears it (`GXCopyTex` with a clear),
+aurora clears with the GPU's own clear only when the rectangle is the whole
+EFB; for a part of it, it draws a triangle over that part. The game clears its
+640x448 every frame, and aurora's EFB is 640x528: it keeps the rows below as
+scratch for other games' effects. So that clear was always a draw. On the
+laptop (Adreno X1-45, Direct3D 12), in widescreen at 4x, it left small blocks
+where what the game drew afterwards did not show and the clear color did:
+black dots at fixed places of the screen, at 30 and at 60 fps. It did not
+happen in 4:3, at other resolutions, or in the cloud (software Vulkan).
+
+The patch clears with the GPU's own clear when the rectangle holds all of the
+picture the game shows: all of the EFB but those rows below, which are
+cleared too. Magical Melody never draws to them (its viewports are 640x448,
+and 256x256 at the top left for the shadows). A smaller clear (the shadow
+map's) is still a draw.
+
+**Tried** on the laptop, in widescreen at 4x: with test builds, the dots came
+out in the clear color (red, when it was changed), did not go away with the
+width rounded to 64 or to 320 pixels, and went away when the whole picture was
+cleared this way, and also when that draw wrote its depth from the shader. The
+first was chosen: the GPU's own clear is also the cheapest on a tiled GPU. On
+Linux the game looks the same.
+
+**Applies to:** the same versions as the patch before.
+
+**License:** MIT, like aurora.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/clear-whole-picture-with-render-pass.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.

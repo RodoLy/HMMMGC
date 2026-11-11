@@ -1,0 +1,32 @@
+{
+  "id": "player_speed",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Personaje más rápido",
+    "en": "Faster character"
+  },
+  "summary": {
+    "es": "El personaje camina y corre más rápido.",
+    "en": "The character walks and runs faster."
+  },
+  "description": {
+    "es": "Multiplica la velocidad con la que el personaje camina y corre, solo cuando lo controlas tú (no en las escenas). 100% es la velocidad del juego original. Por encima de 200%, el personaje puede atravesar alguna pared; la animación no cambia, así que a mucha velocidad los pies parecen resbalar.",
+    "en": "Multiplies the speed at which the character walks and runs, only while you control it (not in the scenes). 100% is the original game's speed. Above 200%, the character may go through a wall; the animation does not change, so at high speeds the feet seem to slide."
+  },
+  "settings": [
+    {
+      "type": "percent",
+      "key": "playerSpeedPercent",
+      "environment": "HM_MM_PLAYER_SPEED_PERCENT",
+      "minimum": 25,
+      "maximum": 300,
+      "default": 150,
+      "step": 5,
+      "label": {
+        "es": "Velocidad del personaje",
+        "en": "Speed of the character"
+      }
+    }
+  ]
+}

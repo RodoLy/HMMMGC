@@ -1,0 +1,13 @@
+# Formatting of the native runtime's C++ (CONTRIBUTING.md), for clang-format 18:
+#   clang-format -i runtime/src/*.cpp runtime/src/*.h runtime/src/*/*.cpp runtime/src/*/*.h
+#
+# Formato del C++ del runtime nativo (CONTRIBUTING.md).
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 120
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+# Includes stay in their groups (the file's own header, this runtime, WiiCompiled's
+# guest ABI, the system), each group sorted.
+IncludeBlocks: Preserve

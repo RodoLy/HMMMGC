@@ -126,6 +126,33 @@ compilar.
 | [`player_speed`](player_speed/mod.c) | Probado en el juego, en la nube; falta Windows | El personaje camina y corre más rápido: engancha la actualización del jugador (`fn_80049D28`) y multiplica la velocidad horizontal que el juego guardó el cuadro anterior, solo en juego libre. Por omisión al 150 % de la velocidad original; `HM_MM_PLAYER_SPEED_PERCENT` (de 25 a 300) lo cambia, y en el paquete de Windows `play.ps1 -PlayerSpeed`. Con 400 el personaje atravesó la puerta de su casa; por encima de 200 queda bajo el propio riesgo del jugador. No cambia la animación. Cómo se mueve el personaje: [MOVEMENT.md](../docs/MOVEMENT.md). |
 | `cheats` | Planeado | Trucos activables. |
 
+### En el runtime nativo
+
+El runtime nativo (`runtime/`, sin Dolphin) compila los mods dentro del
+programa en lugar de cargarlos como bibliotecas: el mismo `mod.c`, con
+`runtime/mod_api/moderngekko/mod_abi.h` en lugar del header de ModernGekko,
+que declara los mismos nombres. Ahí funcionan los *patch* y los *hook* (de
+entrada, de retorno y en una instrucción dentro de una función), los registros
+y la memoria; las exportaciones, importaciones y eventos se ignoran.
+
+Como las funciones traducidas se llaman directamente entre sí, los lugares
+donde actúa cada mod se marcan en el código traducido al compilar:
+`tools/insert_mod_hooks.py` lee las tablas de los mods y agrega las llamadas.
+`scripts/build_native_runtime.sh` lo hace solo para los mods de `NATIVE_MODS`
+(por omisión `jamie_marriage player_speed`). Una función enganchada no puede
+estar copiada en línea en otra: la herramienta lo revisa y se detiene si pasa.
+El registro del runtime dice qué mods cargó y la primera vez que el juego
+llega a cada lugar donde actúan.
+
+Cada uno de esos mods tiene además un manifiesto, `mod.json`, que es lo que
+muestra el launcher de la versión nativa en su pantalla de mods: el nombre, una
+línea, la descripción y un aviso opcional, en español y en inglés, la versión
+(la misma que su `mod.c`), los autores y sus ajustes. Un ajuste es un
+porcentaje que el launcher guarda en `settings.json` y le pasa al juego en una
+variable de entorno, que el mod lee al empezar (el de `player_speed`:
+`HM_MM_PLAYER_SPEED_PERCENT`). `tests/test_mod_manifests.py` revisa que
+coincidan con los mods.
+
 ---
 
 ## English
@@ -246,3 +273,30 @@ evidence, as [CONTRIBUTING.md](../CONTRIBUTING.md) asks) and build again.
 | [`jamie_marriage`](jamie_marriage/mod.c) | Tried in the game with a real save; the spouse lines under hand-written conditions; the pregnancy, the birth and the special days also with a copy of a real save | Marrying Jamie no longer ends the game: if the ceremony has already started and flag 230 is still set, it clears the flag in the field check and records the wedding the way the game does for the other partners (design in [SCRIPTS.md](../docs/SCRIPTS.md)); the notes scene plays once after the ceremony. Jamie lives in the house as the spouse (0.4.0) and, since 0.5.0, talks like a spouse: 33 lines of its own instead of the rival's lines, in the five languages whose text is on the disc ([The conversations](../docs/SCRIPTS.md#the-conversations)). Since 0.6.0 Jamie has a birthday: the 22nd of winter. Since 0.7.0 there are a pregnancy and a birth: Jamie borrows another partner's scenes, with Jamie's model and new lines in the five languages, for the boy and for the girl ([Pregnancy and birth](../docs/SCRIPTS.md#pregnancy-and-birth)). Since 0.8.0, the special days: the anniversary, the child's birthday and its checkup, also with new lines from Jamie ([Special days](../docs/SCRIPTS.md#special-days)). |
 | [`player_speed`](player_speed/mod.c) | Tried in the game, in the cloud; Windows still to do | The character walks and runs faster: it hooks the player's update (`fn_80049D28`) and multiplies the horizontal velocity that the game stored one frame earlier, only in free play. By default at 150% of the original speed; `HM_MM_PLAYER_SPEED_PERCENT` (25 to 300) changes it, and in the Windows package so does `play.ps1 -PlayerSpeed`. At 400 the character went through the door of its house; above 200 it is at the player's own risk. It does not change the animation. How the character moves: [MOVEMENT.md](../docs/MOVEMENT.md). |
 | `cheats` | Planned | Switchable cheats. |
+
+### In the native runtime
+
+The native runtime (`runtime/`, without Dolphin) compiles the mods into the
+program instead of loading them as libraries: the same `mod.c`, with
+`runtime/mod_api/moderngekko/mod_abi.h` in place of ModernGekko's header,
+which declares the same names. Patches and hooks (at entry, at return and at
+an instruction inside a function), the registers and the memory work there;
+exports, imports and events are ignored.
+
+As the translated functions call each other directly, the places where each
+mod acts are marked in the translated code when it is built:
+`tools/insert_mod_hooks.py` reads the mods' tables and adds the calls.
+`scripts/build_native_runtime.sh` does it for the mods in `NATIVE_MODS` (by
+default `jamie_marriage player_speed`). A hooked function cannot be copied
+inline into another one: the tool checks this and stops if it happens. The
+runtime's log says which mods it loaded and the first time the game reaches
+each place where they act.
+
+Each of those mods also has a manifest, `mod.json`, which is what the native
+version's launcher shows on its mods screen: the name, a line, the description
+and an optional warning, in Spanish and in English, the version (the same as
+its `mod.c`), the authors and its settings. A setting is a percentage that the
+launcher keeps in `settings.json` and passes to the game in an environment
+variable, which the mod reads when it starts (`player_speed`'s:
+`HM_MM_PLAYER_SPEED_PERCENT`). `tests/test_mod_manifests.py` checks that they
+agree with the mods.

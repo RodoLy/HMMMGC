@@ -33,6 +33,13 @@ disco (ISO, GCM o RVZ).
   palabras inventadas sí encontró una laguna de DolRecomp (`mtfsb1`) y un error
   del intérprete de Dolphin (`addme` y `subfme`), que el juego no usa. Los
   límites de todo esto, en [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Fase 2 empezada:** con un runtime propio (`runtime/`), el código del juego
+  ya corre sin nada de Dolphin desde su primera instrucción hasta su bucle de
+  cuadros, lee sus archivos del disco, dibuja con aurora los logos, la intro
+  en 3D y la pantalla de título, se controla con teclado o gamepad, y carga y
+  guarda partidas en la memory card, y toca la música y los efectos con el
+  programa de sonido del DSP hecho en C++
+  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
@@ -42,7 +49,7 @@ Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
 
 - Ejecutable nativo, sin emulador.
 - Widescreen y ultra-panorámico, resolución hasta 4K.
-- 120 fps.
+- 60 y 120 fps.
 - Cargas instantáneas.
 - Personaje más rápido (configurable).
 - Mod de Jamie: casarse con Jamie ya no termina el juego.
@@ -59,6 +66,12 @@ la GPU, hay un paquete nativo experimental, sin WSL ni emulador: lo arma un
 workflow de GitHub y se juega con `Play.bat`
 ([packaging/windows/README.md](packaging/windows/README.md)). Todavía no se ha
 probado con el juego real.
+
+La versión nativa (sin Dolphin, [docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md))
+tiene su propio paquete para Windows, ARM64 y x64: un launcher con el estilo del
+juego que prepara el juego en tu computadora con tu propio disco (`.iso`,
+`.gcm` o `.rvz`), sin que el paquete lleve nada del juego
+([docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md)).
 
 ### Empezar (herramientas de análisis)
 
@@ -145,6 +158,13 @@ This repository contains no game data. You need your own backup of the disc
   gap in DolRecomp (`mtfsb1`) and a bug in Dolphin's interpreter (`addme` and
   `subfme`), which the game does not use. The limits of all this are in
   [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Phase 2 started:** with a runtime of our own (`runtime/`), the game's code
+  already runs with nothing from Dolphin from its first instruction to its
+  frame loop, reads its files from the disc, draws the logos, the 3D intro and
+  the title screen with aurora, is played with a keyboard or a gamepad, and
+  loads and saves games on the memory card, and plays the music and sound
+  effects with the DSP's sound program written in C++
+  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
 
 See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and
@@ -154,7 +174,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the full plan,
 
 - Native executable, no emulator.
 - Widescreen and ultrawide, up to 4K.
-- 120 fps.
+- 60 and 120 fps.
 - Instant loading.
 - Faster character movement (configurable).
 - Jamie mod: marrying Jamie no longer ends the game.
@@ -171,6 +191,12 @@ yet, there is an experimental native package, with no WSL and no emulator: a
 GitHub workflow builds it and it is played with `Play.bat`
 ([packaging/windows/README.md](packaging/windows/README.md)). It has not been
 tried with the real game yet.
+
+The native version (without Dolphin, [docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md))
+has its own package for Windows, ARM64 and x64: a launcher in the game's style
+that prepares the game on your computer from your own disc (`.iso`, `.gcm` or
+`.rvz`), without the package carrying anything of the game
+([docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md)).
 
 ### Getting started (analysis tools)
 
