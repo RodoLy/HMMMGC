@@ -80,6 +80,12 @@ else()
 endif()
 add_executable(HarvestMoonMM WIN32 ${launcher_sources})
 add_shared_ui(HarvestMoonMM)
+# The lettering of the launcher's design goes inside the program (fonts/README.md says where each
+# font comes from).
+embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Baloo2-ExtraBold-subset.ttf" FONT_BALOO2_EXTRABOLD)
+embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Dosis-Bold-subset.ttf" FONT_DOSIS_BOLD)
+embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Dosis-SemiBold-subset.ttf" FONT_DOSIS_SEMIBOLD)
+embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/DejaVuSans-Bold-symbols.ttf" FONT_DEJAVU_SYMBOLS)
 target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PACKAGE_VERSION}")
 target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
 target_link_libraries(HarvestMoonMM PRIVATE launcher_imgui SDL3::SDL3-static nlohmann_json::nlohmann_json)

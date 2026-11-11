@@ -58,8 +58,20 @@ vcruntime140*.dll), which Dawn and nodtool use / que usan Dawn y nodtool
   Archivos redistribuibles de Microsoft, bajo los términos de Visual Studio.
   https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files
 
-M PLUS Rounded 1c (the launcher's lettering / las letras del launcher)
+Baloo 2 and Dosis (the launcher's lettering / las letras del launcher)
   inside HarvestMoonMM.exe
+  License: SIL Open Font License 1.1 (licenses\Baloo2-OFL.txt,
+  licenses\Dosis-OFL.txt). https://github.com/google/fonts
+
+DejaVu Sans: the launcher's symbols when Windows lacks them / los símbolos del
+launcher cuando Windows no los tiene
+  inside HarvestMoonMM.exe
+  License: Bitstream Vera's, with DejaVu's changes in the public domain
+  (licenses\DejaVu-LICENSE.txt). https://github.com/dejavu-fonts/dejavu-fonts
+
+M PLUS Rounded 1c (the lettering of the options menu in the game / las letras
+del menú de opciones del juego)
+  inside builder\kit and HarvestMoonMM.exe
   License: SIL Open Font License 1.1 (licenses\RoundedMplus1c-OFL.txt).
   https://github.com/google/fonts
 

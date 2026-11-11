@@ -10,22 +10,26 @@
 
 set(SHARED_UI_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
 
-# A font of shared/fonts as a C++ array, `symbol`, with its size in `symbol`_size.
-function(_shared_ui_embed_font target file symbol)
-    set(source "${SHARED_UI_DIRECTORY}/fonts/${file}")
+# A file (a font) as a C++ array inside `target`: `symbol`, with its size in `symbol`_size.
+function(embed_file_as_array target source symbol)
     set(output "${CMAKE_CURRENT_BINARY_DIR}/generated/${symbol}.cpp")
     file(READ "${source}" bytes HEX)
     string(LENGTH "${bytes}" length)
     math(EXPR size "${length} / 2")
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${bytes}")
+    cmake_path(RELATIVE_PATH source BASE_DIRECTORY "${SHARED_UI_DIRECTORY}/.." OUTPUT_VARIABLE shown)
     file(CONFIGURE OUTPUT "${output}" CONTENT
-"// Written by shared/shared.cmake from shared/fonts/${file}.
+"// Written by shared/shared.cmake from ${shown}.
 #include <cstddef>
 extern const unsigned char ${symbol}[] = {${bytes}};
 extern const size_t ${symbol}_size = ${size};
 ")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${source}")
     target_sources(${target} PRIVATE "${output}")
+endfunction()
+
+function(_shared_ui_embed_font target file symbol)
+    embed_file_as_array(${target} "${SHARED_UI_DIRECTORY}/fonts/${file}" ${symbol})
 endfunction()
 
 function(add_shared_ui target)

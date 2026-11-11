@@ -195,6 +195,9 @@ jobs:
           cp "$WIICOMPILED_DIRECTORY/LICENSE" "$licenses/WiiCompiled-LICENSE.txt"
           cp "$WIICOMPILED_DIRECTORY/aurora-main/LICENSE" "$licenses/aurora-LICENSE.txt"
           cp shared/fonts/OFL.txt "$licenses/RoundedMplus1c-OFL.txt"
+          cp launcher/fonts/OFL-Baloo2.txt "$licenses/Baloo2-OFL.txt"
+          cp launcher/fonts/OFL-Dosis.txt "$licenses/Dosis-OFL.txt"
+          cp launcher/fonts/LICENSE-DejaVu.txt "$licenses/DejaVu-LICENSE.txt"
           dawn_ref=$(sed -n 's/^_aurora_dependency_version(AURORA_DAWN_REF "\([0-9a-f]\{40\}\)".*/\1/p' \
             "$WIICOMPILED_DIRECTORY/aurora-main/cmake/AuroraDependencyVersions.cmake")
           curl --fail --silent --show-error --location --retry 3 --output "$licenses/Dawn-LICENSE.txt" \
