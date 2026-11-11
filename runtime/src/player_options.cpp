@@ -37,6 +37,7 @@ settings::Settings g_settings;
 Options g_options;
 Options g_from_settings;
 std::optional<std::vector<std::string>> g_given_mods;
+std::vector<std::string> g_running_mods;
 bool g_unsaved = false;
 
 // The options that `saved` says, with the launcher's limits: a value out of them is the default.
@@ -121,6 +122,15 @@ bool mod_enabled(const std::string& id) {
         return std::ranges::find(*g_given_mods, id) != g_given_mods->end();
     }
     return g_settings.mod_enabled(id);
+}
+
+void note_running_mods(const std::vector<std::string>& ids) { g_running_mods = ids; }
+
+bool mod_is_running(const std::string& id) { return std::ranges::find(g_running_mods, id) != g_running_mods.end(); }
+
+void set_mod_enabled(const std::string& id, bool enabled) {
+    g_settings.set_mod_enabled(id, enabled);
+    g_unsaved = true;
 }
 
 settings::Settings& current() { return g_settings; }

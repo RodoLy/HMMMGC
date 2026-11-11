@@ -103,6 +103,11 @@ enum class Text {
     QuitNo,
     MenuOpenNote,
     GameShortcuts,
+    ModsRestartNote,
+    ModAppliesOnRestart,
+    ModNameJamieMarriage,
+    ModNamePlayerSpeed,
+    ModNameCarrySpeed,
 
     ModOn,
     ModOff,

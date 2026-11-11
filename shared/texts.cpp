@@ -140,6 +140,12 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::QuitNo, "No, seguir jugando", "No, keep playing"},
     {Text::MenuOpenNote, "Menú abierto: el juego no recibe los controles. F10 o Select para volver.",
      "Menu open: the game gets no input. F10 or Select to go back."},
+    {Text::ModsRestartNote, "Los cambios de los mods se aplican la próxima vez que se abre el juego.",
+     "Changes to the mods apply the next time the game is opened."},
+    {Text::ModAppliesOnRestart, "Se aplica al reiniciar el juego.", "Applies when the game is restarted."},
+    {Text::ModNameJamieMarriage, "Casarse con Jamie", "Marry Jamie"},
+    {Text::ModNamePlayerSpeed, "Personaje más rápido", "Faster character"},
+    {Text::ModNameCarrySpeed, "Sin frenos al cargar", "No slowdown when carrying"},
     {Text::GameShortcuts,
      "En el juego: F10 o el botón Select abren las opciones, Tab acelera (turbo) y Alt+Enter cambia a pantalla "
      "completa.",

@@ -157,6 +157,7 @@ int main(int argc, char** argv) {
                 enabled_mods.push_back(id);
             }
         }
+        player_options::note_running_mods(enabled_mods);
         native_mods::load(&enabled_mods);
 
         CpuContext& cpu = GetPersistentCpuContext();

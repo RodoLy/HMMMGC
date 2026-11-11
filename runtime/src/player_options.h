@@ -45,6 +45,11 @@ unsigned volume_percent();      // 0 (silent) to 100 (the game's own)
 bool show_frame_rate();         // over the game, at the top right (in_game_menu.h)
 // Whether the mod `id` is on: in the command line's list, or not turned off in settings.json.
 bool mod_enabled(const std::string& id);
+// The mods the game started with (main.cpp tells it): the menu compares them with the settings.
+void note_running_mods(const std::vector<std::string>& ids);
+bool mod_is_running(const std::string& id);
+// Turns a mod on or off in the settings (the menu saves them); the game keeps the mods it started with.
+void set_mod_enabled(const std::string& id, bool enabled);
 
 // While the game runs (in_game_menu.h). current() is settings.json as the game runs with it (with
 // what the command line gave), for the menu's rows, which change it; apply_changes() then gives
