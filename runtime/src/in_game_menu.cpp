@@ -273,7 +273,7 @@ float page_height(Page page) {
     switch (page) {
         case Page::Picture: return 520.f;
         case Page::Sound: return 190.f;
-        case Page::Mods: return 330.f;
+        case Page::Mods: return 370.f;
         case Page::Controls: return 540.f;
     }
     return 400.f;

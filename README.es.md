@@ -77,8 +77,10 @@ una imagen que no pudo leer) y ofrece abrir el registro.
 ### Opciones dentro del juego
 
 **F10**, o el botón **Select** del control, abre las mismas opciones sin salir
-del juego. Cambian al momento y se guardan para la próxima vez; ahí también
-está la pantalla de controles. Mientras el menú está abierto, el juego no
+del juego, en una barra arriba con una página de Imagen, Sonido, Mods y
+Controles. Las opciones cambian al momento y se guardan para la próxima vez;
+los mods también se prenden o apagan ahí, y el cambio se aplica la próxima vez
+que se abre el juego. Mientras el menú está abierto, el juego no
 recibe el control.
 
 ![El menú de opciones dentro del juego, sobre la granja](docs/images/in-game-menu-es.jpg)

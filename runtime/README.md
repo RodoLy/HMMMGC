@@ -67,8 +67,10 @@ Dentro del juego, F10 (o el botón Select del control, si el juego no lo usa)
 abre un menú de opciones (`in_game_menu.h`, con lo de `shared/`): la
 resolución interna (como la ventana, 480p, 720p, 1080p o 1440p, que el archivo
 guarda como `internalResolution`), la pantalla completa, la pantalla ancha, los
-cuadros por segundo, el contador de cuadros por segundo, el zoom, la velocidad
-del juego y el volumen, que cambian al momento, y la pantalla de controles. Lo
+cuadros por segundo, el contador de cuadros por segundo, el zoom y el
+volumen, que cambian al momento, los mods (con un interruptor cada uno; el
+cambio se aplica al reiniciar el juego) y la pantalla de controles, en una
+barra arriba con una página para cada parte y el juego visible detrás. Lo
 que cambia se guarda en `settings.json` al cerrar el menú, y el launcher lo lee
 al volver. Mientras está abierto, el juego sigue pero no recibe nada de los
 controles ni del teclado, y al cerrarlo tampoco hasta que se sueltan los
@@ -221,8 +223,10 @@ In the game, F10 (or the controller's Select button, when the game does not
 use it) opens an options menu (`in_game_menu.h`, with what is in `shared/`):
 the internal resolution (as the window, 480p, 720p, 1080p or 1440p, which the
 file keeps as `internalResolution`), full screen, widescreen, frames per
-second, the frame counter, the zoom, the game's speed and the volume, which
-change at once, and the controls screen. What changes is kept in
+second, the frame counter, the zoom and the volume, which change at once, the mods
+(a switch each; the change applies when the game is restarted) and the controls
+screen, in a bar at the top with a page for each part and the game visible
+behind. What changes is kept in
 `settings.json` when the menu closes, and the launcher reads it when it comes
 back. While it is open the game goes on but gets nothing from the controllers
 or the keyboard, and after it closes neither, until the buttons that closed it

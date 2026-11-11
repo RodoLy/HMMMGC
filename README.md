@@ -76,8 +76,10 @@ it, an image it could not read) and offers to open the log.
 ### Options inside the game
 
 **F10**, or the controller's **Select**, opens the same options without
-leaving the game. They change at once and are kept for the next time; the
-controls screen is there too. While the menu is open the game does not get
+leaving the game, in a bar at the top with a page for Picture, Sound, Mods and
+Controls. The options change at once and are kept for the next time; the mods
+can be turned on or off there too, and the change applies the next time the
+game is opened. While the menu is open the game does not get
 the controller.
 
 ![The options menu inside the game, over the farm](docs/images/in-game-menu-en.jpg)
