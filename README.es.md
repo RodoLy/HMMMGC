@@ -93,11 +93,7 @@ recibe el control.
 Los dos están activados mientras la pestaña Mods no los apague. Cómo hacer
 uno: [mods/README.md](mods/README.md).
 
-#### Casarse con Jamie, en imágenes
-
-Tomadas en la versión anterior con ModernGekko, donde el mod se probó con una
-copia de una partida real. Las frases de Jamie son nuevas, escritas para el
-mod.
+#### Casarse con Jamie, funcionando en el juego
 
 <table>
   <tr>
@@ -125,9 +121,6 @@ mod.
     <td align="center">Jugando como la chica, en el aniversario</td>
   </tr>
 </table>
-
-Las capturas están en inglés porque el disco americano solo usa ese idioma; el
-mod trae las frases de Jamie también en español, francés, alemán e italiano.
 
 ## Capturas
 

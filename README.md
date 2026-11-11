@@ -92,10 +92,7 @@ the controller.
 Both are on unless the Mods tab turns them off. How to make one:
 [mods/README.md](mods/README.md).
 
-#### Marry Jamie, in pictures
-
-Taken on the earlier ModernGekko version, where the mod was tried with a copy
-of a real save. Jamie's lines are new, written for the mod.
+#### Marry Jamie, working in the game
 
 <table>
   <tr>
