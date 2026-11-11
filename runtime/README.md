@@ -66,8 +66,9 @@ depurador como gdb (ver `fault_handler.h`).
 ### Menú de opciones (F10)
 
 Dentro del juego, F10 (o el botón Select del control, si el juego no lo usa)
-abre un menú con el aspecto del launcher (`in_game_menu.h`, con lo de
-`shared/`): la resolución interna, la pantalla completa, la pantalla ancha, los
+abre un menú de opciones (`in_game_menu.h`, con lo de `shared/`): la
+resolución interna (como la ventana, 480p, 720p, 1080p o 1440p, que el archivo
+guarda como `internalResolution`), la pantalla completa, la pantalla ancha, los
 cuadros por segundo, el contador de cuadros por segundo, el zoom, la velocidad
 del juego y el volumen, que cambian al momento, y la pantalla de controles. Lo
 que cambia se guarda en `settings.json` al cerrar el menú, y el launcher lo lee
@@ -222,8 +223,9 @@ debugger such as gdb (see `fault_handler.h`).
 ### Options menu (F10)
 
 In the game, F10 (or the controller's Select button, when the game does not
-use it) opens a menu that looks like the launcher (`in_game_menu.h`, with what
-is in `shared/`): the internal resolution, full screen, widescreen, frames per
+use it) opens an options menu (`in_game_menu.h`, with what is in `shared/`):
+the internal resolution (as the window, 480p, 720p, 1080p or 1440p, which the
+file keeps as `internalResolution`), full screen, widescreen, frames per
 second, the frame counter, the zoom, the game's speed and the volume, which
 change at once, and the controls screen. What changes is kept in
 `settings.json` when the menu closes, and the launcher reads it when it comes

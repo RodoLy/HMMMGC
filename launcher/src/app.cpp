@@ -185,8 +185,12 @@ void App::play() {
     for (const std::string& id : enabled) {
         mod_list += (mod_list.empty() ? "" : ",") + id;
     }
+    // SDL writes numbers with a point whatever the computer's language: the game reads "1.5".
     char zoom[16];
     SDL_snprintf(zoom, sizeof(zoom), "%.2f", settings_.number(settings::ZOOM, 100, 50, 200) / 100.0);
+    char resolution[16];
+    SDL_snprintf(resolution, sizeof(resolution), "%g",
+                 settings::resolution_scale(settings_.one_of(settings::RESOLUTION, settings::RESOLUTIONS)));
 
     ChildProcess::Options options;
     options.arguments = {
@@ -197,7 +201,7 @@ void App::play() {
         "--mods", mod_list.empty() ? "none" : mod_list,
         "--game-speed", std::to_string(settings_.number(settings::GAME_SPEED, 100, 100, 400)),
         "--zoom", zoom,
-        "--resolution-scale", std::to_string(settings_.one_of(settings::RESOLUTION_SCALE, settings::RESOLUTION_SCALES)),
+        "--resolution-scale", resolution,
         "--fullscreen", settings_.flag(settings::FULLSCREEN, false) ? "1" : "0",
         "--widescreen", settings_.flag(settings::WIDESCREEN, false) ? "1" : "0",
         "--frame-rate", std::to_string(settings_.one_of(settings::FRAME_RATE, settings::FRAME_RATES)),

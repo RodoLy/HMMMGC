@@ -21,7 +21,7 @@ inline constexpr const char* MODS = "mods";
 inline constexpr const char* PLAYER_SPEED = "playerSpeedPercent";
 inline constexpr const char* GAME_SPEED = "gameSpeedPercent";
 inline constexpr const char* ZOOM = "cameraZoomPercent";
-inline constexpr const char* RESOLUTION_SCALE = "resolutionScale";
+inline constexpr const char* RESOLUTION = "internalResolution";  // the lines the game draws, 0: the window's
 inline constexpr const char* FULLSCREEN = "fullscreen";
 inline constexpr const char* WIDESCREEN = "widescreen";
 inline constexpr const char* FRAME_RATE = "frameRate";
@@ -30,7 +30,10 @@ inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the gam
 inline constexpr const char* LANGUAGE = "language";      // "auto", "es" or "en"
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
 
-inline constexpr int RESOLUTION_SCALES[] = {0, 2, 3, 4, 6};
+inline constexpr int RESOLUTIONS[] = {0, 480, 720, 1080, 1440};
+// How many times bigger than the console's 640x480 the game draws for a resolution (0 follows
+// the window): 720 lines is 1.5 times.
+constexpr float resolution_scale(int lines) { return static_cast<float>(lines) / 480.f; }
 inline constexpr int FRAME_RATES[] = {30, 60, 120};
 
 class Settings {

@@ -72,16 +72,14 @@ float control_width() { return theme::row_control_width(); }
 
 bool resolution(settings::Settings& settings, bool focus) {
     next_row(text(Text::Resolution), text(Text::ResolutionHint));
-    // "As the window", and then each multiple of the console's 640x528 with its size.
+    // "As the window", and then the lines the game draws: 480p, 720p...
     std::vector<std::string> labels;
     int index = 0;
-    const int scale = settings.one_of(settings::RESOLUTION_SCALE, settings::RESOLUTION_SCALES);
-    for (size_t i = 0; i < std::size(settings::RESOLUTION_SCALES); ++i) {
-        const int value = settings::RESOLUTION_SCALES[i];
-        labels.push_back(value == 0 ? text(Text::ResolutionWindow)
-                                    : std::to_string(value) + "x  (" + std::to_string(640 * value) + "\xC3\x97" +
-                                          std::to_string(528 * value) + ")");
-        if (value == scale) {
+    const int lines = settings.one_of(settings::RESOLUTION, settings::RESOLUTIONS);
+    for (size_t i = 0; i < std::size(settings::RESOLUTIONS); ++i) {
+        const int value = settings::RESOLUTIONS[i];
+        labels.push_back(value == 0 ? text(Text::ResolutionWindow) : std::to_string(value) + "p");
+        if (value == lines) {
             index = static_cast<int>(i);
         }
     }
@@ -89,7 +87,7 @@ bool resolution(settings::Settings& settings, bool focus) {
     if (!theme::choice("resolution", &index, labels, control_width())) {
         return false;
     }
-    settings.set(settings::RESOLUTION_SCALE, settings::RESOLUTION_SCALES[index]);
+    settings.set(settings::RESOLUTION, settings::RESOLUTIONS[index]);
     return true;
 }
 

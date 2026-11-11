@@ -33,7 +33,8 @@ std::filesystem::path g_file;
 settings::Settings g_settings;
 // The options as the game runs with them, and as g_settings said them when they were last given
 // to the game (they differ only in what the command line gave that the file cannot say, such as
-// a resolution of 1.5): the menu's changes are what differs from the latter.
+// a resolution scale of 2, which is no resolution of the menu): the menu's changes are what differs
+// from the latter.
 Options g_options;
 Options g_from_settings;
 std::optional<std::vector<std::string>> g_given_mods;
@@ -43,7 +44,7 @@ bool g_unsaved = false;
 Options read(const settings::Settings& saved) {
     Options options;
     options.game_speed_percent = static_cast<unsigned>(saved.number(settings::GAME_SPEED, 100, 100, 400));
-    options.resolution_scale = static_cast<float>(saved.one_of(settings::RESOLUTION_SCALE, settings::RESOLUTION_SCALES));
+    options.resolution_scale = settings::resolution_scale(saved.one_of(settings::RESOLUTION, settings::RESOLUTIONS));
     options.fullscreen = saved.flag(settings::FULLSCREEN, false);
     options.widescreen = saved.flag(settings::WIDESCREEN, false);
     options.zoom = static_cast<float>(saved.number(settings::ZOOM, 100, 50, 200)) / PERCENT;
@@ -58,10 +59,12 @@ void write_given(settings::Settings& settings, const Given& given) {
         settings.set(settings::GAME_SPEED, static_cast<int>(*given.game_speed_percent));
     }
     if (given.resolution_scale) {
-        const auto whole = static_cast<int>(*given.resolution_scale);
-        if (static_cast<float>(whole) == *given.resolution_scale &&
-            std::ranges::find(settings::RESOLUTION_SCALES, whole) != std::end(settings::RESOLUTION_SCALES)) {
-            settings.set(settings::RESOLUTION_SCALE, whole);
+        // The file keeps the lines the game draws (720 for 1.5); a scale that is none of them stays
+        // out of it, as it is.
+        const auto lines = static_cast<int>(std::lround(*given.resolution_scale * 480.f));
+        if (settings::resolution_scale(lines) == *given.resolution_scale &&
+            std::ranges::find(settings::RESOLUTIONS, lines) != std::end(settings::RESOLUTIONS)) {
+            settings.set(settings::RESOLUTION, lines);
         }
     }
     if (given.fullscreen) {
