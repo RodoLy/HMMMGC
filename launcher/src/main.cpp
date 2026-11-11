@@ -22,7 +22,6 @@
 #include <imgui_impl_sdlrenderer3.h>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <dwmapi.h>
 #endif
 
@@ -39,7 +38,6 @@ struct Arguments {
     std::string disc;
     std::optional<App::Tab> tab;
     bool still = false;
-    bool show = false;  // --launcher: the window, whatever the player chose
 };
 
 Arguments parse_arguments(int argc, char** argv) {
@@ -57,8 +55,6 @@ Arguments parse_arguments(int argc, char** argv) {
                     arguments.tab = tab;
                 }
             }
-        } else if (argument == "--launcher") {
-            arguments.show = true;
         } else if (argument == "--still") {
             arguments.still = true;
         } else if (!argument.starts_with("-")) {
@@ -66,16 +62,6 @@ Arguments parse_arguments(int argc, char** argv) {
         }
     }
     return arguments;
-}
-
-// Whether Shift is held now: the way to see the launcher when it is set to start the game at once.
-bool shift_is_held() {
-#ifdef _WIN32
-    return (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
-#else
-    SDL_PumpEvents();
-    return (SDL_GetModState() & SDL_KMOD_SHIFT) != 0;
-#endif
 }
 
 // The design's size at the scaling of the window's screen, but never bigger than the screen.
@@ -137,6 +123,7 @@ int main(int argc, char** argv) {
     round_corners(window);
     SDL_SetRenderVSync(renderer, 1);
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_ShowWindow(window);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -151,10 +138,7 @@ int main(int argc, char** argv) {
     ImGui_ImplSDL3_SetGamepadMode(ImGui_ImplSDL3_GamepadMode_AutoAll);
 
     {
-        App app(window, arguments.disc, arguments.tab, arguments.still, !arguments.show && !shift_is_held());
-        if (!app.game_running()) {
-            SDL_ShowWindow(window);
-        }
+        App app(window, arguments.disc, arguments.tab, arguments.still);
         while (!app.wants_to_quit()) {
             SDL_Event event;
             if (app.game_running()) {

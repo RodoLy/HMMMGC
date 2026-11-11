@@ -92,8 +92,6 @@ enum class Text {
     FrameRateCounter,
     Zoom,
     ZoomHint,
-    SkipLauncher,
-    SkipLauncherHint,
     Volume,
     VolumeHint,
     ZoomBeyondStart,
