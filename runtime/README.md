@@ -44,8 +44,8 @@ mantiene `Tab` apretado, va al menos al 300 % (el turbo), y el título de la
 ventana muestra la velocidad. La resolución interna sigue al tamaño de la ventana
 (Alt+Enter cambia a pantalla completa); `--resolution-scale <n>` la fija en n
 veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
-los bordes, y `--fullscreen 1` empieza en pantalla completa. `--zoom <0.5-2>`
-acerca (más de 1) o aleja (menos de 1) la cámara del juego mientras se camina al
+los bordes, y `--fullscreen 1` empieza en pantalla completa. `--zoom <0.5-1>`
+aleja (menos de 1) la cámara del juego mientras se camina al
 aire libre (en la pantalla de título, las escenas y los cuartos queda la cámara
 del juego, `game_scene.h`), y `--widescreen 1`
 da una imagen panorámica: el 3D muestra más a los lados y los menús se estiran.
@@ -198,8 +198,8 @@ makes the whole game run faster (the console's clock, `game_clock.h`); while
 the speed. The internal resolution follows the window's size (Alt+Enter
 switches to full screen); `--resolution-scale <n>` fixes it at n times the
 console's (6 is nearly 4K) and scales it down to the window, which smooths the
-edges, and `--fullscreen 1` starts in full screen. `--zoom <0.5-2>` brings
-the game's camera closer (above 1) or farther (below 1) while walking outdoors
+edges, and `--fullscreen 1` starts in full screen. `--zoom <0.5-1>` pulls
+the game's camera back (below 1) while walking outdoors
 (the title screen, the cutscenes and the rooms keep the game's camera,
 `game_scene.h`), and `--widescreen 1`
 gives a widescreen picture: the 3D shows more at the sides and the menus are

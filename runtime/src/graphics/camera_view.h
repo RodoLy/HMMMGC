@@ -10,9 +10,10 @@
 // its shape and shows more at the sides. The 2D layer (orthographic projections: backgrounds, the
 // HUD, menus, text) is stretched to the width, as with Dolphin's widescreen hacks: scaling
 // it back would leave the full-screen backgrounds 4:3 with bars at the sides.
-// Zoom: a perspective projection's scale is multiplied by the zoom, which narrows (above
-// 1) or widens (below 1) the camera's field of view: 0.7 shows more of the farm around
-// the player, 1.3 brings the camera in. The 2D layer does not change. The zoom is for
+// Zoom: a perspective projection's scale is multiplied by the zoom, which widens the camera's
+// field of view below 1: 0.7 shows more of the farm around the player, and 0.5 is the most.
+// The zoom never goes above 1, so the camera never comes closer than the game's. The 2D layer
+// does not change. The zoom is for
 // walking outdoors (game_scene.h): on the title screen, in cutscenes and in rooms the
 // camera is the game's, and the change goes smoothly over a few frames.
 // Screen marks: the game works out where a point of the scene lands on the screen
@@ -30,7 +31,7 @@
 namespace camera_view {
 
 inline constexpr float MINIMUM_ZOOM = 0.5f;
-inline constexpr float MAXIMUM_ZOOM = 2.f;
+inline constexpr float MAXIMUM_ZOOM = 1.f;
 
 struct Options {
     bool widescreen = false;

@@ -124,7 +124,7 @@ bool show_frame_rate(settings::Settings& settings, bool focus) {
 }
 
 bool zoom(settings::Settings& settings, bool focus) {
-    return percent_row(settings, settings::ZOOM, 100, 50, 200, 5, Text::Zoom, Text::ZoomHint, focus);
+    return percent_row(settings, settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint, focus);
 }
 
 bool game_speed(settings::Settings& settings, bool focus) {

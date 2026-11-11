@@ -199,7 +199,7 @@ void App::play() {
     }
     // SDL writes numbers with a point whatever the computer's language: the game reads "1.5".
     char zoom[16];
-    SDL_snprintf(zoom, sizeof(zoom), "%.2f", settings_.number(settings::ZOOM, 100, 50, 200) / 100.0);
+    SDL_snprintf(zoom, sizeof(zoom), "%.2f", settings::zoom_for(settings_.number(settings::ZOOM_OUT, 0, 0, 100)));
     char resolution[16];
     SDL_snprintf(resolution, sizeof(resolution), "%g",
                  settings::resolution_scale(settings_.one_of(settings::RESOLUTION, settings::RESOLUTIONS)));
@@ -470,7 +470,7 @@ std::vector<App::Row> App::options_rows() {
     choice(settings::FRAME_RATE, settings::FRAME_RATES, {text(Text::FrameRateGame), "60", "120"}, Text::FrameRate,
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
-    percent(settings::ZOOM, 100, 50, 200, 5, Text::Zoom, Text::ZoomHint);
+    percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
     percent(settings::GAME_SPEED, 100, 100, 400, 10, Text::GameSpeed, Text::GameSpeedHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     return rows;

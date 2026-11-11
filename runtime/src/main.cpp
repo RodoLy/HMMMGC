@@ -61,7 +61,7 @@ constexpr const char* USAGE =
     "usage: hmmm-native --disc <disc image (.iso, .gcm) or extracted disc> [--symbols <file>] [--watchdog <s>]\n"
     "                   [--user-folder <folder>] [--settings <settings.json>]\n"
     "                   [--mods <id,id,...> | --mods none] [--game-speed <100-400>]\n"
-    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-2>]\n"
+    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-1>]\n"
     "                   [--frame-rate <30|60|120>] [--volume <0-100>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
@@ -108,7 +108,7 @@ Options parse_options(int argc, char** argv) {
         } else if (name == "--widescreen") {
             options.given.widescreen = value != "0";
         } else if (name == "--zoom") {
-            options.given.zoom = std::stof(value);
+            options.given.zoom = std::clamp(std::stof(value), camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM);
         } else if (name == "--frame-rate") {
             options.given.frame_rate = static_cast<unsigned>(std::stoul(value));
         } else if (name == "--volume") {

@@ -17,7 +17,7 @@
     "Play" saves the choices and starts hmmm-native.exe, next to this script, with:
       --mods       the mods that are on (or "none");
       --game-speed the speed of the whole game (100 to 400%; Tab held in the game: at least 300%);
-      --zoom              the camera's zoom outdoors (0.5 to 2: below 1 shows more around the player);
+      --zoom              the camera's zoom outdoors (0.5 to 1: below 1 shows more around the player);
       --resolution-scale  the internal resolution (0: as the window; 2, 3, 4 or 6 times the console's);
       --fullscreen        1 to start in full screen (Alt+Enter switches while playing);
       --widescreen        1 for a widescreen picture (the 3D shows more at the sides);
@@ -61,7 +61,10 @@ $Mods = @(
        Spanish = 'Casarse con Jamie: casarse con Jamie ya no termina el juego' },
     @{ Id = 'player_speed'
        English = 'Faster character: walks and runs at the speed below'
-       Spanish = 'Personaje más rápido: camina y corre a la velocidad de abajo' }
+       Spanish = 'Personaje más rápido: camina y corre a la velocidad de abajo' },
+    @{ Id = 'carry_speed'
+       English = 'No slowdown when carrying: runs even with something in the hands'
+       Spanish = 'Sin frenos al cargar: corre aunque lleve algo en las manos' }
 )
 $PlayerSpeedModId = 'player_speed'
 
@@ -73,10 +76,11 @@ $PlayerSpeedDefault = 150
 $GameSpeedMinimum = 100
 $GameSpeedMaximum = 400
 $GameSpeedDefault = 100
-# The camera's zoom, in percent (camera_view.h): 100 is the game's camera, 70 shows more around.
-$ZoomMinimum = 50
-$ZoomMaximum = 200
-$ZoomDefault = 100
+# How far the camera is pulled back outdoors, in percent (settings.h, zoom_for): 0 is the game's camera,
+# 100 the farthest (a zoom of 0.5, camera_view.h).
+$ZoomOutMinimum = 0
+$ZoomOutMaximum = 100
+$ZoomOutDefault = 0
 # The internal resolutions offered: a multiple of the console's 640x528 (0 follows the window).
 $ResolutionScales = @(0, 2, 3, 4, 6)
 # The frame rates offered: the game's 30, or 60 and 120 with frames made in between.
@@ -90,7 +94,7 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Speed of the character (100% is the original game):'
         GameSpeedLabel = 'Speed of the whole game (100% is normal; hold Tab in the game for turbo):'
-        ZoomLabel = "Camera zoom outdoors (100% is the game's; less shows more around the player):"
+        ZoomLabel = "Pull the camera back outdoors (0% is the game's camera; more shows more around the player):"
         ResolutionLabel = 'Internal resolution:'
         FrameRateLabel = 'Frames per second:'
         FrameRateGame = '30 (as the game)'
@@ -111,7 +115,7 @@ $Texts = @{
         ModsLabel   = 'Mods'
         SpeedLabel  = 'Velocidad del personaje (100% es la del juego original):'
         GameSpeedLabel = 'Velocidad de todo el juego (100% es la normal; mantén Tab en el juego para el turbo):'
-        ZoomLabel = 'Zoom de la cámara al aire libre (100% es el del juego; menos muestra más alrededor del personaje):'
+        ZoomLabel = 'Alejar la cámara al aire libre (0% es la cámara del juego; más muestra más alrededor del personaje):'
         ResolutionLabel = 'Resolución interna:'
         FrameRateLabel = 'Cuadros por segundo:'
         FrameRateGame = '30 (como el juego)'
@@ -142,7 +146,7 @@ function Test-WholeNumberInRange($Value, $Minimum, $Maximum) {
 function Read-SettingsFile {
     $settings = [ordered] @{
         mods = [ordered] @{}; playerSpeedPercent = $PlayerSpeedDefault; gameSpeedPercent = $GameSpeedDefault
-        cameraZoomPercent = $ZoomDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false; frameRate = 30
+        cameraZoomOutPercent = $ZoomOutDefault; resolutionScale = 0; fullscreen = $false; widescreen = $false; frameRate = 30
     }
     foreach ($mod in $Mods) { $settings.mods[$mod.Id] = $true }
     if (-not (Test-Path -LiteralPath $SettingsFile)) {
@@ -168,8 +172,8 @@ function Read-SettingsFile {
     if (-not (Test-WholeNumberInRange -Value $settings.gameSpeedPercent -Minimum $GameSpeedMinimum -Maximum $GameSpeedMaximum)) {
         $settings.gameSpeedPercent = $GameSpeedDefault
     }
-    if (-not (Test-WholeNumberInRange -Value $settings.cameraZoomPercent -Minimum $ZoomMinimum -Maximum $ZoomMaximum)) {
-        $settings.cameraZoomPercent = $ZoomDefault
+    if (-not (Test-WholeNumberInRange -Value $settings.cameraZoomOutPercent -Minimum $ZoomOutMinimum -Maximum $ZoomOutMaximum)) {
+        $settings.cameraZoomOutPercent = $ZoomOutDefault
     }
     if ($ResolutionScales -notcontains $settings.resolutionScale) { $settings.resolutionScale = 0 }
     if ($FrameRates -notcontains $settings.frameRate) { $settings.frameRate = 30 }
@@ -203,7 +207,7 @@ function Start-Game($Settings) {
     # cmd.exe sends both of the game's output streams to one log file.
     $gameSpeed = [int] $Settings.gameSpeedPercent
     # A decimal point whatever the language of Windows: the game reads "0.70", not "0,70".
-    $zoom = ([int] $Settings.cameraZoomPercent / 100.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
+    $zoom = (1.0 - [int] $Settings.cameraZoomOutPercent / 200.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
     $display = "--zoom $zoom --resolution-scale $([int] $Settings.resolutionScale) --fullscreen $([int] [bool] $Settings.fullscreen) --widescreen $([int] [bool] $Settings.widescreen) --frame-rate $([int] $Settings.frameRate)"
     $command = "`"`"$Program`" --disc `"$DiscDirectory`" --symbols `"$Symbols`" --mods $modList --game-speed $gameSpeed $display > `"$LogFile`" 2>&1`""
     Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList '/c', $command `
@@ -298,7 +302,7 @@ $ZoomLabel.Text = $Text.ZoomLabel
 $ZoomLabel.AutoSize = $true
 $ZoomLabel.Margin = New-Object System.Windows.Forms.Padding(0, 12, 0, 4)
 $Layout.Controls.Add($ZoomLabel)
-$ZoomRow = New-PercentRow -Minimum $ZoomMinimum -Maximum $ZoomMaximum -Value ([int] $Settings.cameraZoomPercent)
+$ZoomRow = New-PercentRow -Minimum $ZoomOutMinimum -Maximum $ZoomOutMaximum -Value ([int] $Settings.cameraZoomOutPercent)
 $Layout.Controls.Add($ZoomRow)
 
 $ResolutionLabel = New-Object System.Windows.Forms.Label
@@ -350,7 +354,7 @@ function Get-SettingsFromWindow {
     foreach ($mod in $Mods) { $Settings.mods[$mod.Id] = $CheckBoxes[$mod.Id].Checked }
     $Settings.playerSpeedPercent = [int] $SpeedRow.Tag.Value
     $Settings.gameSpeedPercent = [int] $GameSpeedRow.Tag.Value
-    $Settings.cameraZoomPercent = [int] $ZoomRow.Tag.Value
+    $Settings.cameraZoomOutPercent = [int] $ZoomRow.Tag.Value
     $Settings.resolutionScale = $ResolutionScales[$ResolutionList.SelectedIndex]
     $Settings.frameRate = $FrameRates[$FrameRateList.SelectedIndex]
     $Settings.fullscreen = $FullscreenBox.Checked

@@ -47,7 +47,7 @@ Options read(const settings::Settings& saved) {
     options.resolution_scale = settings::resolution_scale(saved.one_of(settings::RESOLUTION, settings::RESOLUTIONS));
     options.fullscreen = saved.flag(settings::FULLSCREEN, false);
     options.widescreen = saved.flag(settings::WIDESCREEN, false);
-    options.zoom = static_cast<float>(saved.number(settings::ZOOM, 100, 50, 200)) / PERCENT;
+    options.zoom = settings::zoom_for(saved.number(settings::ZOOM_OUT, 0, 0, 100));
     options.frame_rate = static_cast<unsigned>(saved.one_of(settings::FRAME_RATE, settings::FRAME_RATES));
     options.volume_percent = static_cast<unsigned>(saved.number(settings::VOLUME, 100, 0, 100));
     return options;
@@ -74,7 +74,7 @@ void write_given(settings::Settings& settings, const Given& given) {
         settings.set(settings::WIDESCREEN, *given.widescreen);
     }
     if (given.zoom) {
-        settings.set(settings::ZOOM, static_cast<int>(std::lround(*given.zoom * PERCENT)));
+        settings.set(settings::ZOOM_OUT, settings::zoom_out_percent_for(*given.zoom));
     }
     if (given.frame_rate) {
         settings.set(settings::FRAME_RATE, static_cast<int>(*given.frame_rate));

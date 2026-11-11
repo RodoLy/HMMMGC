@@ -20,7 +20,8 @@ namespace settings {
 inline constexpr const char* MODS = "mods";
 inline constexpr const char* PLAYER_SPEED = "playerSpeedPercent";
 inline constexpr const char* GAME_SPEED = "gameSpeedPercent";
-inline constexpr const char* ZOOM = "cameraZoomPercent";
+// How far the camera is pulled back outdoors: 0 is the game's camera, 100 the farthest (zoom_for).
+inline constexpr const char* ZOOM_OUT = "cameraZoomOutPercent";
 inline constexpr const char* RESOLUTION = "internalResolution";  // the lines the game draws, 0: the window's
 inline constexpr const char* FULLSCREEN = "fullscreen";
 inline constexpr const char* WIDESCREEN = "widescreen";
@@ -34,6 +35,10 @@ inline constexpr int RESOLUTIONS[] = {0, 480, 720, 1080, 1440};
 // How many times bigger than the console's 640x480 the game draws for a resolution (0 follows
 // the window): 720 lines is 1.5 times.
 constexpr float resolution_scale(int lines) { return static_cast<float>(lines) / 480.f; }
+// The camera's zoom for a "zoom out" percent: 0 is the game's (1), 100 is the farthest (0.5).
+constexpr float zoom_for(int zoom_out_percent) { return 1.f - static_cast<float>(zoom_out_percent) / 200.f; }
+// The "zoom out" percent for a zoom, the other way round (the command line gives a zoom).
+constexpr int zoom_out_percent_for(float zoom) { return static_cast<int>((1.f - zoom) * 200.f + 0.5f); }
 inline constexpr int FRAME_RATES[] = {30, 60, 120};
 
 class Settings {

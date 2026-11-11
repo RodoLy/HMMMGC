@@ -41,7 +41,7 @@ unsigned game_speed_percent();  // 100 to 400
 float resolution_scale();       // 0: the window's; otherwise a multiple of the console's
 bool fullscreen();
 bool widescreen();
-float zoom();                   // 0.5 to 2
+float zoom();                   // 0.5 (pulled back the most) to 1 (the game's camera)
 unsigned frame_rate();          // 30, 60 or 120
 unsigned volume_percent();      // 0 (silent) to 100 (the game's own)
 bool show_frame_rate();         // over the game, at the top right (in_game_menu.h)

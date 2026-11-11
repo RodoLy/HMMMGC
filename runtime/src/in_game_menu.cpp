@@ -210,7 +210,7 @@ void draw_options_page() {
         option_rows::end();
     }
     // The farm's grid of crops was sized for the view the game started with (crop_grid.h).
-    const float zoom = static_cast<float>(settings.number(settings::ZOOM, 100, 50, 200)) / 100.f;
+    const float zoom = settings::zoom_for(settings.number(settings::ZOOM_OUT, 0, 0, 100));
     if (!crop_grid::covers_view(zoom, settings.flag(settings::WIDESCREEN, false))) {
         theme::note(theme::NoteKind::Info, text(Text::ZoomBeyondStart));
     }
