@@ -251,7 +251,22 @@ jobs:
           cat "build/dist/HarvestMoonMM-windows-$ARCHITECTURE/VERSIONS.txt"
           ls -l build/dist
 
+      # A manual run: the package is uploaded as it is, so that what is downloaded is the one zip and not
+      # a zip inside another (GitHub zips every artifact, unless it is told not to).
+      # Una corrida manual: el paquete se sube tal cual, para que lo que se baje sea un solo zip y no un
+      # zip dentro de otro (GitHub comprime cada artefacto, salvo que se le diga que no).
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'release'
+        with:
+          path: build/dist/*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+      # A published release: the job below downloads the packages by these names.
+      # Un release publicado: el trabajo de abajo baja los paquetes por estos nombres.
       - uses: actions/upload-artifact@v4
+        if: github.event_name == 'release'
         with:
           name: HarvestMoonMM-native-windows-${{ matrix.architecture }}
           path: build/dist/*.zip
