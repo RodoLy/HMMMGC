@@ -103,6 +103,17 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      # The runner also has .NET 10, which `dotnet` picks over the 8 just installed, and its restore
+      # of the translator (a .NET 8 project) fails without a message. A global.json at the root of
+      # the checkout makes every `dotnet` command below use the 8.
+      # El runner también trae .NET 10, que `dotnet` prefiere al 8 recién instalado, y con él la
+      # restauración del traductor (un proyecto de .NET 8) falla sin mensaje. Un global.json en la
+      # raíz hace que todos los `dotnet` de abajo usen el 8.
+      - name: Use .NET 8 for every dotnet command
+        run: |
+          printf '{ "sdk": { "version": "8.0.100", "rollForward": "latestFeature" } }\n' > global.json
+          dotnet --version
+
       - name: Install Ninja
         run: sudo apt-get update && sudo apt-get install --yes ninja-build
 
