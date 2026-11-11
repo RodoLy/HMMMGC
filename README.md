@@ -1,206 +1,253 @@
 # Harvest Moon: Magical Melody – PC recompilation
 
-[Español](#español) · [English](#english)
+<p align="center">
+  <img src="docs/images/intro.jpg" alt="The farm of the game's opening, in widescreen, drawn by the native version">
+</p>
 
----
+<p align="center"><b>English</b> · <a href="README.es.md">Español</a></p>
 
-## Español
+A native PC version of *Harvest Moon: Magical Melody* for the GameCube. The
+game's own code is translated ahead of time into C++ and compiled into a
+Windows program that runs on your processor, Intel, AMD or ARM, with no
+emulator in between. It plays in widescreen, at your screen's resolution and
+at 60 or 120 frames a second, with a launcher, an options menu inside the game
+and mods, among them one that lets the game go on after marrying Jamie.
 
-Port nativo a PC de *Harvest Moon: Magical Melody* (GameCube) por recompilación
-estática, con mejoras modernas y un mod que elimina el final forzado al casarse
-con Jamie.
+The game is not included: you need your own disc. The launcher makes the game
+from it, on your computer, the first time you play.
 
-**Binario objetivo:** `Harvest Moon: Magical Melody (USA)`, ID `G4AEE9`, revisión 0.
-`sys/main.dol` SHA-1 `5977972cd798d60ecfcf5c1f26a86dcecc36446f`.
+> [!NOTE]
+> **Version 0.1.0, the first playable version.** The game starts, plays,
+> saves and loads, and it has been played on a Windows laptop with a
+> Snapdragon X. It has not been played from start to finish yet, which is what
+> 1.0 will mean. Expect bugs, and keep a copy of your saves.
 
-Este repositorio no contiene datos del juego. Necesitas tu propio respaldo del
-disco (ISO, GCM o RVZ).
+- [What's in it](#whats-in-it)
+- [Screenshots](#screenshots)
+- [Playing](#playing)
+- [How it works](#how-it-works)
+- [What comes next](#what-comes-next)
+- [For developers](#for-developers)
+- [Credits](#credits)
+- [License](#license)
 
-### Estado
+## What's in it
 
-- **Fase 0 terminada:** análisis del disco y mapa de funciones del ejecutable
-  (4 486 funciones, validado contra el índice de excepciones de CodeWarrior).
-- **Fase 1 en curso:** con DolRecomp + ModernGekko el juego ya llega a la
-  pantalla de título y empieza una partida nueva, todo desde código
-  recompilado ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)).
-  Ya se pueden compilar mods que enganchan funciones del juego por su nombre
-  (`scripts/build_mods.sh`; guía en [mods/README.md](mods/README.md)). El
-  código recompilado se compara con el intérprete de Dolphin mientras se juega
-  y, instrucción por instrucción con operandos aleatorios (26 450 casos con las
-  palabras del juego y 41 045 con palabras inventadas de 316 formas, sin
-  necesitar el juego; esta última también corrió en ARM64, en Linux y en
-  Windows, con las mismas cifras). No ha aparecido ninguna diferencia que afecte al juego; la prueba con
-  palabras inventadas sí encontró una laguna de DolRecomp (`mtfsb1`) y un error
-  del intérprete de Dolphin (`addme` y `subfme`), que el juego no usa. Los
-  límites de todo esto, en [docs/VALIDATION.md](docs/VALIDATION.md).
-- **Fase 2 empezada:** con un runtime propio (`runtime/`), el código del juego
-  ya corre sin nada de Dolphin desde su primera instrucción hasta su bucle de
-  cuadros, lee sus archivos del disco, dibuja con aurora los logos, la intro
-  en 3D y la pantalla de título, se controla con teclado o gamepad, y carga y
-  guarda partidas en la memory card, y toca la música y los efectos con el
-  programa de sonido del DSP hecho en C++
-  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
+### The game, running natively
 
-Ver [docs/PLAN.md](docs/PLAN.md) para el plan completo,
-[docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) para el disco y
-[docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) para el mapa de funciones.
+- **No emulator.** Every function of the game is translated to C++ and runs
+  as native code, on x64 or ARM64. What the GameCube's hardware did is done
+  by a runtime written for this game (`runtime/`).
+- **Graphics** with [aurora](https://github.com/encounter/aurora), which
+  draws the GameCube's graphics with WebGPU: Direct3D 12 on Windows, Vulkan on
+  Linux.
+- **Sound** with the console's sound program (the DSP's AX) rewritten in C++
+  after Dolphin's high-level emulation, and played through SDL.
+- **Controllers**: the ones SDL knows (Xbox, PlayStation, Nintendo, GameCube
+  adapters), mapped automatically; without one, the keyboard.
+- **Saves** on a memory card that is a folder of `.gci` files, as in Dolphin,
+  so a save can be brought over.
+- **Loading** straight from the disc image, with no drive to wait for.
 
-### Metas
+### Picture, speed and sound
 
-- Ejecutable nativo, sin emulador.
-- Widescreen y ultra-panorámico, resolución hasta 4K.
-- 60 y 120 fps.
-- Cargas instantáneas.
-- Personaje más rápido (configurable).
-- Mod de Jamie: casarse con Jamie ya no termina el juego.
-- Menú de cheats y mejoras de calidad de vida.
-- Soporte para mods (reemplazo de assets y hooks de código).
+| Option | What it does |
+|---|---|
+| Internal resolution | As the window, 480p, 720p, 1080p or 1440p. |
+| Widescreen | The 3D shows more at the sides. For now the menus and the text are stretched. |
+| Frames per second | 30, as the game, or 60 and 120: the game draws 30 and the rest are made in between. |
+| Camera zoom | Outdoors, from 50% (much more of the farm in view) to 200%. Rooms and scenes keep the game's camera. |
+| Speed of the whole game | From 100% to 400%, and a turbo: holding Tab goes at least at 300%. |
+| Full screen | Also with Alt+Enter while playing. |
+| Frame counter and volume | The frames per second over the game, and the volume from 0 to 100%. |
 
-### Jugar
+### The launcher
 
-Para compilar y abrir el juego recompilado en Ubuntu, o en Windows dentro de
-WSL2, sigue [docs/BUILDING.md](docs/BUILDING.md); un solo script hace todo.
+`HarvestMoonMM.exe` prepares the game from your disc and starts it. Its four
+tabs are **Game** (prepare, play, change the disc, open the log), **Options**
+(the table above), **Mods** and **Controls** (it shows the mapping and what
+each button of your controller is on the GameCube's). It speaks English and
+Spanish, and is used with the mouse, the keyboard or a controller. If
+something fails it says why in plain words (another game, another version of
+it, an image it could not read) and offers to open the log.
 
-Para laptops con Windows en ARM (Snapdragon), donde WSL2 todavía no puede usar
-la GPU, hay un paquete nativo experimental, sin WSL ni emulador: lo arma un
-workflow de GitHub y se juega con `Play.bat`
-([packaging/windows/README.md](packaging/windows/README.md)). Todavía no se ha
-probado con el juego real.
+![The launcher's Game tab, with the game ready to play](docs/images/launcher-game-en.png)
 
-La versión nativa (sin Dolphin, [docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md))
-tiene su propio paquete para Windows, ARM64 y x64: un launcher con el estilo del
-juego que prepara el juego en tu computadora con tu propio disco (`.iso`,
-`.gcm` o `.rvz`), sin que el paquete lleve nada del juego
-([docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md)).
+### Options inside the game
 
-### Empezar (herramientas de análisis)
+**F10**, or the controller's **Select**, opens the same options without
+leaving the game. They change at once and are kept for the next time; the
+controls screen is there too. While the menu is open the game does not get
+the controller.
 
-Necesitas Python 3.11+, y Rust para instalar `nodtool`.
+![The options menu inside the game, over the farm](docs/images/in-game-menu-en.jpg)
 
-```sh
-# 1. Herramientas
-cargo install nodtool                    # lee ISO/GCM/RVZ
-python3 -m pip install -r requirements-dev.txt   # capstone, pytest, ruff
+### Mods
 
-# 2. Extrae tu disco a orig/G4AEE9 y verifica que sea el binario correcto
-python3 tools/extract_disc.py ruta/a/tu/disco.rvz
-python3 tools/check_disc.py
+| Mod | What it does |
+|---|---|
+| **Marry Jamie** (0.8.0) | In the original game, the wedding with Jamie is the ending. With this mod the wedding plays and the game goes on: Jamie lives in the house as your spouse and talks as your spouse, with new lines in the five languages of the disc, has a birthday (the 22nd of Winter), and there are the pregnancy, the birth and the special days of the marriage, as with the other partners. |
+| **Faster character** (0.1.0) | The character walks and runs faster, from 25% to 300% of the original speed (150% by default), only while you control it. |
 
-# 3. Regenera y comprueba el mapa de funciones
-python3 tools/analyze.py
-HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
+Both are on unless the Mods tab turns them off. How to make one:
+[mods/README.md](mods/README.md).
 
-# 4. Lee cualquier función
-python3 tools/disasm.py main
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/farm-widescreen.jpg" alt="The farm in widescreen, with the game's camera"></td>
+    <td width="50%"><img src="docs/images/farm-zoomed-out.jpg" alt="The same place with the camera zoomed out to 50%"></td>
+  </tr>
+  <tr>
+    <td align="center">Widescreen, with the game's camera</td>
+    <td align="center">The same moment, with the camera at 50%</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/farm-4x3.jpg" alt="The farm in 4:3, as on the GameCube"></td>
+    <td><img src="docs/images/house.jpg" alt="The player's house in the morning, in widescreen"></td>
+  </tr>
+  <tr>
+    <td align="center">4:3, as on the GameCube</td>
+    <td align="center">The house in the morning</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/launcher-mods-en.png" alt="The launcher's Mods tab, with Marry Jamie chosen"></td>
+    <td><img src="docs/images/launcher-options-en.png" alt="The launcher's Options tab"></td>
+  </tr>
+  <tr>
+    <td align="center">The launcher's mods</td>
+    <td align="center">The launcher's options</td>
+  </tr>
+</table>
+
+## Playing
+
+### What you need
+
+- Windows 10 (version 1903 or newer) or Windows 11, with an Intel or AMD
+  processor (the **x64** package) or an ARM one such as the Snapdragon (the
+  **arm64** package).
+- A graphics card with Direct3D 12.
+- Your disc of *Harvest Moon: Magical Melody* for the USA (`G4AEE9`), as an
+  image: `.iso`, `.gcm` or `.rvz` (Dolphin's compressed format). The launcher
+  checks that it is that game and that version.
+- About 2 GB free: an `.rvz` image is converted to `.iso`, and the prepared
+  game takes about 100 MB.
+
+### Steps
+
+1. Download the zip for your processor from
+   [Releases](https://github.com/RodoLy/HMMMGC/releases).
+2. Before unzipping it, right-click it → *Properties* → tick *Unblock* →
+   *OK*. Otherwise Windows may stop the tools that prepare the game.
+3. Unzip all of it into a folder and open `HarvestMoonMM.exe`. The program is
+   not signed, so Windows may say that it does not know the publisher:
+   *More info* → *Run anyway*.
+4. Choose **Prepare the game** and pick your disc image (or drop it on the
+   window). The first time, the game is made for your computer: it takes a
+   few minutes, and then never again until the next update.
+5. Press **Play**.
+
+### Controls
+
+The first controller you connect plays, mapped automatically. Without one,
+the keyboard plays, with the same keys as Dolphin by default:
+
+| GameCube | Keyboard |
+|---|---|
+| Control Stick | Arrow keys |
+| C Stick | I, J, K, L |
+| D-Pad | T, F, G, H |
+| A, B, X, Y | X, Z, C, S |
+| Z | D |
+| L, R | Q, W |
+| START | Enter |
+
+Also: **F10** opens the options, holding **Tab** speeds the game up, and
+**Alt+Enter** switches to full screen.
+
+### Your saves
+
+They are in `%LOCALAPPDATA%\HarvestMoonMM\Native\USA\Card A`, one `.gci` file
+for each file on the memory card. To bring a save from Dolphin, when it keeps
+the memory card as a GCI folder, or from the earlier ModernGekko version,
+copy its `E9-G4AE-HARVESTMOON.gci` there. Your choices are in
+`%LOCALAPPDATA%\HarvestMoonMM\settings.json`, and the logs, `prepare.log` and
+`native.log`, in the `Native` folder.
+
+If something fails, open an [issue](https://github.com/RodoLy/HMMMGC/issues)
+with the log.
+
+## How it works
+
+```
+your disc image (.iso, .gcm or .rvz)
+   │  nodtool turns an .rvz into an .iso; the launcher checks the game and its version
+   ▼
+main.dol: the game's code, for the GameCube's PowerPC processor
+   │  WiiCompiled's translator
+   ▼
+C++: each function of the game, as a C++ function
+   │  clang (llvm-mingw), with the runtime kit, on your computer
+   ▼
+hmmm-native.exe: the game, as a program for your PC
 ```
 
-#### En Windows
+The GameCube's processor is a PowerPC, so its code cannot run on a PC as it
+is. The translator of [WiiCompiled](https://github.com/patchzyy/wiicompiled),
+the recompilation of Mario Kart Wii, turns each function of the game into
+C++, and that C++ is compiled together with a runtime that gives it what it
+expects from the console: memory, the processor's special registers, the
+operating system's threads, alarms and interrupts, the disc, the memory card,
+the controllers, the graphics and the sound.
 
-- Instala el Python **x64** de [python.org](https://www.python.org/downloads/windows/),
-  también si tu PC tiene procesador ARM: `capstone` no publica paquete
-  precompilado (wheel) para Windows ARM64, y Python x64 corre ahí gracias a la
-  emulación de Windows 11. (Con Visual Studio y sus herramientas de C++ para
-  ARM64 también sirve el Python ARM64: `pip` compila `capstone` desde el código
-  fuente; así lo hace el workflow de GitHub.)
-- Usa `py` en lugar de `python3`. En PowerShell, la variable de los tests se
-  define así:
+The translated C++ is the game, so it cannot be handed out. The download
+brings everything else: the runtime already compiled (the *runtime kit*), the
+translator, a C++ compiler (llvm-mingw) and Python. The launcher makes the
+program on your computer from your disc, and nothing in the package comes
+from the disc. The mods are compiled into the program, and the places where
+they act are marked in the translated code.
 
-  ```powershell
-  $env:HM_MM_DOL = "orig/G4AEE9/sys/main.dol"
-  py -m pytest
-  ```
+More: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md) (the package and the
+preparation), [runtime/README.md](runtime/README.md) and
+[docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md) (the runtime),
+[docs/PLAN.md](docs/PLAN.md) (the whole plan).
 
-- Si ya usas Dolphin no necesitas Rust ni `nodtool`: clic derecho en el juego →
-  *Properties* → pestaña *Filesystem* → clic derecho en el disco →
-  *Extract Entire Disc...*, y elige la carpeta `orig\G4AEE9`. Después
-  `py tools/check_disc.py` confirma que quedó bien.
+Before the native version, the recompiled game ran with
+[DolRecomp](https://github.com/ExpansionPak/DolRecomp) on
+[ModernGekko](https://github.com/ExpansionPak/ModernGekko), which keeps
+Dolphin's core for the hardware. That package is still in the repository
+([packaging/windows/README.md](packaging/windows/README.md)), and it was the
+test bench of the Jamie mod.
 
-Antes de contribuir lee [CONTRIBUTING.md](CONTRIBUTING.md).
+## What comes next
 
-### Licencia
+- **1.0**: the game played from start to finish.
+- The menus and the text at 4:3 in widescreen, instead of stretched.
+- The game in Spanish, French, German or Italian: the American disc carries
+  the translations of a European release that never came out.
+- More mods: cheats, and fast-forwarding the scenes.
+- Updating from the launcher, a signed program, and a package for Linux.
+- Later, the two Wii versions of the game on the same runtime.
 
-Este proyecto se distribuye bajo la GNU General Public License, versión 3 o
-posterior (GPL-3.0-or-later); el texto completo está en [LICENSE](LICENSE). Es
-la licencia de ModernGekko y es compatible con la de DolRecomp (GPLv3) y con la
-de Dolphin, sobre los que se construye. Los parches de `patches/` modifican
-archivos derivados de Dolphin que son GPL-2.0-or-later y se ofrecen con esos
-mismos términos. El juego no se incluye ni se distribuye.
+## For developers
 
----
+- The native runtime on Linux: `scripts/build_native_runtime.sh`
+  ([runtime/README.md](runtime/README.md)). It needs your disc extracted in
+  `orig/G4AEE9`.
+- The launcher and the Windows package, which GitHub Actions builds when a
+  version is published: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md).
+- How the game was analysed: [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md),
+  [docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) (4,486 functions, checked
+  against CodeWarrior's exception index) and
+  [docs/VALIDATION.md](docs/VALIDATION.md) (the recompiled code compared with
+  Dolphin's interpreter, during play and instruction by instruction).
 
-## English
+**Target binary:** `Harvest Moon: Magical Melody (USA)`, ID `G4AEE9`,
+revision 0. `sys/main.dol` SHA-1 `5977972cd798d60ecfcf5c1f26a86dcecc36446f`.
 
-Native PC port of *Harvest Moon: Magical Melody* (GameCube) via static
-recompilation, with modern enhancements and a mod that removes the forced
-ending when marrying Jamie.
-
-**Target binary:** `Harvest Moon: Magical Melody (USA)`, ID `G4AEE9`, revision 0.
-`sys/main.dol` SHA-1 `5977972cd798d60ecfcf5c1f26a86dcecc36446f`.
-
-This repository contains no game data. You need your own backup of the disc
-(ISO, GCM or RVZ).
-
-### Status
-
-- **Phase 0 done:** disc analysis and function map of the executable (4,486
-  functions, validated against CodeWarrior's exception index).
-- **Phase 1 in progress:** with DolRecomp + ModernGekko the game already
-  reaches the title screen and starts a new game, all from recompiled code
-  ([docs/RECOMPILER_EVALUATION.md](docs/RECOMPILER_EVALUATION.md)). Mods that
-  attach to the game's functions by name can now be built
-  (`scripts/build_mods.sh`; guide in [mods/README.md](mods/README.md)). The
-  recompiled code is compared with Dolphin's interpreter while the game plays
-  and, instruction by instruction on random operands (26,450 cases with the
-  game's words and 41,045 with made-up words of 316 forms, with no need for
-  the game; the latter also ran on ARM64, on Linux and on Windows, with the
-  same figures). No difference
-  that affects the game has appeared; the test with made-up words did find a
-  gap in DolRecomp (`mtfsb1`) and a bug in Dolphin's interpreter (`addme` and
-  `subfme`), which the game does not use. The limits of all this are in
-  [docs/VALIDATION.md](docs/VALIDATION.md).
-- **Phase 2 started:** with a runtime of our own (`runtime/`), the game's code
-  already runs with nothing from Dolphin from its first instruction to its
-  frame loop, reads its files from the disc, draws the logos, the 3D intro and
-  the title screen with aurora, is played with a keyboard or a gamepad, and
-  loads and saves games on the memory card, and plays the music and sound
-  effects with the DSP's sound program written in C++
-  ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md)).
-
-See [docs/PLAN.md](docs/PLAN.md) for the full plan,
-[docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md) for the disc and
-[docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) for the function map.
-
-### Goals
-
-- Native executable, no emulator.
-- Widescreen and ultrawide, up to 4K.
-- 60 and 120 fps.
-- Instant loading.
-- Faster character movement (configurable).
-- Jamie mod: marrying Jamie no longer ends the game.
-- Cheat menu and quality-of-life improvements.
-- Mod support (asset replacement and code hooks).
-
-### Playing
-
-To build and start the recompiled game on Ubuntu, or on Windows inside WSL2,
-follow [docs/BUILDING.md](docs/BUILDING.md); a single script does it all.
-
-For laptops with Windows on ARM (Snapdragon), where WSL2 cannot use the GPU
-yet, there is an experimental native package, with no WSL and no emulator: a
-GitHub workflow builds it and it is played with `Play.bat`
-([packaging/windows/README.md](packaging/windows/README.md)). It has not been
-tried with the real game yet.
-
-The native version (without Dolphin, [docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md))
-has its own package for Windows, ARM64 and x64: a launcher in the game's style
-that prepares the game on your computer from your own disc (`.iso`, `.gcm` or
-`.rvz`), without the package carrying anything of the game
-([docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md)).
-
-### Getting started (analysis tools)
-
-You need Python 3.11+, and Rust to install `nodtool`.
+The analysis tools need Python 3.11 or newer, and Rust to install `nodtool`:
 
 ```sh
 # 1. Tools
@@ -219,7 +266,7 @@ HM_MM_DOL=orig/G4AEE9/sys/main.dol python3 -m pytest
 python3 tools/disasm.py main
 ```
 
-#### On Windows
+On Windows:
 
 - Install the **x64** Python from [python.org](https://www.python.org/downloads/windows/),
   even if your PC has an ARM processor: `capstone` ships no prebuilt package
@@ -241,11 +288,34 @@ python3 tools/disasm.py main
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
 
-### License
+## Credits
 
-This project is distributed under the GNU General Public License, version 3 or
-later (GPL-3.0-or-later); the full text is in [LICENSE](LICENSE). It is the
-license of ModernGekko and is compatible with those of DolRecomp (GPLv3) and
-Dolphin, which the project builds on. The patches in `patches/` modify
-Dolphin-derived files that are GPL-2.0-or-later and are offered under those
-same terms. The game is neither included nor distributed.
+- [WiiCompiled](https://github.com/patchzyy/wiicompiled): the translator, and
+  the example of a recompilation that runs without an emulator.
+- [aurora](https://github.com/encounter/aurora): the GameCube's graphics,
+  controllers and memory card, on [Dawn](https://dawn.googlesource.com/dawn)
+  (WebGPU).
+- [Dolphin](https://dolphin-emu.org/): the reference for the hardware; the
+  sound program is ported from its high-level emulation.
+- [DolRecomp](https://github.com/ExpansionPak/DolRecomp) and
+  [ModernGekko](https://github.com/ExpansionPak/ModernGekko): the first
+  playable recompilation of the game.
+- [SDL](https://www.libsdl.org/), [Dear ImGui](https://github.com/ocornut/imgui),
+  [nod](https://github.com/encounter/nod),
+  [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) and the fonts Baloo 2,
+  Dosis, M PLUS Rounded 1c and DejaVu Sans. The whole list, with the
+  licenses, is in
+  [packaging/native/THIRD_PARTY_NOTICES.txt](packaging/native/THIRD_PARTY_NOTICES.txt).
+
+## License
+
+GNU General Public License, version 3 or later (GPL-3.0-or-later); the text
+is in [LICENSE](LICENSE). It is the license of WiiCompiled and ModernGekko and
+is compatible with those of DolRecomp and Dolphin. The patches in `patches/`
+modify files derived from Dolphin that are GPL-2.0-or-later and are offered
+under those same terms.
+
+This is a fan project, not affiliated with Natsume, Marvelous or Nintendo.
+*Harvest Moon: Magical Melody* was developed by Marvelous Interactive and
+published by Natsume. No part of the game is in this repository or in its
+downloads.
