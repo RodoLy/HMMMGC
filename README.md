@@ -92,6 +92,38 @@ the controller.
 Both are on unless the Mods tab turns them off. How to make one:
 [mods/README.md](mods/README.md).
 
+#### Marry Jamie, in pictures
+
+Taken on the earlier ModernGekko version, where the mod was tried with a copy
+of a real save. Jamie's lines are new, written for the mod.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/jamie-anniversary-morning.jpg" alt="Jamie at home on the morning of the wedding anniversary: Hey. Come home early tonight, got it?"></td>
+    <td width="50%"><img src="docs/images/jamie-anniversary-dinner.jpg" alt="Jamie that night: I made dinner. Sit down before it gets cold."></td>
+  </tr>
+  <tr>
+    <td align="center">The wedding anniversary, in the morning…</td>
+    <td align="center">…and the dinner, when you remembered</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/jamie-pregnancy.jpg" alt="Jamie in bed at the clinic, and the Musical Note for the pregnancy"></td>
+    <td><img src="docs/images/jamie-checkup.jpg" alt="Jamie at the clinic with the baby: Hah! I knew it. Come here, Mia."></td>
+  </tr>
+  <tr>
+    <td align="center">The pregnancy, with its Musical Note</td>
+    <td align="center">Mia's checkup at the clinic</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/jamie-child-birthday.jpg" alt="Jamie on the child's birthday: I used to think birthdays were nothing to celebrate."></td>
+    <td><img src="docs/images/jamie-girl-anniversary.jpg" alt="Jamie with the girl on the anniversary: ...You remembered. Humph. Not bad."></td>
+  </tr>
+  <tr>
+    <td align="center">Mia's birthday</td>
+    <td align="center">Playing as the girl, on the anniversary</td>
+  </tr>
+</table>
+
 ## Screenshots
 
 <table>

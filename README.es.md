@@ -93,6 +93,42 @@ recibe el control.
 Los dos están activados mientras la pestaña Mods no los apague. Cómo hacer
 uno: [mods/README.md](mods/README.md).
 
+#### Casarse con Jamie, en imágenes
+
+Tomadas en la versión anterior con ModernGekko, donde el mod se probó con una
+copia de una partida real. Las frases de Jamie son nuevas, escritas para el
+mod.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/jamie-anniversary-morning.jpg" alt="Jamie en la casa la mañana del aniversario de bodas: Hey. Come home early tonight, got it?"></td>
+    <td width="50%"><img src="docs/images/jamie-anniversary-dinner.jpg" alt="Jamie esa noche: I made dinner. Sit down before it gets cold."></td>
+  </tr>
+  <tr>
+    <td align="center">El aniversario de bodas, en la mañana…</td>
+    <td align="center">…y la cena, cuando te acordaste</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/jamie-pregnancy.jpg" alt="Jamie en cama en la clínica, y la nota musical por el embarazo"></td>
+    <td><img src="docs/images/jamie-checkup.jpg" alt="Jamie en la clínica con el bebé: Hah! I knew it. Come here, Mia."></td>
+  </tr>
+  <tr>
+    <td align="center">El embarazo, con su nota musical</td>
+    <td align="center">La revisión de Mia en la clínica</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/jamie-child-birthday.jpg" alt="Jamie en el cumpleaños de su hija: I used to think birthdays were nothing to celebrate."></td>
+    <td><img src="docs/images/jamie-girl-anniversary.jpg" alt="Jamie con la chica en el aniversario: ...You remembered. Humph. Not bad."></td>
+  </tr>
+  <tr>
+    <td align="center">El cumpleaños de Mia</td>
+    <td align="center">Jugando como la chica, en el aniversario</td>
+  </tr>
+</table>
+
+Las capturas están en inglés porque el disco americano solo usa ese idioma; el
+mod trae las frases de Jamie también en español, francés, alemán e italiano.
+
 ## Capturas
 
 <table>
