@@ -225,7 +225,9 @@ the internal resolution (as the window, 480p, 720p, 1080p or 1440p, which the
 file keeps as `internalResolution`), full screen, widescreen, frames per
 second, the frame counter, the zoom and the volume, which change at once, the mods
 (a switch each; the change applies when the game is restarted) and the controls
-screen, in a bar at the top with a page for each part and the game visible
+screen (where the key, mouse button or controller button that plays each part of
+the GameCube is chosen, `controls_editor.h`; aurora keeps it in
+`keyboard_bindings.dat` and in a file for each controller), in a bar at the top with a page for each part and the game visible
 behind. What changes is kept in
 `settings.json` when the menu closes, and the launcher reads it when it comes
 back. While it is open the game goes on but gets nothing from the controllers
