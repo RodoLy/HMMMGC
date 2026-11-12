@@ -189,8 +189,15 @@ public:
         style.PopupRounding = theme::px(3);
         style.FrameRounding = theme::px(3);
         style.WindowBorderSize = 1.f;
+        // Room between the edge of a window or a menu and what is in it (the launcher's style, which
+        // the game's windows start from, has none: its panels bring their own).
+        style.WindowPadding = ImVec2(theme::px(14), theme::px(12));
         style.FramePadding = ImVec2(theme::px(9), theme::px(5));
-        style.ItemSpacing = ImVec2(theme::px(9), theme::px(6));
+        style.ItemSpacing = ImVec2(theme::px(9), theme::px(7));
+        style.ItemInnerSpacing = ImVec2(theme::px(8), theme::px(4));
+        style.CellPadding = ImVec2(theme::px(8), theme::px(4));
+        style.WindowTitleAlign = ImVec2(0.f, 0.5f);
+        style.ScrollbarSize = theme::px(12);
         style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.07f, 0.08f, 0.10f, 0.94f);
         ImGui::PushFont(theme::fonts().small);
     }
@@ -334,7 +341,10 @@ void draw_menu_bar(ImVec2 window) {
     }
     settings::Settings& settings = player_options::current();
     bool changed = false;
-    ImGui::TextDisabled("Harvest Moon MM");
+    // The game's name only where the bar has room for it.
+    if (window.x >= theme::px(1000)) {
+        ImGui::TextDisabled("Harvest Moon MM");
+    }
     changed |= draw_resolution_menu(settings);
     changed |= draw_picture_menu(settings);
     if (ImGui::MenuItem(text(Text::ControllerSettings))) {
