@@ -182,7 +182,12 @@ All come off, like the original game; you turn them on in the Mods tab. How to m
 ### Controls
 
 The first controller you connect plays, mapped automatically. Without one,
-the keyboard plays, with the same keys as Dolphin by default:
+the keyboard plays, with the same keys as Dolphin by default. You can change
+them in the game: **F10**, then **Controls**. Pick a part of the GameCube
+controller and press the key (or a mouse button) or, for a controller, the
+button that should play it; the changes are kept by themselves, each controller
+has its own, and **Restore defaults** goes back to the automatic mapping.
+(A controller's sticks always follow the controller's own.)
 
 | GameCube | Keyboard |
 |---|---|

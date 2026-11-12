@@ -146,6 +146,30 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::ModNameJamieMarriage, "Casarse con Jamie", "Marry Jamie"},
     {Text::ModNamePlayerSpeed, "Personaje más rápido", "Faster character"},
     {Text::ModNameCarrySpeed, "Sin frenos al cargar", "No slowdown when carrying"},
+    {Text::AnalogStick, "Palanca", "Stick"},
+    {Text::DirectionUp, "arriba", "up"},
+    {Text::DirectionDown, "abajo", "down"},
+    {Text::DirectionLeft, "izquierda", "left"},
+    {Text::DirectionRight, "derecha", "right"},
+    {Text::PressKey, "Presiona una tecla o un botón del ratón...", "Press a key or a mouse button..."},
+    {Text::PressButton, "Presiona un botón del control...", "Press a button on the controller..."},
+    {Text::RestoreMapping, "Restablecer", "Restore defaults"},
+    {Text::MouseLeft, "Ratón izquierdo", "Mouse left"},
+    {Text::MouseMiddle, "Ratón central", "Mouse middle"},
+    {Text::MouseRight, "Ratón derecho", "Mouse right"},
+    {Text::MouseOther, "Botón del ratón", "Mouse button"},
+    {Text::EditorIntroKeyboard,
+     "Elige una parte del control de GameCube y presiona la tecla (o el botón del ratón) que la juega. Escape "
+     "cancela. Se guarda solo.",
+     "Pick a part of the GameCube controller and press the key (or mouse button) that plays it. Escape cancels. "
+     "It is kept by itself."},
+    {Text::EditorIntroGamepad,
+     "Elige un botón de GameCube y presiona el botón de tu control que lo juega. Las palancas siguen a las de tu "
+     "control. Cada control guarda su propia asignación.",
+     "Pick a GameCube button and press the button on your controller that plays it. The sticks follow your "
+     "controller's. Each controller keeps its own mapping."},
+    {Text::EditorConnectGamepad, "Conecta un control para asignarlo también.", "Connect a controller to set it up too."},
+    {Text::NoKey, "Sin tecla", "No key"},
     {Text::GameShortcuts,
      "En el juego: F10 o el botón Select abren las opciones, Tab acelera (turbo) y Alt+Enter cambia a pantalla "
      "completa.",

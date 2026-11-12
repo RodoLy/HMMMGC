@@ -4,6 +4,7 @@
 
 #include "controls.h"
 #include "crop_grid.h"
+#include "controls_editor.h"
 #include "graphics/aurora_host.h"
 #include "mods/native_mods.h"
 #include "option_rows.h"
@@ -61,8 +62,6 @@ bool g_ready = false;               // the language and ImGui's settings are set
 // The lettering was made before this frame started: ImGui builds it as a frame starts, so a menu
 // opened between frames (by an event read while the game loads) waits for the next one.
 bool g_lettering_ready = false;
-controls::Gamepads g_gamepads;
-int g_selected_device = 0;
 
 // The language of the launcher's choice, and nothing of ImGui kept between runs.
 void get_ready() {
@@ -130,7 +129,7 @@ void close() {
     g_open = false;
     g_asking_to_quit = false;
     g_waiting_for_release = true;
-    g_gamepads.close();
+    controls_editor::stop();
     ImGui::GetIO().ConfigFlags &= ~(ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad);
     player_options::save_if_changed();
     runtime_log::info("menu", "the options menu is closed");
@@ -148,9 +147,7 @@ void show_page(Page page) {
     if (page != g_page) {
         g_page = page;
         g_focus_first = true;
-        if (page != Page::Controls) {
-            g_gamepads.close();
-        }
+        controls_editor::stop();
     }
 }
 
@@ -354,9 +351,7 @@ void draw_menu(ImVec2 window) {
             case Page::Picture: draw_picture_page(); break;
             case Page::Sound: draw_sound_page(); break;
             case Page::Mods: draw_mods_page(); break;
-            case Page::Controls:
-                controls::draw_screen(g_gamepads, g_selected_device, std::exchange(g_focus_first, false));
-                break;
+            case Page::Controls: controls_editor::draw(std::exchange(g_focus_first, false)); break;
         }
         theme::end_panel();
     }
@@ -400,6 +395,8 @@ void draw_quit_question(ImVec2 window) {
 void handle_event(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat && event.key.scancode == SDL_SCANCODE_F10) {
         toggle();
+    } else if (g_open) {
+        controls_editor::handle_event(event);
     }
 }
 
@@ -433,7 +430,8 @@ void draw() {
     }
     // Escape and the controller's B go back: from the question to the menu, from the menu to the
     // game. The controller's shoulder buttons change the page.
-    const bool back = ImGui::IsKeyPressed(ImGuiKey_Escape, false) || std::exchange(g_b_pressed, false);
+    const bool back = (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || std::exchange(g_b_pressed, false)) &&
+                      !controls_editor::busy();
     if (g_asking_to_quit) {
         if (back) {
             g_asking_to_quit = false;

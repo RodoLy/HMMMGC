@@ -69,7 +69,7 @@ resolución interna (como la ventana, 480p, 720p, 1080p o 1440p, que el archivo
 guarda como `internalResolution`), la pantalla completa, la pantalla ancha, los
 cuadros por segundo, el contador de cuadros por segundo, el zoom y el
 volumen, que cambian al momento, los mods (con un interruptor cada uno; el
-cambio se aplica al reiniciar el juego) y la pantalla de controles, en una
+cambio se aplica al reiniciar el juego) y la pantalla de controles (donde se elige qué tecla, botón del ratón o botón del control juega cada parte del GameCube, `controls_editor.h`; aurora lo guarda en `keyboard_bindings.dat` y en un archivo por control), en una
 barra arriba con una página para cada parte y el juego visible detrás. Lo
 que cambia se guarda en `settings.json` al cerrar el menú, y el launcher lo lee
 al volver. Mientras está abierto, el juego sigue pero no recibe nada de los

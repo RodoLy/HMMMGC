@@ -207,6 +207,41 @@ State Gamepads::state(const Device& device) {
     return state;
 }
 
+std::string native_button_label(SDL_GamepadType type, int button) {
+    const OtherNames names = other_names(family(type));
+    const bool nintendo = family(type) == Family::Nintendo || family(type) == Family::GameCube;
+    switch (static_cast<SDL_GamepadButton>(button)) {
+    case SDL_GAMEPAD_BUTTON_SOUTH:
+    case SDL_GAMEPAD_BUTTON_EAST:
+    case SDL_GAMEPAD_BUTTON_WEST:
+    case SDL_GAMEPAD_BUTTON_NORTH: return face_label(type, static_cast<SDL_GamepadButton>(button));
+    case SDL_GAMEPAD_BUTTON_START: return names.start;
+    case SDL_GAMEPAD_BUTTON_BACK: return family(type) == Family::PlayStation ? "Share" : nintendo ? "-" : "Back";
+    case SDL_GAMEPAD_BUTTON_LEFT_STICK: return family(type) == Family::PlayStation ? "L3" : "LS";
+    case SDL_GAMEPAD_BUTTON_RIGHT_STICK: return family(type) == Family::PlayStation ? "R3" : "RS";
+    case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
+        return family(type) == Family::Xbox ? "LB" : family(type) == Family::PlayStation ? "L1" : "L";
+    case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return names.shoulder;
+    case SDL_GAMEPAD_BUTTON_DPAD_UP: return "\xE2\x86\x91";     // ↑
+    case SDL_GAMEPAD_BUTTON_DPAD_DOWN: return "\xE2\x86\x93";   // ↓
+    case SDL_GAMEPAD_BUTTON_DPAD_LEFT: return "\xE2\x86\x90";   // ←
+    case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: return "\xE2\x86\x92";  // →
+    default: break;
+    }
+    return "#" + std::to_string(button);
+}
+
+std::string native_axis_label(SDL_GamepadType type, int axis) {
+    const OtherNames names = other_names(family(type));
+    if (axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER) {
+        return names.left_trigger;
+    }
+    if (axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) {
+        return names.right_trigger;
+    }
+    return texts::text(Text::AnalogStick);
+}
+
 std::string part_name(Part part) {
     switch (part) {
     case Part::A: return "A";

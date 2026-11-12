@@ -49,6 +49,13 @@ private:
     std::map<SDL_JoystickID, SDL_Gamepad*> open_;
 };
 
+// What a gamepad of this kind calls one of its buttons ("A", "✕", "LB", "L1"...), and one of its
+// axes when it works as a button (the triggers).
+//
+// Cómo llama un gamepad de este tipo a uno de sus botones y a uno de sus ejes que hace de botón.
+std::string native_button_label(SDL_GamepadType type, int button);
+std::string native_axis_label(SDL_GamepadType type, int axis);
+
 // The GameCube part's name ("A", "Z", "Palanca C", ...).
 std::string part_name(Part part);
 // What plays that part on `device`: a button's label ("A", "✕", "RB"), a stick, or keys.
