@@ -146,6 +146,8 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::ModNameJamieMarriage, "Casarse con Jamie", "Marry Jamie"},
     {Text::ModNamePlayerSpeed, "Personaje más rápido", "Faster character"},
     {Text::ModNameCarrySpeed, "Sin frenos al cargar", "No slowdown when carrying"},
+    {Text::ControllerSettings, "Ajustes del control", "Controller settings"},
+    {Text::HideMenu, "Ocultar (F10)", "Hide (F10)"},
     {Text::AnalogStick, "Palanca", "Stick"},
     {Text::DirectionUp, "arriba", "up"},
     {Text::DirectionDown, "abajo", "down"},

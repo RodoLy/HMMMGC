@@ -77,8 +77,9 @@ una imagen que no pudo leer) y ofrece abrir el registro.
 ### Opciones dentro del juego
 
 **F10**, o el botón **Select** del control, abre las mismas opciones sin salir
-del juego, en una barra arriba con una página de Imagen, Sonido, Mods y
-Controles. Las opciones cambian al momento y se guardan para la próxima vez;
+del juego, en una barra sencilla arriba con menús desplegables: la
+resolución, Imagen, Ajustes del control, Volumen y Mods. Las opciones cambian
+al momento y se guardan para la próxima vez;
 los mods también se prenden o apagan ahí, y el cambio se aplica la próxima vez
 que se abre el juego. Mientras el menú está abierto, el juego no
 recibe el control.
@@ -185,7 +186,7 @@ uno: [mods/README.md](mods/README.md).
 
 El primer control que conectes juega, asignado solo. Sin control, juega el
 teclado, con las mismas teclas que Dolphin trae de entrada. Se pueden cambiar
-en el juego: **F10** y luego **Controles**. Elige una parte del control de
+en el juego: **F10** y luego **Ajustes del control**. Elige una parte del control de
 GameCube y presiona la tecla (o un botón del ratón) o, en un control, el botón
 que debe jugarla; los cambios se guardan solos, cada control tiene los suyos y
 **Restablecer** vuelve a la asignación automática. (Las palancas de un control

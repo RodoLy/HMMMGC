@@ -3,7 +3,6 @@
 #include "controls_editor.h"
 
 #include "controls.h"
-#include "option_rows.h"
 #include "texts.h"
 #include "theme.h"
 
@@ -13,6 +12,7 @@
 #include <dolphin/pad.h>
 #include <imgui.h>
 
+#include <cfloat>
 #include <string>
 #include <vector>
 
@@ -262,7 +262,7 @@ bool handle_event(const SDL_Event& event) {
     return true;
 }
 
-void draw(bool focus) {
+bool draw_window(bool* open) {
     const bool connected = gamepad_connected();
     if (!connected) {
         g_device = 0;
@@ -275,44 +275,67 @@ void draw(bool focus) {
         listen_to_gamepad(rows);
     }
 
-    std::vector<std::string> devices = {text(Text::Keyboard)};
-    if (connected) {
-        const char* name = PADGetName(PORT);
-        devices.push_back(name != nullptr ? name : text(Text::Controller));
-    }
-    if (focus) {
-        ImGui::SetKeyboardFocusHere();
-    }
-    int device = g_device;
-    if (theme::choice("##editor device", &device, devices, std::min(ImGui::GetContentRegionAvail().x * 0.6f, theme::px(420)))) {
-        stop_waiting();
-        g_device = device;
-    }
-    theme::paragraph(text(g_device == 1 ? Text::EditorIntroGamepad : Text::EditorIntroKeyboard), theme::TEXT_SOFT);
-    if (!connected) {
-        theme::paragraph(text(Text::EditorConnectGamepad), theme::TEXT_SOFT);
-    }
-
-    if (option_rows::begin("##editor rows")) {
-        const bool settled = SDL_GetTicks() - g_stopped_at >= SETTLE_MS;
-        for (size_t i = 0; i < rows.size(); ++i) {
-            option_rows::next_row(rows[i].label.c_str(), nullptr);
-            const bool waiting = g_waiting_row == static_cast<int>(i);
-            const std::string label = waiting ? text(g_device == 1 ? Text::PressButton : Text::PressKey) : binding_label(rows[i]);
-            ImGui::PushID(static_cast<int>(i));
-            if (theme::menu_button(label.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, theme::px(30)),
-                                   waiting ? theme::ButtonColor::Orange : theme::ButtonColor::Gray) &&
-                settled && !waiting) {
-                start_waiting(static_cast<int>(i));
-            }
-            ImGui::PopID();
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(theme::px(560), theme::px(600)), ImGuiCond_Appearing);
+    const bool shown = ImGui::Begin(text(Text::ControllerSettings), open, ImGuiWindowFlags_NoSavedSettings);
+    if (shown) {
+        std::vector<std::string> devices = {text(Text::Keyboard)};
+        if (connected) {
+            const char* name = PADGetName(PORT);
+            devices.push_back(name != nullptr ? name : text(Text::Controller));
         }
-        option_rows::end();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::BeginCombo("##device", devices[static_cast<size_t>(g_device)].c_str())) {
+            for (size_t i = 0; i < devices.size(); ++i) {
+                if (ImGui::Selectable(devices[i].c_str(), static_cast<int>(i) == g_device)) {
+                    stop_waiting();
+                    g_device = static_cast<int>(i);
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::TextWrapped("%s", text(g_device == 1 ? Text::EditorIntroGamepad : Text::EditorIntroKeyboard));
+        if (!connected) {
+            ImGui::TextDisabled("%s", text(Text::EditorConnectGamepad));
+        }
+        ImGui::Spacing();
+        const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+        if (ImGui::BeginChild("##rows", ImVec2(0, -footer)) &&
+            ImGui::BeginTable("##editor rows", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("part", ImGuiTableColumnFlags_WidthStretch, 0.45f);
+            ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch, 0.55f);
+            const bool settled = SDL_GetTicks() - g_stopped_at >= SETTLE_MS;
+            for (size_t i = 0; i < rows.size(); ++i) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(rows[i].label.c_str());
+                ImGui::TableNextColumn();
+                const bool waiting = g_waiting_row == static_cast<int>(i);
+                const std::string label =
+                    waiting ? text(g_device == 1 ? Text::PressButton : Text::PressKey) : binding_label(rows[i]);
+                ImGui::PushID(static_cast<int>(i));
+                if (waiting) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                }
+                if (ImGui::Button(label.c_str(), ImVec2(-FLT_MIN, 0)) && settled && !waiting) {
+                    start_waiting(static_cast<int>(i));
+                }
+                if (waiting) {
+                    ImGui::PopStyleColor();
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        ImGui::EndChild();
+        if (ImGui::Button(text(Text::RestoreMapping))) {
+            stop_waiting();
+            restore_defaults();
+        }
     }
-    if (theme::menu_button(text(Text::RestoreMapping), ImVec2(theme::px(220), theme::px(34)), theme::ButtonColor::Green)) {
-        stop_waiting();
-        restore_defaults();
-    }
+    ImGui::End();
+    return *open;
 }
 
 }  // namespace controls_editor

@@ -104,6 +104,8 @@ enum class Text {
     MenuOpenNote,
     GameShortcuts,
     AnalogStick,
+    ControllerSettings,
+    HideMenu,
     DirectionUp,
     DirectionDown,
     DirectionLeft,

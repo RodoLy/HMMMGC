@@ -11,8 +11,9 @@
 
 namespace controls_editor {
 
-// The content of the page, in the panel of the options menu.
-void draw(bool focus);
+// The window with the parts of the controller and what plays each, in ImGui's plain style like the
+// rest of the menu; false when the player closed it (`open` is its flag).
+bool draw_window(bool* open);
 // Takes the key or the mouse button the player presses while a part waits for one; true when
 // the event was used.
 bool handle_event(const SDL_Event& event);

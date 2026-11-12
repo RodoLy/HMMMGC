@@ -76,10 +76,10 @@ it, an image it could not read) and offers to open the log.
 ### Options inside the game
 
 **F10**, or the controller's **Select**, opens the same options without
-leaving the game, in a bar at the top with a page for Picture, Sound, Mods and
-Controls. The options change at once and are kept for the next time; the mods
-can be turned on or off there too, and the change applies the next time the
-game is opened. While the menu is open the game does not get
+leaving the game, in a plain bar at the top with drop-down menus: the
+resolution, Picture, Controller settings, Volume and Mods. The options change
+at once and are kept for the next time; the mods can be turned on or off there
+too, and the change applies the next time the game is opened. While the menu is open the game does not get
 the controller.
 
 ![The options menu inside the game, over the farm](docs/images/in-game-menu-en.jpg)
@@ -183,7 +183,7 @@ All come off, like the original game; you turn them on in the Mods tab. How to m
 
 The first controller you connect plays, mapped automatically. Without one,
 the keyboard plays, with the same keys as Dolphin by default. You can change
-them in the game: **F10**, then **Controls**. Pick a part of the GameCube
+them in the game: **F10**, then **Controller settings**. Pick a part of the GameCube
 controller and press the key (or a mouse button) or, for a controller, the
 button that should play it; the changes are kept by themselves, each controller
 has its own, and **Restore defaults** goes back to the automatic mapping.
