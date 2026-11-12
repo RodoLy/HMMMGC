@@ -23,6 +23,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdlib>
+#include <iterator>
 #include <string>
 #include <utility>
 
@@ -228,9 +229,13 @@ bool flag_item(settings::Settings& settings, const char* name, Text label) {
     return true;
 }
 
+// Whether the bar has room for the values beside the names of its menus ("Volume: 100%").
+bool g_bar_is_wide = true;
+
 bool draw_resolution_menu(settings::Settings& settings) {
     const int lines = settings.one_of(settings::RESOLUTION, settings::RESOLUTIONS);
-    const std::string title = std::string(text(Text::Resolution)) + ": " + resolution_label(lines) + "###resolution";
+    const std::string title = std::string(text(Text::Resolution)) +
+                              (g_bar_is_wide ? ": " + resolution_label(lines) : std::string()) + "###resolution";
     bool changed = false;
     if (ImGui::BeginMenu(title.c_str())) {
         for (const int value : settings::RESOLUTIONS) {
@@ -280,7 +285,8 @@ bool draw_picture_menu(settings::Settings& settings) {
 
 bool draw_audio_menu(settings::Settings& settings) {
     int volume = settings.number(settings::VOLUME, 100, 0, 100);
-    const std::string title = std::string(text(Text::Volume)) + ": " + std::to_string(volume) + "%###audio";
+    const std::string title = std::string(text(Text::Volume)) +
+                              (g_bar_is_wide ? ": " + std::to_string(volume) + "%" : std::string()) + "###audio";
     bool changed = false;
     if (ImGui::BeginMenu(title.c_str())) {
         ImGui::SetNextItemWidth(theme::px(240));
@@ -291,6 +297,25 @@ bool draw_audio_menu(settings::Settings& settings) {
         ImGui::EndMenu();
     }
     return changed;
+}
+
+// The language of the game's dialogues: the game reads it when it starts (game_language.h).
+void draw_language_menu() {
+    settings::Settings& settings = player_options::current();
+    const int chosen = settings.game_language();
+    if (!ImGui::BeginMenu(text(Text::GameLanguageShort))) {
+        return;
+    }
+    for (int i = 0; i < static_cast<int>(std::size(settings::GAME_LANGUAGES)); ++i) {
+        if (ImGui::MenuItem(settings::GAME_LANGUAGE_NAMES[i], nullptr, i == chosen)) {
+            player_options::set_game_language(settings::GAME_LANGUAGES[i]);
+        }
+    }
+    ImGui::Separator();
+    ImGui::PushTextWrapPos(theme::px(340));
+    ImGui::TextDisabled("%s", text(Text::GameLanguageRestart));
+    ImGui::PopTextWrapPos();
+    ImGui::EndMenu();
 }
 
 // The name of a mod in the language of the menu; the ids this game's mods have are known here.
@@ -341,8 +366,9 @@ void draw_menu_bar(ImVec2 window) {
     }
     settings::Settings& settings = player_options::current();
     bool changed = false;
-    // The game's name only where the bar has room for it.
-    if (window.x >= theme::px(1000)) {
+    // The game's name and the values of the menus only where the bar has room for them.
+    g_bar_is_wide = window.x >= theme::px(1100);
+    if (g_bar_is_wide) {
         ImGui::TextDisabled("Harvest Moon MM");
     }
     changed |= draw_resolution_menu(settings);
@@ -351,6 +377,7 @@ void draw_menu_bar(ImVec2 window) {
         g_controls_window = true;
     }
     changed |= draw_audio_menu(settings);
+    draw_language_menu();
     draw_mods_menu();
     if (changed) {
         player_options::apply_changes();

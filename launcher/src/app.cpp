@@ -469,6 +469,23 @@ std::vector<App::Row> App::options_rows() {
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
     percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
+    {
+        // The language of the game's dialogues, of those the disc has.
+        Row row;
+        const int index = settings_.game_language();
+        row.label = text(Text::GameLanguage);
+        row.hint = text(Text::GameLanguageHint);
+        row.value = settings::GAME_LANGUAGE_NAMES[index];
+        row.tone = Tone::Value;
+        row.arrows = true;
+        row.change = [this, index, changed](int step) {
+            const int count = static_cast<int>(std::size(settings::GAME_LANGUAGES));
+            settings_.set(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
+            changed();
+        };
+        row.activate = [change = row.change] { change(1); };
+        rows.push_back(std::move(row));
+    }
     return rows;
 }
 

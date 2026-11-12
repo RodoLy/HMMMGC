@@ -50,6 +50,8 @@ void note_running_mods(const std::vector<std::string>& ids);
 bool mod_is_running(const std::string& id);
 // Turns a mod on or off in the settings (the menu saves them); the game keeps the mods it started with.
 void set_mod_enabled(const std::string& id, bool enabled);
+// The language of the game's dialogues for the next start ("en", "es"...); the menu saves it.
+void set_game_language(const std::string& language);
 
 // While the game runs (in_game_menu.h). current() is settings.json as the game runs with it (with
 // what the command line gave), for the menu's rows, which change it; apply_changes() then gives

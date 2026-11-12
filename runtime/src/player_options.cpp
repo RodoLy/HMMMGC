@@ -133,6 +133,11 @@ void set_mod_enabled(const std::string& id, bool enabled) {
     g_unsaved = true;
 }
 
+void set_game_language(const std::string& language) {
+    g_settings.set(settings::GAME_LANGUAGE, language);
+    g_unsaved = true;
+}
+
 settings::Settings& current() { return g_settings; }
 
 void apply_changes() {

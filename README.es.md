@@ -58,6 +58,7 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
 | Pantalla ancha | El 3D muestra más a los lados. Por ahora los menús y los textos se estiran. |
 | Cuadros por segundo | 30, como el juego, o 60 y 120: el juego dibuja 30 y los demás se hacen entre ellos. |
 | Alejar la cámara | Al aire libre, de 0% (la cámara del juego) a 100% (se ve mucho más de la granja). Los cuartos y las escenas conservan la cámara del juego. |
+| Idioma de los diálogos | Inglés, español, francés, alemán o italiano, los que trae el disco. Los menús y los nombres de los objetos siguen en inglés. |
 | Turbo | No es una opción: mantén Tab en el juego y va al 300%. |
 | Pantalla completa | También con Alt+Enter mientras juegas. |
 | Contador de cuadros y volumen | Los cuadros por segundo sobre el juego, y el volumen de 0 a 100%. |
