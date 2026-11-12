@@ -37,6 +37,10 @@ public:
     // offset `offset` (empty when no file does). For logs.
     std::string file_at(uint64_t offset) const;
 
+    // Whether the disc has a file with this path ("files/message_s/chara/Rion_s.bin"); upper and lower
+    // case are the same, as they are for the game's own search of the table.
+    bool has_file(const std::string& disc_path) const;
+
     const std::vector<uint8_t>& file_system_table() const { return file_system_table_; }
     const std::vector<uint8_t>& boot_info2() const { return boot_info2_; }
     const std::vector<uint8_t>& disc_header() const { return disc_header_; }

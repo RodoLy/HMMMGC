@@ -26,6 +26,12 @@ inline constexpr const char* FULLSCREEN = "fullscreen";
 inline constexpr const char* WIDESCREEN = "widescreen";
 inline constexpr const char* FRAME_RATE = "frameRate";
 inline constexpr const char* VOLUME = "volumePercent";  // 0 (silent) to 100 (the game's own)
+// The language of the game's text, of those the disc has: the game reads it when it starts.
+inline constexpr const char* GAME_LANGUAGE = "gameLanguage";
+inline constexpr const char* GAME_LANGUAGES[] = {"en", "es", "fr", "de", "it"};
+// Their names, each in its own language, in the same order.
+inline constexpr const char* GAME_LANGUAGE_NAMES[] = {"English", "Espa\xC3\xB1ol", "Fran\xC3\xA7" "ais", "Deutsch",
+                                                        "Italiano"};
 inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the game, at the top right
 inline constexpr const char* LANGUAGE = "language";      // "en" (the default) or "es"
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
@@ -51,6 +57,8 @@ public:
     int one_of(const char* name, std::span<const int> allowed) const;
     bool flag(const char* name, bool fallback) const;
     std::string text(const char* name, const std::string& fallback) const;
+    // Which of GAME_LANGUAGES the file says (0, English, when it says none of them).
+    int game_language() const;
     void set(const char* name, const nlohmann::json& value);
 
     // A mod is off unless the file says it is on: the game is the original one until the player chooses.

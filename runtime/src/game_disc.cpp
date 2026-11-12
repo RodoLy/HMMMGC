@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -252,6 +253,15 @@ bool GameDisc::read(uint64_t offset, size_t length, uint8_t* destination) const 
         }
     }
     return end <= end_of_last_source;
+}
+
+bool GameDisc::has_file(const std::string& disc_path) const {
+    const auto same = [](char a, char b) {
+        return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+    };
+    return std::ranges::any_of(files_, [&](const Extent& extent) {
+        return std::ranges::equal(extent.disc_path, disc_path, same);
+    });
 }
 
 std::string GameDisc::file_at(uint64_t offset) const {

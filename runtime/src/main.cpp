@@ -18,6 +18,7 @@
 #include "fault_handler.h"
 #include "game_clock.h"
 #include "game_disc.h"
+#include "game_language.h"
 #include "graphics/aurora_host.h"
 #include "graphics/camera_view.h"
 #include "graphics/frame_interpolation.h"
@@ -148,6 +149,7 @@ int main(int argc, char** argv) {
 
         InitializeDataSections();
         console_boot::prepare_memory(disc);
+        game_language::apply(disc, settings::GAME_LANGUAGES[player_options::current().game_language()]);
         // With the game's data in memory: the farm's grid of crops, for the chosen zoom.
         crop_grid::size_for_view(std::clamp(camera.zoom, camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM),
                                  camera.widescreen);
