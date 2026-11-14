@@ -12,16 +12,22 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <iterator>
 #include <numbers>
 #include <optional>
 
 namespace shadow_range {
 namespace {
 
-// The light's view, and what it holds as every view does (main_view.cpp): its projection
+// The light's views, and what each holds as every view does (main_view.cpp): its projection
 // type (0 perspective), its camera, and its view matrix (world to camera, 3x4, row by
-// row). The camera holds its vertical field of view in degrees and its aspect ratio.
-constexpr uint32_t LIGHT_VIEW_POINTER = 0x802AEDA0u;
+// row). The camera holds its vertical field of view in degrees and its aspect ratio. The
+// game keeps two views of the light, each with a camera of its own, the same: one draws the
+// depth map and the other looks it up. Both must be widened alike, or the map is looked up at
+// another scale than it was drawn with, and the shadows slide away from what casts them, the
+// farther the more the camera is pulled back.
+constexpr uint32_t LIGHT_VIEW_POINTERS[] = {0x802AEDA0u, 0x802AEDB0u};
+constexpr size_t LIGHT_VIEW_COUNT = std::size(LIGHT_VIEW_POINTERS);
 constexpr uint32_t VIEW_CAMERA = 0x04u;
 constexpr uint32_t VIEW_PROJECTION_TYPE = 0x34u;
 constexpr uint32_t VIEW_MATRIX = 0xD0u;
@@ -35,10 +41,10 @@ constexpr float WIDEST_GAME_FIELD_OF_VIEW = 10.f;
 // The most the area is widened (when the screen's corners reach the horizon).
 constexpr double LARGEST_WIDENING = 8;
 
-// The light camera's field of view as the game set it, and the one the runtime last wrote:
+// Each light camera's field of view as the game set it, and the one the runtime last wrote:
 // a value that is neither means the game set a new one.
-float g_game_field_of_view = 0.f;
-float g_written_field_of_view = 0.f;
+std::array<float, LIGHT_VIEW_COUNT> g_game_field_of_view{};
+std::array<float, LIGHT_VIEW_COUNT> g_written_field_of_view{};
 // For the log: the zoom of the frame before, and the widening last written to the log,
 // which tells it once the zoom has settled and the widening changed by this much.
 float g_previous_zoom = 1.f;
@@ -52,9 +58,9 @@ struct LightView {
     uint32_t camera = 0;
 };
 
-// The light's view and its camera, when they are the shadows' as the game makes them.
-std::optional<LightView> light_view() {
-    const uint32_t view = guest_memory::read32(LIGHT_VIEW_POINTER);
+// A light's view and its camera, when they are the shadows' as the game makes them.
+std::optional<LightView> light_view(uint32_t pointer) {
+    const uint32_t view = guest_memory::read32(pointer);
     if (!guest_memory::is_cached_main_memory(view) ||
         static_cast<int8_t>(guest_memory::read8(view + VIEW_PROJECTION_TYPE)) != PERSPECTIVE) {
         return std::nullopt;
@@ -93,12 +99,12 @@ float widened_field_of_view(float game_field_of_view, double widening) {
     return static_cast<float>(std::atan(std::tan(half_angle) * widening) * 360.0 / std::numbers::pi);
 }
 
-void log_widening(double widening, float field_of_view) {
+void log_widening(double widening, float field_of_view, float game_field_of_view) {
     const float zoom = camera_view::zoom();
     if (zoom == g_previous_zoom && std::abs(widening - g_logged_widening) >= LOGGED_CHANGE) {
         runtime_log::info("graphics",
                           "shadows: cover %.1f times as far as the game's (light field of view %.2f, the game's %.2f)",
-                          widening, field_of_view, g_game_field_of_view);
+                          widening, field_of_view, game_field_of_view);
         g_logged_widening = widening;
     }
     g_previous_zoom = zoom;
@@ -107,25 +113,35 @@ void log_widening(double widening, float field_of_view) {
 }  // namespace
 
 void update() {
-    const std::optional<LightView> light = light_view();
-    if (!light) {
-        return;
+    // The widening is measured along the axes of the first light view (both look the same way).
+    double widening = 1.0;
+    bool measured = false;
+    for (size_t i = 0; i < LIGHT_VIEW_COUNT; ++i) {
+        const std::optional<LightView> light = light_view(LIGHT_VIEW_POINTERS[i]);
+        if (!light) {
+            continue;
+        }
+        const float current = read_float(light->camera + CAMERA_FIELD_OF_VIEW);
+        if (current != g_written_field_of_view[i]) {
+            g_game_field_of_view[i] = current;  // the game set it
+        }
+        const float game = g_game_field_of_view[i];
+        if (!(game > 0.f && game < WIDEST_GAME_FIELD_OF_VIEW)) {
+            continue;  // not the field of view the game gives its shadows
+        }
+        if (!measured) {
+            measured = true;
+            widening = camera_view::zoom() < 1.f ? std::min(reach_ratio(light->view), LARGEST_WIDENING) : 1.0;
+        }
+        const float field_of_view = widening > 1 ? widened_field_of_view(game, widening) : game;
+        if (field_of_view != current) {
+            guest_memory::write32(light->camera + CAMERA_FIELD_OF_VIEW, std::bit_cast<uint32_t>(field_of_view));
+        }
+        g_written_field_of_view[i] = field_of_view;
+        if (i == 0) {
+            log_widening(widening, field_of_view, game);
+        }
     }
-    const float current = read_float(light->camera + CAMERA_FIELD_OF_VIEW);
-    if (current != g_written_field_of_view) {
-        g_game_field_of_view = current;  // the game set it
-    }
-    if (!(g_game_field_of_view > 0.f && g_game_field_of_view < WIDEST_GAME_FIELD_OF_VIEW)) {
-        return;  // not the field of view the game gives its shadows
-    }
-    const double widening = camera_view::zoom() < 1.f ? std::min(reach_ratio(light->view), LARGEST_WIDENING) : 1.0;
-    const float field_of_view =
-        widening > 1 ? widened_field_of_view(g_game_field_of_view, widening) : g_game_field_of_view;
-    if (field_of_view != current) {
-        guest_memory::write32(light->camera + CAMERA_FIELD_OF_VIEW, std::bit_cast<uint32_t>(field_of_view));
-    }
-    g_written_field_of_view = field_of_view;
-    log_widening(widening, field_of_view);
 }
 
 }  // namespace shadow_range

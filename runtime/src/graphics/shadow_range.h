@@ -5,7 +5,8 @@
 // The game draws its shadows with a depth map: each frame it draws the scene from the light
 // into a 256x256 picture and copies its depths to a texture, and the ground and everything
 // else look that texture up to know whether something stands between them and the light.
-// The light is a camera of its own (the view at 0x802AEDA0): far up along the light's
+// The light is a camera of its own (the views at 0x802AEDA0 and 0x802AEDB0, one drawing the
+// depth map and one looking it up, which must stay alike): far up along the light's
 // direction, looking at the point the main camera looks at, with a field of view of 1
 // degree that covers about 9 units around that point, a little more than the game's camera
 // shows. The game builds both the projection of the depth map and the texture matrix that
