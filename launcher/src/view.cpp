@@ -108,6 +108,10 @@ void draw_centered(ImDrawList* draw, const TextStyle& lettering, float center_x,
 constexpr float LIST_HEIGHT = 310.f;
 constexpr float WHEEL_STEP = 60.f;
 
+// What a disc is called in the box at the top: the console and the region for the disc this port
+// plays, and the disc's own code for any other.
+std::string disc_name(const std::string& code) { return code == "G4AEE9" ? "GameCube USA" : code; }
+
 // The animation of a row or a tab coming in from the left (hmSlideL).
 struct Slide {
     float dx;
@@ -386,9 +390,13 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     code.stroke = 5.f;
     code.stroke_color = rgb(0x6a3d00);
     const std::string& known = disc_code_.empty() ? prepared_.game : disc_code_;
-    const std::string game = known.empty() ? "\xE2\x80\x94" : known;  // —
-    look::draw_text(draw, code, 946.f - look::text_width(code, game), look::baseline_in_line(code, 28.f + TOP, 38.f),
-                    game);
+    const std::string game = known.empty() ? "\xE2\x80\x94" : disc_name(known);  // —
+    if (game != known) {
+        code.size = 26;  // a name, in the size of this face that has all the letters (lettering.cpp)
+        code.stroke = 4.f;
+    }
+    look::draw_text(draw, code, 946.f - look::text_width(code, game),
+                    look::baseline_in_line(code, 47.f + TOP - code.size * 0.5f, static_cast<float>(code.size)), game);
 
     // The state of the game, and the languages.
     look::draw_box(draw, Box{.rect = at(570.f, 86.f, 400.f, 56.f), .radius = 16.f, .background = rgb(0x4a8fe0),
@@ -478,9 +486,12 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     TextStyle number = style(Face::Baloo800, 28, 0.f, YELLOW);
     number.stroke = 4.f;
     number.stroke_color = rgb(0x3a1f6e);
-    // A long version, in smaller numbers, until it fits in its half of the box.
-    while (number.size > 12 && look::text_width(number, SHOWN_VERSION) > 106.f) {
-        --number.size;
+    // A long version, in smaller numbers so that it fits in its half of the box: the next sizes
+    // this face is made in with letters and numbers (lettering.cpp).
+    for (const int smaller : {19, 18}) {
+        if (look::text_width(number, SHOWN_VERSION) > 106.f) {
+            number.size = smaller;
+        }
     }
     look::draw_text(draw, number, 1200.5f - look::text_width(number, SHOWN_VERSION) * 0.5f,
                     look::baseline_in_line(number, 111.f + TOP - number.size * 0.5f, static_cast<float>(number.size)),
