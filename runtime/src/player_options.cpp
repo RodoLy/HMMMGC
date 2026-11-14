@@ -39,6 +39,7 @@ Options g_options;
 Options g_from_settings;
 std::optional<std::vector<std::string>> g_given_mods;
 std::vector<std::string> g_running_mods;
+int g_running_player_speed = settings::PLAYER_SPEED_DEFAULT;  // what the mod was given at the start
 std::string g_running_language;  // the language of the dialogues this run started with
 bool g_unsaved = false;
 
@@ -129,10 +130,27 @@ bool mod_enabled(const std::string& id) {
 void note_running_mods(const std::vector<std::string>& ids) {
     g_running_mods = ids;
     g_running_language = g_settings.text(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[0]);
+    if (const char* given = std::getenv(settings::PLAYER_SPEED_VARIABLE)) {
+        g_running_player_speed = std::atoi(given);
+    }
+}
+
+int player_speed_percent() {
+    return g_settings.number(settings::PLAYER_SPEED, settings::PLAYER_SPEED_DEFAULT, settings::PLAYER_SPEED_MINIMUM,
+                             settings::PLAYER_SPEED_MAXIMUM);
+}
+
+void set_player_speed_percent(int percent) {
+    g_settings.set(settings::PLAYER_SPEED, percent);
+    g_unsaved = true;
 }
 
 bool restart_pending() {
     if (g_settings.text(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[0]) != g_running_language) {
+        return true;
+    }
+    if (mod_is_running("player_speed") && g_settings.mod_enabled("player_speed") &&
+        player_speed_percent() != g_running_player_speed) {
         return true;
     }
     return std::ranges::any_of(native_mods::compiled_in(), [](const std::string& id) {

@@ -142,6 +142,7 @@ constexpr Translation TRANSLATIONS[] = {
      "Menu open: the game gets no input. F10 or Select to go back."},
     {Text::ModsRestartNote, "Los cambios de los mods se aplican la próxima vez que se abre el juego.",
      "Changes to the mods apply the next time the game is opened."},
+    {Text::PlayerSpeed, "Velocidad del personaje", "Speed of the character"},
     {Text::NeedsRestart, "Requiere reiniciar el juego", "Needs the game restarted"},
     {Text::RestartPending, "Reinicia el juego para aplicar los cambios", "Restart the game to apply the changes"},
     {Text::ModAppliesOnRestart, "Se aplica al reiniciar el juego.", "Applies when the game is restarted."},

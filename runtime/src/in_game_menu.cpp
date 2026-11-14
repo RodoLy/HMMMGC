@@ -344,6 +344,23 @@ std::string mod_name(const std::string& id) {
     return id;
 }
 
+// How fast the player_speed mod makes the character, under its switch: the same number as in the
+// launcher, in steps of 5.
+void draw_player_speed(bool mod_on) {
+    int percent = player_options::player_speed_percent();
+    const std::string format = std::string(text(Text::PlayerSpeed)) + ": %d%%";
+    ImGui::BeginDisabled(!mod_on);
+    ImGui::Indent();
+    ImGui::SetNextItemWidth(theme::px(260));
+    if (ImGui::SliderInt("##player speed", &percent, settings::PLAYER_SPEED_MINIMUM, settings::PLAYER_SPEED_MAXIMUM,
+                         format.c_str())) {
+        const int step = settings::PLAYER_SPEED_STEP;
+        player_options::set_player_speed_percent((percent + step / 2) / step * step);
+    }
+    ImGui::Unindent();
+    ImGui::EndDisabled();
+}
+
 // The mods that are compiled in, with a switch each. The game keeps the mods it started with, so
 // a change waits for the next start.
 void draw_mods_menu() {
@@ -361,6 +378,9 @@ void draw_mods_menu() {
         if (on != player_options::mod_is_running(id)) {
             ImGui::SameLine();
             ImGui::TextDisabled("(%s)", text(Text::ModAppliesOnRestart));
+        }
+        if (id == "player_speed") {
+            draw_player_speed(on);
         }
     }
     ImGui::Separator();

@@ -127,6 +127,7 @@ enum class Text {
     NoKey,
     ModsRestartNote,
     NeedsRestart,
+    PlayerSpeed,
     RestartPending,
     ModAppliesOnRestart,
     ModNameJamieMarriage,

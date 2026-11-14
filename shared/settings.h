@@ -19,6 +19,13 @@ namespace settings {
 // The names in the file, and the limits of each value (the same as the runtime's options).
 inline constexpr const char* MODS = "mods";
 inline constexpr const char* PLAYER_SPEED = "playerSpeedPercent";
+// The limits of the player_speed mod's setting (mods/player_speed/mod.json), and the variable the
+// launcher gives it to the game in.
+inline constexpr int PLAYER_SPEED_MINIMUM = 25;
+inline constexpr int PLAYER_SPEED_MAXIMUM = 300;
+inline constexpr int PLAYER_SPEED_DEFAULT = 100;
+inline constexpr int PLAYER_SPEED_STEP = 5;
+inline constexpr const char* PLAYER_SPEED_VARIABLE = "HM_MM_PLAYER_SPEED_PERCENT";
 // How far the camera is pulled back outdoors: 0 is the game's camera, 100 the farthest (zoom_for).
 inline constexpr const char* ZOOM_OUT = "cameraZoomOutPercent";
 inline constexpr const char* RESOLUTION = "internalResolution";  // the lines the game draws, 0: the window's

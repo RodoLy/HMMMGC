@@ -52,6 +52,9 @@ bool mod_is_running(const std::string& id);
 void set_mod_enabled(const std::string& id, bool enabled);
 // The language of the game's dialogues for the next start ("en", "es"...); the menu saves it.
 void set_game_language(const std::string& language);
+// The speed the player_speed mod gives the character from the next start, in percent.
+int player_speed_percent();
+void set_player_speed_percent(int percent);
 // Whether the settings ask for something the game only takes when it starts (the mods, the
 // language of the dialogues) and that is not what this run started with.
 bool restart_pending();
