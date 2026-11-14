@@ -66,8 +66,8 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
 ### El launcher
 
 `HarvestMoonMM.exe` prepara el juego a partir de tu disco y lo arranca. Sus
-cuatro pestañas son **Juego** (preparar, jugar, cambiar el disco, abrir el
-registro), **Opciones** (la tabla de arriba), **Mods** y **Controles** (muestra
+cuatro pestañas son **Juego** (preparar, jugar, cambiar el disco, elegir el
+idioma), **Opciones** (la tabla de arriba), **Mods** y **Controles** (muestra
 la asignación y qué es cada botón de tu control en el de GameCube). Habla
 español e inglés, y se usa con el mouse, el teclado o un control. Si algo
 falla, dice por qué en palabras sencillas (otro juego, otra versión del juego,

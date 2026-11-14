@@ -108,10 +108,6 @@ void draw_centered(ImDrawList* draw, const TextStyle& lettering, float center_x,
 constexpr float LIST_HEIGHT = 310.f;
 constexpr float WHEEL_STEP = 60.f;
 
-// What a disc is called in the box at the top: the console and the region for the disc this port
-// plays, and the disc's own code for any other.
-std::string disc_name(const std::string& code) { return code == "G4AEE9" ? "GameCube USA" : code; }
-
 // The animation of a row or a tab coming in from the left (hmSlideL).
 struct Slide {
     float dx;

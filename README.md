@@ -65,7 +65,7 @@ from it, on your computer, the first time you play.
 ### The launcher
 
 `HarvestMoonMM.exe` prepares the game from your disc and starts it. Its four
-tabs are **Game** (prepare, play, change the disc, open the log), **Options**
+tabs are **Game** (prepare, play, change the disc, choose the language), **Options**
 (the table above), **Mods** and **Controls** (it shows the mapping and what
 each button of your controller is on the GameCube's). It speaks English and
 Spanish, and is used with the mouse, the keyboard or a controller. If

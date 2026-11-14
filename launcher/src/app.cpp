@@ -318,6 +318,8 @@ std::string App::preparation_text() const {
     return said;
 }
 
+std::string disc_name(const std::string& code) { return code == "G4AEE9" ? "GameCube USA" : code; }
+
 std::vector<App::Row> App::game_rows() {
     const Preparation::State state = preparation_.state();
     const bool preparing = state == Preparation::State::Running;
@@ -376,18 +378,32 @@ std::vector<App::Row> App::game_rows() {
     Row disc;
     disc.symbol = "\xE2\x97\x8E";  // ◎
     disc.label = text(Text::ChangeDisc);
-    disc.value = disc_code_.empty() ? prepared_.game : disc_code_;
+    disc.value = disc_name(disc_code_.empty() ? prepared_.game : disc_code_);
     disc.tone = disc.value.empty() ? Tone::None : Tone::Value;
     disc.hint = text(Text::ChangeDiscHint);
     disc.activate = [this] { choose_disc(); };
     rows.push_back(std::move(disc));
 
-    Row log;
-    log.symbol = "\xE2\x89\xA1";  // ≡
-    log.label = text(Text::OpenLog);
-    log.hint = text(Text::OpenLogHint);
-    log.activate = [this] { open_log(); };
-    rows.push_back(std::move(log));
+    {
+        // One language for the game's dialogues and for the launcher, of those the disc has.
+        Row row;
+        const int index = settings_.language();
+        row.label = text(Text::GameLanguage);
+        row.hint = text(Text::GameLanguageHint);
+        row.value = settings::GAME_LANGUAGE_NAMES[index];
+        row.tone = Tone::Value;
+        row.arrows = true;
+        row.symbol = "\xE2\x99\xAA";  // ♪
+        row.change = [this, index](int step) {
+            const int count = static_cast<int>(std::size(settings::GAME_LANGUAGES));
+            settings_.set(settings::LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
+            save_settings();
+            apply_language();
+            mods_ = mods::load(package_.mods, package_mods());
+        };
+        row.activate = [change = row.change] { change(1); };
+        rows.push_back(std::move(row));
+    }
 
     Row exit;
     exit.symbol = "\xE2\x9C\x95";  // ✕
@@ -472,23 +488,12 @@ std::vector<App::Row> App::options_rows() {
     percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     {
-        // One language for the game's dialogues and for the launcher, of those the disc has.
-        Row row;
-        const int index = settings_.language();
-        row.label = text(Text::GameLanguage);
-        row.hint = text(Text::GameLanguageHint);
-        row.value = settings::GAME_LANGUAGE_NAMES[index];
-        row.tone = Tone::Value;
-        row.arrows = true;
-        row.change = [this, index, changed](int step) {
-            const int count = static_cast<int>(std::size(settings::GAME_LANGUAGES));
-            settings_.set(settings::LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
-            changed();
-            apply_language();
-            mods_ = mods::load(package_.mods, package_mods());
-        };
-        row.activate = [change = row.change] { change(1); };
-        rows.push_back(std::move(row));
+        Row log;
+        log.symbol = "\xE2\x89\xA1";  // ≡
+        log.label = text(Text::OpenLog);
+        log.hint = text(Text::OpenLogHint);
+        log.activate = [this] { open_log(); };
+        rows.push_back(std::move(log));
     }
     return rows;
 }

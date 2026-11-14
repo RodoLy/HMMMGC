@@ -28,6 +28,10 @@
 #include <string>
 #include <vector>
 
+// What a disc is called: the console and the region for the disc this port plays, and the disc's
+// own code for any other.
+std::string disc_name(const std::string& code);
+
 class App {
 public:
     enum class Tab { Game, Options, Mods, Controls };
