@@ -101,7 +101,7 @@ private:
     void draw_mods(ImDrawList* draw, double seconds);
     void draw_mod_details(ImDrawList* draw, const mods::Mod& mod);
     void draw_art(ImDrawList* draw);
-    void draw_scroll_bar(ImDrawList* draw, int count);
+    void draw_scroll_bar(ImDrawList* draw);
     void draw_message(ImDrawList* draw, double seconds, const std::string& message);
     void draw_cursor(ImDrawList* draw, double seconds, float row_x, float row_center);
     // Whether the mouse is over `rect` of the design: then a hand shows it can be clicked.
@@ -149,6 +149,11 @@ private:
     int selected_ = 0;
     std::string toast_;
     float scroll_ = 0.f;
+    // The list scrolls to keep the chosen row in view after the keys moved it; the wheel and the
+    // scroll bar move the list by themselves and leave the chosen row where it is.
+    bool follow_selection_ = true;
+    float list_total_ = 0.f;   // the height of all the rows of the list on screen
+    bool dragging_bar_ = false;
     float description_scroll_ = 0.f;
     double started_ = -1.0;
     ImVec2 last_mouse_{-1.f, -1.f};

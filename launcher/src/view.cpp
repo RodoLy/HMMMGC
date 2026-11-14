@@ -101,6 +101,11 @@ void draw_centered(ImDrawList* draw, const TextStyle& lettering, float center_x,
                     look::baseline_centered(lettering, center_y), text);
 }
 
+// The height of the list of rows, and how far a notch of the wheel or an arrow of the scroll bar
+// moves it, in the design's pixels.
+constexpr float LIST_HEIGHT = 310.f;
+constexpr float WHEEL_STEP = 60.f;
+
 // The animation of a row or a tab coming in from the left (hmSlideL).
 struct Slide {
     float dx;
@@ -192,7 +197,7 @@ void App::handle_keys(const std::vector<Row>& rows) {
         }
     }
 
-    // The wheel goes through the rows, or through a mod's description when it is over it.
+    // The wheel scrolls the list, or a mod's description when it is over it.
     const float wheel = ImGui::GetIO().MouseWheel;
     if (wheel != 0.f) {
         const bool over_description =
@@ -200,7 +205,8 @@ void App::handle_keys(const std::vector<Row>& rows) {
         if (over_description) {
             description_scroll_ = std::max(0.f, description_scroll_ - wheel * 30.f);
         } else {
-            move_selection(wheel > 0.f ? -1 : 1);
+            scroll_ -= wheel * WHEEL_STEP;
+            follow_selection_ = false;
         }
     }
 }
@@ -540,13 +546,13 @@ void App::draw_panel(ImDrawList* draw, double seconds, const std::vector<Row>& r
 
     if (tab_ == Tab::Mods) {
         draw_mods(draw, seconds);
-        draw_scroll_bar(draw, static_cast<int>(mods_.size()));
+        draw_scroll_bar(draw);
     } else {
         draw_rows(draw, seconds, rows, tab_ == Tab::Game ? 640.f : 922.f);
         if (tab_ == Tab::Game) {
             draw_art(draw);
         }
-        draw_scroll_bar(draw, static_cast<int>(rows.size()));
+        draw_scroll_bar(draw);
     }
 }
 
@@ -576,12 +582,13 @@ void App::draw_rows(ImDrawList* draw, double seconds, const std::vector<Row>& ro
         y += (row.play ? 72.f : 52.f) + 8.f;
     }
     const float total = std::max(0.f, y - 8.f);
-    if (selected_ >= 0 && selected_ < static_cast<int>(rows.size())) {
+    if (follow_selection_ && selected_ >= 0 && selected_ < static_cast<int>(rows.size())) {
         const float row_top = places[static_cast<size_t>(selected_)];
         const float row_bottom = row_top + (rows[static_cast<size_t>(selected_)].play ? 72.f : 52.f);
         scroll_ = std::clamp(scroll_, row_bottom - height, row_top);
     }
     scroll_ = std::clamp(scroll_, 0.f, std::max(0.f, total - height));
+    list_total_ = total;
 
     const TextStyle arrows = style(Face::Baloo800, 18, 0.f, rgb(0xffffff));
     int hovered_row = -1;
@@ -650,6 +657,7 @@ void App::draw_rows(ImDrawList* draw, double seconds, const std::vector<Row>& ro
     draw->PopClipRect();
     if (hovered_row >= 0) {
         selected_ = hovered_row;
+        follow_selection_ = false;  // a row half out of view stays where the mouse found it
     }
 }
 
@@ -662,7 +670,11 @@ void App::draw_mods(ImDrawList* draw, double seconds) {
     selected_ = std::clamp(selected_, 0, static_cast<int>(mods_.size()) - 1);
     const float total = static_cast<float>(mods_.size()) * 76.f - 8.f;
     const float row_top = static_cast<float>(selected_) * 76.f;
-    scroll_ = std::clamp(std::clamp(scroll_, row_top + 68.f - height, row_top), 0.f, std::max(0.f, total - height));
+    if (follow_selection_) {
+        scroll_ = std::clamp(scroll_, row_top + 68.f - height, row_top);
+    }
+    scroll_ = std::clamp(scroll_, 0.f, std::max(0.f, total - height));
+    list_total_ = total;
 
     const TextStyle name = [] {
         TextStyle lettering = style(Face::Dosis700, 23, 0.06f, ROW_TEXT);
@@ -714,6 +726,7 @@ void App::draw_mods(ImDrawList* draw, double seconds) {
     draw->PopClipRect();
     if (hovered_row >= 0 && hovered_row != selected_) {
         selected_ = hovered_row;
+        follow_selection_ = false;
         description_scroll_ = 0.f;
     }
     draw_mod_details(draw, mods_[static_cast<size_t>(selected_)]);
@@ -828,18 +841,49 @@ void App::draw_art(ImDrawList* draw) {
     look::dashed_border(draw, box, 14.f, 3.f, rgb(0x6a7ce0));
 }
 
-void App::draw_scroll_bar(ImDrawList* draw, int count) {
-    // Not a scroll bar to drag: its handle shows where the chosen row is in the list.
+void App::draw_scroll_bar(ImDrawList* draw) {
+    // Its handle shows which part of the list is in view; it is dragged, its track is clicked, and
+    // its arrows move the list a step.
+    const float top_arrow = 240.5f + TOP;
+    const float bottom_arrow = 537.5f + TOP;
     const TextStyle arrows = style(Face::Dosis700, 13, 0.f, rgb(0xd6f0ff));
-    draw_centered(draw, arrows, 1207.f, 240.5f + TOP, "\xE2\x96\xB2");  // ▲
-    draw_centered(draw, arrows, 1207.f, 537.5f + TOP, "\xE2\x96\xBC");  // ▼
+    draw_centered(draw, arrows, 1207.f, top_arrow, "\xE2\x96\xB2");     // ▲
+    draw_centered(draw, arrows, 1207.f, bottom_arrow, "\xE2\x96\xBC");  // ▼
     const Rect track = at(1199.f, 251.f, 16.f, 276.f);
     look::draw_box(draw, Box{.rect = track, .radius = 8.f, .background = rgb(0x0e0a44), .border = 2.f,
                              .border_color = rgb(0xd6f0ff)});
-    const float place =
-        count > 1 ? static_cast<float>(std::clamp(selected_, 0, count - 1)) / static_cast<float>(count - 1) : 0.f;
-    look::fill(draw, {track.x + 3.f, track.y + 2.f + (track.h - 4.f - 34.f) * place, 10.f, 34.f}, 6.f, BAR_TOP,
-               BAR_BOTTOM);
+
+    const float hidden = std::max(0.f, list_total_ - LIST_HEIGHT);
+    const float run = track.h - 4.f;
+    const float handle = hidden > 0.f ? std::max(34.f, run * LIST_HEIGHT / list_total_) : run;
+    if (hidden > 0.f) {
+        if (clicked(1195.f, top_arrow - 10.f, 24.f, 20.f)) {
+            scroll_ -= WHEEL_STEP;
+            follow_selection_ = false;
+        }
+        if (clicked(1195.f, bottom_arrow - 10.f, 24.f, 20.f)) {
+            scroll_ += WHEEL_STEP;
+            follow_selection_ = false;
+        }
+        if (clicked(track.x - 4.f, track.y, track.w + 8.f, track.h)) {
+            dragging_bar_ = true;
+        }
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            dragging_bar_ = false;
+        }
+        if (dragging_bar_) {
+            // The middle of the handle goes where the mouse is.
+            const float mouse = look::to_design(ImGui::GetIO().MousePos).y;
+            const float place = (mouse - track.y - 2.f - handle * 0.5f) / std::max(1.f, run - handle);
+            scroll_ = std::clamp(place, 0.f, 1.f) * hidden;
+            follow_selection_ = false;
+        }
+        scroll_ = std::clamp(scroll_, 0.f, hidden);
+    } else {
+        dragging_bar_ = false;
+    }
+    const float place = hidden > 0.f ? scroll_ / hidden : 0.f;
+    look::fill(draw, {track.x + 3.f, track.y + 2.f + (run - handle) * place, 10.f, handle}, 6.f, BAR_TOP, BAR_BOTTOM);
 }
 
 void App::draw_message(ImDrawList* draw, double seconds, const std::string& message) {

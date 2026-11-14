@@ -282,6 +282,7 @@ void App::choose_tab(Tab tab) {
     tab_ = tab;
     selected_ = 0;
     scroll_ = 0.f;
+    follow_selection_ = true;
     description_scroll_ = 0.f;
     toast_.clear();
 }
@@ -295,6 +296,7 @@ void App::move_selection(int step) {
         return;
     }
     selected_ = (selected_ + step + count) % count;
+    follow_selection_ = true;
     description_scroll_ = 0.f;
     toast_.clear();
 }
