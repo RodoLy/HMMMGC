@@ -1,5 +1,5 @@
 diff --git a/lib/gfx/recording.cpp b/lib/gfx/recording.cpp
-index 6981e05..b68945d 100644
+index 6981e05..efac7a0 100644
 --- a/lib/gfx/recording.cpp
 +++ b/lib/gfx/recording.cpp
 @@ -886,7 +886,12 @@ void resolve_pass_into(TextureHandle texture, ClipRect rect, bool clearColor, bo
@@ -9,18 +9,18 @@ index 6981e05..b68945d 100644
 -  const bool fullTarget = left == 0 && top == 0 && right == targetSize.width && bottom == targetSize.height;
 +  // A copy that clears all of the picture the game shows is cleared with the render pass's own
 +  // clear, which clears the EFB's scratch rows below the picture too. Drawn as a partial clear, it
-+  // left blocks on a tiled GPU (Adreno X1, Direct3D 12, with a widescreen EFB at 4x) where the next
-+  // frame's draws did not show and the clear color did: black dots at fixed places of the screen.
++  // left blocks on a tiled GPU (Adreno X1, Direct3D 12, with an EFB above about a megapixel) where
++  // the next frame's draws did not show and the clear color did: black dots at fixed places.
 +  const bool fullTarget = (left == 0 && top == 0 && right == targetSize.width && bottom == targetSize.height) ||
 +                          gx::covers_whole_picture(clearRect);
    RenderPass newPass{
        .label = pass_label(g_recorder.inOffscreen ? "Offscreen" : "EFB"),
        .colorAttachments = prevPass.colorAttachments,
 diff --git a/lib/gx/gx.cpp b/lib/gx/gx.cpp
-index e373bf0..95716dc 100644
+index e373bf0..9664012 100644
 --- a/lib/gx/gx.cpp
 +++ b/lib/gx/gx.cpp
-@@ -266,6 +266,21 @@ Vec2<uint32_t> logical_fb_size() noexcept {
+@@ -266,6 +266,20 @@ Vec2<uint32_t> logical_fb_size() noexcept {
    return gfx::is_offscreen() ? gfx::get_render_target_size() : vi::configured_fb_size();
  }
  
@@ -28,22 +28,21 @@ index e373bf0..95716dc 100644
 +  if (gfx::is_offscreen()) {
 +    return false;
 +  }
-+  const uint32_t efbHeight = vi::configured_fb_size().y;
-+  const uint32_t pictureHeight = vi::visible_fb_size().y;
 +  const auto [targetWidth, targetHeight] = gfx::get_render_target_size();
-+  if (efbHeight == 0 || targetWidth == 0 || targetHeight == 0) {
++  if (targetWidth == 0 || targetHeight == 0) {
 +    return false;
 +  }
-+  const auto pictureBottom = static_cast<int64_t>(pictureHeight) * targetHeight / efbHeight;
-+  return rect.x == 0 && rect.y == 0 && rect.width == static_cast<int32_t>(targetWidth) &&
-+         static_cast<int64_t>(rect.y) + rect.height >= pictureBottom;
++  // The picture is as wide as the EFB and starts at its first row; how many rows it has is the
++  // game's choice (448 of the EFB's 528 here), and aurora is not told it when the game's own VI
++  // library runs instead of aurora's.
++  return rect.x == 0 && rect.y == 0 && rect.width == static_cast<int32_t>(targetWidth) && rect.height > 0;
 +}
 +
  gfx::Viewport map_logical_viewport(const gfx::Viewport& logicalViewport) noexcept {
    if (g_gxState.viewportPolicy == AURORA_VIEWPORT_NATIVE) {
      return logicalViewport;
 diff --git a/lib/gx/gx.hpp b/lib/gx/gx.hpp
-index 02be26a..a752595 100644
+index 02be26a..96ed2e5 100644
 --- a/lib/gx/gx.hpp
 +++ b/lib/gx/gx.hpp
 @@ -463,6 +463,9 @@ void evict_tlut_object(u32 tlutObjId) noexcept;
@@ -51,7 +50,7 @@ index 02be26a..a752595 100644
  gfx::Viewport map_logical_viewport(const gfx::Viewport& logicalViewport) noexcept;
  gfx::ClipRect map_logical_scissor(const gfx::ClipRect& logicalScissor) noexcept;
 +// Whether a rectangle of the EFB (render-target pixels) holds all of the picture the game shows: all
-+// of the EFB but the rows below the picture that it keeps as scratch (vi::configured_fb_size).
++// of the EFB's width from its first row. The rows below the picture are scratch.
 +bool covers_whole_picture(const gfx::ClipRect& rect) noexcept;
  // Render-target viewport and scissor for the current logical state, including the scissor box offset.
  gfx::Viewport mapped_render_viewport() noexcept;
