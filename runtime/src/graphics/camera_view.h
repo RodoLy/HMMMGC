@@ -13,7 +13,8 @@
 // Zoom: a perspective projection's scale is multiplied by the zoom, which widens the camera's
 // field of view below 1: 0.7 shows more of the farm around the player, and 0.5 is the most.
 // The zoom never goes above 1, so the camera never comes closer than the game's. The 2D layer
-// does not change. The zoom is for
+// does not change. The zoom comes from the far_camera mod (far_camera.h): how far past the game's
+// own limit the player pulled the camera back with the game's button. It is for
 // walking outdoors (game_scene.h): on the title screen, in cutscenes and in rooms the
 // camera is the game's, and the change goes smoothly over a few frames.
 // Screen marks: the game works out where a point of the scene lands on the screen

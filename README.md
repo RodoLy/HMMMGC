@@ -56,7 +56,6 @@ from it, on your computer, the first time you play.
 | Internal resolution | As the window, 480p, 720p, 1080p or 1440p. |
 | Widescreen | The 3D shows more at the sides. For now the menus and the text are stretched. |
 | Frames per second | 30, as the game, or 60 and 120: the game draws 30 and the rest are made in between. |
-| Pull the camera back | Outdoors, from 0% (the game's camera) to 100% (much more of the farm in view). Rooms and scenes keep the game's camera. |
 | Language | One for the game and the launcher: English, Spanish, French, German or Italian, the ones the disc has. The launcher and the F10 menu are only in Spanish and English. In the game the dialogues change. The menus and the names of the items stay in English. |
 | Turbo | Not an option: hold Tab in the game and it goes at 300%. |
 | Full screen | Also with Alt+Enter while playing. |
@@ -93,6 +92,7 @@ the controller.
 | **Marry Jamie** (0.8.0) | In the original game, the wedding with Jamie is the ending. With this mod the wedding plays and the game goes on: Jamie lives in the house as your spouse and talks as your spouse, with new lines in the five languages of the disc, has a birthday (the 22nd of Winter), and there are the pregnancy, the birth and the special days of the marriage, as with the other partners. |
 | **Faster character** (0.1.0) | The character walks and runs faster, from 25% to 300% of the original speed (150% by default), only while you control it. |
 | **No slowdown when carrying** (0.1.0) | In the original game, with something in the hands the character can only walk. With this mod, with the stick fully pushed it moves at running speed. |
+| **Farther camera** (0.1.0) | In the game, up and down on the D-pad bring the camera closer and pull it back. With this mod, holding down past the game's limit keeps pulling it back, until much more of the farm is in view; up brings it back. Only outdoors: rooms and scenes keep the game's camera. |
 
 All come off, like the original game; you turn them on in the Mods tab. How to make one:
 [mods/README.md](mods/README.md).
@@ -129,11 +129,11 @@ All come off, like the original game; you turn them on in the Mods tab. How to m
 <table>
   <tr>
     <td width="50%"><img src="docs/images/farm-widescreen.jpg" alt="The farm in widescreen, with the game's camera"></td>
-    <td width="50%"><img src="docs/images/farm-zoomed-out.jpg" alt="The same place with the camera pulled back to 100%"></td>
+    <td width="50%"><img src="docs/images/farm-zoomed-out.jpg" alt="The same place with the Farther camera mod, pulled back all the way"></td>
   </tr>
   <tr>
     <td align="center">Widescreen, with the game's camera</td>
-    <td align="center">The same moment, with the camera pulled back to 100%</td>
+    <td align="center">The same moment with the Farther camera mod, pulled back all the way</td>
   </tr>
   <tr>
     <td><img src="docs/images/farm-4x3.jpg" alt="The farm in 4:3, as on the GameCube"></td>

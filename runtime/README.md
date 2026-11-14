@@ -42,10 +42,10 @@ compilados dentro se activan. Mientras se mantiene `Tab` apretado, todo el juego
 ventana muestra la velocidad. La resolución interna sigue al tamaño de la ventana
 (Alt+Enter cambia a pantalla completa); `--resolution-scale <n>` la fija en n
 veces la de la consola (6 es casi 4K) y la reduce a la ventana, lo que suaviza
-los bordes, y `--fullscreen 1` empieza en pantalla completa. `--zoom <0.5-1>`
-aleja (menos de 1) la cámara del juego mientras se camina al
+los bordes, y `--fullscreen 1` empieza en pantalla completa. El mod `far_camera` deja alejar
+la cámara más allá del tope del juego con la cruceta, mientras se camina al
 aire libre (en la pantalla de título, las escenas y los cuartos queda la cámara
-del juego, `game_scene.h`), y `--widescreen 1`
+del juego, `game_scene.h`; `graphics/far_camera.h`), y `--widescreen 1`
 da una imagen panorámica: el 3D muestra más a los lados y los menús se estiran.
 `--frame-rate 60` (o `120`) muestra 60 (o 120) cuadros por segundo: el juego
 dibuja 30 y aurora hace los demás en medio (`graphics/frame_interpolation.h`).
@@ -53,10 +53,10 @@ dibuja 30 y aurora hace los demás en medio (`graphics/frame_interpolation.h`).
 (`HarvestMoonMM/settings.json` en la carpeta de datos del sistema, o el que diga
 `--settings <archivo>`; con `--user-folder`, el de esa carpeta), así que el
 juego arrancado a mano juega como lo dejó el launcher; sin ese archivo, cada
-opción vale lo de siempre (ningún mod, 100 %, la ventana, 4:3, sin
-zoom, 30 cuadros, todo el volumen), `player_options.h`. En Windows, `Launcher.bat`
+opción vale lo de siempre (ningún mod, 100 %, la ventana, 4:3,
+30 cuadros, todo el volumen), `player_options.h`. En Windows, `Launcher.bat`
 (`packaging/windows/native/`) abre una ventana para activar los mods, elegir la
-velocidad del personaje y la del juego, la resolución, el zoom, la pantalla
+velocidad del personaje y la del juego, la resolución, la pantalla
 completa, la panorámica y los cuadros por segundo, y jugar; guarda lo elegido en el mismo `settings.json`
 que la versión ModernGekko. Con `HMMM_NATIVE_READABLE_REGISTERS=1` corre bajo un
 depurador como gdb (ver `fault_handler.h`).
@@ -67,7 +67,7 @@ Dentro del juego, F10 (o el botón Select del control, si el juego no lo usa)
 abre un menú de opciones (`in_game_menu.h`, con lo de `shared/`): la
 resolución interna (como la ventana, 480p, 720p, 1080p o 1440p, que el archivo
 guarda como `internalResolution`), la pantalla completa, la pantalla ancha, los
-cuadros por segundo, el contador de cuadros por segundo, el zoom y el
+cuadros por segundo, el contador de cuadros por segundo y el
 volumen, que cambian al momento, los mods (con un interruptor cada uno; el
 cambio se aplica al reiniciar el juego) y la pantalla de controles (donde se elige qué tecla, botón del ratón o botón del control juega cada parte del GameCube, `controls_editor.h`; se guarda en `controls.json`, que también edita el launcher, y se le da a aurora al arrancar y al conectar un control), en una
 barra sencilla arriba con menús desplegables y el juego visible detrás (la resolución, Imagen, Ajustes del control, Volumen y Mods). Lo
@@ -77,9 +77,7 @@ controles ni del teclado, y al cerrarlo tampoco hasta que se sueltan los
 botones que lo cerraron. Se mueve con el ratón, las flechas o el control;
 Escape o el botón que es B en el juego regresa, y los botones de hombro del
 control (LB y RB) cambian entre Opciones y Controles. «Salir del juego» pregunta antes, porque lo
-que no se guardó en el juego se pierde. Un zoom más lejano que el del arranque
-avisa que los cultivos más lejanos aparecen al acercarse hasta reiniciar
-(`crop_grid.h`). Para que no corra el reloj del juego, abre antes su propio
+que no se guardó en el juego se pierde. Para que no corra el reloj del juego, abre antes su propio
 menú (Start).
 
 ### Idioma de los textos
@@ -209,8 +207,8 @@ compiled in are turned on. While `Tab` is held the whole game goes at 300% (the 
 the speed. The internal resolution follows the window's size (Alt+Enter
 switches to full screen); `--resolution-scale <n>` fixes it at n times the
 console's (6 is nearly 4K) and scales it down to the window, which smooths the
-edges, and `--fullscreen 1` starts in full screen. `--zoom <0.5-1>` pulls
-the game's camera back (below 1) while walking outdoors
+edges, and `--fullscreen 1` starts in full screen. The `far_camera` mod lets the D-pad
+pull the camera back past the game's limit while walking outdoors (`graphics/far_camera.h`)
 (the title screen, the cutscenes and the rooms keep the game's camera,
 `game_scene.h`), and `--widescreen 1`
 gives a widescreen picture: the 3D shows more at the sides and the menus are
@@ -221,10 +219,10 @@ mutes it). What the command line leaves out is read
 from the launcher's `settings.json` (`HarvestMoonMM/settings.json` in the
 system's data folder, or the one `--settings <file>` names; with
 `--user-folder`, the one in that folder), so the game started by hand plays as
-the launcher left it; without that file, each option is as always (no mod, 100%, the window's resolution, 4:3, no zoom, 30 frames, full volume), `player_options.h`.
+the launcher left it; without that file, each option is as always (no mod, 100%, the window's resolution, 4:3, 30 frames, full volume), `player_options.h`.
 On Windows, `Launcher.bat`
 (`packaging/windows/native/`) opens a window to turn the mods on, choose the
-speed of the character and of the game, the resolution, zoom, full screen,
+speed of the character and of the game, the resolution, full screen,
 widescreen and frames per second, and
 play; it keeps the choices in the same `settings.json` as the ModernGekko
 version. With `HMMM_NATIVE_READABLE_REGISTERS=1` it runs under a
@@ -236,7 +234,7 @@ In the game, F10 (or the controller's Select button, when the game does not
 use it) opens an options menu (`in_game_menu.h`, with what is in `shared/`):
 the internal resolution (as the window, 480p, 720p, 1080p or 1440p, which the
 file keeps as `internalResolution`), full screen, widescreen, frames per
-second, the frame counter, the zoom and the volume, which change at once, the mods
+second, the frame counter and the volume, which change at once, the mods
 (a switch each; the change applies when the game is restarted) and the controls
 screen (where the key, mouse button or controller button that plays each part of
 the GameCube is chosen, `controls_editor.h`; aurora keeps it in
@@ -248,9 +246,7 @@ or the keyboard, and after it closes neither, until the buttons that closed it
 are let go. It is used with the mouse, the arrow keys or a controller; Escape
 or the button that is B in the game goes back, and the controller's shoulder
 buttons (LB and RB) switch between Options and Controls. "Quit the game" asks first,
-because what was not saved in the game is lost. A zoom farther out than the
-one the game started with warns that the farthest crops appear as the player
-walks up to them until the game is restarted (`crop_grid.h`). To keep the
+because what was not saved in the game is lost. To keep the
 game's clock from running, open its own menu (Start) first.
 
 ### Language of the text

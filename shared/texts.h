@@ -90,11 +90,8 @@ enum class Text {
     ShowFrameRate,
     ShowFrameRateHint,
     FrameRateCounter,
-    Zoom,
-    ZoomHint,
     Volume,
     VolumeHint,
-    ZoomBeyondStart,
 
     BackToGame,
     QuitGame,
@@ -132,6 +129,7 @@ enum class Text {
     ModNameJamieMarriage,
     ModNamePlayerSpeed,
     ModNameCarrySpeed,
+    ModNameFarCamera,
 
     ModOn,
     ModOff,

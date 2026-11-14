@@ -271,19 +271,6 @@ bool draw_picture_menu(settings::Settings& settings) {
             ImGui::EndMenu();
         }
         changed |= flag_item(settings, settings::SHOW_FRAME_RATE, Text::ShowFrameRate);
-        int zoom = settings.number(settings::ZOOM_OUT, 0, 0, 100);
-        const std::string zoom_format = std::string(text(Text::Zoom)) + ": %d%%";
-        ImGui::SetNextItemWidth(theme::px(280));
-        if (ImGui::SliderInt("##zoom", &zoom, 0, 100, zoom_format.c_str())) {
-            settings.set(settings::ZOOM_OUT, zoom);
-            changed = true;
-        }
-        // The farm's grid of crops was sized for the view the game started with (crop_grid.h).
-        if (!crop_grid::covers_view(settings::zoom_for(zoom), settings.flag(settings::WIDESCREEN, false))) {
-            ImGui::PushTextWrapPos(theme::px(320));
-            ImGui::TextDisabled("%s", text(Text::ZoomBeyondStart));
-            ImGui::PopTextWrapPos();
-        }
         ImGui::EndMenu();
     }
     return changed;
@@ -334,6 +321,7 @@ std::string mod_name(const std::string& id) {
         {"jamie_marriage", Text::ModNameJamieMarriage},
         {"player_speed", Text::ModNamePlayerSpeed},
         {"carry_speed", Text::ModNameCarrySpeed},
+        {"far_camera", Text::ModNameFarCamera},
     };
     for (const auto& [known, name] : names) {
         if (id == known) {

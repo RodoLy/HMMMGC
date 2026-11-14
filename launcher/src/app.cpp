@@ -198,8 +198,6 @@ void App::play() {
         mod_list += (mod_list.empty() ? "" : ",") + id;
     }
     // SDL writes numbers with a point whatever the computer's language: the game reads "1.5".
-    char zoom[16];
-    SDL_snprintf(zoom, sizeof(zoom), "%.2f", settings::zoom_for(settings_.number(settings::ZOOM_OUT, 0, 0, 100)));
     char resolution[16];
     SDL_snprintf(resolution, sizeof(resolution), "%g",
                  settings::resolution_scale(settings_.one_of(settings::RESOLUTION, settings::RESOLUTIONS)));
@@ -211,7 +209,6 @@ void App::play() {
         "--symbols", paths::utf8(package_.symbols),
         "--settings", paths::utf8(player_.settings),
         "--mods", mod_list.empty() ? "none" : mod_list,
-        "--zoom", zoom,
         "--resolution-scale", resolution,
         "--fullscreen", settings_.flag(settings::FULLSCREEN, false) ? "1" : "0",
         "--widescreen", settings_.flag(settings::WIDESCREEN, false) ? "1" : "0",
@@ -518,7 +515,6 @@ std::vector<App::Row> App::options_rows() {
     choice(settings::FRAME_RATE, settings::FRAME_RATES, {text(Text::FrameRateGame), "60", "120"}, Text::FrameRate,
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
-    percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     {
         Row log;

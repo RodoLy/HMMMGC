@@ -139,7 +139,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../shared/shared.cmake")
 # as a library, built here against a stand-in of ModernGekko's mod ABI (mod_api/). The
 # translated code must be marked for the same list of mods (tools/insert_mod_hooks.py,
 # which scripts/build_native_runtime.sh runs with NATIVE_MODS).
-set(NATIVE_MODS "jamie_marriage;player_speed;carry_speed" CACHE STRING "the mods in mods/ to compile into the runtime")
+set(NATIVE_MODS "jamie_marriage;player_speed;carry_speed;far_camera" CACHE STRING "the mods in mods/ to compile into the runtime")
 set(MOD_SYMBOL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/../build/G4AEE9_symbols.h" CACHE FILEPATH
     "G4AEE9_symbols.h, written by tools/export_mod_symbols.py")
 set(mods_directory "${CMAKE_CURRENT_SOURCE_DIR}/../mods")
@@ -175,6 +175,10 @@ ${native_mod_getters}    nullptr,
 file(GLOB_RECURSE runtime_sources CONFIGURE_DEPENDS src/*.cpp)
 add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
 add_shared_ui(hmmm-native)
+# The far_camera mod gives the runtime how far the camera goes (src/graphics/far_camera.h).
+if("far_camera" IN_LIST NATIVE_MODS)
+    target_compile_definitions(hmmm-native PRIVATE HMMM_FAR_CAMERA_MOD)
+endif()
 target_include_directories(hmmm-native PRIVATE src "${WIICOMPILED_RUNTIME_DIR}/include" mod_api
                                                "${CMAKE_BINARY_DIR}/generated")
 target_compile_options(hmmm-native PRIVATE ${strict_floating_point} -Wall -Wextra -Wno-unused-parameter)

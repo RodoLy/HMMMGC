@@ -1,0 +1,18 @@
+{
+  "id": "far_camera",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Cámara más lejos",
+    "en": "Farther camera"
+  },
+  "summary": {
+    "es": "El botón de alejar la cámara llega más lejos.",
+    "en": "The button that pulls the camera back goes farther."
+  },
+  "description": {
+    "es": "En el juego, la cruceta arriba y abajo acerca y aleja la cámara. Con este mod, si sigues presionando abajo cuando la cámara ya llegó al tope del juego, se sigue alejando hasta mostrar el doble alrededor del personaje; arriba la regresa. Solo al aire libre: en las casas y en las escenas la cámara es la del juego.",
+    "en": "In the game, up and down on the D-pad bring the camera closer and pull it back. With this mod, if you keep pressing down once the camera has reached the game's limit, it keeps pulling back until it shows twice as much around the character; up brings it back. Only outdoors: in the houses and in the scenes the camera is the game's."
+  },
+  "settings": []
+}

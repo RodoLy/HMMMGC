@@ -22,7 +22,6 @@ struct Options {
     float resolution_scale = 0.f;
     bool fullscreen = false;
     bool widescreen = false;
-    float zoom = 1.f;
     unsigned frame_rate = 30;
     unsigned volume_percent = 100;
 };
@@ -49,7 +48,6 @@ Options read(const settings::Settings& saved) {
     options.resolution_scale = settings::resolution_scale(saved.one_of(settings::RESOLUTION, settings::RESOLUTIONS));
     options.fullscreen = saved.flag(settings::FULLSCREEN, false);
     options.widescreen = saved.flag(settings::WIDESCREEN, false);
-    options.zoom = settings::zoom_for(saved.number(settings::ZOOM_OUT, 0, 0, 100));
     options.frame_rate = static_cast<unsigned>(saved.one_of(settings::FRAME_RATE, settings::FRAME_RATES));
     options.volume_percent = static_cast<unsigned>(saved.number(settings::VOLUME, 100, 0, 100));
     return options;
@@ -72,9 +70,6 @@ void write_given(settings::Settings& settings, const Given& given) {
     if (given.widescreen) {
         settings.set(settings::WIDESCREEN, *given.widescreen);
     }
-    if (given.zoom) {
-        settings.set(settings::ZOOM_OUT, settings::zoom_out_percent_for(*given.zoom));
-    }
     if (given.frame_rate) {
         settings.set(settings::FRAME_RATE, static_cast<int>(*given.frame_rate));
     }
@@ -84,11 +79,11 @@ void write_given(settings::Settings& settings, const Given& given) {
 }
 
 void log_options(const char* when, const Options& options) {
-    runtime_log::info("player", "options %s: resolution %s, %s, %s, zoom %.2f, %u frames a second, "
+    runtime_log::info("player", "options %s: resolution %s, %s, %s, %u frames a second, "
                       "volume %u%%",
                       when, options.resolution_scale > 0.f ? "fixed" : "the window's",
                       options.fullscreen ? "full screen" : "windowed", options.widescreen ? "widescreen" : "4:3",
-                      options.zoom, options.frame_rate, options.volume_percent);
+                      options.frame_rate, options.volume_percent);
 }
 
 }  // namespace
@@ -103,7 +98,6 @@ void load(const std::filesystem::path& file, const Given& given) {
     options.resolution_scale = given.resolution_scale.value_or(options.resolution_scale);
     options.fullscreen = given.fullscreen.value_or(options.fullscreen);
     options.widescreen = given.widescreen.value_or(options.widescreen);
-    options.zoom = given.zoom.value_or(options.zoom);
     options.frame_rate = given.frame_rate.value_or(options.frame_rate);
     options.volume_percent = std::min(given.volume_percent.value_or(options.volume_percent), 100u);
     g_options = options;
@@ -115,7 +109,6 @@ void load(const std::filesystem::path& file, const Given& given) {
 float resolution_scale() { return g_options.resolution_scale; }
 bool fullscreen() { return g_options.fullscreen; }
 bool widescreen() { return g_options.widescreen; }
-float zoom() { return g_options.zoom; }
 unsigned frame_rate() { return g_options.frame_rate; }
 unsigned volume_percent() { return g_options.volume_percent; }
 bool show_frame_rate() { return g_settings.flag(settings::SHOW_FRAME_RATE, false); }
@@ -202,10 +195,6 @@ void apply_changes() {
     if (wanted.widescreen != before.widescreen) {
         aurora_host::set_widescreen(wanted.widescreen);
         g_options.widescreen = wanted.widescreen;
-    }
-    if (wanted.zoom != before.zoom) {
-        camera_view::set_zoom(wanted.zoom);
-        g_options.zoom = wanted.zoom;
     }
     if (wanted.frame_rate != before.frame_rate) {
         frame_interpolation::set_frame_rate(wanted.frame_rate);

@@ -21,6 +21,7 @@
 #include "game_language.h"
 #include "graphics/aurora_host.h"
 #include "graphics/camera_view.h"
+#include "graphics/far_camera.h"
 #include "graphics/frame_interpolation.h"
 #include "guest_memory.h"
 #include "guest_symbols.h"
@@ -62,7 +63,7 @@ constexpr const char* USAGE =
     "usage: hmmm-native --disc <disc image (.iso, .gcm) or extracted disc> [--symbols <file>] [--watchdog <s>]\n"
     "                   [--user-folder <folder>] [--settings <settings.json>]\n"
     "                   [--mods <id,id,...> | --mods none]\n"
-    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1] [--zoom <0.5-1>]\n"
+    "                   [--resolution-scale <0-8>] [--fullscreen 1] [--widescreen 1]\n"
     "                   [--frame-rate <30|60|120>] [--volume <0-100>]";
 
 // "a,b" -> {"a", "b"}; "none" -> {}.
@@ -106,8 +107,6 @@ Options parse_options(int argc, char** argv) {
             options.given.fullscreen = value != "0";
         } else if (name == "--widescreen") {
             options.given.widescreen = value != "0";
-        } else if (name == "--zoom") {
-            options.given.zoom = std::clamp(std::stof(value), camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM);
         } else if (name == "--frame-rate") {
             options.given.frame_rate = static_cast<unsigned>(std::stoul(value));
         } else if (name == "--volume") {
@@ -138,7 +137,7 @@ int main(int argc, char** argv) {
 
         aurora_host::configure({.resolution_scale = player_options::resolution_scale(),
                                 .fullscreen = player_options::fullscreen()});
-        const camera_view::Options camera{.widescreen = player_options::widescreen(), .zoom = player_options::zoom()};
+        const camera_view::Options camera{.widescreen = player_options::widescreen()};
         camera_view::configure(camera);
         frame_interpolation::configure(player_options::frame_rate());
         audio_output::set_volume(static_cast<float>(player_options::volume_percent()) / 100.f);
@@ -150,8 +149,10 @@ int main(int argc, char** argv) {
         InitializeDataSections();
         console_boot::prepare_memory(disc);
         game_language::apply(disc, settings::GAME_LANGUAGES[player_options::current().language()]);
-        // With the game's data in memory: the farm's grid of crops, for the chosen zoom.
-        crop_grid::size_for_view(std::clamp(camera.zoom, camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM),
+        // With the game's data in memory: the farm's grid of crops, for the farthest the camera can
+        // go (the far_camera mod pulls it back past the game's limit).
+        crop_grid::size_for_view(player_options::mod_enabled(far_camera::MOD_ID) ? camera_view::MINIMUM_ZOOM
+                                                                                 : camera_view::MAXIMUM_ZOOM,
                                  camera.widescreen);
         std::vector<std::string> enabled_mods;
         for (const std::string& id : native_mods::compiled_in()) {

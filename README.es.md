@@ -57,7 +57,6 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
 | Resolución interna | Como la ventana, 480p, 720p, 1080p o 1440p. |
 | Pantalla ancha | El 3D muestra más a los lados. Por ahora los menús y los textos se estiran. |
 | Cuadros por segundo | 30, como el juego, o 60 y 120: el juego dibuja 30 y los demás se hacen entre ellos. |
-| Alejar la cámara | Al aire libre, de 0% (la cámara del juego) a 100% (se ve mucho más de la granja). Los cuartos y las escenas conservan la cámara del juego. |
 | Idioma | Uno para el juego y el launcher: inglés, español, francés, alemán o italiano, los que trae el disco. El launcher y el menú F10 solo están en español e inglés. En el juego cambian los diálogos. Los menús y los nombres de los objetos siguen en inglés. |
 | Turbo | No es una opción: mantén Tab en el juego y va al 300%. |
 | Pantalla completa | También con Alt+Enter mientras juegas. |
@@ -94,6 +93,7 @@ recibe el control.
 | **Casarse con Jamie** (0.8.0) | En el juego original, la boda con Jamie es el final. Con este mod, la boda se ve y el juego sigue: Jamie vive en la casa como tu pareja y habla como tu pareja, con frases nuevas en los cinco idiomas del disco, tiene cumpleaños (el 22 de invierno), y hay embarazo, parto y los días especiales del matrimonio, como con las demás parejas. |
 | **Personaje más rápido** (0.1.0) | El personaje camina y corre más rápido, de 25% a 300% de la velocidad original (150% de entrada), solo mientras lo controlas tú. |
 | **Sin frenos al cargar** (0.1.0) | En el juego original, con algo en las manos el personaje solo camina. Con este mod, con el stick a fondo avanza a la velocidad de correr. |
+| **Cámara más lejos** (0.1.0) | En el juego, la cruceta arriba y abajo acerca y aleja la cámara. Con este mod, si sigues presionando abajo al llegar al tope del juego, se sigue alejando hasta que se ve mucho más de la granja; arriba la regresa. Solo al aire libre: los cuartos y las escenas conservan la cámara del juego. |
 
 Todos vienen apagados, como el juego original; los enciendes en la pestaña Mods. Cómo hacer
 uno: [mods/README.md](mods/README.md).
@@ -130,11 +130,11 @@ uno: [mods/README.md](mods/README.md).
 <table>
   <tr>
     <td width="50%"><img src="docs/images/farm-widescreen.jpg" alt="La granja en pantalla ancha, con la cámara del juego"></td>
-    <td width="50%"><img src="docs/images/farm-zoomed-out.jpg" alt="El mismo lugar con la cámara alejada al 100%"></td>
+    <td width="50%"><img src="docs/images/farm-zoomed-out.jpg" alt="El mismo lugar con el mod Cámara más lejos, alejada al máximo"></td>
   </tr>
   <tr>
     <td align="center">Pantalla ancha, con la cámara del juego</td>
-    <td align="center">El mismo momento, con la cámara alejada al 100%</td>
+    <td align="center">El mismo momento con el mod Cámara más lejos, alejada al máximo</td>
   </tr>
   <tr>
     <td><img src="docs/images/farm-4x3.jpg" alt="La granja en 4:3, como en la GameCube"></td>

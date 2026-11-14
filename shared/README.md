@@ -19,7 +19,7 @@ aurora, que lo dibuja sobre cada cuadro.
 | `fonts/` | Las letras del menú de opciones (M PLUS Rounded 1c, libre; ver `fonts/README.md`), que van dentro del programa. |
 | `texts.h`, `texts.cpp` | Todo lo que dicen, en español y en inglés. |
 | `settings.h`, `settings.cpp` | Las elecciones del jugador en `settings.json`. |
-| `option_rows.h`, `option_rows.cpp` | Las filas de las opciones (resolución, pantalla completa, pantalla ancha, cuadros por segundo, zoom, velocidad del juego, volumen), con su nombre, su pista y su control. |
+| `option_rows.h`, `option_rows.cpp` | Las filas de las opciones (resolución, pantalla completa, pantalla ancha, cuadros por segundo, volumen), con su nombre, su pista y su control. |
 | `controls.h`, `controls.cpp` | Los controles de la PC, cómo los asigna el juego, un control de GameCube dibujado y la pantalla de controles. |
 | `controls_profile.h`, `controls_profile.cpp` | Los controles que eligió el jugador en `controls.json`, que leen y escriben el launcher y el juego. |
 
@@ -40,6 +40,6 @@ which draws it over each frame.
 | `fonts/` | The options menu's lettering (M PLUS Rounded 1c, free; see `fonts/README.md`), which goes inside the program. |
 | `texts.h`, `texts.cpp` | Everything they say, in Spanish and in English. |
 | `settings.h`, `settings.cpp` | The player's choices in `settings.json`. |
-| `option_rows.h`, `option_rows.cpp` | The rows of the options (resolution, full screen, widescreen, frames per second, zoom, volume), with their name, hint and control. |
+| `option_rows.h`, `option_rows.cpp` | The rows of the options (resolution, full screen, widescreen, frames per second, volume), with their name, hint and control. |
 | `controls.h`, `controls.cpp` | The PC's controllers, how the game maps them, a GameCube controller drawn, and the controls screen. |
 | `controls_profile.h`, `controls_profile.cpp` | The controls the player chose, in `controls.json`, which the launcher and the game read and write. |
