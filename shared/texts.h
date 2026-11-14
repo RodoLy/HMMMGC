@@ -102,6 +102,7 @@ enum class Text {
     QuitYes,
     QuitNo,
     MenuOpenNote,
+    StartNotice,
     GameShortcuts,
     AnalogStick,
     GameLanguage,

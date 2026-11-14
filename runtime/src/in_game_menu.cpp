@@ -17,6 +17,7 @@
 #include <imgui.h>
 
 #include <SDL3/SDL_gamepad.h>
+#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 
 #include <algorithm>
@@ -477,7 +478,20 @@ void handle_event(const SDL_Event& event) {
     }
 }
 
+namespace {
+
+// The first seconds of the game show which keys open this menu and speed the game up.
+constexpr Uint64 START_NOTICE_MS = 9000;
+Uint64 g_first_frame_at = 0;
+
+bool start_notice_showing() { return SDL_GetTicks() - g_first_frame_at < START_NOTICE_MS; }
+
+}  // namespace
+
 void before_frame() {
+    if (g_first_frame_at == 0) {
+        g_first_frame_at = SDL_GetTicks();
+    }
     SDL_Gamepad* gamepad = first_port_gamepad();
     const bool select =
         gamepad != nullptr && SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_BACK) && !game_uses_select();
@@ -488,7 +502,7 @@ void before_frame() {
     const bool b = gamepad != nullptr && SDL_GetGamepadButton(gamepad, game_b_button());
     g_b_pressed = b && !g_b_held;
     g_b_held = b;
-    if (g_open || player_options::show_frame_rate()) {
+    if (g_open || player_options::show_frame_rate() || start_notice_showing()) {
         get_ready();
         fit_to_window();
         g_lettering_ready = true;
@@ -503,6 +517,9 @@ void draw() {
         draw_frame_rate(g_open ? g_bar_height : 0.f);
     }
     if (!g_open) {
+        if (start_notice_showing()) {
+            draw_note(text(Text::StartNotice), 0.f);
+        }
         return;
     }
     // Escape and the controller's B go back: from the question to the menu, from the menu to the
