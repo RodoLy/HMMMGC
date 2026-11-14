@@ -46,6 +46,46 @@ bool is_switched_off(const char* mod_id) {
     return std::find(g_switched_off.begin(), g_switched_off.end(), mod_id) != g_switched_off.end();
 }
 
+// A mod that a save can depend on: once the player married Jamie with jamie_marriage on, the
+// save needs it (without it Jamie does not live in the house nor talk as the spouse, and the
+// game would go on as if the ending had never come). Turned off by the player, it is loaded all
+// the same, and its hooks run only while the loaded save says the player is married to Jamie;
+// with any other save it does nothing, as if it were off.
+//
+// Un mod del que puede depender una partida: casado con Jamie, la partida lo sigue usando aunque
+// el jugador lo haya desactivado; con cualquier otra partida no hace nada.
+constexpr const char* JAMIE_MARRIAGE = "jamie_marriage";
+// Where the game keeps its save data (a pointer, 0 until a game is loaded), and in it the number
+// of the spouse's character; Jamie is character 2 (mods/jamie_marriage/mod.c).
+constexpr uint32_t SAVE_DATA_POINTER = 0x80321F48u;
+constexpr uint32_t SPOUSE_OFFSET = 0x22B8u;
+constexpr uint32_t JAMIE_CHARACTER_NUMBER = 2u;
+bool g_jamie_marriage_kept_for_saves = false;
+
+bool married_to_jamie() {
+    const uint32_t save_data = guest_memory::read32(SAVE_DATA_POINTER);
+    return guest_memory::is_cached_main_memory(save_data) &&
+           guest_memory::read32(save_data + SPOUSE_OFFSET) == JAMIE_CHARACTER_NUMBER;
+}
+
+// Whether a hook of the mod runs now.
+bool hook_runs(const char* mod_id) {
+    if (!g_switched_off.empty() && is_switched_off(mod_id)) {
+        return false;
+    }
+    if (g_jamie_marriage_kept_for_saves && std::strcmp(mod_id, JAMIE_MARRIAGE) == 0) {
+        static bool was_married = false;
+        const bool married = married_to_jamie();
+        if (married != was_married) {
+            was_married = married;
+            runtime_log::info("mods", married ? "this save is married to Jamie: jamie_marriage runs for it"
+                                              : "this save is not married to Jamie: jamie_marriage stays off");
+        }
+        return married;
+    }
+    return true;
+}
+
 const ModernGekkoModHostApi& host_api();
 
 // ---- The mod's view of the game: CPUState ----
@@ -128,7 +168,7 @@ void run(const std::vector<NamedFunction>& functions, uint32_t address, CpuConte
     }
     CPUState state = state_from(cpu, address);
     for (const NamedFunction& hook : functions) {
-        if (g_switched_off.empty() || !is_switched_off(hook.mod_id)) {
+        if (hook_runs(hook.mod_id)) {
             hook.function(&state);
         }
     }
@@ -224,11 +264,15 @@ void load(const std::vector<std::string>* enabled) {
         }
         if (enabled != nullptr && std::find(enabled->begin(), enabled->end(), mod->id) == enabled->end()) {
             runtime_log::info("mods", "%s is turned off", mod->id);
-            if (!switches_while_running(mod->id)) {
+            if (std::strcmp(mod->id, JAMIE_MARRIAGE) == 0) {
+                // Loaded all the same, for a save that is married to Jamie (hook_runs).
+                g_jamie_marriage_kept_for_saves = true;
+            } else if (!switches_while_running(mod->id)) {
                 continue;
+            } else {
+                // Loaded all the same, so that the player can turn it on in the game's menu.
+                g_switched_off.emplace_back(mod->id);
             }
-            // Loaded all the same, so that the player can turn it on in the game's menu.
-            g_switched_off.emplace_back(mod->id);
         }
         if (std::strncmp(mod->game_id, GAME_ID, sizeof(mod->game_id)) != 0) {
             runtime_log::warning("mods", "%s is for game %.8s, not %s; it is not used", mod->id, mod->game_id, GAME_ID);

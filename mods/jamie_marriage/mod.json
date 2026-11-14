@@ -15,8 +15,8 @@
     "en": "In the original game, the wedding with Jamie is the ending. With this mod, the wedding plays and the game goes on: Jamie lives in the house as your spouse, talks as your spouse (with new lines in the disc's five languages), has a birthday, and there are the pregnancy, the birth and the special days of the marriage, as with the other partners."
   },
   "warning": {
-    "es": "Si ya te casaste con Jamie, déjalo activado: sin el mod, Jamie no vive en la casa ni habla como tu pareja.",
-    "en": "If you already married Jamie, keep it on: without the mod, Jamie does not live in the house or talk as your spouse."
+    "es": "Si te casaste con Jamie, esa partida lo sigue usando aunque lo desactives: Jamie sigue viviendo en la casa como tu pareja. En las demás partidas, desactivado no hace nada.",
+    "en": "If you married Jamie, that save keeps using it even if you turn it off: Jamie goes on living in the house as your spouse. In other saves, turned off it does nothing."
   },
   "settings": []
 }

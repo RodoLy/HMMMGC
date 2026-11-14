@@ -90,7 +90,7 @@ recibe el control.
 
 | Mod | Qué hace |
 |---|---|
-| **Casarse con Jamie** (0.8.0) | En el juego original, la boda con Jamie es el final. Con este mod, la boda se ve y el juego sigue: Jamie vive en la casa como tu pareja y habla como tu pareja, con frases nuevas en los cinco idiomas del disco, tiene cumpleaños (el 22 de invierno), y hay embarazo, parto y los días especiales del matrimonio, como con las demás parejas. |
+| **Casarse con Jamie** (0.8.0) | En el juego original, la boda con Jamie es el final. Con este mod, la boda se ve y el juego sigue: Jamie vive en la casa como tu pareja y habla como tu pareja, con frases nuevas en los cinco idiomas del disco, tiene cumpleaños (el 22 de invierno), y hay embarazo, parto y los días especiales del matrimonio, como con las demás parejas. Si te casas con Jamie, esa partida sigue usando el mod aunque lo desactives. |
 | **Personaje más rápido** (0.1.0) | El personaje camina y corre más rápido, de 25% a 300% de la velocidad original (150% de entrada), solo mientras lo controlas tú. |
 | **Sin frenos al cargar** (0.1.0) | En el juego original, con algo en las manos el personaje solo camina. Con este mod, con el stick a fondo avanza a la velocidad de correr. |
 | **Cámara más lejos** (0.1.0) | En el juego, la cruceta arriba y abajo acerca y aleja la cámara. Con este mod, si sigues presionando abajo al llegar al tope del juego, se sigue alejando hasta que se ve mucho más de la granja; arriba la regresa. Solo al aire libre: los cuartos y las escenas conservan la cámara del juego. |
