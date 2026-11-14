@@ -50,7 +50,7 @@ constexpr ImU32 BAR_TOP = rgb(0xd2ffe0);      // the green of the bars and the s
 constexpr ImU32 BAR_BOTTOM = rgb(0x6fd89a);
 
 // The symbol of each tab, in the medallion and on the tab, and the color of its rows' squares.
-// ♪ and ⚙; the Mods tab says MOD, and the Controls tab's is drawn (draw_controller).
+// ♪ and ⚙ in the medallion; for Mods it says MODS, and the Controls tab's is drawn (draw_controller).
 constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "", ""};
 constexpr size_t MODS_TAB = 2;
 constexpr size_t CONTROLS_TAB = 3;
@@ -130,8 +130,8 @@ void draw_controller(ImDrawList* draw, float center_x, float center_y, float wid
 void draw_tab_symbol(ImDrawList* draw, size_t tab, int size, float center_x, float center_y, ImU32 color,
                      ImU32 behind) {
     if (tab == MODS_TAB) {
-        // The word, in the sizes the lettering has its letters in (18 on the tab, 28 in the medallion).
-        draw_centered(draw, style(Face::Baloo800, size >= 60 ? 28 : 18, 0.04f, color), center_x, center_y, "MOD");
+        // The word, in a size the lettering has its letters in.
+        draw_centered(draw, style(Face::Baloo800, 28, 0.04f, color), center_x, center_y, "MODS");
     } else if (tab == CONTROLS_TAB) {
         draw_controller(draw, center_x, center_y, static_cast<float>(size) * 1.15f, color, behind);
     } else {
@@ -511,21 +511,22 @@ void App::draw_header(ImDrawList* draw, double seconds) {
 }
 
 void App::draw_tabs(ImDrawList* draw, double seconds) {
-    // At the left of the panel, one under the other; the chosen one wider and joined to it.
+    // At the left of the panel, one under the other, each with its name; the chosen one wider and
+    // joined to it.
+    const char* names[] = {text(Text::GameTab), text(Text::Options), text(Text::Mods), text(Text::Controls)};
     for (int i = 0; i < 4; ++i) {
         const bool chosen = i == static_cast<int>(tab_);
-        const float width = chosen ? 104.f : 86.f;
+        const float width = chosen ? 154.f : 136.f;
         const Rect tab = at(244.f - (chosen ? 0.f : 6.f) - width, 258.f + static_cast<float>(i) * 76.f, width, 68.f);
         const Slide slide = slide_in(seconds, 0.7f + static_cast<float>(i) * 0.08f, 0.4f, still_);
         const look::Moved moved(draw, slide.dx, 0.f, slide.opacity);
         const Corners corners(16.f, 0.f, 0.f, 16.f);
         look::fill(draw, tab, corners, chosen ? TEAL : ORANGE);
         look::inset_bottom_shadow(draw, tab, corners, 4.f, rgb(0x000028, 0.12f));
-        const Rect square{tab.x + 10.f, tab.y + 8.f, 52.f, 52.f};
-        const ImU32 square_color = chosen ? rgb(0x4fa8b4) : rgb(0xcf6712);
-        look::fill(draw, square, 12.f, square_color);
-        draw_tab_symbol(draw, static_cast<size_t>(i), 30, square.center_x(), square.center_y(), rgb(0xffffff),
-                        square_color);
+        TextStyle name = style(Face::Dosis700, 23, 0.04f, rgb(0xffffff));
+        name.shadow_y = 2.f;
+        name.shadow_color = chosen ? rgb(0x2f8a94) : rgb(0xb0560c);
+        draw_centered(draw, name, tab.x + (chosen ? 136.f : 130.f) * 0.5f, tab.center_y(), names[i]);
         if (clicked(tab.x, tab.y, tab.w, tab.h)) {
             later([this, i] { choose_tab(static_cast<Tab>(i)); });
         }
