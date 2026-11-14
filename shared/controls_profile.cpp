@@ -24,7 +24,7 @@ constexpr const char* GAMEPADS = "gamepads";
 constexpr const char* NAMES[SLOT_COUNT] = {
     "a",       "b",         "x",         "y",          "z",          "l",           "r",
     "start",   "dpad_up",   "dpad_down", "dpad_left",  "dpad_right", "stick_up",    "stick_down",
-    "stick_left", "stick_right", "cstick_up", "cstick_down", "cstick_left", "cstick_right",
+    "stick_left", "stick_right", "cstick_up", "cstick_down", "cstick_left", "cstick_right", "turbo",
 };
 
 // The keys of Dolphin, which the runtime gives the keyboard (runtime/src/input/pad_natives.cpp).
@@ -34,6 +34,7 @@ constexpr SDL_Scancode DEFAULT_KEYS[SLOT_COUNT] = {
     SDL_SCANCODE_T,    SDL_SCANCODE_G,     SDL_SCANCODE_F,    SDL_SCANCODE_H,
     SDL_SCANCODE_UP,   SDL_SCANCODE_DOWN,  SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT,
     SDL_SCANCODE_I,    SDL_SCANCODE_K,     SDL_SCANCODE_J,    SDL_SCANCODE_L,
+    SDL_SCANCODE_TAB,  // the turbo
 };
 
 const char* name_of(Slot slot) { return NAMES[static_cast<int>(slot)]; }
@@ -78,6 +79,9 @@ Text direction_of(Slot slot) {
 }  // namespace
 
 std::string slot_name(Slot slot) {
+    if (slot == Slot::Turbo) {
+        return text(Text::Turbo);
+    }
     if (slot <= Slot::Start) {
         return controls::part_name(part_of(slot));
     }

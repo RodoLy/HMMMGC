@@ -538,6 +538,7 @@ const char* slot_symbol(controls_profile::Slot slot) {
         "\xE2\x86\x91", "\xE2\x86\x93", "\xE2\x86\x90", "\xE2\x86\x92",  // ↑ ↓ ← →, the D-pad
         "\xE2\x96\xB2", "\xE2\x96\xBC", "\xE2\x97\x80", "\xE2\x96\xB6",  // ▲ ▼ ◀ ▶, the sticks
         "\xE2\x96\xB2", "\xE2\x96\xBC", "\xE2\x97\x80", "\xE2\x96\xB6",
+        "\xE2\x86\x92",  // →, the turbo
     };
     return SYMBOLS[static_cast<int>(slot)];
 }
@@ -570,9 +571,11 @@ std::vector<App::Row> App::controls_rows() {
     device.activate = [change = device.change] { change(1); };
     rows.push_back(std::move(device));
 
-    const int slots = keyboard ? controls_profile::SLOT_COUNT : controls_profile::BUTTON_SLOT_COUNT;
-    for (int index = 0; index < slots; ++index) {
+    for (int index = 0; index < controls_profile::SLOT_COUNT; ++index) {
         const auto slot = static_cast<controls_profile::Slot>(index);
+        if (!keyboard && !controls_profile::on_gamepad(slot)) {
+            continue;
+        }
         Row row;
         row.symbol = slot_symbol(slot);
         row.label = controls_profile::slot_name(slot);

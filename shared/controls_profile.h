@@ -23,11 +23,13 @@ namespace controls_profile {
 
 // The parts the player can change, in the order the screens list them. The first twelve are
 // buttons (a gamepad can map those); the sticks are keys only (a gamepad's own sticks play them).
+// The turbo goes on both.
 enum class Slot {
     A, B, X, Y, Z, L, R, Start,
     DPadUp, DPadDown, DPadLeft, DPadRight,
     StickUp, StickDown, StickLeft, StickRight,
     CStickUp, CStickDown, CStickLeft, CStickRight,
+    Turbo,  // not the GameCube's: held, the game runs faster (Tab by default, no button on a gamepad)
     Count
 };
 inline constexpr int SLOT_COUNT = static_cast<int>(Slot::Count);
@@ -47,6 +49,9 @@ inline constexpr std::uint32_t NO_BUTTON = 0xfffffffeu;
 constexpr std::uint32_t axis_as_button(int axis) { return 0x10000u | static_cast<std::uint32_t>(axis) | (50u << 8); }
 constexpr bool is_axis_button(std::uint32_t native) { return (native & 0xffff0000u) == 0x10000u; }
 constexpr int axis_of(std::uint32_t native) { return static_cast<int>(native & 0x7fu); }
+
+// Whether a gamepad can play the part (the buttons and the turbo, not the sticks).
+constexpr bool on_gamepad(Slot slot) { return static_cast<int>(slot) < BUTTON_SLOT_COUNT || slot == Slot::Turbo; }
 
 // How the part is called on the screens ("A", "Control Stick up", ...).
 std::string slot_name(Slot slot);

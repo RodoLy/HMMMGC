@@ -3,6 +3,7 @@
 #include "graphics/aurora_host.h"
 
 #include "audio/audio_output.h"
+#include "controls_editor.h"
 #include "game_clock.h"
 #include "game_scene.h"
 #include "graphics/camera_view.h"
@@ -205,9 +206,10 @@ void present_frame() {
     map_draw_range::update();
     character_range::update();
     shadow_range::update();
-    // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while Tab is held (not
-    // while the options menu is open, where Tab moves between its controls).
-    game_clock::set_turbo(!in_game_menu::is_open() && SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_TAB]);
+    // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while its key (Tab, or
+    // the one chosen in the controls) or its gamepad button is held; not while the options menu is
+    // open, where Tab moves between its controls.
+    game_clock::set_turbo(!in_game_menu::is_open() && controls_editor::turbo_held());
     // The menu's shortcut on the controller and its lettering for the window's size, before the
     // next frame starts (and with it ImGui's).
     in_game_menu::before_frame();

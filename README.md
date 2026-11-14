@@ -191,7 +191,9 @@ file, `controls.json`, next to `settings.json`. Pick a part of the GameCube
 controller and press the key (or a mouse button) or, for a controller, the
 button that should play it; the changes are kept by themselves, each controller
 has its own, and **Restore defaults** goes back to the automatic mapping.
-(A controller's sticks always follow the controller's own.)
+(A controller's sticks always follow the controller's own.) The same list has
+**Turbo (fast forward)**: Tab by default, and it can be given another key or a
+controller button.
 
 | GameCube | Keyboard |
 |---|---|

@@ -10,6 +10,7 @@
 
 #include <SDL3/SDL_gamepad.h>
 #include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_timer.h>
 #include <dolphin/pad.h>
 #include <imgui.h>
@@ -31,53 +32,47 @@ constexpr Uint64 WAIT_LIMIT_MS = 6000;
 // just pressed is still down (Enter, for example, would press the button again).
 constexpr Uint64 SETTLE_MS = 300;
 
-// A part of the controller the player can change: its button, and the axis a key moves (the
-// sticks, and the triggers, which are both a button and an axis).
+// A part the player can change: its button, and the axis a key moves (the sticks, and the
+// triggers, which are both a button and an axis). The turbo has neither: it is not the GameCube's,
+// and the runtime reads its key or button itself (turbo_held).
 struct Row {
-    std::string label;
+    controls_profile::Slot slot;
     PADButton button = 0;
     s32 axis = -1;
     s32 second_axis = -1;  // L and R are a button and a trigger axis
 };
 
-std::string direction(controls::Part part, Text way) { return controls::part_name(part) + " " + text(way); }
-
 std::vector<Row> keyboard_rows() {
-    using controls::Part;
-    std::vector<Row> rows = {
-        {controls::part_name(Part::A), PAD_BUTTON_A},
-        {controls::part_name(Part::B), PAD_BUTTON_B},
-        {controls::part_name(Part::X), PAD_BUTTON_X},
-        {controls::part_name(Part::Y), PAD_BUTTON_Y},
-        {controls::part_name(Part::Z), PAD_TRIGGER_Z},
-        {controls::part_name(Part::L), PAD_TRIGGER_L, PAD_AXIS_TRIGGER_L},
-        {controls::part_name(Part::R), PAD_TRIGGER_R, PAD_AXIS_TRIGGER_R},
-        {controls::part_name(Part::Start), PAD_BUTTON_START},
-        {direction(Part::DPad, Text::DirectionUp), PAD_BUTTON_UP},
-        {direction(Part::DPad, Text::DirectionDown), PAD_BUTTON_DOWN},
-        {direction(Part::DPad, Text::DirectionLeft), PAD_BUTTON_LEFT},
-        {direction(Part::DPad, Text::DirectionRight), PAD_BUTTON_RIGHT},
+    using controls_profile::Slot;
+    return {
+        {Slot::A, PAD_BUTTON_A},
+        {Slot::B, PAD_BUTTON_B},
+        {Slot::X, PAD_BUTTON_X},
+        {Slot::Y, PAD_BUTTON_Y},
+        {Slot::Z, PAD_TRIGGER_Z},
+        {Slot::L, PAD_TRIGGER_L, PAD_AXIS_TRIGGER_L},
+        {Slot::R, PAD_TRIGGER_R, PAD_AXIS_TRIGGER_R},
+        {Slot::Start, PAD_BUTTON_START},
+        {Slot::DPadUp, PAD_BUTTON_UP},
+        {Slot::DPadDown, PAD_BUTTON_DOWN},
+        {Slot::DPadLeft, PAD_BUTTON_LEFT},
+        {Slot::DPadRight, PAD_BUTTON_RIGHT},
+        {Slot::StickUp, 0, PAD_AXIS_LEFT_Y_POS},
+        {Slot::StickDown, 0, PAD_AXIS_LEFT_Y_NEG},
+        {Slot::StickLeft, 0, PAD_AXIS_LEFT_X_NEG},
+        {Slot::StickRight, 0, PAD_AXIS_LEFT_X_POS},
+        {Slot::CStickUp, 0, PAD_AXIS_RIGHT_Y_POS},
+        {Slot::CStickDown, 0, PAD_AXIS_RIGHT_Y_NEG},
+        {Slot::CStickLeft, 0, PAD_AXIS_RIGHT_X_NEG},
+        {Slot::CStickRight, 0, PAD_AXIS_RIGHT_X_POS},
+        {Slot::Turbo},
     };
-    const struct {
-        Part part;
-        s32 up, down, left, right;
-    } sticks[] = {
-        {Part::Stick, PAD_AXIS_LEFT_Y_POS, PAD_AXIS_LEFT_Y_NEG, PAD_AXIS_LEFT_X_NEG, PAD_AXIS_LEFT_X_POS},
-        {Part::CStick, PAD_AXIS_RIGHT_Y_POS, PAD_AXIS_RIGHT_Y_NEG, PAD_AXIS_RIGHT_X_NEG, PAD_AXIS_RIGHT_X_POS},
-    };
-    for (const auto& stick : sticks) {
-        rows.push_back({direction(stick.part, Text::DirectionUp), 0, stick.up});
-        rows.push_back({direction(stick.part, Text::DirectionDown), 0, stick.down});
-        rows.push_back({direction(stick.part, Text::DirectionLeft), 0, stick.left});
-        rows.push_back({direction(stick.part, Text::DirectionRight), 0, stick.right});
-    }
-    return rows;
 }
 
-// The gamepad's buttons (its sticks go with the controller's own).
+// The gamepad's buttons and the turbo (its sticks go with the controller's own).
 std::vector<Row> gamepad_rows() {
     std::vector<Row> rows = keyboard_rows();
-    std::erase_if(rows, [](const Row& row) { return row.button == 0; });
+    std::erase_if(rows, [](const Row& row) { return !controls_profile::on_gamepad(row.slot); });
     return rows;
 }
 
@@ -104,8 +99,6 @@ controls_profile::Profile& profile() {
     }
     return g_profile;
 }
-
-controls_profile::Slot slot_of(size_t row) { return static_cast<controls_profile::Slot>(row); }
 
 std::string gamepad_name() {
     const char* name = PADGetName(PORT);
@@ -182,6 +175,11 @@ std::string gamepad_label(PADButton button) {
 }
 
 std::string binding_label(const Row& row) {
+    if (row.slot == controls_profile::Slot::Turbo) {
+        return g_device == 1 ? controls_profile::button_label(
+                                   gamepad_type(), profile().button_or_default(gamepad_name(), gamepad_type(), row.slot))
+                             : key_name(profile().key_or_default(row.slot));
+    }
     if (g_device == 1) {
         return gamepad_label(row.button);
     }
@@ -207,15 +205,19 @@ void apply_key(const Row& row, s32 code) {
 
 // Gives the key to the part, and saves it.
 void assign_key(size_t row, s32 code) {
-    apply_key(keyboard_rows()[row], code);
-    profile().set_key(slot_of(row), code);
+    const Row part = keyboard_rows()[row];
+    apply_key(part, code);
+    profile().set_key(part.slot, code);
     profile().save(profile_file());
     PADSerializeMappings();
 }
 
 void assign_button(size_t row, s32 native) {
-    PADSetButtonMapping(PORT, {static_cast<u32>(native), keyboard_rows()[row].button});
-    profile().set_button(gamepad_name(), slot_of(row), static_cast<u32>(native));
+    const Row part = gamepad_rows()[row];
+    if (part.button != 0) {
+        PADSetButtonMapping(PORT, {static_cast<u32>(native), part.button});
+    }
+    profile().set_button(gamepad_name(), part.slot, static_cast<u32>(native));
     profile().save(profile_file());
     PADSerializeMappings();
 }
@@ -258,7 +260,7 @@ void apply_saved() {
         PADRestoreDefaultKeyBindings(PORT);
         const std::vector<Row> rows = keyboard_rows();
         for (size_t i = 0; i < rows.size(); ++i) {
-            if (const auto key = profile().key(slot_of(i))) {
+            if (const auto key = profile().key(rows[i].slot)) {
                 apply_key(rows[i], *key);
             }
         }
@@ -269,11 +271,35 @@ void apply_saved() {
         PADRestoreDefaultMapping(PORT);
         const std::vector<Row> rows = gamepad_rows();
         for (size_t i = 0; i < rows.size(); ++i) {
-            if (const auto native = profile().button(name, slot_of(i))) {
+            const auto native = profile().button(name, rows[i].slot);
+            if (native && rows[i].button != 0) {
                 PADSetButtonMapping(PORT, {*native, rows[i].button});
             }
         }
     }
+}
+
+bool turbo_held() {
+    using controls_profile::Slot;
+    const int key = profile().key_or_default(Slot::Turbo);
+    bool held = false;
+    if (key >= 0 && key < SDL_SCANCODE_COUNT) {
+        held = SDL_GetKeyboardState(nullptr)[key];
+    } else if (key <= controls_profile::MOUSE_LEFT) {
+        constexpr int BUTTONS[] = {SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_BUTTON_X1, SDL_BUTTON_X2};
+        const int index = controls_profile::MOUSE_LEFT - key;
+        held = index < 5 && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_MASK(BUTTONS[index])) != 0;
+    }
+    if (!held && gamepad_connected()) {
+        const auto native = profile().button(gamepad_name(), Slot::Turbo);
+        SDL_Gamepad* gamepad = PADGetSDLGamepadForIndex(static_cast<u32>(PADGetIndexForPort(PORT)));
+        if (native && gamepad != nullptr) {
+            held = controls_profile::is_axis_button(*native)
+                       ? SDL_GetGamepadAxis(gamepad, static_cast<SDL_GamepadAxis>(controls_profile::axis_of(*native))) > 16000
+                       : SDL_GetGamepadButton(gamepad, static_cast<SDL_GamepadButton>(*native));
+        }
+    }
+    return held;
 }
 
 bool busy() { return g_waiting_row >= 0 || SDL_GetTicks() - g_stopped_at < SETTLE_MS; }
@@ -361,7 +387,7 @@ bool draw_window(bool* open) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(rows[i].label.c_str());
+                ImGui::TextUnformatted(controls_profile::slot_name(rows[i].slot).c_str());
                 ImGui::TableNextColumn();
                 const bool waiting = g_waiting_row == static_cast<int>(i);
                 const std::string label =

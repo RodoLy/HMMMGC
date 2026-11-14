@@ -167,6 +167,7 @@ enum class Text {
     ControlsRestoreHint,
     PressShort,
     ControlAssigned,
+    Turbo,
 
     Count
 };

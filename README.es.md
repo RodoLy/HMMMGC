@@ -193,7 +193,8 @@ archivo, `controls.json`, junto a `settings.json`. Elige una parte del control d
 GameCube y presiona la tecla (o un botón del ratón) o, en un control, el botón
 que debe jugarla; los cambios se guardan solos, cada control tiene los suyos y
 **Restablecer** vuelve a la asignación automática. (Las palancas de un control
-siempre siguen a las del control.)
+siempre siguen a las del control.) Ahí mismo está **Turbo (acelerar)**: Tab
+de entrada, y se le puede dar otra tecla o un botón del control.
 
 | GameCube | Teclado |
 |---|---|

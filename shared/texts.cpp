@@ -238,6 +238,7 @@ constexpr Translation TRANSLATIONS[] = {
      "Puts this device back to the game's own mapping."},
     {Text::PressShort, "Presiona...", "Press..."},
     {Text::ControlAssigned, "%s ahora es %s.", "%s is now %s."},
+    {Text::Turbo, "Turbo (acelerar)", "Turbo (fast forward)"},
 };
 
 constexpr size_t TEXT_COUNT = static_cast<size_t>(Text::Count);
