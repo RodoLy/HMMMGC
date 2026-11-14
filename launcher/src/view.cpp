@@ -50,8 +50,9 @@ constexpr ImU32 BAR_TOP = rgb(0xd2ffe0);      // the green of the bars and the s
 constexpr ImU32 BAR_BOTTOM = rgb(0x6fd89a);
 
 // The symbol of each tab, in the medallion and on the tab, and the color of its rows' squares.
-// ♪ ⚙ ✿ ✚
-constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "\xE2\x9C\xBF", "\xE2\x9C\x9A"};
+// ♪ ⚙ ✿, and the last tab's is drawn (draw_controller).
+constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "\xE2\x9C\xBF", ""};
+constexpr size_t CONTROLS_TAB = 3;
 constexpr ImU32 TAB_COLORS[] = {rgb(0xf08a2c), rgb(0x4aa0d8), rgb(0x5ab04a), rgb(0x9a6ad0)};
 
 constexpr const char* NOTE = "\xE2\x99\xAA";        // ♪
@@ -107,6 +108,32 @@ void draw_centered(ImDrawList* draw, const TextStyle& lettering, float center_x,
 // moves it, in the design's pixels.
 constexpr float LIST_HEIGHT = 310.f;
 constexpr float WHEEL_STEP = 60.f;
+
+// A game controller `width` wide around a point, for the Controls tab: its body with the two
+// grips, and in the colour of what is behind it the cross at the left and two buttons at the right.
+// (The fonts of the launcher have no such symbol.)
+void draw_controller(ImDrawList* draw, float center_x, float center_y, float width, ImU32 color, ImU32 behind) {
+    const float s = width;
+    look::fill(draw, {center_x - s * 0.5f, center_y - s * 0.28f, s, s * 0.5f}, s * 0.22f, color);
+    look::circle(draw, ImVec2(center_x - s * 0.31f, center_y + s * 0.15f), s * 0.19f, color);
+    look::circle(draw, ImVec2(center_x + s * 0.31f, center_y + s * 0.15f), s * 0.19f, color);
+    const float cross_x = center_x - s * 0.24f;
+    const float cross_y = center_y - s * 0.04f;
+    look::fill(draw, {cross_x - s * 0.11f, cross_y - s * 0.035f, s * 0.22f, s * 0.07f}, s * 0.02f, behind);
+    look::fill(draw, {cross_x - s * 0.035f, cross_y - s * 0.11f, s * 0.07f, s * 0.22f}, s * 0.02f, behind);
+    look::circle(draw, ImVec2(center_x + s * 0.16f, center_y + s * 0.01f), s * 0.05f, behind);
+    look::circle(draw, ImVec2(center_x + s * 0.29f, center_y - s * 0.09f), s * 0.05f, behind);
+}
+
+// The symbol of a tab, around a point: a character of the fonts, or the controller for Controls.
+void draw_tab_symbol(ImDrawList* draw, size_t tab, int size, float center_x, float center_y, ImU32 color,
+                     ImU32 behind) {
+    if (tab == CONTROLS_TAB) {
+        draw_controller(draw, center_x, center_y, static_cast<float>(size) * 1.15f, color, behind);
+    } else {
+        draw_centered(draw, style(Face::Baloo800, size, 0.f, color), center_x, center_y, TAB_SYMBOLS[tab]);
+    }
+}
 
 // The animation of a row or a tab coming in from the left (hmSlideL).
 struct Slide {
@@ -363,7 +390,7 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     look::draw_box(draw, Box{.rect = at(48.f, 44.f, 124.f, 124.f), .radius = 62.f, .background = rgb(0xfff3d6),
                              .border = 6.f, .border_color = rgb(0xffffff),
                              .shadows = {{{.y = 5.f, .color = PINK_DARK}}}});
-    draw_centered(draw, style(Face::Baloo800, 62, 0.f, ORANGE), 110.f, 106.f + TOP, TAB_SYMBOLS[tab]);
+    draw_tab_symbol(draw, tab, 62, 110.f, 106.f + TOP, ORANGE, rgb(0xfff3d6));
     const char* names[] = {text(Text::GameTab), text(Text::Options), text(Text::Mods), text(Text::Controls)};
     TextStyle section = style(Face::Baloo800, 58, 0.02f, rgb(0xeaf45c));
     section.stroke = 9.f;
@@ -479,9 +506,10 @@ void App::draw_tabs(ImDrawList* draw, double seconds) {
         look::fill(draw, tab, corners, chosen ? TEAL : ORANGE);
         look::inset_bottom_shadow(draw, tab, corners, 4.f, rgb(0x000028, 0.12f));
         const Rect square{tab.x + 10.f, tab.y + 8.f, 52.f, 52.f};
-        look::fill(draw, square, 12.f, chosen ? rgb(0x4fa8b4) : rgb(0xcf6712));
-        draw_centered(draw, style(Face::Baloo800, 30, 0.f, rgb(0xffffff)), square.center_x(), square.center_y(),
-                      TAB_SYMBOLS[i]);
+        const ImU32 square_color = chosen ? rgb(0x4fa8b4) : rgb(0xcf6712);
+        look::fill(draw, square, 12.f, square_color);
+        draw_tab_symbol(draw, static_cast<size_t>(i), 30, square.center_x(), square.center_y(), rgb(0xffffff),
+                        square_color);
         if (clicked(tab.x, tab.y, tab.w, tab.h)) {
             later([this, i] { choose_tab(static_cast<Tab>(i)); });
         }
