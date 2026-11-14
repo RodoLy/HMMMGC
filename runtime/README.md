@@ -88,7 +88,7 @@ El disco americano trae los textos de los diálogos en inglés, español, franc�
 alemán e italiano (`message_e`, `message_s`, `message_f`, `message_g` y
 `message_i`), pero su programa solo abre los de inglés. El idioma se elige en
 las opciones del launcher o en el menú F10 (Idioma), y vale desde la próxima vez
-que se abre el juego. Con `"gameLanguage"` en `settings.json` (`en`, `es`, `fr`,
+que se abre el juego. Con `"language"` en `settings.json` (`en`, `es`, `fr`,
 `de` o `it`), `game_language.h` cambia esas
 rutas en la memoria del juego antes de arrancar y el juego abre los del idioma
 elegido. Lo que el programa trae dentro (los menús, los nombres de los objetos)
@@ -260,7 +260,7 @@ German and Italian (`message_e`, `message_s`, `message_f`, `message_g` and
 `message_i`), but its program only opens the English ones. The language is
 chosen in the launcher's options or in the F10 menu (Language), and counts from
 the next time the game is opened. With
-`"gameLanguage"` in `settings.json` (`en`, `es`, `fr`, `de` or `it`),
+`"language"` in `settings.json` (`en`, `es`, `fr`, `de` or `it`),
 `game_language.h` changes those paths in the game's memory before it starts,
 and the game opens the files of the chosen language. What the program holds
 inside (the menus, the names of the items) and the pictures with words stay in

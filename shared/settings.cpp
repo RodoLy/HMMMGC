@@ -70,8 +70,8 @@ std::string Settings::text(const char* name, const std::string& fallback) const 
     return found != document_.end() && found->is_string() ? found->get<std::string>() : fallback;
 }
 
-int Settings::game_language() const {
-    const std::string chosen = text(GAME_LANGUAGE, GAME_LANGUAGES[0]);
+int Settings::language() const {
+    const std::string chosen = text(LANGUAGE, GAME_LANGUAGES[0]);
     const auto found = std::ranges::find(GAME_LANGUAGES, chosen);
     return found != std::end(GAME_LANGUAGES) ? static_cast<int>(found - std::begin(GAME_LANGUAGES)) : 0;
 }

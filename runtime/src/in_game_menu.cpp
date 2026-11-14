@@ -57,14 +57,19 @@ bool g_ready = false;               // the language and ImGui's settings are set
 // opened between frames (by an event read while the game loads) waits for the next one.
 bool g_lettering_ready = false;
 
-// The language of the launcher's choice, and nothing of ImGui kept between runs.
+// The menu is in Spanish when that is the language of the settings, and in English for the others.
+void apply_language() {
+    const std::string language = settings::GAME_LANGUAGES[player_options::current().language()];
+    texts::set_language(language == "es" ? texts::Language::Spanish : texts::Language::English);
+}
+
+// The language of the settings, and nothing of ImGui kept between runs.
 void get_ready() {
     if (g_ready) {
         return;
     }
     g_ready = true;
-    const std::string language = player_options::current().text(settings::LANGUAGE, "en");
-    texts::set_language(language == "es" ? texts::Language::Spanish : texts::Language::English);
+    apply_language();
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
@@ -312,7 +317,7 @@ void restart_heading() {
 // The language of the game's dialogues: the game reads it when it starts (game_language.h).
 void draw_language_menu() {
     settings::Settings& settings = player_options::current();
-    const int chosen = settings.game_language();
+    const int chosen = settings.language();
     if (!ImGui::BeginMenu(text(Text::GameLanguageShort))) {
         return;
     }
@@ -320,6 +325,7 @@ void draw_language_menu() {
     for (int i = 0; i < static_cast<int>(std::size(settings::GAME_LANGUAGES)); ++i) {
         if (ImGui::MenuItem(settings::GAME_LANGUAGE_NAMES[i], nullptr, i == chosen)) {
             player_options::set_game_language(settings::GAME_LANGUAGES[i]);
+            apply_language();  // the menu changes at once; the game's dialogues, at the next start
         }
     }
     ImGui::Separator();

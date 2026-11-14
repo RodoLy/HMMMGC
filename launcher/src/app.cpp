@@ -65,7 +65,7 @@ App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_t
 // -- What the launcher knows ----------------------------------------------------------------------
 
 void App::apply_language() {
-    const std::string chosen = settings_.text(settings::LANGUAGE, "en");
+    const std::string chosen = settings::GAME_LANGUAGES[settings_.language()];
     texts::set_language(chosen == "es" ? texts::Language::Spanish : texts::Language::English);
 }
 
@@ -472,9 +472,9 @@ std::vector<App::Row> App::options_rows() {
     percent(settings::ZOOM_OUT, 0, 0, 100, 5, Text::Zoom, Text::ZoomHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     {
-        // The language of the game's dialogues, of those the disc has.
+        // One language for the game's dialogues and for the launcher, of those the disc has.
         Row row;
-        const int index = settings_.game_language();
+        const int index = settings_.language();
         row.label = text(Text::GameLanguage);
         row.hint = text(Text::GameLanguageHint);
         row.value = settings::GAME_LANGUAGE_NAMES[index];
@@ -482,8 +482,10 @@ std::vector<App::Row> App::options_rows() {
         row.arrows = true;
         row.change = [this, index, changed](int step) {
             const int count = static_cast<int>(std::size(settings::GAME_LANGUAGES));
-            settings_.set(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
+            settings_.set(settings::LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
             changed();
+            apply_language();
+            mods_ = mods::load(package_.mods, package_mods());
         };
         row.activate = [change = row.change] { change(1); };
         rows.push_back(std::move(row));

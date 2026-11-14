@@ -129,7 +129,7 @@ bool mod_enabled(const std::string& id) {
 
 void note_running_mods(const std::vector<std::string>& ids) {
     g_running_mods = ids;
-    g_running_language = g_settings.text(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[0]);
+    g_running_language = g_settings.text(settings::LANGUAGE, settings::GAME_LANGUAGES[0]);
     if (const char* given = std::getenv(settings::PLAYER_SPEED_VARIABLE)) {
         g_running_player_speed = std::atoi(given);
     }
@@ -146,7 +146,7 @@ void set_player_speed_percent(int percent) {
 }
 
 bool restart_pending() {
-    if (g_settings.text(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[0]) != g_running_language) {
+    if (g_settings.text(settings::LANGUAGE, settings::GAME_LANGUAGES[0]) != g_running_language) {
         return true;
     }
     if (mod_is_running("player_speed") && g_settings.mod_enabled("player_speed") &&
@@ -166,7 +166,7 @@ void set_mod_enabled(const std::string& id, bool enabled) {
 }
 
 void set_game_language(const std::string& language) {
-    g_settings.set(settings::GAME_LANGUAGE, language);
+    g_settings.set(settings::LANGUAGE, language);
     g_unsaved = true;
 }
 

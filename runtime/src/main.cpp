@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
         InitializeDataSections();
         console_boot::prepare_memory(disc);
-        game_language::apply(disc, settings::GAME_LANGUAGES[player_options::current().game_language()]);
+        game_language::apply(disc, settings::GAME_LANGUAGES[player_options::current().language()]);
         // With the game's data in memory: the farm's grid of crops, for the chosen zoom.
         crop_grid::size_for_view(std::clamp(camera.zoom, camera_view::MINIMUM_ZOOM, camera_view::MAXIMUM_ZOOM),
                                  camera.widescreen);
