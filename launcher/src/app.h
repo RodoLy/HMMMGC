@@ -104,7 +104,6 @@ private:
     void draw_rows(ImDrawList* draw, double seconds, const std::vector<Row>& rows, float width);
     void draw_mods(ImDrawList* draw, double seconds);
     void draw_mod_details(ImDrawList* draw, const mods::Mod& mod);
-    void draw_art(ImDrawList* draw);
     void draw_scroll_bar(ImDrawList* draw);
     void draw_message(ImDrawList* draw, double seconds, const std::string& message);
     void draw_cursor(ImDrawList* draw, double seconds, float row_x, float row_center);
@@ -158,6 +157,7 @@ private:
     bool follow_selection_ = true;
     float list_total_ = 0.f;   // the height of all the rows of the list on screen
     bool dragging_bar_ = false;
+    bool using_pad_ = false;  // the last key came from a controller, so the tab labels say L and R
     float description_scroll_ = 0.f;
     double started_ = -1.0;
     ImVec2 last_mouse_{-1.f, -1.f};

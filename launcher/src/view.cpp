@@ -171,6 +171,12 @@ void App::handle_keys(const std::vector<Row>& rows) {
         return std::ranges::any_of(keys, [&](ImGuiKey key) { return ImGui::IsKeyPressed(key, repeat); });
     };
     const bool preparing = preparation_.state() == Preparation::State::Running;
+    for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key) {
+        const auto named = static_cast<ImGuiKey>(key);
+        if (ImGui::IsKeyPressed(named, false)) {
+            using_pad_ = key >= ImGuiKey_GamepadStart && key <= ImGuiKey_GamepadRStickRight;
+        }
+    }
     if (pressed({ImGuiKey_Escape}, false)) {
         if (preparing) {
             preparation_.cancel();
@@ -372,7 +378,9 @@ void App::draw_header(ImDrawList* draw, double seconds) {
 
     // The shoulder buttons that change the tab.
     const TextStyle shoulder = style(Face::Baloo800, 18, 0.f, rgb(0x7a3fa8));
-    const std::string labels[] = {std::string(LEFT_ARROW) + " L", std::string("R ") + RIGHT_ARROW};
+    // They name the keys of what the person is using: Q and E on the keyboard, L and R on a controller.
+    const std::string labels[] = {std::string(LEFT_ARROW) + (using_pad_ ? " L" : " Q"),
+                                  std::string(using_pad_ ? "R " : "E ") + RIGHT_ARROW};
     const float lefts[] = {12.f, 168.f};
     for (int i = 0; i < 2; ++i) {
         const float width = look::text_width(shoulder, labels[i]) + 20.f;
@@ -559,10 +567,7 @@ void App::draw_panel(ImDrawList* draw, double seconds, const std::vector<Row>& r
         draw_mods(draw, seconds);
         draw_scroll_bar(draw);
     } else {
-        draw_rows(draw, seconds, rows, tab_ == Tab::Game ? 640.f : 922.f);
-        if (tab_ == Tab::Game) {
-            draw_art(draw);
-        }
+        draw_rows(draw, seconds, rows, 922.f);
         draw_scroll_bar(draw);
     }
 }
@@ -842,14 +847,6 @@ void App::draw_mod_details(ImDrawList* draw, const mods::Mod& mod) {
         look::draw_text(draw, description, inside.x, look::baseline_in_line(description, line_top, line), lines[i]);
     }
     draw->PopClipRect();
-}
-
-void App::draw_art(ImDrawList* draw) {
-    // The design's box for the art: diagonal stripes in a dashed border. It stays empty; the game's
-    // own logo is in the game, and the launcher, the project's face, shows nothing of the game.
-    const Rect box = at(914.f, 234.f, 270.f, 310.f);
-    look::stripes(draw, box, 14.f, rgb(0x221c78), rgb(0x1c1668), 12.f, 6.f);
-    look::dashed_border(draw, box, 14.f, 3.f, rgb(0x6a7ce0));
 }
 
 void App::draw_scroll_bar(ImDrawList* draw) {
