@@ -181,8 +181,6 @@ constexpr Translation TRANSLATIONS[] = {
      "controller's. Each controller keeps its own mapping."},
     {Text::EditorConnectGamepad, "Conecta un control para asignarlo también.", "Connect a controller to set it up too."},
     {Text::NoKey, "Sin tecla", "No key"},
-    {Text::StartNotice, "F10 o Select: opciones y mods   -   Mantén Tab: acelerar",
-     "F10 or Select: options and mods   -   Hold Tab: speed up"},
     {Text::GameShortcuts,
      "En el juego: F10 o el botón Select abren las opciones, Tab acelera (turbo) y Alt+Enter cambia a pantalla "
      "completa.",
