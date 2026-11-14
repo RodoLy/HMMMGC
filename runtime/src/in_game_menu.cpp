@@ -300,6 +300,15 @@ bool draw_audio_menu(settings::Settings& settings) {
     return changed;
 }
 
+// The colour of what tells the player that the game has to be restarted.
+constexpr ImVec4 RESTART_COLOR(1.f, 0.82f, 0.35f, 1.f);
+
+// The first line of a menu whose choices the game only takes when it starts.
+void restart_heading() {
+    ImGui::TextColored(RESTART_COLOR, "%s", text(Text::NeedsRestart));
+    ImGui::Separator();
+}
+
 // The language of the game's dialogues: the game reads it when it starts (game_language.h).
 void draw_language_menu() {
     settings::Settings& settings = player_options::current();
@@ -307,6 +316,7 @@ void draw_language_menu() {
     if (!ImGui::BeginMenu(text(Text::GameLanguageShort))) {
         return;
     }
+    restart_heading();
     for (int i = 0; i < static_cast<int>(std::size(settings::GAME_LANGUAGES)); ++i) {
         if (ImGui::MenuItem(settings::GAME_LANGUAGE_NAMES[i], nullptr, i == chosen)) {
             player_options::set_game_language(settings::GAME_LANGUAGES[i]);
@@ -340,6 +350,7 @@ void draw_mods_menu() {
     if (!ImGui::BeginMenu(text(Text::Mods))) {
         return;
     }
+    restart_heading();
     const settings::Settings& settings = player_options::current();
     for (const std::string& id : native_mods::compiled_in()) {
         bool on = settings.mod_enabled(id);
@@ -382,6 +393,9 @@ void draw_menu_bar(ImVec2 window) {
     draw_mods_menu();
     if (changed) {
         player_options::apply_changes();
+    }
+    if (player_options::restart_pending()) {
+        ImGui::TextColored(RESTART_COLOR, "%s", text(Text::RestartPending));
     }
     // At the right, in the order they are read from the end.
     const ImGuiStyle& style = ImGui::GetStyle();

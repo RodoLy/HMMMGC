@@ -7,6 +7,7 @@
 #include "graphics/aurora_host.h"
 #include "graphics/camera_view.h"
 #include "graphics/frame_interpolation.h"
+#include "mods/native_mods.h"
 #include "runtime_log.h"
 
 #include <algorithm>
@@ -38,6 +39,7 @@ Options g_options;
 Options g_from_settings;
 std::optional<std::vector<std::string>> g_given_mods;
 std::vector<std::string> g_running_mods;
+std::string g_running_language;  // the language of the dialogues this run started with
 bool g_unsaved = false;
 
 // The options that `saved` says, with the launcher's limits: a value out of them is the default.
@@ -124,7 +126,19 @@ bool mod_enabled(const std::string& id) {
     return g_settings.mod_enabled(id);
 }
 
-void note_running_mods(const std::vector<std::string>& ids) { g_running_mods = ids; }
+void note_running_mods(const std::vector<std::string>& ids) {
+    g_running_mods = ids;
+    g_running_language = g_settings.text(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[0]);
+}
+
+bool restart_pending() {
+    if (g_settings.text(settings::GAME_LANGUAGE, settings::GAME_LANGUAGES[0]) != g_running_language) {
+        return true;
+    }
+    return std::ranges::any_of(native_mods::compiled_in(), [](const std::string& id) {
+        return g_settings.mod_enabled(id) != mod_is_running(id);
+    });
+}
 
 bool mod_is_running(const std::string& id) { return std::ranges::find(g_running_mods, id) != g_running_mods.end(); }
 

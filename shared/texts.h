@@ -126,6 +126,8 @@ enum class Text {
     EditorConnectGamepad,
     NoKey,
     ModsRestartNote,
+    NeedsRestart,
+    RestartPending,
     ModAppliesOnRestart,
     ModNameJamieMarriage,
     ModNamePlayerSpeed,
