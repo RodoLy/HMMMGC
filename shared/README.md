@@ -21,6 +21,7 @@ aurora, que lo dibuja sobre cada cuadro.
 | `settings.h`, `settings.cpp` | Las elecciones del jugador en `settings.json`. |
 | `option_rows.h`, `option_rows.cpp` | Las filas de las opciones (resolución, pantalla completa, pantalla ancha, cuadros por segundo, zoom, velocidad del juego, volumen), con su nombre, su pista y su control. |
 | `controls.h`, `controls.cpp` | Los controles de la PC, cómo los asigna el juego, un control de GameCube dibujado y la pantalla de controles. |
+| `controls_profile.h`, `controls_profile.cpp` | Los controles que eligió el jugador en `controls.json`, que leen y escriben el launcher y el juego. |
 
 ## English
 
@@ -41,3 +42,4 @@ which draws it over each frame.
 | `settings.h`, `settings.cpp` | The player's choices in `settings.json`. |
 | `option_rows.h`, `option_rows.cpp` | The rows of the options (resolution, full screen, widescreen, frames per second, zoom, volume), with their name, hint and control. |
 | `controls.h`, `controls.cpp` | The PC's controllers, how the game maps them, a GameCube controller drawn, and the controls screen. |
+| `controls_profile.h`, `controls_profile.cpp` | The controls the player chose, in `controls.json`, which the launcher and the game read and write. |

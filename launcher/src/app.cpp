@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_timer.h>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -57,6 +58,7 @@ App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_t
     read_prepared();
     mods_ = mods::load(package_.mods, package_mods());
     tab_ = first_tab.value_or(Tab::Game);
+    controls_ = controls_profile::Profile::load(controls_profile::file_beside(player_.settings));
     if (!disc.empty() && missing_.empty()) {
         start_preparation(disc);
     }
@@ -267,6 +269,32 @@ void App::update() {
 }
 
 void App::handle_event(const SDL_Event& event) {
+    // On the controls tab, the key or the button pressed while a part waits is given to it.
+    if (waiting_slot_ >= 0) {
+        const bool keyboard = selected_device_ == 0;
+        if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+            if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
+                stop_waiting();
+            } else if (keyboard) {
+                give_key(static_cast<int>(event.key.scancode));
+            }
+        } else if (keyboard && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            // The left button chooses the rows, so it is not given to a part.
+            switch (event.button.button) {
+            case SDL_BUTTON_MIDDLE: give_key(controls_profile::MOUSE_MIDDLE); break;
+            case SDL_BUTTON_RIGHT: give_key(controls_profile::MOUSE_RIGHT); break;
+            case SDL_BUTTON_X1: give_key(controls_profile::MOUSE_X1); break;
+            case SDL_BUTTON_X2: give_key(controls_profile::MOUSE_X2); break;
+            default: break;
+            }
+        } else if (!keyboard && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+            give_button(event.gbutton.button);
+        } else if (!keyboard && event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION && event.gaxis.value > 16000 &&
+                   (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER ||
+                    event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER)) {
+            give_button(controls_profile::axis_as_button(event.gaxis.axis));
+        }
+    }
     // A disc image dropped on the window is chosen as the disc.
     if (event.type == SDL_EVENT_DROP_FILE && event.drop.data != nullptr &&
         preparation_.state() != Preparation::State::Running) {
@@ -278,6 +306,11 @@ void App::handle_event(const SDL_Event& event) {
 void App::choose_tab(Tab tab) {
     if (tab_ == Tab::Controls && tab != Tab::Controls) {
         gamepads_.close();
+    }
+    stop_waiting();
+    if (tab == Tab::Controls) {
+        // The game's options menu writes the file too.
+        controls_ = controls_profile::Profile::load(controls_profile::file_beside(player_.settings));
     }
     tab_ = tab;
     selected_ = 0;
@@ -498,52 +531,124 @@ std::vector<App::Row> App::options_rows() {
     return rows;
 }
 
+// The symbol in a part's square: its letter, or the way it points.
+const char* slot_symbol(controls_profile::Slot slot) {
+    constexpr const char* SYMBOLS[controls_profile::SLOT_COUNT] = {
+        "A", "B", "X", "Y", "Z", "L", "R", "S",
+        "\xE2\x86\x91", "\xE2\x86\x93", "\xE2\x86\x90", "\xE2\x86\x92",  // ↑ ↓ ← →, the D-pad
+        "\xE2\x96\xB2", "\xE2\x96\xBC", "\xE2\x97\x80", "\xE2\x96\xB6",  // ▲ ▼ ◀ ▶, the sticks
+        "\xE2\x96\xB2", "\xE2\x96\xBC", "\xE2\x97\x80", "\xE2\x96\xB6",
+    };
+    return SYMBOLS[static_cast<int>(slot)];
+}
+
 std::vector<App::Row> App::controls_rows() {
-    // The gamepads come first and the keyboard last; the first gamepad is the one that plays.
-    const std::vector<controls::Device> devices = gamepads_.devices();
-    const bool gamepad = devices.size() > 1;
+    // The keyboard (with the mouse) first, then each gamepad connected; the list below is what
+    // plays each part of the GameCube controller on the one chosen, and a part chosen waits for
+    // the key or the button that will play it (handle_event).
+    std::vector<controls::Device> devices = gamepads_.devices();
+    devices.pop_back();  // the keyboard, which devices() lists last
+    const int count = static_cast<int>(devices.size()) + 1;
+    selected_device_ = std::clamp(selected_device_, 0, count - 1);
+    const bool keyboard = selected_device_ == 0;
+    const controls::Device* gamepad = keyboard ? nullptr : &devices[static_cast<size_t>(selected_device_ - 1)];
     std::vector<Row> rows;
 
-    Row keyboard;
-    keyboard.label = text(Text::Keyboard);
-    keyboard.value = gamepad ? text(Text::NotInUse) : text(Text::InUse);
-    keyboard.tone = gamepad ? Tone::Off : Tone::Value;
-    keyboard.hint = text(Text::KeyboardHint);
-    rows.push_back(std::move(keyboard));
+    Row device;
+    device.symbol = "\xE2\x9C\x9A";  // ✚
+    device.label = text(Text::ControlsDevice);
+    device.value = keyboard ? text(Text::Keyboard) : gamepad->name;
+    device.tone = Tone::Value;
+    device.arrows = count > 1;
+    device.hint = count == 1 ? text(Text::ControllerNoneHint)
+                  : keyboard ? text(Text::KeyboardHint)
+                             : text(Text::ControllerHint);
+    device.change = [this, count](int step) {
+        stop_waiting();
+        selected_device_ = (selected_device_ + step + count) % count;
+    };
+    device.activate = [change = device.change] { change(1); };
+    rows.push_back(std::move(device));
 
-    Row controller;
-    controller.label = text(Text::Controller);
-    controller.value = gamepad ? devices.front().name : text(Text::NotConnected);
-    controller.tone = gamepad ? Tone::Value : Tone::Warning;
-    controller.hint = gamepad ? text(Text::ControllerHint) : text(Text::ControllerNoneHint);
-    rows.push_back(std::move(controller));
+    const int slots = keyboard ? controls_profile::SLOT_COUNT : controls_profile::BUTTON_SLOT_COUNT;
+    for (int index = 0; index < slots; ++index) {
+        const auto slot = static_cast<controls_profile::Slot>(index);
+        Row row;
+        row.symbol = slot_symbol(slot);
+        row.label = controls_profile::slot_name(slot);
+        if (waiting_slot_ == index) {
+            row.value = text(Text::PressShort);
+            row.tone = Tone::Warning;
+        } else {
+            row.value = keyboard ? controls_profile::key_label(controls_.key_or_default(slot))
+                                 : controls_profile::button_label(
+                                       gamepad->type, controls_.button_or_default(gamepad->name, gamepad->type, slot));
+            row.tone = Tone::Key;
+        }
+        row.hint = text(keyboard ? Text::ControlsHintKeyboard : Text::ControlsHintGamepad);
+        // Chosen again (or Esc), it stops waiting; another part takes the wait over.
+        row.activate = [this, index] { waiting_slot_ == index ? stop_waiting() : start_waiting(index); };
+        rows.push_back(std::move(row));
+    }
 
-    // The game maps every gamepad by itself, by its kind (controls.h).
-    Row mapping;
-    mapping.label = text(Text::AutomaticMapping);
-    mapping.value = text(Text::ModOn);
-    mapping.tone = Tone::On;
-    mapping.hint = text(Text::TryButtons);
-    rows.push_back(std::move(mapping));
+    Row restore;
+    restore.symbol = "\xE2\x97\x8E";  // ◎
+    restore.label = text(Text::RestoreMapping);
+    restore.hint = text(Text::ControlsRestoreHint);
+    restore.activate = [this, keyboard, name = gamepad != nullptr ? gamepad->name : std::string()] {
+        stop_waiting();
+        if (keyboard) {
+            controls_.clear_keyboard();
+        } else {
+            controls_.clear_gamepad(name);
+        }
+        save_controls();
+        toast_ = text(Text::ControlsRestoreHint);
+    };
+    rows.push_back(std::move(restore));
     return rows;
 }
 
-// On the controls' tab, what is pressed on the gamepad that plays says what it is on a GameCube.
-void App::watch_controller() {
-    const std::vector<controls::Device> devices = gamepads_.devices();
-    if (devices.size() < 2) {
-        pressed_before_ = {};
+void App::start_waiting(int slot) {
+    waiting_slot_ = slot;
+    waiting_since_ = SDL_GetTicks();
+    toast_ = text(selected_device_ == 0 ? Text::PressKey : Text::PressButton);
+}
+
+void App::stop_waiting() {
+    if (waiting_slot_ >= 0) {
+        settled_until_ = SDL_GetTicks() + 300;
+        toast_.clear();
+    }
+    waiting_slot_ = -1;
+}
+
+bool App::choosing_controls() const { return waiting_slot_ >= 0 || SDL_GetTicks() < settled_until_; }
+
+void App::save_controls() { controls_.save(controls_profile::file_beside(player_.settings)); }
+
+void App::give_key(int key) {
+    const auto slot = static_cast<controls_profile::Slot>(waiting_slot_);
+    controls_.set_key(slot, key);
+    save_controls();
+    stop_waiting();
+    toast_ = texts::format(Text::ControlAssigned, controls_profile::slot_name(slot).c_str(),
+                           controls_profile::key_label(key).c_str());
+}
+
+void App::give_button(std::uint32_t native) {
+    std::vector<controls::Device> devices = gamepads_.devices();
+    if (selected_device_ < 1 || selected_device_ >= static_cast<int>(devices.size())) {
+        stop_waiting();
         return;
     }
-    const controls::State state = gamepads_.state(devices.front());
-    for (size_t part = 0; part < controls::PART_COUNT; ++part) {
-        if (state.pressed[part] && !pressed_before_[part]) {
-            const auto which = static_cast<controls::Part>(part);
-            toast_ = texts::format(Text::PressedPart, controls::part_name(which).c_str(),
-                                   controls::binding(devices.front(), which).c_str());
-        }
-    }
-    pressed_before_ = state.pressed;
+    const controls::Device& gamepad = devices[static_cast<size_t>(selected_device_ - 1)];
+    const auto slot = static_cast<controls_profile::Slot>(waiting_slot_);
+    controls_.set_button(gamepad.name, slot, native);
+    save_controls();
+    stop_waiting();
+    toast_ = texts::format(Text::ControlAssigned, controls_profile::slot_name(slot).c_str(),
+                           controls_profile::button_label(gamepad.type, native).c_str());
 }
 
 void App::follow_disc() {
@@ -585,10 +690,11 @@ void App::frame(double seconds) {
         }
         return std::vector<Row>();
     };
-    handle_keys(rows_now());
-    if (tab_ == Tab::Controls) {
-        watch_controller();
+    // A part that waited too long gives up.
+    if (waiting_slot_ >= 0 && SDL_GetTicks() - waiting_since_ > 6000) {
+        stop_waiting();
     }
+    handle_keys(rows_now());
     // The keys may have changed the tab or a value: the rows are made again to draw them.
     draw(still_ ? 100.0 : seconds - started_, rows_now());
     if (pending_) {

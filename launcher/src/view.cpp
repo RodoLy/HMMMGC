@@ -171,6 +171,10 @@ void App::handle_keys(const std::vector<Row>& rows) {
         return std::ranges::any_of(keys, [&](ImGuiKey key) { return ImGui::IsKeyPressed(key, repeat); });
     };
     const bool preparing = preparation_.state() == Preparation::State::Running;
+    // While a part of the controls waits for its key, the keys are its own (handle_event).
+    if (choosing_controls()) {
+        return;
+    }
     for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key) {
         const auto named = static_cast<ImGuiKey>(key);
         if (ImGui::IsKeyPressed(named, false)) {

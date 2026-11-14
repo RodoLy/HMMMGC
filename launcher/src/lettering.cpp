@@ -62,7 +62,7 @@ constexpr Size SIZES[] = {
     {Face::Dosis700, 34, Glyphs::Text},     // "Play"
     {Face::Baloo800, 18, Glyphs::Ascii},    // "L", "R" and the arrows of the values
     {Face::Baloo800, 19, Glyphs::Ascii},    // "Esc"
-    {Face::Baloo800, 22, Glyphs::Symbols},  // the symbols of the rows
+    {Face::Baloo800, 22, Glyphs::Ascii},    // the symbols of the rows, and the letters of the controls
     {Face::Baloo800, 24, Glyphs::Symbols},  // "→" and the smallest bubbles
     {Face::Baloo800, 26, Glyphs::Text},     // the name of the chosen mod
     {Face::Baloo800, 28, Glyphs::Ascii},    // the version

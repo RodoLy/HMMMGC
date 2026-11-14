@@ -231,6 +231,16 @@ std::string native_button_label(SDL_GamepadType type, int button) {
     return "#" + std::to_string(button);
 }
 
+SDL_GamepadButton face_button(SDL_GamepadType type, Part part) {
+    const FaceButtons face = face_buttons(type);
+    switch (part) {
+    case Part::A: return face.a;
+    case Part::B: return face.b;
+    case Part::X: return face.x;
+    default: return face.y;
+    }
+}
+
 std::string native_axis_label(SDL_GamepadType type, int axis) {
     const OtherNames names = other_names(family(type));
     if (axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER) {

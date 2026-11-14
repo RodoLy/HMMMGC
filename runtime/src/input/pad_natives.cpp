@@ -13,6 +13,7 @@
 //   A: X   B: Z   X: C   Y: S   Z: D   L: Q   R: W   START: Enter
 
 #include "guest_memory.h"
+#include "controls_editor.h"
 #include "in_game_menu.h"
 #include "native_functions.h"
 
@@ -109,6 +110,7 @@ PPC_NATIVE_OVERRIDE(8017C890, PADInitNative, uint32_t, (), ());
 // u32 PADRead(PADStatus status[4]): the four ports, in the game's array; returns the ports
 // whose controller can rumble, as the console's PADRead does.
 uint32_t PADReadNative(uint32_t status_address) {
+    controls_editor::apply_saved();
     choose_keyboard_or_gamepad();
     PADStatus statuses[PAD_CHANMAX]{};
     const uint32_t rumble_ports = PADRead(statuses);

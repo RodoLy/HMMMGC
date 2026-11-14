@@ -35,6 +35,7 @@ endfunction()
 function(add_shared_ui target)
     target_sources(${target} PRIVATE
         "${SHARED_UI_DIRECTORY}/controls.cpp"
+        "${SHARED_UI_DIRECTORY}/controls_profile.cpp"
         "${SHARED_UI_DIRECTORY}/option_rows.cpp"
         "${SHARED_UI_DIRECTORY}/settings.cpp"
         "${SHARED_UI_DIRECTORY}/texts.cpp"

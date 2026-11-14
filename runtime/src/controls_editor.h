@@ -11,6 +11,11 @@
 
 namespace controls_editor {
 
+// Gives aurora what the player chose in controls.json (the launcher writes it too): the keys of the
+// keyboard when the game starts, and a gamepad's buttons when it is connected. Called at every read
+// of the controllers; it does the work only when there is something new.
+void apply_saved();
+
 // The window with the parts of the controller and what plays each, in ImGui's plain style like the
 // rest of the menu; false when the player closed it (`open` is its flag).
 bool draw_window(bool* open);

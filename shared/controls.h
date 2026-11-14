@@ -56,6 +56,9 @@ private:
 std::string native_button_label(SDL_GamepadType type, int button);
 std::string native_axis_label(SDL_GamepadType type, int axis);
 
+// The face button of this kind of gamepad that the game maps to A, B, X or Y by itself.
+SDL_GamepadButton face_button(SDL_GamepadType type, Part part);
+
 // The GameCube part's name ("A", "Z", "Palanca C", ...).
 std::string part_name(Part part);
 // What plays that part on `device`: a button's label ("A", "✕", "RB"), a stick, or keys.

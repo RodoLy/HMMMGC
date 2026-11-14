@@ -223,6 +223,21 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::ControllerHint, "Juega el primer control que conectaste. Presiona sus botones para probarlo.",
      "The first controller you connected plays. Press its buttons to try it."},
     {Text::PressedPart, "%s de GameCube: %s en tu control.", "GameCube's %s: %s on your controller."},
+    {Text::ControlsDevice, "Dispositivo", "Device"},
+    {Text::ControlsHintKeyboard,
+     "Elige una parte del control de GameCube y presiona la tecla (o el botón del ratón) que la juega. Esc cancela. "
+     "Se guarda solo.",
+     "Pick a part of the GameCube controller and press the key (or mouse button) that plays it. Esc cancels. It is "
+     "kept by itself."},
+    {Text::ControlsHintGamepad,
+     "Elige un botón de GameCube y presiona el botón de tu control que lo juega. Esc cancela. Las palancas siguen a "
+     "las de tu control. Cada control guarda su asignación.",
+     "Pick a GameCube button and press the button on your controller that plays it. Esc cancels. The sticks follow "
+     "your controller's. Each controller keeps its own mapping."},
+    {Text::ControlsRestoreHint, "Devuelve este dispositivo a la asignación del juego.",
+     "Puts this device back to the game's own mapping."},
+    {Text::PressShort, "Presiona...", "Press..."},
+    {Text::ControlAssigned, "%s ahora es %s.", "%s is now %s."},
 };
 
 constexpr size_t TEXT_COUNT = static_cast<size_t>(Text::Count);

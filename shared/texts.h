@@ -161,6 +161,12 @@ enum class Text {
     ControllerNoneHint,
     ControllerHint,
     PressedPart,
+    ControlsDevice,
+    ControlsHintKeyboard,
+    ControlsHintGamepad,
+    ControlsRestoreHint,
+    PressShort,
+    ControlAssigned,
 
     Count
 };

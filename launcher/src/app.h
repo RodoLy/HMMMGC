@@ -9,6 +9,7 @@
 
 #include "child_process.h"
 #include "controls.h"
+#include "controls_profile.h"
 #include "mods.h"
 #include "paths.h"
 #include "preparation.h"
@@ -21,6 +22,7 @@
 #include <imgui.h>
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -89,7 +91,13 @@ private:
     std::vector<Row> options_rows();
     std::vector<Row> controls_rows();
     std::string preparation_text() const;
-    void watch_controller();
+    // The controls tab: a part waits for the key or the button the player presses.
+    void start_waiting(int slot);
+    void stop_waiting();
+    void give_key(int key);
+    void give_button(std::uint32_t native);
+    void save_controls();
+    bool choosing_controls() const;
     void follow_disc();
 
     // -- How it looks (view.cpp) --
@@ -144,7 +152,11 @@ private:
 
     std::vector<mods::Mod> mods_;
     controls::Gamepads gamepads_;
-    std::array<bool, controls::PART_COUNT> pressed_before_{};
+    controls_profile::Profile controls_;
+    int selected_device_ = 0;  // 0 is the keyboard, then the gamepads
+    int waiting_slot_ = -1;    // the part that waits for a key or a button, or none
+    std::uint64_t waiting_since_ = 0;
+    std::uint64_t settled_until_ = 0;  // the key that was just given is still down: it does nothing yet
 
     // What the player sees: the tab, the chosen row, a message that answers what was just done
     // (instead of the chosen row's hint), and how far the list is scrolled.

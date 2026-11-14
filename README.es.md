@@ -187,7 +187,9 @@ uno: [mods/README.md](mods/README.md).
 
 El primer control que conectes juega, asignado solo. Sin control, juega el
 teclado, con las mismas teclas que Dolphin trae de entrada. Se pueden cambiar
-en el juego: **F10** y luego **Ajustes del control**. Elige una parte del control de
+en el launcher, en la pestaña **Controles** (elige el dispositivo con ◀ ▶), o
+en el juego: **F10** y luego **Ajustes del control**. Los dos guardan en el mismo
+archivo, `controls.json`, junto a `settings.json`. Elige una parte del control de
 GameCube y presiona la tecla (o un botón del ratón) o, en un control, el botón
 que debe jugarla; los cambios se guardan solos, cada control tiene los suyos y
 **Restablecer** vuelve a la asignación automática. (Las palancas de un control

@@ -69,7 +69,7 @@ resolución interna (como la ventana, 480p, 720p, 1080p o 1440p, que el archivo
 guarda como `internalResolution`), la pantalla completa, la pantalla ancha, los
 cuadros por segundo, el contador de cuadros por segundo, el zoom y el
 volumen, que cambian al momento, los mods (con un interruptor cada uno; el
-cambio se aplica al reiniciar el juego) y la pantalla de controles (donde se elige qué tecla, botón del ratón o botón del control juega cada parte del GameCube, `controls_editor.h`; aurora lo guarda en `keyboard_bindings.dat` y en un archivo por control), en una
+cambio se aplica al reiniciar el juego) y la pantalla de controles (donde se elige qué tecla, botón del ratón o botón del control juega cada parte del GameCube, `controls_editor.h`; se guarda en `controls.json`, que también edita el launcher, y se le da a aurora al arrancar y al conectar un control), en una
 barra sencilla arriba con menús desplegables y el juego visible detrás (la resolución, Imagen, Ajustes del control, Volumen y Mods). Lo
 que cambia se guarda en `settings.json` al cerrar el menú, y el launcher lo lee
 al volver. Mientras está abierto, el juego sigue pero no recibe nada de los
@@ -240,7 +240,7 @@ second, the frame counter, the zoom and the volume, which change at once, the mo
 (a switch each; the change applies when the game is restarted) and the controls
 screen (where the key, mouse button or controller button that plays each part of
 the GameCube is chosen, `controls_editor.h`; aurora keeps it in
-`keyboard_bindings.dat` and in a file for each controller), in a plain bar at the top with drop-down menus and the game visible
+kept in `controls.json`, which the launcher edits too, and given to aurora at the start and when a controller is connected), in a plain bar at the top with drop-down menus and the game visible
 behind (the resolution, Picture, Controller settings, Volume and Mods). What changes is kept in
 `settings.json` when the menu closes, and the launcher reads it when it comes
 back. While it is open the game goes on but gets nothing from the controllers

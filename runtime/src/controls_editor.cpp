@@ -3,6 +3,8 @@
 #include "controls_editor.h"
 
 #include "controls.h"
+#include "controls_profile.h"
+#include "player_folder.h"
 #include "texts.h"
 #include "theme.h"
 
@@ -88,6 +90,28 @@ Uint64 g_stopped_at = 0;
 
 bool gamepad_connected() { return PADGetIndexForPort(PORT) >= 0; }
 
+// What the player chose, in controls.json beside settings.json: the launcher writes it too, so it is
+// read again when the game starts, and what is changed here is written at once.
+controls_profile::Profile g_profile;
+bool g_profile_read = false;
+
+std::filesystem::path profile_file() { return controls_profile::file_beside(player_folder::settings_file()); }
+
+controls_profile::Profile& profile() {
+    if (!g_profile_read) {
+        g_profile = controls_profile::Profile::load(profile_file());
+        g_profile_read = true;
+    }
+    return g_profile;
+}
+
+controls_profile::Slot slot_of(size_t row) { return static_cast<controls_profile::Slot>(row); }
+
+std::string gamepad_name() {
+    const char* name = PADGetName(PORT);
+    return name != nullptr ? name : "";
+}
+
 void stop_waiting() {
     if (g_waiting_row >= 0) {
         g_stopped_at = SDL_GetTicks();
@@ -131,19 +155,7 @@ PADKeyAxisBinding* axis_binding(s32 axis) {
     return nullptr;
 }
 
-std::string key_name(s32 code) {
-    switch (code) {
-    case PAD_KEY_INVALID: return text(Text::NoKey);
-    case PAD_KEY_MOUSE_LEFT: return text(Text::MouseLeft);
-    case PAD_KEY_MOUSE_MIDDLE: return text(Text::MouseMiddle);
-    case PAD_KEY_MOUSE_RIGHT: return text(Text::MouseRight);
-    case PAD_KEY_MOUSE_X1:
-    case PAD_KEY_MOUSE_X2: return text(Text::MouseOther);
-    default: break;
-    }
-    const char* name = SDL_GetScancodeName(static_cast<SDL_Scancode>(code));
-    return name != nullptr && *name != '\0' ? name : text(Text::NoKey);
-}
+std::string key_name(s32 code) { return controls_profile::key_label(code); }
 
 SDL_GamepadType gamepad_type() {
     SDL_Gamepad* gamepad = PADGetSDLGamepadForIndex(static_cast<u32>(std::max(PADGetIndexForPort(PORT), 0)));
@@ -180,8 +192,8 @@ std::string binding_label(const Row& row) {
     return binding != nullptr ? key_name(binding->scancode) : text(Text::NoKey);
 }
 
-// Gives the key to the part, and saves it.
-void assign_key(const Row& row, s32 code) {
+// Gives the key to the part on aurora's side (not saved).
+void apply_key(const Row& row, s32 code) {
     if (row.button != 0) {
         PADSetKeyButtonBinding(PORT, {code, row.button});
     }
@@ -191,37 +203,78 @@ void assign_key(const Row& row, s32 code) {
             PADSetKeyAxisBinding(PORT, {code, static_cast<PADAxis>(axis), current != nullptr ? current->influence : s16{0}});
         }
     }
+}
+
+// Gives the key to the part, and saves it.
+void assign_key(size_t row, s32 code) {
+    apply_key(keyboard_rows()[row], code);
+    profile().set_key(slot_of(row), code);
+    profile().save(profile_file());
     PADSerializeMappings();
 }
 
-void assign_button(const Row& row, s32 native) {
-    PADSetButtonMapping(PORT, {static_cast<u32>(native), row.button});
+void assign_button(size_t row, s32 native) {
+    PADSetButtonMapping(PORT, {static_cast<u32>(native), keyboard_rows()[row].button});
+    profile().set_button(gamepad_name(), slot_of(row), static_cast<u32>(native));
+    profile().save(profile_file());
     PADSerializeMappings();
 }
 
 void restore_defaults() {
     if (g_device == 1) {
         PADRestoreDefaultMapping(PORT);
+        profile().clear_gamepad(gamepad_name());
     } else {
         PADRestoreDefaultKeyBindings(PORT);
+        profile().clear_keyboard();
     }
+    profile().save(profile_file());
     PADSerializeMappings();
 }
 
 // A gamepad's part waits for the next button, once the buttons that were down are let go.
-void listen_to_gamepad(const std::vector<Row>& rows) {
+void listen_to_gamepad() {
     const s32 pressed = PADGetNativeButtonPressed(PORT);
     if (g_waiting_for_release) {
         g_waiting_for_release = pressed >= 0;
         return;
     }
     if (pressed >= 0) {
-        assign_button(rows[static_cast<size_t>(g_waiting_row)], pressed);
+        assign_button(static_cast<size_t>(g_waiting_row), pressed);
         stop_waiting();
     }
 }
 
 }  // namespace
+
+void apply_saved() {
+    // The keyboard once, and each gamepad when it is connected: what aurora kept by itself is
+    // dropped, so that controls.json (which the launcher edits too) is the one that decides.
+    static bool keyboard_done = false;
+    static std::string gamepad_done;
+    if (!keyboard_done) {
+        keyboard_done = true;
+        wake_keyboard_bindings();
+        PADRestoreDefaultKeyBindings(PORT);
+        const std::vector<Row> rows = keyboard_rows();
+        for (size_t i = 0; i < rows.size(); ++i) {
+            if (const auto key = profile().key(slot_of(i))) {
+                apply_key(rows[i], *key);
+            }
+        }
+    }
+    const std::string name = gamepad_name();
+    if (!name.empty() && name != gamepad_done) {
+        gamepad_done = name;
+        PADRestoreDefaultMapping(PORT);
+        const std::vector<Row> rows = gamepad_rows();
+        for (size_t i = 0; i < rows.size(); ++i) {
+            if (const auto native = profile().button(name, slot_of(i))) {
+                PADSetButtonMapping(PORT, {*native, rows[i].button});
+            }
+        }
+    }
+}
 
 bool busy() { return g_waiting_row >= 0 || SDL_GetTicks() - g_stopped_at < SETTLE_MS; }
 
@@ -234,7 +287,6 @@ bool handle_event(const SDL_Event& event) {
     if (g_waiting_row < 0 || g_device != 0) {
         return false;
     }
-    const std::vector<Row> rows = keyboard_rows();
     s32 code = PAD_KEY_INVALID;
     if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
         if (event.key.scancode == SDL_SCANCODE_F10) {
@@ -256,7 +308,7 @@ bool handle_event(const SDL_Event& event) {
         return false;
     }
     if (code != PAD_KEY_INVALID) {
-        assign_key(rows[static_cast<size_t>(g_waiting_row)], code);
+        assign_key(static_cast<size_t>(g_waiting_row), code);
     }
     stop_waiting();
     return true;
@@ -272,7 +324,7 @@ bool draw_window(bool* open) {
         stop_waiting();
     }
     if (g_waiting_row >= 0 && g_device == 1) {
-        listen_to_gamepad(rows);
+        listen_to_gamepad();
     }
 
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));

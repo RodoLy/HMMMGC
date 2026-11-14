@@ -185,7 +185,9 @@ All come off, like the original game; you turn them on in the Mods tab. How to m
 
 The first controller you connect plays, mapped automatically. Without one,
 the keyboard plays, with the same keys as Dolphin by default. You can change
-them in the game: **F10**, then **Controller settings**. Pick a part of the GameCube
+them in the launcher, on the **Controls** tab (choose the device with ◀ ▶), or
+in the game: **F10**, then **Controller settings**. Both keep them in the same
+file, `controls.json`, next to `settings.json`. Pick a part of the GameCube
 controller and press the key (or a mouse button) or, for a controller, the
 button that should play it; the changes are kept by themselves, each controller
 has its own, and **Restore defaults** goes back to the automatic mapping.
