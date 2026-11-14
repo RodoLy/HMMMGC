@@ -80,7 +80,8 @@ it, an image it could not read) and offers to open the log.
 leaving the game, in a plain bar at the top with drop-down menus: the
 resolution, Picture, Controller settings, Volume and Mods. The options change
 at once and are kept for the next time; the mods can be turned on or off there
-too, and the change applies the next time the game is opened. While the menu is open the game does not get
+too: the two of the character's speed change at once, and Marry Jamie the next
+time the game is opened. While the menu is open the game does not get
 the controller.
 
 ![The options menu inside the game, over the farm](docs/images/in-game-menu-en.jpg)

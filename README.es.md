@@ -81,8 +81,8 @@ una imagen que no pudo leer) y ofrece abrir el registro.
 del juego, en una barra sencilla arriba con menús desplegables: la
 resolución, Imagen, Ajustes del control, Volumen y Mods. Las opciones cambian
 al momento y se guardan para la próxima vez;
-los mods también se prenden o apagan ahí, y el cambio se aplica la próxima vez
-que se abre el juego. Mientras el menú está abierto, el juego no
+los mods también se prenden o apagan ahí: los dos de la velocidad del personaje
+cambian al momento, y Casarse con Jamie la próxima vez que se abre el juego. Mientras el menú está abierto, el juego no
 recibe el control.
 
 ![El menú de opciones dentro del juego, sobre la granja](docs/images/in-game-menu-es.jpg)

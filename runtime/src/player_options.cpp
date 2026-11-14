@@ -143,6 +143,15 @@ int player_speed_percent() {
 void set_player_speed_percent(int percent) {
     g_settings.set(settings::PLAYER_SPEED, percent);
     g_unsaved = true;
+    // The mod reads the speed from its environment variable: it is given the new one now.
+    const std::string value = std::to_string(percent);
+#ifdef _WIN32
+    _putenv_s(settings::PLAYER_SPEED_VARIABLE, value.c_str());
+#else
+    setenv(settings::PLAYER_SPEED_VARIABLE, value.c_str(), 1);
+#endif
+    native_mods::read_settings_again("player_speed");
+    g_running_player_speed = percent;
 }
 
 bool restart_pending() {
@@ -163,6 +172,13 @@ bool mod_is_running(const std::string& id) { return std::ranges::find(g_running_
 void set_mod_enabled(const std::string& id, bool enabled) {
     g_settings.set_mod_enabled(id, enabled);
     g_unsaved = true;
+    if (native_mods::switches_while_running(id)) {
+        native_mods::set_running(id, enabled);
+        std::erase(g_running_mods, id);
+        if (enabled) {
+            g_running_mods.push_back(id);
+        }
+    }
 }
 
 void set_game_language(const std::string& language) {

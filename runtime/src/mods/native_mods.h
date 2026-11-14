@@ -29,6 +29,16 @@ std::vector<std::string> compiled_in();
 // choice, player_options.h); without it, all of them. Call once, before the game starts.
 void load(const std::vector<std::string>* enabled);
 
+// Whether a mod can be turned on and off while the game runs: the ones that only act at each
+// frame of the game (the two of the character's speed). A mod that changes what the game has
+// already loaded (jamie_marriage) waits for the next start.
+bool switches_while_running(const std::string& id);
+// Turns one of those mods on or off, from now.
+void set_running(const std::string& id, bool on);
+// Makes a mod read its settings again (its on_load), after the environment variable that holds
+// one of them changed.
+void read_settings_again(const std::string& id);
+
 }  // namespace native_mods
 
 // The calls that tools/insert_mod_hooks.py puts in the translated code. `address` is the

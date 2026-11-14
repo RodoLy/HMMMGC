@@ -246,7 +246,10 @@ static long read_requested_speed_percent(void)
     return percent;
 }
 
-/* Called once when the mod is loaded, before the game runs. */
+/*
+ * Called when the mod is loaded, before the game runs. The native runtime calls it again when the player
+ * changes the speed in the game's menu, after putting the new one in the environment variable.
+ */
 static void choose_the_speed_multiplier(const ModernGekkoModHostApi* host_api)
 {
     (void)host_api; /* The mod does not call back into the runner. */

@@ -37,6 +37,17 @@ struct HooksAtAddress {
 
 std::unordered_map<uint32_t, HooksAtAddress> g_hooks;
 
+// The mods that can be turned on and off while the game runs (native_mods.h): their hooks are
+// always in place, and are skipped while the mod is off.
+constexpr const char* SWITCHED_WHILE_RUNNING[] = {"player_speed", "carry_speed"};
+std::vector<std::string> g_switched_off;
+
+bool is_switched_off(const char* mod_id) {
+    return std::find(g_switched_off.begin(), g_switched_off.end(), mod_id) != g_switched_off.end();
+}
+
+const ModernGekkoModHostApi& host_api();
+
 // ---- The mod's view of the game: CPUState ----
 
 uint64_t read_guest(CPUState*, uint32_t address, uint8_t size) {
@@ -117,7 +128,9 @@ void run(const std::vector<NamedFunction>& functions, uint32_t address, CpuConte
     }
     CPUState state = state_from(cpu, address);
     for (const NamedFunction& hook : functions) {
-        hook.function(&state);
+        if (g_switched_off.empty() || !is_switched_off(hook.mod_id)) {
+            hook.function(&state);
+        }
     }
     copy_back(state, cpu);
 }
@@ -147,7 +160,44 @@ int no_event(void*, const char*, const char*, CPUState*) { return 0; }
 
 ModernGekkoModFunction no_export(void*, const char*, const char*) { return nullptr; }
 
+const ModernGekkoModHostApi& host_api() {
+    static const ModernGekkoModHostApi HOST_API{MODERNGEKKO_MOD_HOST_ABI_VERSION, nullptr, no_event, no_export};
+    return HOST_API;
+}
+
+const ModernGekkoModDesc* find_mod(const std::string& id) {
+    for (const ModernGekkoGetModFn* get_mod = COMPILED_IN_MODS; *get_mod != nullptr; ++get_mod) {
+        const ModernGekkoModDesc* mod = (*get_mod)();
+        if (mod != nullptr && mod->id != nullptr && id == mod->id) {
+            return mod;
+        }
+    }
+    return nullptr;
+}
+
 }  // namespace
+
+bool switches_while_running(const std::string& id) {
+    return std::find(std::begin(SWITCHED_WHILE_RUNNING), std::end(SWITCHED_WHILE_RUNNING), id) !=
+           std::end(SWITCHED_WHILE_RUNNING);
+}
+
+void set_running(const std::string& id, bool on) {
+    if (!switches_while_running(id)) {
+        return;
+    }
+    std::erase(g_switched_off, id);
+    if (!on) {
+        g_switched_off.push_back(id);
+    }
+    runtime_log::info("mods", "%s is turned %s while the game runs", id.c_str(), on ? "on" : "off");
+}
+
+void read_settings_again(const std::string& id) {
+    if (const ModernGekkoModDesc* mod = find_mod(id); mod != nullptr && mod->on_load != nullptr) {
+        mod->on_load(&host_api());
+    }
+}
 
 std::vector<std::string> compiled_in() {
     std::vector<std::string> ids;
@@ -161,7 +211,6 @@ std::vector<std::string> compiled_in() {
 }
 
 void load(const std::vector<std::string>* enabled) {
-    static const ModernGekkoModHostApi HOST_API{MODERNGEKKO_MOD_HOST_ABI_VERSION, nullptr, no_event, no_export};
     std::vector<std::string> compiled_in;
     for (const ModernGekkoGetModFn* get_mod = COMPILED_IN_MODS; *get_mod != nullptr; ++get_mod) {
         const ModernGekkoModDesc* mod = (*get_mod)();
@@ -175,7 +224,11 @@ void load(const std::vector<std::string>* enabled) {
         }
         if (enabled != nullptr && std::find(enabled->begin(), enabled->end(), mod->id) == enabled->end()) {
             runtime_log::info("mods", "%s is turned off", mod->id);
-            continue;
+            if (!switches_while_running(mod->id)) {
+                continue;
+            }
+            // Loaded all the same, so that the player can turn it on in the game's menu.
+            g_switched_off.emplace_back(mod->id);
         }
         if (std::strncmp(mod->game_id, GAME_ID, sizeof(mod->game_id)) != 0) {
             runtime_log::warning("mods", "%s is for game %.8s, not %s; it is not used", mod->id, mod->game_id, GAME_ID);
@@ -192,7 +245,7 @@ void load(const std::vector<std::string>* enabled) {
                                  mod->id);
         }
         if (mod->on_load != nullptr) {
-            mod->on_load(&HOST_API);
+            mod->on_load(&host_api());
         }
         runtime_log::info("mods", "%s %s: %u patches, %u hooks", mod->id, mod->version, mod->num_patches,
                           mod->num_hooks);

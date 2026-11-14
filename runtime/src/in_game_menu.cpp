@@ -308,12 +308,6 @@ bool draw_audio_menu(settings::Settings& settings) {
 // The colour of what tells the player that the game has to be restarted.
 constexpr ImVec4 RESTART_COLOR(1.f, 0.82f, 0.35f, 1.f);
 
-// The first line of a menu whose choices the game only takes when it starts.
-void restart_heading() {
-    ImGui::TextColored(RESTART_COLOR, "%s", text(Text::NeedsRestart));
-    ImGui::Separator();
-}
-
 // The language of the game's dialogues: the game reads it when it starts (game_language.h).
 void draw_language_menu() {
     settings::Settings& settings = player_options::current();
@@ -321,7 +315,6 @@ void draw_language_menu() {
     if (!ImGui::BeginMenu(text(Text::GameLanguageShort))) {
         return;
     }
-    restart_heading();
     for (int i = 0; i < static_cast<int>(std::size(settings::GAME_LANGUAGES)); ++i) {
         if (ImGui::MenuItem(settings::GAME_LANGUAGE_NAMES[i], nullptr, i == chosen)) {
             player_options::set_game_language(settings::GAME_LANGUAGES[i]);
@@ -330,7 +323,7 @@ void draw_language_menu() {
     }
     ImGui::Separator();
     ImGui::PushTextWrapPos(theme::px(340));
-    ImGui::TextDisabled("%s", text(Text::GameLanguageRestart));
+    ImGui::TextColored(RESTART_COLOR, "%s", text(Text::GameLanguageRestart));
     ImGui::PopTextWrapPos();
     ImGui::EndMenu();
 }
@@ -361,7 +354,10 @@ void draw_player_speed(bool mod_on) {
     if (ImGui::SliderInt("##player speed", &percent, settings::PLAYER_SPEED_MINIMUM, settings::PLAYER_SPEED_MAXIMUM,
                          format.c_str())) {
         const int step = settings::PLAYER_SPEED_STEP;
-        player_options::set_player_speed_percent((percent + step / 2) / step * step);
+        const int rounded = (percent + step / 2) / step * step;
+        if (rounded != player_options::player_speed_percent()) {
+            player_options::set_player_speed_percent(rounded);  // the character has it from the next frame
+        }
     }
     ImGui::Unindent();
     ImGui::EndDisabled();
@@ -373,7 +369,6 @@ void draw_mods_menu() {
     if (!ImGui::BeginMenu(text(Text::Mods))) {
         return;
     }
-    restart_heading();
     const settings::Settings& settings = player_options::current();
     for (const std::string& id : native_mods::compiled_in()) {
         bool on = settings.mod_enabled(id);
@@ -381,18 +376,17 @@ void draw_mods_menu() {
         if (ImGui::Checkbox(label.c_str(), &on)) {
             player_options::set_mod_enabled(id, on);
         }
-        if (on != player_options::mod_is_running(id)) {
-            ImGui::SameLine();
-            ImGui::TextDisabled("(%s)", text(Text::ModAppliesOnRestart));
+        // Each mod says when a change to it counts: at once, or when the game is restarted.
+        ImGui::SameLine();
+        if (native_mods::switches_while_running(id)) {
+            ImGui::TextDisabled("(%s)", text(Text::ModAppliesAtOnce));
+        } else {
+            ImGui::TextColored(RESTART_COLOR, "(%s)", text(Text::NeedsRestart));
         }
         if (id == "player_speed") {
             draw_player_speed(on);
         }
     }
-    ImGui::Separator();
-    ImGui::PushTextWrapPos(theme::px(360));
-    ImGui::TextDisabled("%s", text(Text::ModsRestartNote));
-    ImGui::PopTextWrapPos();
     ImGui::EndMenu();
 }
 
