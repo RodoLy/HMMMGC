@@ -153,7 +153,9 @@ Después, para cada procesador, ARM64 y x64, en Linux:
    que el juego necesita a su lado. El de x64 se compila para `x86-64-v2`
    (procesadores de unos quince años para acá), y el juego se compila igual en
    la computadora del jugador.
-4. Compila el launcher, con la versión del paquete.
+4. Compila el launcher, con la versión del paquete. La que muestra arriba es la
+   publicada (`v0.1.1`); en una corrida manual, la última publicada con un más
+   (`v0.1.1+`).
 5. Publica el traductor como programa de Windows, con su propio .NET.
 6. Junta los textos de las licencias y arma el zip
    (`tools/package_native_windows.py`), que se niega a terminar si algún

@@ -20,7 +20,8 @@ if(WIN32)
     enable_language(RC)
 endif()
 
-set(HMMM_PACKAGE_VERSION "dev" CACHE STRING "the version of the package, which the launcher shows and records")
+set(HMMM_PACKAGE_VERSION "dev" CACHE STRING "the version of the package, which the launcher records")
+set(HMMM_SHOWN_VERSION "" CACHE STRING "the version the launcher shows, when it is not the package's (a test build)")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -86,7 +87,11 @@ embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Baloo2-Extr
 embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Dosis-Bold-subset.ttf" FONT_DOSIS_BOLD)
 embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/Dosis-SemiBold-subset.ttf" FONT_DOSIS_SEMIBOLD)
 embed_file_as_array(HarvestMoonMM "${CMAKE_CURRENT_SOURCE_DIR}/fonts/DejaVuSans-Bold-symbols.ttf" FONT_DEJAVU_SYMBOLS)
-target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PACKAGE_VERSION}")
+if(NOT HMMM_SHOWN_VERSION)
+    set(HMMM_SHOWN_VERSION "${HMMM_PACKAGE_VERSION}")
+endif()
+target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PACKAGE_VERSION}"
+                                                 HMMM_SHOWN_VERSION="${HMMM_SHOWN_VERSION}")
 target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
 target_link_libraries(HarvestMoonMM PRIVATE launcher_imgui SDL3::SDL3-static nlohmann_json::nlohmann_json)
 if(WIN32)

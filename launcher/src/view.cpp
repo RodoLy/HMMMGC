@@ -29,7 +29,9 @@ using look::TextStyle;
 using texts::Text;
 using texts::text;
 
-constexpr const char* PACKAGE_VERSION = HMMM_PACKAGE_VERSION;
+// The version in the box at the top: the published one ("v0.1.1"), or for a test build the last
+// published one with a plus ("v0.1.1+").
+constexpr const char* SHOWN_VERSION = HMMM_SHOWN_VERSION;
 
 constexpr float TOP = 32.f;               // the launcher, under the window's title bar
 constexpr float LAUNCHER_HEIGHT = 720.f;
@@ -476,12 +478,13 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     TextStyle number = style(Face::Baloo800, 28, 0.f, YELLOW);
     number.stroke = 4.f;
     number.stroke_color = rgb(0x3a1f6e);
-    if (look::text_width(number, PACKAGE_VERSION) > 110.f) {
-        number.size = 19;  // a long version, in smaller numbers
+    // A long version, in smaller numbers, until it fits in its half of the box.
+    while (number.size > 12 && look::text_width(number, SHOWN_VERSION) > 106.f) {
+        --number.size;
     }
-    look::draw_text(draw, number, 1200.5f - look::text_width(number, PACKAGE_VERSION) * 0.5f,
+    look::draw_text(draw, number, 1200.5f - look::text_width(number, SHOWN_VERSION) * 0.5f,
                     look::baseline_in_line(number, 111.f + TOP - number.size * 0.5f, static_cast<float>(number.size)),
-                    PACKAGE_VERSION);
+                    SHOWN_VERSION);
 }
 
 void App::draw_tabs(ImDrawList* draw, double seconds) {

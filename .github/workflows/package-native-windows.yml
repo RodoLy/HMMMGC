@@ -117,16 +117,22 @@ jobs:
       - name: Install Ninja
         run: sudo apt-get update && sudo apt-get install --yes ninja-build
 
-      # The version the launcher shows and the preparation records: the release's tag, or the branch
-      # and the commit. A player's game is prepared again when it changes.
+      # The version the preparation records: the release's tag, or the branch and the commit. A
+      # player's game is prepared again when it changes. The launcher shows the published version:
+      # the tag, or for a manual run the last published tag with a plus ("v0.1.1+").
       - name: Choose the version of the package
         run: |
           if [[ -n "$RELEASE_TAG" ]]; then
             version="$RELEASE_TAG"
+            shown="$RELEASE_TAG"
           else
             version="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
+            last=$(git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
+            shown="${last:+$last+}"
+            shown="${shown:-dev}"
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "SHOWN_VERSION=$shown" >> "$GITHUB_ENV"
           echo "PACKAGE_ZIP=HarvestMoonMM-native-$version-windows-$ARCHITECTURE.zip" >> "$GITHUB_ENV"
           echo "Version: $version"
 
@@ -183,7 +189,7 @@ jobs:
           cmake -S launcher -B build/launcher -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/packaging/native/windows-toolchain.cmake" \
             -DLLVM_MINGW="$TOOLS_DIRECTORY/cross-compiler" -DHMMM_WINDOWS_ARCHITECTURE="$ARCHITECTURE" \
-            -DCMAKE_BUILD_TYPE=Release -DHMMM_PACKAGE_VERSION="$VERSION"
+            -DCMAKE_BUILD_TYPE=Release -DHMMM_PACKAGE_VERSION="$VERSION" -DHMMM_SHOWN_VERSION="$SHOWN_VERSION"
           cmake --build build/launcher
 
       # A Windows program with its own .NET, so that the player installs nothing.
