@@ -151,9 +151,9 @@ int main(int argc, char** argv) {
         game_language::apply(disc, settings::GAME_LANGUAGES[player_options::current().language()]);
         // With the game's data in memory: the farm's grid of crops, for the farthest the camera can
         // go (the far_camera mod pulls it back past the game's limit).
-        crop_grid::size_for_view(player_options::mod_enabled(far_camera::MOD_ID) ? camera_view::MINIMUM_ZOOM
-                                                                                 : camera_view::MAXIMUM_ZOOM,
-                                 camera.widescreen);
+        if (player_options::mod_enabled(far_camera::MOD_ID)) {
+            crop_grid::size_for_farthest_view();
+        }
         std::vector<std::string> enabled_mods;
         for (const std::string& id : native_mods::compiled_in()) {
             if (player_options::mod_enabled(id)) {

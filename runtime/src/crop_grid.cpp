@@ -124,15 +124,9 @@ bool covers_view(float zoom, bool widescreen) {
     return 2 * half_size + 1 <= hmmm_crop_grid_size;
 }
 
-void size_for_view(float zoom, bool widescreen) {
-    if (zoom >= 1) {
-        return;  // the game's camera, or closer: the game's square
-    }
-    const uint32_t half_size =
-        half_size_for(ground_reach(zoom, widescreen ? WIDESCREEN_ASPECT_RATIO : GAME_ASPECT_RATIO));
-    if (half_size == GAME_HALF_SIZE) {
-        return;
-    }
+namespace {
+
+void size_with_half(uint32_t half_size) {
     // Only where the game keeps it: another version of the game would hold something else.
     if (read_float(HALF_SIZE_CONSTANT) != static_cast<float>(GAME_HALF_SIZE)) {
         runtime_log::warning("farm", "the size of the grid of crops is not where it was expected; it stays the game's");
@@ -156,5 +150,21 @@ void size_for_view(float zoom, bool widescreen) {
     runtime_log::info("farm", "crops and items drawn up to %u tiles to the sides of the player (the game's %u)",
                       half_size - EDGE_BAND, GAME_HALF_SIZE - EDGE_BAND);
 }
+
+}  // namespace
+
+void size_for_view(float zoom, bool widescreen) {
+    if (zoom >= 1) {
+        return;  // the game's camera, or closer: the game's square
+    }
+    const uint32_t half_size =
+        half_size_for(ground_reach(zoom, widescreen ? WIDESCREEN_ASPECT_RATIO : GAME_ASPECT_RATIO));
+    if (half_size == GAME_HALF_SIZE) {
+        return;
+    }
+    size_with_half(half_size);
+}
+
+void size_for_farthest_view() { size_with_half(LARGEST_HALF_SIZE); }
 
 }  // namespace crop_grid
