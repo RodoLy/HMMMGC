@@ -37,7 +37,7 @@ inline constexpr const char* VOLUME = "volumePercent";  // 0 (silent) to 100 (th
 // launcher and the in-game menu are in Spanish for "es" and in English for the others.
 inline constexpr const char* GAME_LANGUAGES[] = {"en", "es", "fr", "de", "it"};
 // Their names, each in its own language, in the same order.
-inline constexpr const char* GAME_LANGUAGE_NAMES[] = {"English", "Espa\xC3\xB1ol", "Fran\xC3\xA7" "ais", "Deutsch",
+inline constexpr const char* GAME_LANGUAGE_NAMES[] = {"English", "Espa\xC3\xB1ol", ("Fran\xC3\xA7" "ais"), "Deutsch",
                                                         "Italiano"};
 inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the game, at the top right
 inline constexpr const char* LANGUAGE = "language";  // of the game's dialogues, the launcher and the menu

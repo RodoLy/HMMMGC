@@ -394,37 +394,10 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     look::draw_text(draw, code, 946.f - look::text_width(code, game),
                     look::baseline_in_line(code, 47.f + TOP - code.size * 0.5f, static_cast<float>(code.size)), game);
 
-    // The state of the game, and the languages.
+    // The state of the game. (The language is a row of the Game tab.)
     look::draw_box(draw, Box{.rect = at(570.f, 86.f, 400.f, 56.f), .radius = 16.f, .background = rgb(0x4a8fe0),
                              .border = 4.f, .border_color = rgb(0x9ad2fa)});
-    const TextStyle language = style(Face::Dosis700, 20, 0.05f, 0);
-    const bool spanish = texts::language() == texts::Language::Spanish;
-    const struct {
-        const char* name;
-        const char* code;
-        bool chosen;
-    } languages[] = {{"Espa\xC3\xB1ol", "es", spanish}, {"English", "en", !spanish}};
-    float right = 958.f;
-    for (int i = 1; i >= 0; --i) {
-        TextStyle lettering = language;
-        lettering.color = languages[i].chosen ? ROYAL : rgb(0xc8d4ff);
-        const float width = look::text_width(lettering, languages[i].name) + 28.f;
-        const Rect button = at(right - width, 96.f, width, 36.f);
-        look::draw_box(draw, Box{.rect = button, .radius = 10.f,
-                                 .background = languages[i].chosen ? rgb(0xdff1ff) : rgb(0x1b2f8f),
-                                 .shadows = {{{.y = 3.f, .color = rgb(0x16257a)}}}});
-        look::draw_text(draw, lettering, button.x + 14.f, look::baseline_in_line(lettering, button.y, 36.f),
-                        languages[i].name);
-        if (clicked(button.x, button.y, button.w, button.h)) {
-            later([this, code = languages[i].code] {
-                settings_.set(settings::LANGUAGE, code);
-                save_settings();
-                apply_language();
-                mods_ = mods::load(package_.mods, package_mods());
-            });
-        }
-        right = button.x - 8.f;
-    }
+    const float right = 958.f;
     const Preparation::State state = preparation_.state();
     const char* status = text(Text::StatusNotPrepared);
     ImU32 dot = rgb(0xffd84a);
