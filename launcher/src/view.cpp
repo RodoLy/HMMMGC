@@ -50,8 +50,9 @@ constexpr ImU32 BAR_TOP = rgb(0xd2ffe0);      // the green of the bars and the s
 constexpr ImU32 BAR_BOTTOM = rgb(0x6fd89a);
 
 // The symbol of each tab, in the medallion and on the tab, and the color of its rows' squares.
-// ♪ ⚙ ✿, and the last tab's is drawn (draw_controller).
-constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "\xE2\x9C\xBF", ""};
+// ♪ and ⚙; the Mods and the Controls tabs' are drawn (draw_puzzle_piece, draw_controller).
+constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "", ""};
+constexpr size_t MODS_TAB = 2;
 constexpr size_t CONTROLS_TAB = 3;
 constexpr ImU32 TAB_COLORS[] = {rgb(0xf08a2c), rgb(0x4aa0d8), rgb(0x5ab04a), rgb(0x9a6ad0)};
 
@@ -125,10 +126,26 @@ void draw_controller(ImDrawList* draw, float center_x, float center_y, float wid
     look::circle(draw, ImVec2(center_x + s * 0.29f, center_y - s * 0.09f), s * 0.05f, behind);
 }
 
-// The symbol of a tab, around a point: a character of the fonts, or the controller for Controls.
+// A puzzle piece `width` wide around a point, for the Mods tab (what adds to the game): a square
+// with a knob out at the top and at the right, and a notch in the colour of what is behind it at the
+// left and at the bottom.
+void draw_puzzle_piece(ImDrawList* draw, float center_x, float center_y, float width, ImU32 color, ImU32 behind) {
+    const float s = width;
+    const float half = s * 0.33f;
+    const float knob = s * 0.13f;
+    look::fill(draw, {center_x - half, center_y - half + s * 0.06f, half * 2.f, half * 2.f}, s * 0.06f, color);
+    look::circle(draw, ImVec2(center_x, center_y - half + s * 0.06f - knob * 0.55f), knob, color);
+    look::circle(draw, ImVec2(center_x + half + knob * 0.55f, center_y + s * 0.06f), knob, color);
+    look::circle(draw, ImVec2(center_x - half + knob * 0.45f, center_y + s * 0.06f), knob * 0.95f, behind);
+    look::circle(draw, ImVec2(center_x, center_y + half + s * 0.06f - knob * 0.45f), knob * 0.95f, behind);
+}
+
+// The symbol of a tab, around a point: a character of the fonts, or a drawing for Mods and Controls.
 void draw_tab_symbol(ImDrawList* draw, size_t tab, int size, float center_x, float center_y, ImU32 color,
                      ImU32 behind) {
-    if (tab == CONTROLS_TAB) {
+    if (tab == MODS_TAB) {
+        draw_puzzle_piece(draw, center_x, center_y, static_cast<float>(size) * 1.05f, color, behind);
+    } else if (tab == CONTROLS_TAB) {
         draw_controller(draw, center_x, center_y, static_cast<float>(size) * 1.15f, color, behind);
     } else {
         draw_centered(draw, style(Face::Baloo800, size, 0.f, color), center_x, center_y, TAB_SYMBOLS[tab]);
