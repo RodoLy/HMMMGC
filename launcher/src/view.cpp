@@ -50,7 +50,7 @@ constexpr ImU32 BAR_TOP = rgb(0xd2ffe0);      // the green of the bars and the s
 constexpr ImU32 BAR_BOTTOM = rgb(0x6fd89a);
 
 // The symbol of each tab, in the medallion and on the tab, and the color of its rows' squares.
-// ♪ and ⚙ in the medallion; for Mods and Controls it is drawn (draw_box_symbol, draw_controller).
+// ♪ and ⚙ in the medallion; for Mods and Controls it is drawn (draw_disc_with_plus, draw_controller).
 constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "", ""};
 constexpr size_t MODS_TAB = 2;
 constexpr size_t CONTROLS_TAB = 3;
@@ -126,37 +126,28 @@ void draw_controller(ImDrawList* draw, float center_x, float center_y, float wid
     look::circle(draw, ImVec2(center_x + s * 0.29f, center_y - s * 0.09f), s * 0.05f, behind);
 }
 
-// A colour made darker (by `share`, 0 to 1), keeping its alpha.
-ImU32 darker(ImU32 color, float share) {
-    const auto channel = [&](int shift) {
-        return static_cast<ImU32>(static_cast<float>((color >> shift) & 0xFF) * (1.f - share)) << shift;
-    };
-    return channel(IM_COL32_R_SHIFT) | channel(IM_COL32_G_SHIFT) | channel(IM_COL32_B_SHIFT) |
-           (color & IM_COL32_A_MASK);
-}
-
-// A box seen from above and a side, `width` wide around a point, for the Mods tab (a package added to
-// the game): its top in the colour, its left side a little darker and its right side darker still.
-void draw_box_symbol(ImDrawList* draw, float center_x, float center_y, float width, ImU32 color) {
-    const float s = width * 0.5f;
-    const auto at_point = [&](float x, float y) { return look::to_window(ImVec2(center_x + x * s, center_y + y * s)); };
-    const ImVec2 top = at_point(0.f, -0.95f);
-    const ImVec2 left = at_point(-0.85f, -0.5f);
-    const ImVec2 right = at_point(0.85f, -0.5f);
-    const ImVec2 middle = at_point(0.f, -0.05f);
-    const ImVec2 bottom_left = at_point(-0.85f, 0.5f);
-    const ImVec2 bottom_right = at_point(0.85f, 0.5f);
-    const ImVec2 bottom = at_point(0.f, 0.95f);
-    draw->AddQuadFilled(top, right, middle, left, color);
-    draw->AddQuadFilled(left, middle, bottom, bottom_left, darker(color, 0.18f));
-    draw->AddQuadFilled(middle, right, bottom_right, bottom, darker(color, 0.34f));
+// A disc with a plus, `width` wide around a point, for the Mods tab (something added to the game), flat in
+// one colour like the other symbols: the disc with its hole in the colour of what is behind it, and at its
+// top right a round badge, set apart by a ring of that colour, with the plus cut out of it.
+void draw_disc_with_plus(ImDrawList* draw, float center_x, float center_y, float width, ImU32 color, ImU32 behind) {
+    const float s = width;
+    const ImVec2 disc(center_x - s * 0.08f, center_y + s * 0.06f);
+    look::circle(draw, disc, s * 0.38f, color);
+    look::circle(draw, disc, s * 0.09f, behind);
+    const ImVec2 badge(center_x + s * 0.27f, center_y - s * 0.25f);
+    look::circle(draw, badge, s * 0.24f, behind);
+    look::circle(draw, badge, s * 0.18f, color);
+    const float arm = s * 0.11f;
+    const float thickness = s * 0.05f;
+    look::fill(draw, {badge.x - arm, badge.y - thickness * 0.5f, arm * 2.f, thickness}, thickness * 0.4f, behind);
+    look::fill(draw, {badge.x - thickness * 0.5f, badge.y - arm, thickness, arm * 2.f}, thickness * 0.4f, behind);
 }
 
 // The symbol of a tab, around a point: a character of the fonts, or a drawing for Mods and Controls.
 void draw_tab_symbol(ImDrawList* draw, size_t tab, int size, float center_x, float center_y, ImU32 color,
                      ImU32 behind) {
     if (tab == MODS_TAB) {
-        draw_box_symbol(draw, center_x, center_y, static_cast<float>(size) * 1.2f, color);
+        draw_disc_with_plus(draw, center_x, center_y, static_cast<float>(size) * 1.35f, color, behind);
     } else if (tab == CONTROLS_TAB) {
         draw_controller(draw, center_x, center_y, static_cast<float>(size) * 1.15f, color, behind);
     } else {
