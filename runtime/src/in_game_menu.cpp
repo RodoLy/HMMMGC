@@ -254,8 +254,9 @@ bool draw_picture_menu(settings::Settings& settings) {
     if (ImGui::BeginMenu(text(Text::PictureSection))) {
         changed |= flag_item(settings, settings::FULLSCREEN, Text::Fullscreen);
         changed |= flag_item(settings, settings::WIDESCREEN, Text::Widescreen);
-        if (ImGui::BeginMenu(text(Text::FrameRate))) {
-            const int rate = settings.one_of(settings::FRAME_RATE, settings::FRAME_RATES);
+        const int rate = settings.one_of(settings::FRAME_RATE, settings::FRAME_RATES);
+        const std::string rate_title = std::string(text(Text::FrameRate)) + ": " + std::to_string(rate) + "###rate";
+        if (ImGui::BeginMenu(rate_title.c_str())) {
             for (const int value : settings::FRAME_RATES) {
                 if (ImGui::MenuItem(frame_rate_label(value).c_str(), nullptr, value == rate)) {
                     settings.set(settings::FRAME_RATE, value);
