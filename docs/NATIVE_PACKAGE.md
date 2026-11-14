@@ -349,7 +349,9 @@ minute or two. Then, for each processor, ARM64 and x64, on Linux:
    DLLs that the game needs beside it. The x64 one is built for `x86-64-v2`
    (processors of about the last fifteen years), and the game is compiled the
    same way on the player's computer.
-4. It builds the launcher, with the package's version.
+4. It builds the launcher, with the package's version. The one it shows at the top is the
+   published one (`v0.1.1`); in a manual run, the last published one with a plus
+   (`v0.1.1+`).
 5. It publishes the translator as a Windows program, with its own .NET.
 6. It gathers the license texts and assembles the zip
    (`tools/package_native_windows.py`), which refuses to finish if a file looks
