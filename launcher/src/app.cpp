@@ -375,6 +375,14 @@ std::vector<App::Row> App::game_rows() {
         rows.push_back(std::move(row));
     }
 
+    // Here, beside what fails, so that the details are one row away when the box says to look.
+    Row log;
+    log.symbol = "\xE2\x89\xA1";  // ≡
+    log.label = text(Text::OpenLog);
+    log.hint = text(Text::OpenLogHint);
+    log.activate = [this] { open_log(); };
+    rows.push_back(std::move(log));
+
     Row exit;
     exit.symbol = "\xE2\x9C\x95";  // ✕
     exit.label = text(Text::Exit);
@@ -456,14 +464,6 @@ std::vector<App::Row> App::options_rows() {
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
-    {
-        Row log;
-        log.symbol = "\xE2\x89\xA1";  // ≡
-        log.label = text(Text::OpenLog);
-        log.hint = text(Text::OpenLogHint);
-        log.activate = [this] { open_log(); };
-        rows.push_back(std::move(log));
-    }
     return rows;
 }
 

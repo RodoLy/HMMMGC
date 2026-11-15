@@ -27,7 +27,7 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::Controls, "Controles", "Controls"},
     {Text::Exit, "Salir", "Exit"},
     {Text::ChangeDisc, "Cambiar el disco", "Change the disc"},
-    {Text::OpenLog, "Abrir el registro", "Open the log"},
+    {Text::OpenLog, "Ver el registro", "See the log"},
 
     {Text::GameTab, "Juego", "Game"},
     {Text::PanelPicture, "Imagen y sonido", "Picture and sound"},
