@@ -1,0 +1,52 @@
+diff --git a/include/aurora/gfx.h b/include/aurora/gfx.h
+--- a/include/aurora/gfx.h
++++ b/include/aurora/gfx.h
+@@ -72,6 +72,11 @@
+ // Supported targets are 0 (off), 120, 180 and 240. Guest simulation and VI timing are unchanged.
+ void aurora_set_frame_interpolation_fps(uint32_t targetFps);
+ uint32_t aurora_get_frame_interpolation_fps();
++// The most a draw may move in one logical frame, in game units, to be interpolated; a draw that
++// moved more is shown where it is. 0 (the default) sets no limit beyond the one relative to the
++// draw's distance from the camera. A camera far from what it looks at (a narrow light view for
++// shadows) leaves that one very wide, so that two instances of one mesh can pair up.
++void aurora_set_frame_interpolation_max_translation(float units);
+ 
+ // When enabled, draws whose pipeline is still compiling are skipped instead of stalling.
+ void aurora_set_skip_unready_pipelines(bool enabled);
+diff --git a/lib/gx/frame_interpolation.cpp b/lib/gx/frame_interpolation.cpp
+--- a/lib/gx/frame_interpolation.cpp
++++ b/lib/gx/frame_interpolation.cpp
+@@ -295,6 +295,8 @@
+ // instead. Draws close to the camera's origin (a sky centred on it) may always move this little.
+ constexpr float kMaximumTranslationPerFrameOfDistance = 0.25f;
+ constexpr float kAlwaysAllowedTranslationPerFrame = 1.0f;
++// The game's own limit (aurora_set_frame_interpolation_max_translation), or 0 for none.
++std::atomic<float> s_maximumTranslationPerFrame{0.0f};
+ constexpr float kMinimumQuaternionDot = 0.70710678f;
+ constexpr size_t kNoPreparedPair = std::numeric_limits<size_t>::max();
+ 
+@@ -453,9 +455,12 @@
+   };
+   const std::array<float, 3> delta{current[0] - previous[0], current[1] - previous[1],
+                                    current[2] - previous[2]};
+-  const float allowed = std::max(kMaximumTranslationPerFrameOfDistance *
+-                                     std::max(length(previous), length(current)),
+-                                 kAlwaysAllowedTranslationPerFrame);
++  float allowed = std::max(kMaximumTranslationPerFrameOfDistance *
++                               std::max(length(previous), length(current)),
++                           kAlwaysAllowedTranslationPerFrame);
++  if (const float limit = s_maximumTranslationPerFrame.load(std::memory_order_relaxed); limit > 0.0f) {
++    allowed = std::min(allowed, limit);
++  }
+   return !(length(delta) <= allowed);
+ }
+ 
+@@ -1567,3 +1572,8 @@
+   return interpolatedRanges;
+ }
+ } // namespace aurora::gx
++
++void aurora_set_frame_interpolation_max_translation(float units) {
++  aurora::gx::s_maximumTranslationPerFrame.store(std::isfinite(units) && units > 0.0f ? units : 0.0f,
++                                                 std::memory_order_relaxed);
++}

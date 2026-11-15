@@ -409,6 +409,42 @@ git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/clear-whole-pic
 
 **Quitar:** el mismo `git apply` con `-R`.
 
+### `aurora/reject-pairs-past-the-game-limit.patch`
+
+Para el runtime nativo, como los anteriores: `scripts/build_native_runtime.sh`
+lo aplica solo a la copia de aurora de WiiCompiled, después de
+`reject-far-interpolation-pairs.patch`, que cambia.
+
+El límite de ese parche es una parte de la distancia a la cámara. Las sombras
+se dibujan desde la cámara de la luz, que mira con un ángulo de 1 grado desde
+muy lejos (cientos de unidades), así que ahí el límite era de decenas de
+unidades: la sombra de un personaje podía emparejarse con la de otro, y en un
+cuadro intermedio salía una sombra a medio camino entre los dos, donde no hay
+nada. A 60 fps en la laptop se veía como un destello de sombra en el pasto,
+un cuadro; a 30 fps no, porque no hay cuadros intermedios.
+
+El parche agrega `aurora_set_frame_interpolation_max_translation`: lo más que
+un dibujo se mueve en un cuadro del juego para que se interpole, en unidades
+del juego. El runtime le da 2 (una casilla de la granja es 1; es diez veces
+una carrera), y lo que se mueve más se muestra donde está.
+
+**Probado:** en un video de la laptop a 60 fps, el destello es una mancha
+oscura redonda en el pasto, en un solo cuadro, a medio camino entre el
+jugador y lo que hay arriba a la derecha. Con el parche, falta probarlo en la
+laptop.
+
+**Versiones a las que se aplica:** las mismas que los parches anteriores.
+
+**Licencia:** MIT, como aurora.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-pairs-past-the-game-limit.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ---
 
 ## English
@@ -808,6 +844,41 @@ no dots.
 
 ```bash
 git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/clear-whole-picture-with-render-pass.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
+
+### `aurora/reject-pairs-past-the-game-limit.patch`
+
+For the native runtime, like the ones before: `scripts/build_native_runtime.sh`
+applies it by itself to WiiCompiled's copy of aurora, after
+`reject-far-interpolation-pairs.patch`, which it changes.
+
+That patch's limit is a part of the distance from the camera. The shadows are
+drawn from the light's camera, which looks with an angle of 1 degree from very
+far (hundreds of units), so there the limit was tens of units: a character's
+shadow could pair up with another's, and a frame in between showed a shadow
+halfway between the two, where there is nothing. At 60 fps on the laptop it
+looked like a shadow flashing on the grass, for one frame; at 30 fps it did
+not, as there are no frames in between.
+
+The patch adds `aurora_set_frame_interpolation_max_translation`: the most a
+draw moves in one frame of the game to be interpolated, in the game's units.
+The runtime gives it 2 (a tile of the farm is 1; it is ten times a run), and
+what moves more is shown where it is.
+
+**Tried:** in a video from the laptop at 60 fps, the flash is a round dark
+patch on the grass, in a single frame, halfway between the player and what is
+up to the right. With the patch, it is still to be tried on the laptop.
+
+**Versions it applies to:** the same as the patches before.
+
+**License:** MIT, like aurora.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-pairs-past-the-game-limit.patch"
 ```
 
 **Remove:** the same `git apply` with `-R`.

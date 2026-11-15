@@ -23,6 +23,13 @@ constexpr auto LONGEST_GAME_FRAME_TIME = std::chrono::milliseconds(100);
 // A frame that took longer than this many frame times did not keep up: aurora shows it
 // without frames in between, and makes fewer of them if that keeps happening.
 constexpr double LATE_FRAME = 1.5;
+// The most a draw moves in one frame of the game and still is drawn part of the way in the frames
+// in between, in the game's units (a tile of the farm is 1): ten times a run, enough for the
+// player_speed mod's fastest. Two shadows or two fences farther apart than this are never taken
+// for one thing that moved: the shadows are drawn from the light's camera, so far away that
+// aurora's own limit (a part of the distance from the camera) let a character's shadow pair up
+// with another's, and a shadow flashed for one frame halfway between them.
+constexpr float MAXIMUM_MOVE_PER_GAME_FRAME = 2.f;
 // How often the log tells how the frames went.
 constexpr auto REPORT_INTERVAL = std::chrono::seconds(30);
 
@@ -74,6 +81,7 @@ void apply_to_aurora() {
     }
     // aurora's rates are for a game at 60 (see frame_interpolation.h).
     aurora_set_frame_interpolation_fps(g_frame_rate * 2);
+    aurora_set_frame_interpolation_max_translation(MAXIMUM_MOVE_PER_GAME_FRAME);
     runtime_log::info("graphics", "%u frames a second: %u made between each two of the game", g_frame_rate,
                       g_frame_rate / GAME_FRAME_RATE - 1);
     if (!aurora_display_shows_interpolation()) {
