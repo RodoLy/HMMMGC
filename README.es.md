@@ -84,8 +84,6 @@ los mods también se prenden o apagan ahí: los dos de la velocidad del personaj
 cambian al momento, y Casarse con Jamie la próxima vez que se abre el juego. Mientras el menú está abierto, el juego no
 recibe el control.
 
-![El menú de opciones dentro del juego, sobre la granja](docs/images/in-game-menu-es.jpg)
-
 ### Mods
 
 | Mod | Qué hace |

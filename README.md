@@ -83,8 +83,6 @@ too: the two of the character's speed change at once, and Marry Jamie the next
 time the game is opened. While the menu is open the game does not get
 the controller.
 
-![The options menu inside the game, over the farm](docs/images/in-game-menu-en.jpg)
-
 ### Mods
 
 | Mod | What it does |
