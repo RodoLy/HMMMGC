@@ -876,6 +876,46 @@ pasó nada).
   mañana y la noche del aniversario, con las dos respuestas, ahora con los
   lugares de la pareja 13 (Jamie como esposo).
 
+### La adopción
+
+Con el mod `marry_anyone` una pareja del mismo sexo no tiene embarazo ni parto (`Eve_conce` y
+`Eve_child` hablan de un embarazo). En su lugar, como en los juegos recientes de la serie, la Diosa de
+la Cosecha les da un bebé en adopción:
+
+1. Cuando la revisión del campo va a empezar el embarazo de esa pareja (las mismas condiciones de
+   siempre: 20 días de casados, el contador en 10 y 900 de amistad, al entrar a la casa desde la
+   granja), el mod lo detiene en `0x800FC2F8` y pone el valor 43 (`save + 0xCB60`) en 60, como si el
+   embarazo ya hubiera terminado.
+2. A la mañana siguiente el juego empieza el parto de esa pareja (`0xDC` a `0xEF`) con su propio
+   código: el valor 43 queda en 255, se guarda la fecha y el hijo existe desde entonces como con
+   cualquier pareja.
+3. Cuando el juego carga el script y los mensajes de ese parto, el mod escribe encima la escena de la
+   adopción. La escribe [tools/make_adoption_scene.py](../tools/make_adoption_scene.py) en
+   `mods/marry_anyone/adoption_scene.h`: un ensamblador pequeño arma el `.lsb` con las funciones
+   nativas tal como las usan las escenas del juego, y las líneas van en los cinco idiomas del disco,
+   con versión para dos chicas donde el idioma lo necesita.
+
+La escena pasa en el manantial de la Diosa (`70(26)`, con la luz que pone `Eve_mega03`: `159(1, 3)` y
+`156`). Si la Diosa ya despertó (el evento `0x105`, `Eve_mega02`, empezó), ella misma está sobre la
+terraza de arriba, donde está su estatua; si sigue de piedra, viene un duende (el personaje 42). La
+pareja la mira de frente y la cámara de la escena (`92(1)`, `133(0, 0, 0)`, `83` y `80`) los ve desde el
+sur, a su altura. La Diosa (o el duende) les cuenta que llegó un bebé sin familia y les pregunta si
+quieren criarlo; la pareja acepta, el jugador escribe el nombre (`126(5, 0)` y `127`, la misma
+pantalla del parto) y luego, en la casa, coloca la cuna (`128` y `129`). Al final recibe la nota
+musical del parto (la 51), con la subrutina del parto, para que las cien notas se puedan juntar. El
+mod también apaga el bit 5 de la pareja: su primera plática después del parto habla de haber dado a
+luz.
+
+**Prueba en el juego (2026-11-15).** Con una copia de la partida del jugador, casado con Basil (el
+chico) y el valor 43 en 60, la mañana siguiente empezó `0xED` (`Eve_child17`), el registro dijo
+`event 0xED becomes the Harvest Goddess's visit`, `gave the adoption 9 lines (e)` y `the Harvest
+Goddess comes to the spring with a baby`, y la escena se vio en el manantial: la Diosa de frente,
+Aden y Basil a cada lado, el bebé delante de ella, la pantalla del nombre (`Registered the name`), la
+respuesta de la Diosa con el nombre y la pantalla de los muebles en la casa. Con el evento `0x105`
+apagado vino el duende Arthur con sus propias líneas. `tests/test_marry_anyone.py` revisa los
+scripts, que las líneas quepan en la ventana y en los archivos del disco, y los ganchos sobre una
+memoria falsa.
+
 ### Qué no está verificado
 
 - La prueba usó condiciones escritas a mano sobre un estado guardado, con el
@@ -1804,6 +1844,44 @@ that save, area 39, where Jamie lives; the copy wakes up in the second one
 - With the girl (`save + 0x227C` at 1 in the first slot) the morning and the
   evening of the anniversary came out the same, with both answers, now with
   partner 13's places (Jamie as the husband).
+
+### The adoption
+
+With the `marry_anyone` mod a couple of the same sex has no pregnancy nor birth (`Eve_conce` and
+`Eve_child` are about a pregnancy). Instead, as in the recent games of the series, the Harvest Goddess
+gives them a baby to adopt:
+
+1. When the field check is about to start that couple's pregnancy (the usual conditions: 20 days
+   married, the counter at 10 and 900 of friendship, on entering the house from the farm), the mod
+   holds it back at `0x800FC2F8` and sets value 43 (`save + 0xCB60`) to 60, as if the pregnancy were
+   over.
+2. The next morning the game starts that couple's birth (`0xDC` to `0xEF`) with its own code: value
+   43 becomes 255, the date is kept and the child exists from then on as with any couple.
+3. When the game loads that birth's script and messages, the mod writes the adoption scene over them.
+   [tools/make_adoption_scene.py](../tools/make_adoption_scene.py) writes it into
+   `mods/marry_anyone/adoption_scene.h`: a small assembler builds the `.lsb` with the native functions
+   as the game's scenes use them, and the lines come in the five languages of the disc, with a version
+   for two women where the language needs one.
+
+The scene takes place at the Goddess's spring (`70(26)`, with the light `Eve_mega03` sets: `159(1, 3)`
+and `156`). If the Goddess is awake (event `0x105`, `Eve_mega02`, has started) she stands herself on
+the upper terrace, where her statue is; while she is still stone, a sprite comes (character 42). The
+couple faces her and the scene's camera (`92(1)`, `133(0, 0, 0)`, `83` and `80`) sees them from the
+south, at their height. The Goddess (or the sprite) tells them that a baby with no family has come and
+asks whether they would raise it; the couple accepts, the player writes the name (`126(5, 0)` and
+`127`, the birth's own screen) and then, at home, places the crib (`128` and `129`). At the end the
+player gets the birth's musical note (51), through the birth's subroutine, so that all hundred notes
+can be gathered. The mod also clears the spouse's bit 5: their first talk after a birth is about
+having given birth.
+
+**Test in the game (2026-11-15).** With a copy of the player's save, married to Basil (as the boy) and
+value 43 at 60, the next morning `0xED` (`Eve_child17`) started, the log said `event 0xED becomes the
+Harvest Goddess's visit`, `gave the adoption 9 lines (e)` and `the Harvest Goddess comes to the spring
+with a baby`, and the scene played at the spring: the Goddess facing the camera, Aden and Basil on
+each side, the baby before her, the name screen (`Registered the name`), the Goddess's answer with the
+name and the furniture screen at home. With event `0x105` cleared, the sprite Arthur came with his own
+lines. `tests/test_marry_anyone.py` checks the scripts, that the lines fit the window and the disc's
+files, and the hooks on a fake memory.
 
 ### What is not verified
 

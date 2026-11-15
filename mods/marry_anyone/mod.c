@@ -32,8 +32,13 @@
  *     in his suit. The two roles of the script make the same moves, so nothing else changes.
  *   - The rival scenes (Eve_npc00 to 09, each about two partners who are drawn to each other) do not start
  *     when the player is engaged or married to one of the two.
- *   - The pregnancy and the birth (Eve_conce and Eve_child) do not start for a couple of the same sex: those
- *     scenes are about a pregnancy, which they cannot have.
+ *   - A couple of the same sex cannot have the pregnancy (Eve_conce): when the game would start it, the mod
+ *     keeps it back and counts its days as over instead. The next morning the game starts the birth's event
+ *     (Eve_child), and the mod writes over its script and its messages the adoption scene that
+ *     tools/make_adoption_scene.py makes (adoption_scene.h): at the Harvest Goddess's spring, the Goddess, or
+ *     one of her sprites while she is still stone, gives the couple a baby with no family, the player names
+ *     it, places its crib at home and gets the birth's musical note. The game's own code for the birth does
+ *     the rest, so the child grows as any other.
  *   - The first thing a spouse says after the wedding (message 9, and 100 when the player has chosen what the
  *     spouse will call them) has words that go by the player's sex in many partners' lines: "husband" or
  *     "wife", "Mrs.", "married" in the languages where it agrees with the couple. For a couple of the same sex
@@ -46,9 +51,10 @@
  * del jugador; la revisión del campo da la segunda escena de amor y la boda solo con las parejas de su
  * personaje, y cada guion de boda viste al jugador como su personaje (72 el traje del chico, 73 el vestido de
  * la chica). El mod hace que las veinte parejas cuenten, lleva la revisión a la cadena que corresponde, viste
- * al jugador como es en la boda, no deja empezar las escenas de rivales de su pareja ni el embarazo y el
- * parto de una pareja del mismo sexo, y cambia «esposo» o «esposa», «casados» o «casadas» y palabras así en
- * las primeras palabras del cónyuge.
+ * al jugador como es en la boda, no deja empezar las escenas de rivales de su pareja, cambia «esposo» o
+ * «esposa», «casados» o «casadas» y palabras así en las primeras palabras del cónyuge y, en lugar del embarazo
+ * y el parto de una pareja del mismo sexo, la Diosa de la Cosecha (o un duende, si sigue de piedra) les da un
+ * bebé en adopción en su manantial.
  */
 
 #include <stdbool.h>
@@ -56,6 +62,8 @@
 #include <string.h>
 
 #include "hm_mm_mod.h"
+
+#include "adoption_scene.h"
 
 #define MOD_ID "marry_anyone"
 
@@ -133,7 +141,21 @@ static const uint8_t rival_couples[][2] = {
 
 /* Eve_conce00 to 19 (0xC8 to 0xDB) and Eve_child00 to 19 (0xDC to 0xEF): the pregnancy and the birth. */
 #define FIRST_PREGNANCY_SCENE 0xC8u
+#define FIRST_BIRTH_SCENE 0xDCu
 #define LAST_BIRTH_SCENE 0xEFu
+/*
+ * Value 43 of the scripts: 0, then the days of the pregnancy, 255 once the child is born. The morning checks
+ * start the birth when it is 60 or more (see jamie_marriage, "The pregnancy and the birth").
+ */
+#define PREGNANCY_DAYS_OFFSET 0xCB60u
+#define NOT_EXPECTING 0u
+#define DAYS_UNTIL_THE_BIRTH 60u
+/* Eve_mega02, where the Harvest Goddess wakes up from stone. */
+#define EVENT_THE_GODDESS_WAKES_UP 0x105u
+/* Each character's bits (3 bytes each); bit 5 of the spouse's is the first conversation after the birth. */
+#define CHARACTER_BITS_OFFSET 0x5564u
+#define CHARACTER_BITS_BYTES_EACH 3u
+#define BIT_TALK_ABOUT_THE_BIRTH 5u
 
 /* The wedding scripts, the actor that is the player in them, and where the player is dressed. */
 #define WEDDING_SCRIPT_PREFIX "/Script/Eve_marry"
@@ -161,6 +183,8 @@ static const uint8_t rival_couples[][2] = {
 #define MESSAGE_FILE_HEADER_TABLE_START 0x08u
 #define MESSAGE_FILE_HEADER_TEXT_START 0x0Cu
 #define LONGEST_MESSAGE_BYTES 400u
+/* An event's message starts with this code and the number of the character who speaks it. */
+#define SPEAKER_CODE 0x1Eu
 /* A message ends with these four bytes. */
 static const uint8_t end_of_a_message[] = {0x01, 0x08, 0x1F, 0x1D};
 
@@ -362,11 +386,21 @@ static bool event_does_not_start(CPUState* cpu, uint32_t save_data, uint32_t eve
         return is_engaged_or_married_to(cpu, save_data, couple[0]) ||
                is_engaged_or_married_to(cpu, save_data, couple[1]);
     }
-    if (event >= FIRST_PREGNANCY_SCENE && event <= LAST_BIRTH_SCENE) {
+    if (event >= FIRST_PREGNANCY_SCENE && event < FIRST_BIRTH_SCENE) {
         return is_of_the_players_sex(cpu, save_data, read_word(cpu, save_data + SPOUSE_OFFSET));
     }
     return false;
 }
+
+/* Whether this is the birth of a couple of the same sex: the adoption scene takes its place. */
+static bool is_an_adoption(CPUState* cpu, uint32_t save_data, uint32_t event)
+{
+    return event >= FIRST_BIRTH_SCENE && event <= LAST_BIRTH_SCENE &&
+           is_of_the_players_sex(cpu, save_data, read_word(cpu, save_data + SPOUSE_OFFSET));
+}
+
+/* The adoption scene is to be written over the birth's files as the game loads them. */
+static bool adoption_pending;
 
 /* At the test of whether an event started before: an event the mod keeps back counts as started. */
 static void keep_back_an_event(CPUState* cpu)
@@ -379,12 +413,32 @@ static void keep_back_an_event(CPUState* cpu)
     if (event_does_not_start(cpu, save_data, event)) {
         set_r3_and_its_test(cpu, 1);
         HM_MM_LOG(MOD_ID, "event 0x%X does not start for this couple", (unsigned int)event);
+        /*
+         * Instead of the pregnancy, its days are over: the next morning the game starts the birth's event,
+         * which becomes the Harvest Goddess's visit.
+         */
+        const bool is_the_pregnancy = event >= FIRST_PREGNANCY_SCENE && event < FIRST_BIRTH_SCENE;
+        if (is_the_pregnancy && read_word(cpu, save_data + PREGNANCY_DAYS_OFFSET) == NOT_EXPECTING) {
+            write_word(cpu, save_data + PREGNANCY_DAYS_OFFSET, DAYS_UNTIL_THE_BIRTH);
+            HM_MM_LOG(MOD_ID, "the Harvest Goddess will come the next morning");
+        }
+        return;
+    }
+    if (is_an_adoption(cpu, save_data, event)) {
+        adoption_pending = true;
+        HM_MM_LOG(MOD_ID, "event 0x%X becomes the Harvest Goddess's visit", (unsigned int)event);
     }
 }
 
 /* ---- Files: the wedding scripts and the spouse's first words ---- */
 
-typedef enum PendingFile { NO_PENDING_FILE, WEDDING_SCRIPT, SPOUSE_MESSAGES } PendingFile;
+typedef enum PendingFile {
+    NO_PENDING_FILE,
+    WEDDING_SCRIPT,
+    SPOUSE_MESSAGES,
+    ADOPTION_SCRIPT,
+    ADOPTION_MESSAGES,
+} PendingFile;
 
 static PendingFile pending_file = NO_PENDING_FILE;
 /* For SPOUSE_MESSAGES: the message to change and the letter of the language's folder (message_e, ...). */
@@ -436,6 +490,34 @@ static char language_letter_of_a_character_file(const char* path)
     return strncmp(path + sizeof prefix, "/chara/", 7) == 0 ? letter : '\0';
 }
 
+/* Whether `text` starts with `prefix`, whatever the case of their letters (the disc's names mix cases). */
+static bool starts_with_any_case(const char* text, const char* prefix)
+{
+    for (; *prefix != '\0'; ++text, ++prefix) {
+        const char a = (char)(*text >= 'A' && *text <= 'Z' ? *text - 'A' + 'a' : *text);
+        const char b = (char)(*prefix >= 'A' && *prefix <= 'Z' ? *prefix - 'A' + 'a' : *prefix);
+        if (a != b) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The birth's files that the adoption scene replaces: its script, and its messages ("/message_X/event/...). */
+static PendingFile adoption_file(const char* path, char* language_letter)
+{
+    if (starts_with_any_case(path, "/Script/Eve_child")) {
+        return ADOPTION_SCRIPT;
+    }
+    static const char prefix[] = "/message_";
+    if (starts_with_any_case(path, prefix) && path[sizeof prefix - 1] != '\0' &&
+        starts_with_any_case(path + sizeof prefix, "/event/eve_child")) {
+        *language_letter = path[sizeof prefix - 1];
+        return ADOPTION_MESSAGES;
+    }
+    return NO_PENDING_FILE;
+}
+
 static void before_a_file_is_loaded(CPUState* cpu)
 {
     pending_file = NO_PENDING_FILE;
@@ -446,6 +528,14 @@ static void before_a_file_is_loaded(CPUState* cpu)
     const uint32_t save_data = save_data_of(cpu);
     if (save_data == NO_SAVE_DATA) {
         return;
+    }
+    if (adoption_pending) {
+        char letter = '\0';
+        pending_file = adoption_file(path, &letter);
+        if (pending_file != NO_PENDING_FILE) {
+            pending_language_letter = letter;
+            return;
+        }
     }
     const uint32_t wedding = wedding_script_number(path);
     if (wedding != 0) {
@@ -605,6 +695,85 @@ static void change_the_spouse_word(CPUState* cpu, uint32_t file)
               pending_speaker_is_a_woman ? "a woman" : "a man");
 }
 
+/* ---- The adoption ---- */
+
+/* Who brings the baby: the Harvest Goddess once she is awake (the event Eve_mega02 has started), else a sprite. */
+static AdoptionVisitor visitor_of_the_adoption(CPUState* cpu, uint32_t save_data)
+{
+    return is_bit_set(cpu, save_data + STARTED_EVENTS_OFFSET, EVENT_THE_GODDESS_WAKES_UP) ? ADOPTION_BY_THE_GODDESS
+                                                                                         : ADOPTION_BY_THE_SPRITE;
+}
+
+/*
+ * Writes the adoption scene over the birth's script that the game has just loaded (every birth script is
+ * longer than it), with the spouse's number where the scene names the spouse.
+ */
+static void write_the_adoption_script(CPUState* cpu, uint32_t file)
+{
+    const uint32_t save_data = save_data_of(cpu);
+    const uint32_t spouse = read_word(cpu, save_data + SPOUSE_OFFSET);
+    const AdoptionVisitor visitor = visitor_of_the_adoption(cpu, save_data);
+    const AdoptionScript* script = &adoption_scripts[visitor];
+    for (uint32_t index = 0; index < script->size; ++index) {
+        write_byte(cpu, file + index, script->bytes[index]);
+    }
+    for (uint32_t index = 0; index < script->spouse_place_count; ++index) {
+        write_byte(cpu, file + script->spouse_places[index], (uint8_t)spouse);
+    }
+    /* The spouse's first conversation after a birth is about having given birth: not this time. */
+    const uint32_t spouse_bits = save_data + CHARACTER_BITS_OFFSET + CHARACTER_BITS_BYTES_EACH * spouse;
+    write_byte(cpu, spouse_bits, (uint8_t)(read_byte(cpu, spouse_bits) & ~(1u << BIT_TALK_ABOUT_THE_BIRTH)));
+    adoption_pending = false;
+    HM_MM_LOG(MOD_ID, "%s comes to the spring with a baby",
+              visitor == ADOPTION_BY_THE_GODDESS ? "the Harvest Goddess" : "a Harvest Sprite");
+}
+
+/*
+ * Writes the adoption's lines over the birth's messages that the game has just loaded: one after another from
+ * the start of the text, the table pointing to each, and the spouse's number as the speaker of the spouse's.
+ */
+static void write_the_adoption_lines(CPUState* cpu, uint32_t file)
+{
+    const uint32_t save_data = save_data_of(cpu);
+    const uint32_t spouse = read_word(cpu, save_data + SPOUSE_OFFSET);
+    const bool two_women = read_word(cpu, save_data + PLAYER_CHARACTER_OFFSET) == PLAYER_IS_THE_GIRL;
+    const AdoptionVisitor visitor = visitor_of_the_adoption(cpu, save_data);
+    const AdoptionLines* lines = NULL;
+    for (size_t index = 0; index < HM_MM_ARRAY_COUNT(adoption_lines); ++index) {
+        const AdoptionLines* candidate = &adoption_lines[index];
+        if (candidate->visitor == visitor && candidate->language == pending_language_letter &&
+            candidate->two_women == two_women) {
+            lines = candidate;
+        }
+    }
+    const uint32_t highest_message = read_half_word(cpu, file + MESSAGE_FILE_HEADER_HIGHEST_MESSAGE);
+    if (lines == NULL || highest_message + 1 < ADOPTION_MESSAGE_COUNT) {
+        HM_MM_LOG(MOD_ID, "the birth's messages are not as expected; the adoption has no lines");
+        return;
+    }
+    const uint32_t table = file + read_word(cpu, file + MESSAGE_FILE_HEADER_TABLE_START);
+    const uint32_t text = file + read_word(cpu, file + MESSAGE_FILE_HEADER_TEXT_START);
+    uint32_t message = 0;
+    bool starts_a_message = true;
+    for (uint32_t index = 0; index < lines->size; ++index) {
+        uint8_t byte = lines->bytes[index];
+        if (starts_a_message) {
+            write_word(cpu, table + message * WORD_BYTES, index);
+            ++message;
+        }
+        const bool is_the_spouse_speaking =
+            index > 0 && lines->bytes[index - 1] == SPEAKER_CODE && byte == ADOPTION_SPOUSE_PLACEHOLDER;
+        if (is_the_spouse_speaking) {
+            byte = (uint8_t)spouse;
+        }
+        write_byte(cpu, text + index, byte);
+        starts_a_message = index + 1 >= sizeof end_of_a_message &&
+                           memcmp(lines->bytes + index + 1 - sizeof end_of_a_message, end_of_a_message,
+                                  sizeof end_of_a_message) == 0;
+    }
+    HM_MM_LOG(MOD_ID, "gave the adoption %u lines (%c)", (unsigned int)message, pending_language_letter);
+}
+
 static void after_a_file_is_loaded(CPUState* cpu)
 {
     const PendingFile kind = pending_file;
@@ -618,6 +787,10 @@ static void after_a_file_is_loaded(CPUState* cpu)
     } else if (kind == SPOUSE_MESSAGES) {
         message_to_change = 0;
         change_the_spouse_word(cpu, file);
+    } else if (kind == ADOPTION_SCRIPT) {
+        write_the_adoption_script(cpu, file);
+    } else if (kind == ADOPTION_MESSAGES) {
+        write_the_adoption_lines(cpu, file);
     }
 }
 
@@ -666,7 +839,7 @@ static const ModernGekkoModDesc descriptor = {
     .cpu_state_size = sizeof(CPUState),
     .game_id = HM_MM_GAME_ID,
     .id = MOD_ID,
-    .version = "0.1.0",
+    .version = "0.2.0",
     .display_name = "Marry anyone",
     .hooks = hooks,
     .num_hooks = HM_MM_ARRAY_COUNT(hooks),

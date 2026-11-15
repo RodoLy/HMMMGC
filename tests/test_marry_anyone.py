@@ -23,7 +23,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
-from project import DISC_DIRECTORY, REPOSITORY_ROOT  # noqa: E402
+import make_adoption_scene  # noqa: E402
+from lsb import parse_script  # noqa: E402
+from project import DISC_DIRECTORY, REPOSITORY_ROOT, SCRIPT_DIRECTORY  # noqa: E402
 
 MOD_SOURCE = REPOSITORY_ROOT / "mods" / "marry_anyone" / "mod.c"
 C_COMPILER = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
@@ -43,6 +45,8 @@ END_OF_MESSAGE = b"\x01\x08\x1f\x1d"
 NEW_ROW = b"\x01\x04\x1d"
 NEW_PAGE = b"\x01\x05\x1d"
 LONGEST_ROW = 28  # letters, as tests/jamie_mod_source.py measured the window
+
+Facts = dict[str, dict[str, int | str]]
 
 DRIVER = r"""
 #include MOD_SOURCE_PATH
@@ -171,6 +175,10 @@ static void make_a_wedding_script(uint32_t actor)
 
 static uint32_t actor_after_the_load(void) { return bytes_at(LOADED_FILE + 0x40 + 0x22)[2]; }
 
+static void make_a_birth_message_file(void);
+static void report_the_birth_message_file(const char* name);
+static void report_the_loaded_bytes(const char* name, size_t size);
+
 static void play_the_hooks(void)
 {
     /* Built-in 189 asks about a partner of the player's character in the same place. */
@@ -249,6 +257,79 @@ static void play_the_hooks(void)
     make_a_wedding_script(ACTOR_BOY_IN_HIS_SUIT);
     load_file("/Script/Eve_marry50.lsb");
     report("dress", "not_a_wedding", actor_after_the_load());
+
+    /* The adoption: two men's pregnancy is over at once, and their birth becomes the Goddess's visit. */
+    set_up(THE_BOY_PLAYER, 20, NOBODY);
+    report("adoption", "pregnancy_starts", starts(FIRST_PREGNANCY_SCENE + 17));
+    report("adoption", "days_after_the_pregnancy", word_at(SAVE_DATA + PREGNANCY_DAYS_OFFSET));
+    set_word_at(SAVE_DATA + PREGNANCY_DAYS_OFFSET, 30);
+    starts(FIRST_PREGNANCY_SCENE + 17);
+    report("adoption", "days_already_counted", word_at(SAVE_DATA + PREGNANCY_DAYS_OFFSET));
+    bytes_at(SAVE_DATA + CHARACTER_BITS_OFFSET + CHARACTER_BITS_BYTES_EACH * 20)[0] = 0xFF;
+    report("adoption", "birth_starts", starts(FIRST_BIRTH_SCENE + 17));
+    make_a_birth_message_file();
+    load_file("/message_s/event/Eve_child10_s.bin");
+    report_the_birth_message_file("adoption_messages");
+    memset(bytes_at(LOADED_FILE), 0x55, 0x1000);
+    load_file("/Script/Eve_child17.lsb");
+    report_the_loaded_bytes("adoption_script_sprite", adoption_scripts[ADOPTION_BY_THE_SPRITE].size);
+    const uint32_t basils_bits = SAVE_DATA + CHARACTER_BITS_OFFSET + CHARACTER_BITS_BYTES_EACH * 20;
+    report("adoption", "spouse_bits", bytes_at(basils_bits)[0]);
+    memset(bytes_at(LOADED_FILE), 0x55, 0x1000);
+    load_file("/Script/Eve_child17.lsb");
+    report("adoption", "second_load_untouched", bytes_at(LOADED_FILE)[0] == 0x55);
+
+    /* Once the Goddess is awake, she comes herself. */
+    set_up(THE_GIRL_PLAYER, 6, NOBODY);
+    set_bit(SAVE_DATA + STARTED_EVENTS_OFFSET, EVENT_THE_GODDESS_WAKES_UP);
+    starts(FIRST_BIRTH_SCENE + 3);
+    make_a_birth_message_file();
+    load_file("/message_e/event/eve_child00_e.bin");
+    report_the_birth_message_file("adoption_messages_goddess");
+    memset(bytes_at(LOADED_FILE), 0x55, 0x1000);
+    load_file("/Script/Eve_child03.lsb");
+    report_the_loaded_bytes("adoption_script_goddess", adoption_scripts[ADOPTION_BY_THE_GODDESS].size);
+
+    set_up(THE_BOY_PLAYER, 5, NOBODY);
+    report("adoption", "birth_of_a_man_and_a_woman_starts", starts(FIRST_BIRTH_SCENE + 2));
+    memset(bytes_at(LOADED_FILE), 0x55, 0x1000);
+    load_file("/Script/Eve_child02.lsb");
+    report("adoption", "a_man_and_a_woman_keep_the_birth", bytes_at(LOADED_FILE)[0] == 0x55);
+}
+
+/* A birth's message file as the game loads it: 48 messages, all of 0x20 bytes of 0xEE. */
+static void make_a_birth_message_file(void)
+{
+    memset(bytes_at(LOADED_FILE), 0, 0x1000);
+    fake_write(NULL, LOADED_FILE + MESSAGE_FILE_HEADER_HIGHEST_MESSAGE, 47, HALF_WORD_BYTES);
+    set_word_at(LOADED_FILE + MESSAGE_FILE_HEADER_TABLE_START, 0x10);
+    set_word_at(LOADED_FILE + MESSAGE_FILE_HEADER_TEXT_START, 0xD0);
+    for (uint32_t message = 0; message < 48; ++message) {
+        set_word_at(LOADED_FILE + 0x10 + message * WORD_BYTES, message * 0x20);
+    }
+    memset(bytes_at(LOADED_FILE + 0xD0), 0xEE, 48 * 0x20);
+}
+
+static void report_the_birth_message_file(const char* name)
+{
+    printf("%s entries", name);
+    for (uint32_t message = 0; message < 48; ++message) {
+        printf(" %u", (unsigned int)word_at(LOADED_FILE + 0x10 + message * WORD_BYTES));
+    }
+    printf("\n%s text ", name);
+    for (uint32_t index = 0; index < 48 * 0x20; ++index) {
+        printf("%02x", bytes_at(LOADED_FILE + 0xD0)[index]);
+    }
+    printf("\n");
+}
+
+static void report_the_loaded_bytes(const char* name, size_t size)
+{
+    printf("%s bytes ", name);
+    for (size_t index = 0; index < size + 4; ++index) {
+        printf("%02x", bytes_at(LOADED_FILE)[index]);
+    }
+    printf("\n");
 }
 
 /*
@@ -334,29 +415,30 @@ def driver(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="module")
-def facts(driver: Path) -> dict[str, dict[str, int]]:
+def facts(driver: Path) -> Facts:
+    """Each fact by case: a number, or the text of a longer fact (a table's entries, bytes in hexadecimal)."""
     output = subprocess.run([str(driver)], check=True, capture_output=True, text=True).stdout
-    results: dict[str, dict[str, int]] = {}
+    results: Facts = {}
     for line in output.splitlines():
-        case, name, value = line.split(" ")
-        results.setdefault(case, {})[name] = int(value)
+        case, name, value = line.split(" ", 2)
+        results.setdefault(case, {})[name] = int(value) if value.isdigit() else value
     return results
 
 
-def test_built_in_189_asks_about_a_partner_of_the_players_character(facts: dict[str, dict[str, int]]) -> None:
+def test_built_in_189_asks_about_a_partner_of_the_players_character(facts: Facts) -> None:
     # Basil (20) is the eighth of the girl's partners, so the boy's eighth is asked about: Ketty (10).
     # Mary (6) is the boy's fourth, so the girl's fourth: Azuma (16).
     assert facts["boy_asks"] == {"about_basil": 10, "about_mary": 6, "about_jamie": 2}
     assert facts["girl_asks"] == {"about_mary": 16, "about_basil": 20}
 
 
-def test_the_closest_partner_is_among_all_twenty(facts: dict[str, dict[str, int]]) -> None:
+def test_the_closest_partner_is_among_all_twenty(facts: Facts) -> None:
     # Basil and Kazan tie at 420: the first one wins, as in the game's own loop.
     assert facts["closest"] == {"of_all": 20, "none_above": NOBODY, "married": 20}
     assert facts["advice"] == {"a_woman_at_800": 1, "nobody_at_800": 0}
 
 
-def test_the_field_check_goes_to_the_chain_with_a_scene_waiting(facts: dict[str, dict[str, int]]) -> None:
+def test_the_field_check_goes_to_the_chain_with_a_scene_waiting(facts: Facts) -> None:
     assert facts["love"] == {
         "none_waits": THE_BOY,
         "a_man_waits": THE_GIRL,
@@ -370,19 +452,19 @@ def test_the_field_check_goes_to_the_chain_with_a_scene_waiting(facts: dict[str,
     }
 
 
-def test_the_rival_scenes_and_a_same_sex_pregnancy_do_not_start(facts: dict[str, dict[str, int]]) -> None:
+def test_the_rival_scenes_and_a_same_sex_pregnancy_do_not_start(facts: Facts) -> None:
     assert facts["events"] == {
         "basils_rival_scene": 0,
         "anothers_rival_scene": 1,
         "pregnancy_of_two_men": 0,
-        "birth_of_two_men": 0,
+        "birth_of_two_men": 1,
         "village_scene": 1,
         "fiances_rival_scene": 0,
         "pregnancy_of_a_man_and_a_woman": 1,
     }
 
 
-def test_the_wedding_dresses_the_player_as_the_player_is(facts: dict[str, dict[str, int]]) -> None:
+def test_the_wedding_dresses_the_player_as_the_player_is(facts: Facts) -> None:
     suit, dress = 72, 73
     assert facts["dress"] == {
         "boy_in_a_girls_wedding": suit,
@@ -537,3 +619,117 @@ def test_the_rows_still_fit_the_window(first_words: list[tuple[str, int, int, by
                 assert len(row_after) <= max(LONGEST_ROW, len(row_before)), (
                     f"{language} {PARTNER_FILES[partner]} {number}: the row {row_after!r} is too long"
                 )
+
+
+# ---------------------------------------------------------------------------------------------------------
+# The adoption.
+
+
+def test_the_adoption_scene_is_up_to_date() -> None:
+    header = REPOSITORY_ROOT / "mods" / "marry_anyone" / "adoption_scene.h"
+    assert header.read_text(encoding="utf-8") == make_adoption_scene.header_text(), (
+        "run python3 tools/make_adoption_scene.py"
+    )
+
+
+def test_the_adoption_scripts_read_as_scripts() -> None:
+    for visitor in make_adoption_scene.VISITORS:
+        script, spouse_places = make_adoption_scene.scene_script(visitor)
+        parsed = parse_script(script)
+        offsets = parsed.instruction_offsets
+        assert parsed.header.main_entry in offsets
+        assert all(
+            instruction.branch_target in offsets
+            for instruction in parsed.instructions
+            if instruction.branch_target
+        ), "every jump and call lands on an instruction"
+        assert spouse_places
+        assert all(script[place] == make_adoption_scene.SPOUSE_PLACEHOLDER for place in spouse_places)
+        assert all(script[place - 1] == 0x02 for place in spouse_places), "each place is a PUSH_INT's"
+
+
+def every_adoption_text() -> list[tuple[str, str, str, list[str]]]:
+    return [
+        (visitor, language, couple, make_adoption_scene.lines_of(visitor, language, couple))
+        for visitor in make_adoption_scene.VISITORS
+        for language in make_adoption_scene.LINES[visitor]
+        for couple in ("men", "women")
+    ]
+
+
+def test_the_adoption_lines_fit_the_window() -> None:
+    for visitor, language, _, lines in every_adoption_text():
+        for text in lines:
+            message = make_adoption_scene.message_bytes(visitor, make_adoption_scene.VISITOR_LINE, text)
+            body = message[2:].removesuffix(END_OF_MESSAGE)
+            for page in body.split(NEW_PAGE):
+                rows = page.split(NEW_ROW)
+                assert len(rows) <= make_adoption_scene.ROWS_PER_PAGE, f"{visitor} {language}: {text!r}"
+                for row in rows:
+                    letters = len(row.replace(make_adoption_scene.BABYS_NAME, b"N" * 8))
+                    assert letters <= LONGEST_ROW, f"{visitor} {language}: the row {row!r} is too long"
+
+
+def test_the_pregnancy_of_a_same_sex_couple_becomes_an_adoption(facts: Facts) -> None:
+    assert facts["adoption"]["pregnancy_starts"] == 0
+    assert facts["adoption"]["days_after_the_pregnancy"] == 60
+    assert facts["adoption"]["days_already_counted"] == 30
+    assert facts["adoption"]["birth_starts"] == 1
+    assert facts["adoption"]["birth_of_a_man_and_a_woman_starts"] == 1
+
+
+def expected_script(visitor: str, spouse: int) -> bytes:
+    script, spouse_places = make_adoption_scene.scene_script(visitor)
+    expected = bytearray(script)
+    for place in spouse_places:
+        expected[place] = spouse
+    return bytes(expected)
+
+
+def test_the_birth_script_becomes_the_adoption_scene(facts: Facts) -> None:
+    for visitor, spouse in (("sprite", 20), ("goddess", 6)):
+        loaded = bytes.fromhex(str(facts[f"adoption_script_{visitor}"]["bytes"]))
+        script = expected_script(visitor, spouse)
+        assert loaded[: len(script)] == script, f"the {visitor}'s scene"
+        assert loaded[len(script) :] == b"\x55" * 4, "nothing after the scene changed"
+    assert facts["adoption"]["spouse_bits"] == 0xFF & ~(1 << 5), "the talk about the birth is cleared"
+    assert facts["adoption"]["second_load_untouched"] == 1
+    assert facts["adoption"]["a_man_and_a_woman_keep_the_birth"] == 1
+
+
+def test_the_birth_messages_become_the_adoption_lines(facts: Facts) -> None:
+    for case, visitor, language, couple, spouse in (
+        ("adoption_messages", "sprite", "s", "men", 20),
+        ("adoption_messages_goddess", "goddess", "e", "women", 6),
+    ):
+        entries = [int(value) for value in str(facts[case]["entries"]).split()]
+        text = bytes.fromhex(str(facts[case]["text"]))
+        lines = make_adoption_scene.lines_of(visitor, language, couple)
+        position = 0
+        for number, (speaker, line) in enumerate(zip(make_adoption_scene.SPEAKERS, lines, strict=True)):
+            message = bytearray(make_adoption_scene.message_bytes(visitor, speaker, line))
+            if speaker == make_adoption_scene.SPOUSE_LINE:
+                message[1] = spouse
+            assert entries[number] == position, f"{case}: message {number}"
+            assert text[position : position + len(message)] == bytes(message), f"{case}: message {number}"
+            position += len(message)
+        assert entries[len(lines) :] == [number * 0x20 for number in range(len(lines), 48)]
+
+
+def test_the_adoption_fits_every_birth_on_the_disc() -> None:
+    if not SCRIPT_DIRECTORY.is_dir():
+        pytest.skip("needs the game's files (orig/G4AEE9)")
+    for visitor in make_adoption_scene.VISITORS:
+        script, _ = make_adoption_scene.scene_script(visitor)
+        for number in range(20):
+            path = SCRIPT_DIRECTORY / f"Eve_child{number:02}.lsb"
+            assert len(script) <= path.stat().st_size, f"the {visitor}'s scene is longer than {path.name}"
+    for visitor, language, couple, _ in every_adoption_text():
+        size = len(make_adoption_scene.messages_of(visitor, language, couple))
+        for file_number in ("00", "10"):
+            folder = DISC_DIRECTORY / "files" / f"message_{language}" / "event"
+            data = (folder / f"eve_child{file_number}_{language}.bin").read_bytes()
+            highest = struct.unpack_from(">H", data, 2)[0]
+            text_start = struct.unpack_from(">I", data, 12)[0]
+            assert highest + 1 >= len(make_adoption_scene.SPEAKERS)
+            assert size <= len(data) - text_start, f"the {visitor}'s lines ({language}) do not fit"

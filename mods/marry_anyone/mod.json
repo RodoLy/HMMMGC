@@ -1,7 +1,9 @@
 {
   "id": "marry_anyone",
-  "version": "0.1.0",
-  "authors": ["HMMMGC"],
+  "version": "0.2.0",
+  "authors": [
+    "HMMMGC"
+  ],
   "name": {
     "es": "Casarse con quien quieras",
     "en": "Marry anyone"
@@ -11,8 +13,8 @@
     "en": "Any of the twenty partners, as the boy or as the girl."
   },
   "description": {
-    "es": "En el juego original, el chico solo puede casarse con las diez chicas y la chica con los diez chicos. Con este mod puedes cortejar a cualquiera de los veinte: sus escenas de amor salen igual, aceptan la pluma azul, la boda se hace con su propia escena (te viste como tu personaje) y vive en tu casa como tu pareja. Si tu pareja es del mismo sexo que tú, en sus primeras palabras de casados te llama esposa o esposo según seas, y no hay embarazo: la escena para tener un hijo llegará en una versión próxima.",
-    "en": "In the original game the boy can only marry the ten girls and the girl the ten boys. With this mod you can court any of the twenty: their love scenes play as well, they accept the blue feather, the wedding uses their own scene (dressing you as your character) and they live in your house as your spouse. If your spouse is of your own sex, their first words as a married couple call you husband or wife as you are, and there is no pregnancy: the scene to have a child will come in a later version."
+    "es": "En el juego original, el chico solo puede casarse con las diez chicas y la chica con los diez chicos. Con este mod puedes cortejar a cualquiera de los veinte: sus escenas de amor salen igual, aceptan la pluma azul, la boda se hace con su propia escena (te viste como tu personaje) y vive en tu casa como tu pareja. Si tu pareja es del mismo sexo que tú, en sus primeras palabras de casados te llama esposa o esposo según seas, y en lugar del embarazo, la Diosa de la Cosecha los llama a su manantial para darles en adopción un bebé por su gran amor (si la Diosa sigue de piedra, viene uno de sus duendes).",
+    "en": "In the original game the boy can only marry the ten girls and the girl the ten boys. With this mod you can court any of the twenty: their love scenes play as well, they accept the blue feather, the wedding uses their own scene (dressing you as your character) and they live in your house as your spouse. If your spouse is of your own sex, their first words as a married couple call you husband or wife as you are, and instead of the pregnancy the Harvest Goddess calls you both to her spring to give you a baby to adopt, for your great love (while the Goddess is still stone, one of her sprites comes)."
   },
   "warning": {
     "es": "Si te casas o te comprometes con alguien de tu mismo sexo, esa partida lo sigue usando aunque lo desactives. En las demás partidas, desactivado no hace nada.",
