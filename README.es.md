@@ -158,15 +158,18 @@ uno: [mods/README.md](mods/README.md).
 
 ### Qué necesitas
 
-- Windows 10 (versión 1903 o más nueva) o Windows 11, con un procesador Intel
-  o AMD (el paquete **x64**) o uno ARM como el Snapdragon (el paquete
-  **arm64**).
-- Una tarjeta gráfica con Direct3D 12.
-- Tu disco de *Harvest Moon: Magical Melody* de Estados Unidos (`G4AEE9`),
-  como imagen: `.iso`, `.gcm` o `.rvz` (el formato comprimido de Dolphin). El
-  launcher revisa que sea ese juego y esa versión.
-- Unos 2 GB libres: una imagen `.rvz` se convierte a `.iso`, y el juego
-  preparado ocupa unos 100 MB.
+| | Requisitos mínimos |
+|---|---|
+| Sistema | Windows 10 (versión 1903 o más nueva) o Windows 11, de 64 bits. |
+| Procesador | Intel o AMD con SSE4.2 (Intel desde 2008, AMD desde 2011): el paquete **x64**. Uno ARM como el Snapdragon: el paquete **arm64**. |
+| Memoria | 4 GB de RAM; mejor 8 GB. La primera vez, el juego se compila en tu computadora, con un compilador por cada núcleo del procesador, de hasta unos 250 MB cada uno. |
+| Gráficos | Una tarjeta gráfica, o los gráficos del procesador, con Direct3D 12. |
+| Disco | Unos 3 GB libres: el paquete descomprimido (unos 550 MB), el `.iso` al que se convierte una imagen `.rvz` y el juego preparado (unos 100 MB). |
+| Juego | Tu disco de *Harvest Moon: Magical Melody* de Estados Unidos (`G4AEE9`), como imagen: `.iso`, `.gcm` o `.rvz` (el formato comprimido de Dolphin). El launcher revisa que sea ese juego y esa versión. |
+
+Probado en una laptop con Snapdragon X (gráficos Adreno X1-45), que mantiene
+60 fps en pantalla ancha. No se ha probado en computadoras más débiles; en una
+cerca del mínimo, lo más seguro es jugar a 30 fps.
 
 ### Pasos
 
