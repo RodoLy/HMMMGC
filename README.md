@@ -185,6 +185,13 @@ the minimum, 30 fps is the safest choice.
    few minutes, and then never again until the next update.
 5. Press **Play**.
 
+The launcher works with a controller too: the D-pad or the left stick moves,
+A chooses, LB and RB change the tab, and B goes back (on the game's tab, it
+exits or stops the preparation). If your disc image is in Downloads,
+Documents, on the Desktop, in a `Games` folder, next to `HarvestMoonMM.exe` or
+in a folder of Dolphin's game list, the launcher finds it by itself and
+**Prepare the game** uses it, so you don't need the mouse to pick it.
+
 **With [RecompLauncher](https://recomplauncher.com).** The package has a
 `recomplauncher.json`, so RecompLauncher can install it, check your disc
 image, prepare the game without opening the launcher's window, show the

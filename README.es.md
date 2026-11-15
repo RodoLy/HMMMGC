@@ -187,6 +187,14 @@ cerca del mínimo, lo más seguro es jugar a 30 fps.
    unos minutos, y ya no vuelve a hacerlo hasta la siguiente actualización.
 5. Presiona **Jugar**.
 
+El launcher también se maneja con control: la cruceta o el stick izquierdo
+mueven, A elige, LB y RB cambian de pestaña y B regresa (en la pestaña del
+juego, sale o detiene la preparación). Si la imagen de tu disco está en
+Descargas, Documentos, el Escritorio, una carpeta `Games`, junto a
+`HarvestMoonMM.exe` o en una carpeta de la lista de juegos de Dolphin, el
+launcher la encuentra solo y **Preparar el juego** la usa, así que no
+necesitas el mouse para elegirla.
+
 **Con [RecompLauncher](https://recomplauncher.com).** El paquete trae un
 `recomplauncher.json`, así que RecompLauncher puede instalarlo, revisar la
 imagen de tu disco, preparar el juego sin abrir la ventana del launcher,
