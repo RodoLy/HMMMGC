@@ -201,7 +201,13 @@ void App::handle_keys(const std::vector<Row>& rows) {
             using_pad_ = key >= ImGuiKey_GamepadStart && key <= ImGuiKey_GamepadRStickRight;
         }
     }
-    if (pressed({ImGuiKey_Escape}, false)) {
+    // B (Circle on a PlayStation controller) goes back: from another tab to the game's, and on the
+    // game's it does what Esc does.
+    if (pressed({ImGuiKey_GamepadFaceRight}, false) && tab_ != Tab::Game) {
+        choose_tab(Tab::Game);
+        return;
+    }
+    if (pressed({ImGuiKey_Escape, ImGuiKey_GamepadFaceRight}, false)) {
         if (preparing) {
             preparation_.cancel();
         } else {
@@ -480,14 +486,15 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     look::circle(draw, ImVec2(start + 8.f, pill.center_y()), 6.f, dot);
     look::draw_text(draw, state_text, start + 24.f, look::baseline_centered(state_text, pill.center_y()), status);
 
-    // Esc to leave (or to stop the preparation).
+    // Esc (B on a controller) to leave, or to stop the preparation.
     look::draw_box(draw, Box{.rect = at(992.f, 16.f, 272.f, 54.f), .radius = 27.f, .background = ROYAL,
                              .border = 4.f, .border_color = rgb(0x7fe0d0)});
     const TextStyle key = style(Face::Baloo800, 19, 0.f, rgb(0xffffff));
-    const float key_width = look::text_width(key, "Esc") + 28.f;
+    const char* leave_key = using_pad_ ? "B" : "Esc";
+    const float key_width = look::text_width(key, leave_key) + 28.f;
     look::draw_box(draw, Box{.rect = at(1010.f, 28.f, key_width, 30.f), .radius = 14.f, .background = rgb(0x4f6fe0),
                              .shadows = {{{.y = 3.f, .color = rgb(0x101a5c)}}}});
-    look::draw_text(draw, key, 1024.f, look::baseline_in_line(key, 28.f + TOP, 30.f), "Esc");
+    look::draw_text(draw, key, 1024.f, look::baseline_in_line(key, 28.f + TOP, 30.f), leave_key);
     const TextStyle arrow = style(Face::Baloo800, 24, 0.f, rgb(0xffffff));
     const float arrow_x = 1010.f + key_width + 12.f;
     look::draw_text(draw, arrow, arrow_x, look::baseline_centered(arrow, 43.f + TOP), "\xE2\x86\x92");  // →

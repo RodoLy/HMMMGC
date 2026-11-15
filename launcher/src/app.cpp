@@ -23,26 +23,13 @@ using texts::text;
 
 // The disc images the dialog offers.
 constexpr const char* DISC_PATTERN = "iso;gcm;rvz;wia;gcz;ciso";
+// The disc this port plays, and how many of the images found of it the game tab offers.
+constexpr const char* GAME_CODE = "G4AEE9";
+constexpr int MOST_FOUND_DISCS_OFFERED = 3;
 
 bool file_exists(const std::filesystem::path& path) {
     std::error_code error;
     return !path.empty() && std::filesystem::is_regular_file(path, error);
-}
-
-// The code of the game on a GameCube disc image read as it is (an .iso or .gcm): the first six
-// letters of its header, which ends at 0x1C with the magic number of every GameCube disc.
-std::string game_code(const std::filesystem::path& disc_image) {
-    std::ifstream disc(disc_image, std::ios::binary);
-    unsigned char header[0x20] = {};
-    if (!disc.read(reinterpret_cast<char*>(header), sizeof(header))) {
-        return {};
-    }
-    constexpr unsigned char GAMECUBE_MAGIC[] = {0xC2, 0x33, 0x9F, 0x3D};
-    const bool gamecube = std::equal(std::begin(GAMECUBE_MAGIC), std::end(GAMECUBE_MAGIC), header + 0x1C);
-    std::string code(header, header + 6);
-    const bool readable =
-        std::ranges::all_of(code, [](char c) { return (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); });
-    return gamecube && readable ? code : "";
 }
 
 }  // namespace
@@ -59,6 +46,7 @@ App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_t
     if (!disc.empty() && missing_.empty()) {
         start_preparation(disc);
     }
+    disc_search_.start(package_.root, GAME_CODE);
 }
 
 // -- What the launcher knows ----------------------------------------------------------------------
@@ -277,16 +265,17 @@ std::string App::preparation_text() const {
     return said;
 }
 
-std::string disc_name(const std::string& code) { return code == "G4AEE9" ? "GameCube USA" : code; }
+std::string disc_name(const std::string& code) { return code == GAME_CODE ? "GameCube USA" : code; }
 
 std::vector<App::Row> App::game_rows() {
     const Preparation::State state = preparation_.state();
     const bool preparing = state == Preparation::State::Running;
+    const std::vector<std::string> found_discs = disc_search_.found();
     std::vector<Row> rows;
 
     Row play_row;
     play_row.play = true;
-    play_row.value = "Enter";
+    play_row.value = using_pad_ ? "A" : "Enter";
     play_row.tone = Tone::Key;
     if (preparing) {
         play_row.label = text(Text::PreparingRow);
@@ -302,7 +291,10 @@ std::vector<App::Row> App::game_rows() {
             play();
         };
     } else {
-        const std::string disc = remembered_disc();
+        std::string disc = remembered_disc();
+        if (disc.empty() && !found_discs.empty()) {
+            disc = found_discs.front();
+        }
         const bool failed = state == Preparation::State::Failed || state == Preparation::State::Cancelled;
         play_row.label = failed ? text(Text::TryAgain) : text(Text::Prepare);
         if (!missing_.empty()) {
@@ -343,6 +335,25 @@ std::vector<App::Row> App::game_rows() {
     disc.activate = [this] { choose_disc(); };
     rows.push_back(std::move(disc));
 
+    // The images of the disc found in the usual folders (disc_search.h): one press prepares the game
+    // with one, so that a controller is enough.
+    if (!preparing && missing_.empty()) {
+        int offered = 0;
+        for (const std::string& found : found_discs) {
+            if (found == shown_disc_ || offered == MOST_FOUND_DISCS_OFFERED) {
+                continue;
+            }
+            const std::filesystem::path path = paths::from_utf8(found);
+            Row row;
+            row.symbol = "\xE2\x97\x8E";  // ◎
+            row.label = texts::format(Text::FoundDisc, paths::utf8(path.filename()).c_str());
+            row.hint = texts::format(Text::FoundDiscHint, paths::utf8(path.parent_path()).c_str());
+            row.activate = [this, found] { start_preparation(found); };
+            rows.push_back(std::move(row));
+            ++offered;
+        }
+    }
+
     {
         // One language for the game's dialogues and for the launcher, of those the disc has.
         Row row;
@@ -367,7 +378,7 @@ std::vector<App::Row> App::game_rows() {
     Row exit;
     exit.symbol = "\xE2\x9C\x95";  // ✕
     exit.label = text(Text::Exit);
-    exit.value = "Esc";
+    exit.value = using_pad_ ? "B" : "Esc";
     exit.tone = Tone::Key;
     exit.hint = text(Text::ExitHint);
     exit.activate = [this] {
@@ -580,7 +591,12 @@ void App::give_button(std::uint32_t native) {
 }
 
 void App::follow_disc() {
-    const std::string disc = prepared_is_current() ? prepared_.disc : remembered_disc();
+    std::string disc = prepared_is_current() ? prepared_.disc : remembered_disc();
+    if (disc.empty()) {
+        // None chosen yet: the first one found is the one "Prepare the game" uses.
+        const std::vector<std::string> found = disc_search_.found();
+        disc = found.empty() ? "" : found.front();
+    }
     if (disc != shown_disc_) {
         shown_disc_ = disc;
         disc_code_ = disc.empty() ? "" : game_code(paths::from_utf8(disc));

@@ -10,6 +10,7 @@
 #include "child_process.h"
 #include "controls.h"
 #include "controls_profile.h"
+#include "disc_search.h"
 #include "game_start.h"
 #include "mods.h"
 #include "paths.h"
@@ -131,6 +132,7 @@ private:
     bool still_ = false;
 
     PreparedGame prepared_;
+    DiscSearch disc_search_;
     Preparation preparation_;
     Preparation::State seen_state_ = Preparation::State::Idle;
     std::unique_ptr<ChildProcess> game_;

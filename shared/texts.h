@@ -40,6 +40,8 @@ enum class Text {
     PreparingRow,
     PreparingStage,
     ChangeDiscHint,
+    FoundDisc,
+    FoundDiscHint,
     OpenLogHint,
     NoLog,
     ExitHint,
