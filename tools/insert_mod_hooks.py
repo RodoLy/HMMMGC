@@ -20,9 +20,17 @@ En ModernGekko los patches y hooks de un mod se aplican mientras corre el juego.
 runtime nativo las funciones traducidas se llaman directamente, así que las llamadas se
 escriben en el C++ traducido, una vez, entre el traductor y el compilador.
 
-A hooked function must stay a function of its own: it is refused when the translator
-inlined it somewhere or made a state-free copy of it, since those calls would skip the
-hook. Running the tool again does nothing new: every insertion carries a marker.
+- at the entry of each copy of a hooked function that the translator inlined into a caller
+  (its label is loc_inl<N>_0x<address>): the same as at a hooked instruction, with the
+  address of the function, so that the hook runs for those calls too.
+
+A function with return hooks must stay a function of its own: it is refused when the
+translator inlined it somewhere, since an inlined copy has no return to hook. A state-free
+copy of a hooked function is refused too: it keeps no registers for a hook to see. Running
+the tool again does nothing new: every insertion carries a marker.
+
+Un hook de entrada también se escribe en cada copia de la función que el traductor metió
+dentro de otra (inline); un hook de retorno no, así que esa función se rechaza.
 
 Usage / Uso:
     python3 tools/insert_mod_hooks.py --mod jamie_marriage --mod player_speed --mod carry_speed \
@@ -122,10 +130,10 @@ def closing_brace(lines: list[str], open_brace: int) -> int:
     raise SystemExit("error: a translated function does not end")
 
 
-def check_stays_a_function(shards: Shards, address: int) -> None:
+def check_stays_a_function(shards: Shards, address: int, on_return: bool) -> None:
     name = f"{address:08X}"
-    if shards.find(f"inline leaf 0x{name}"):
-        raise SystemExit(f"error: the translator inlined 0x{name}, so a hook there would not run")
+    if on_return and shards.find(f"inline leaf 0x{name}"):
+        raise SystemExit(f"error: the translator inlined 0x{name}, so a return hook there would not run")
     if shards.find(f"func_{name}_statefree"):
         raise SystemExit(f"error: the translator made a state-free copy of 0x{name}, which a hook would miss")
 
@@ -188,11 +196,48 @@ def insert_inside(lines: list[str], label: int, locals_: list[tuple[str, str]], 
     return True
 
 
+FUNCTION_HEADER = re.compile(r'^extern "C" void func_[0-9A-F]{8}\(CpuContext\* MKW_RESTRICT ctx\)$')
+
+
+def insert_at_label(lines: list[str], label: int, address: int) -> bool:
+    """A hook call at the label on line `label`, inside the function that holds it."""
+    header = max(i for i in range(label) if FUNCTION_HEADER.match(lines[i]))
+    open_brace = header + 1
+    close_brace = closing_brace(lines, open_brace)
+    return insert_inside(lines, label, register_locals(lines, open_brace, close_brace), address)
+
+
+def insert_in_inlined_copies(shards: Shards, address: int) -> bool:
+    """A hook call at the entry of each copy of the function at `address` inlined into a caller."""
+    label = re.compile(rf"^loc_inl\d+_0x{address:08X}:$")
+    changed = False
+    for path in shards.find(f"_0x{address:08X}:\n"):
+        lines = shards.texts[path].split("\n")
+        labels = [i for i, line in enumerate(lines) if label.match(line)]
+        if not labels:
+            continue
+        ensure_declarations(lines)
+        # The declarations may have moved the lines: the labels are found again.
+        labels = [i for i, line in enumerate(lines) if label.match(line)]
+        # From the last one up, so that inserting lines does not move the labels still to do.
+        path_changed = False
+        for index in reversed(labels):
+            path_changed |= insert_at_label(lines, index, address)
+        shards.texts[path] = "\n".join(lines)
+        if path_changed:
+            shards.changed.add(path)
+            changed = True
+    return changed
+
+
 def insert(shards: Shards, point: HookPoint) -> bool:
     name = f"{point.address:08X}"
+    inlined_changed = False
+    if not point.on_return:
+        inlined_changed = insert_in_inlined_copies(shards, point.address)
     function_files = shards.find(f'extern "C" void func_{name}(CpuContext* MKW_RESTRICT ctx)\n{{')
     if function_files:
-        check_stays_a_function(shards, point.address)
+        check_stays_a_function(shards, point.address, point.on_return)
         path = function_files[0]
         lines = shards.texts[path].split("\n")
         ensure_declarations(lines)
@@ -206,20 +251,17 @@ def insert(shards: Shards, point: HookPoint) -> bool:
             raise SystemExit(f"error: a return hook at 0x{name}, which does not start a function")
         label_files = shards.find(f"\nloc_{name}:\n")
         if len(label_files) != 1:
+            if inlined_changed or shards.find(f"_0x{name}:\n"):
+                return inlined_changed
             raise SystemExit(f"error: no single translated instruction at 0x{name}")
         path = label_files[0]
         lines = shards.texts[path].split("\n")
         ensure_declarations(lines)
-        label = lines.index(f"loc_{name}:")
-        function_header = re.compile(r'^extern "C" void func_[0-9A-F]{8}\(CpuContext\* MKW_RESTRICT ctx\)$')
-        header = max(i for i in range(label) if function_header.match(lines[i]))
-        open_brace = header + 1
-        close_brace = closing_brace(lines, open_brace)
-        changed = insert_inside(lines, label, register_locals(lines, open_brace, close_brace), point.address)
+        changed = insert_at_label(lines, lines.index(f"loc_{name}:"), point.address)
     shards.texts[path] = "\n".join(lines)
     if changed:
         shards.changed.add(path)
-    return changed
+    return changed or inlined_changed
 
 
 def main() -> int:

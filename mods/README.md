@@ -144,8 +144,10 @@ Como las funciones traducidas se llaman directamente entre sí, los lugares
 donde actúa cada mod se marcan en el código traducido al compilar:
 `tools/insert_mod_hooks.py` lee las tablas de los mods y agrega las llamadas.
 `scripts/build_native_runtime.sh` lo hace solo para los mods de `NATIVE_MODS`
-(por omisión `jamie_marriage player_speed carry_speed far_camera marry_anyone longer_days gentle_stamina`). Una función enganchada no puede
-estar copiada en línea en otra: la herramienta lo revisa y se detiene si pasa.
+(por omisión `jamie_marriage player_speed carry_speed far_camera marry_anyone longer_days gentle_stamina`). Si el traductor copió en línea una función
+enganchada dentro de otra, el hook de entrada se escribe también en cada copia
+(su etiqueta es `loc_inl<N>_0x<dirección>`); un hook de retorno no puede, y la
+herramienta se detiene si pasa.
 El registro del runtime dice qué mods cargó y la primera vez que el juego
 llega a cada lugar donde actúan.
 
@@ -297,8 +299,10 @@ As the translated functions call each other directly, the places where each
 mod acts are marked in the translated code when it is built:
 `tools/insert_mod_hooks.py` reads the mods' tables and adds the calls.
 `scripts/build_native_runtime.sh` does it for the mods in `NATIVE_MODS` (by
-default `jamie_marriage player_speed carry_speed far_camera marry_anyone longer_days gentle_stamina`). A hooked function cannot be copied
-inline into another one: the tool checks this and stops if it happens. The
+default `jamie_marriage player_speed carry_speed far_camera marry_anyone longer_days gentle_stamina`). If the translator copied a hooked
+function inline into another one, the entry hook is written into each copy too
+(its label is `loc_inl<N>_0x<address>`); a return hook cannot be, and the tool
+stops if that happens. The
 runtime's log says which mods it loaded and the first time the game reaches
 each place where they act.
 
