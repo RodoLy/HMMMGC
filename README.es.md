@@ -95,6 +95,7 @@ recibe el control.
 | **Personaje más rápido** (0.1.0) | El personaje camina y corre más rápido, de 25% a 300% de la velocidad original (150% de entrada), solo mientras lo controlas tú. |
 | **Sin frenos al cargar** (0.1.0) | En el juego original, con algo en las manos el personaje solo camina. Con este mod, con el stick a fondo avanza a la velocidad de correr. |
 | **Cámara más lejos** (0.1.0) | En el juego, la cruceta arriba y abajo acerca y aleja la cámara. Con este mod, si sigues presionando abajo al llegar al tope del juego, se sigue alejando hasta que se ve mucho más de la granja; arriba la regresa. Solo al aire libre: los cuartos y las escenas conservan la cámara del juego. |
+| **Días más largos** (0.1.0) | El reloj del juego avanza más despacio, para tener más tiempo cada día para cultivar, pescar y visitar: de 100% (el día del juego original) a 400% (un día cuatro veces más largo), 150% por omisión. Dormir, los eventos y el inicio del día no cambian. |
 
 Todos vienen apagados, como el juego original; los enciendes en la pestaña Mods. Cómo hacer
 uno: [mods/README.md](mods/README.md).

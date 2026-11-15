@@ -1,0 +1,32 @@
+{
+  "id": "longer_days",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Días más largos",
+    "en": "Longer days"
+  },
+  "summary": {
+    "es": "El reloj del juego avanza más despacio.",
+    "en": "The game's clock goes more slowly."
+  },
+  "description": {
+    "es": "Hace que el reloj del juego avance más despacio, para tener más tiempo cada día. 100% es la duración del juego original y 200% un día el doble de largo. Dormir, los eventos y el inicio del día no cambian.",
+    "en": "Makes the game's clock go more slowly, so that each day gives more time. 100% is the length of the original game's day and 200% a day twice as long. Sleeping, the events and the start of the day do not change."
+  },
+  "settings": [
+    {
+      "type": "percent",
+      "key": "dayLengthPercent",
+      "environment": "HM_MM_DAY_LENGTH_PERCENT",
+      "minimum": 100,
+      "maximum": 400,
+      "default": 150,
+      "step": 25,
+      "label": {
+        "es": "Duración del día",
+        "en": "Length of the day"
+      }
+    }
+  ]
+}

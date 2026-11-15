@@ -158,6 +158,26 @@
       "defaults": { "mods/carry_speed": "false" }
     },
     {
+      "id": "longer_days",
+      "label": "Longer days",
+      "group": "Mods",
+      "help": "The game's clock goes more slowly, so each day gives more time.",
+      "choices": [
+        { "label": "Off", "set": { "mods/longer_days": "false" } },
+        { "label": "On", "set": { "mods/longer_days": "true" } }
+      ],
+      "defaults": { "mods/longer_days": "false" }
+    },
+    {
+      "id": "day_length_percent",
+      "label": "Length of the day",
+      "group": "Mods",
+      "help": "100% is the original game's day; 200% is a day twice as long.",
+      "slider": { "key": "dayLengthPercent", "min": 100, "max": 400, "step": 25, "format": "%g" },
+      "defaults": { "dayLengthPercent": "150" },
+      "when": { "mods/longer_days": "true" }
+    },
+    {
       "id": "far_camera",
       "label": "Farther camera",
       "group": "Mods",

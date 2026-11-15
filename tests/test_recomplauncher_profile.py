@@ -65,7 +65,29 @@ def test_the_options_are_those_of_settings_json_with_the_values_the_game_accepts
     sliders = {
         setting["id"]: setting["slider"]["key"] for setting in PROFILE["settings"] if "slider" in setting
     }
-    assert sliders == {"volume": setting_name("VOLUME"), "player_speed_percent": setting_name("PLAYER_SPEED")}
+    assert sliders == {
+        "volume": setting_name("VOLUME"),
+        "player_speed_percent": setting_name("PLAYER_SPEED"),
+        "day_length_percent": mod_setting("longer_days")["key"],
+    }
+
+
+def mod_setting(mod_id: str) -> dict:
+    manifest = json.loads((REPOSITORY / "mods" / mod_id / "mod.json").read_text(encoding="utf-8"))
+    (setting,) = manifest["settings"]
+    return setting
+
+
+def test_the_day_length_slider_has_the_limits_of_the_mod():
+    setting = mod_setting("longer_days")
+    slider = next(entry for entry in PROFILE["settings"] if entry["id"] == "day_length_percent")
+    assert (slider["slider"]["min"], slider["slider"]["max"], slider["slider"]["step"]) == (
+        setting["minimum"],
+        setting["maximum"],
+        setting["step"],
+    )
+    assert slider["defaults"] == {setting["key"]: str(setting["default"])}
+    assert slider["when"] == {"mods/longer_days": "true"}
 
 
 def test_every_mod_of_the_runtime_can_be_turned_on():

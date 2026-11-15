@@ -94,6 +94,7 @@ the controller.
 | **Faster character** (0.1.0) | The character walks and runs faster, from 25% to 300% of the original speed (150% by default), only while you control it. |
 | **No slowdown when carrying** (0.1.0) | In the original game, with something in the hands the character can only walk. With this mod, with the stick fully pushed it moves at running speed. |
 | **Farther camera** (0.1.0) | In the game, up and down on the D-pad bring the camera closer and pull it back. With this mod, holding down past the game's limit keeps pulling it back, until much more of the farm is in view; up brings it back. Only outdoors: rooms and scenes keep the game's camera. |
+| **Longer days** (0.1.0) | The game's clock goes more slowly, so each day gives more time to farm, fish and visit: from 100% (the original day) to 400% (a day four times as long), 150% by default. Sleeping, the events and the start of the day do not change. |
 
 All come off, like the original game; you turn them on in the Mods tab. How to make one:
 [mods/README.md](mods/README.md).
