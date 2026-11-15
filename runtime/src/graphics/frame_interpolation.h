@@ -13,7 +13,9 @@
 // between, its 240 three. This game runs at 30, so 120 there is 60 here and 240 is 120.
 // The runtime tells aurora when each frame of the game is due (present_schedule), and
 // aurora shows the frames in between spread over that time, from its render thread: the
-// picture is shown up to one game frame later.
+// picture is shown up to one game frame later. While the turbo is held (game_clock.h) the
+// game's frames come faster than that schedule, so each is shown as it comes, with none in
+// between.
 #pragma once
 
 namespace frame_interpolation {

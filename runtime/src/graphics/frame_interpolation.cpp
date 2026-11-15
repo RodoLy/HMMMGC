@@ -2,6 +2,7 @@
 
 #include "graphics/frame_interpolation.h"
 
+#include "game_clock.h"
 #include "runtime_log.h"
 
 #include <aurora/aurora.h>
@@ -99,6 +100,17 @@ bool is_on() { return g_frame_rate > GAME_FRAME_RATE; }
 void schedule_frame() {
     const Clock::time_point now = Clock::now();
     if (!is_on()) {
+        report_now_and_then(now);
+        return;
+    }
+    if (game_clock::speed_percent() != game_clock::NORMAL_SPEED_PERCENT) {
+        // The turbo: the game makes its frames faster than the schedule would show them, and the
+        // schedule would hold it back to its own pace (aurora shows the frames of a group at their
+        // times before it takes the next frame). Show each frame as it comes, with none in
+        // between, and start the schedule over when the turbo ends.
+        g_last_frame = Clock::time_point{};
+        aurora_report_producer_paced(false);
+        aurora_set_present_schedule(0, 0);
         report_now_and_then(now);
         return;
     }
