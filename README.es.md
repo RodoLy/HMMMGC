@@ -6,6 +6,8 @@
 
 <p align="center"><a href="README.md">English</a> · <b>Español</b></p>
 
+<p align="center"><a href="https://recomplauncher.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://recomplauncher.com/assets/press/launcher/badge-light.svg"><img alt="Get it on RecompLauncher" src="https://recomplauncher.com/assets/press/launcher/badge-dark.svg" height="48"></picture></a></p>
+
 Una versión nativa para PC de *Harvest Moon: Magical Melody* de GameCube. El
 código del propio juego se traduce por adelantado a C++ y se compila en un
 programa de Windows que corre en tu procesador, Intel, AMD o ARM, sin ningún
@@ -184,6 +186,13 @@ cerca del mínimo, lo más seguro es jugar a 30 fps.
    la ventana). La primera vez, el juego se arma para tu computadora: tarda
    unos minutos, y ya no vuelve a hacerlo hasta la siguiente actualización.
 5. Presiona **Jugar**.
+
+**Con [RecompLauncher](https://recomplauncher.com).** El paquete trae un
+`recomplauncher.json`, así que RecompLauncher puede instalarlo, revisar la
+imagen de tu disco, preparar el juego sin abrir la ventana del launcher,
+mostrar las opciones y los mods en la página del juego y arrancarlo. Usa el
+mismo launcher (`HarvestMoonMM.exe --prepare <imagen>` y `--play`), así que el
+juego, las opciones y las partidas son los mismos de las dos formas.
 
 ### Controles
 
