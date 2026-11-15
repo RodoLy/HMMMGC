@@ -408,7 +408,7 @@ LINES: dict[str, dict[str, list[str]]] = {
     "goddess": {
         "e": [
             "Welcome to my spring, you two. Don't be afraid. I am the Harvest Goddess.",
-            "I have watched over this town, and over the great love the two of you share.",
+            "From my spring I have seen the great love the two of you share.",
             "A little one has come into my care. A baby with no family to hold it.",
             "Your home is so full of love…|Would you raise this child as your own?",
             "A baby… for us? Yes! We'll love this child with all our hearts!",
@@ -419,7 +419,7 @@ LINES: dict[str, dict[str, list[str]]] = {
         ],
         "s": [
             "Bienvenidos a mi manantial. No tengan miedo. Soy la Diosa Cosecha.",
-            "He cuidado de este pueblo y del gran amor que se tienen ustedes dos.",
+            "Desde mi manantial he visto el gran amor que se tienen ustedes dos.",
             "Un pequeño ha quedado a mi cuidado. Un bebé sin una familia que lo abrace.",
             "Su hogar está tan lleno de amor…|¿Querrían criar a este bebé como su hijo?",
             "¿Un bebé… para nosotros? ¡Sí! ¡Lo querremos con todo el corazón!",
@@ -430,7 +430,7 @@ LINES: dict[str, dict[str, list[str]]] = {
         ],
         "f": [
             "Bienvenue à ma source, vous deux. N'ayez pas peur. Je suis la déesse des récoltes.",
-            "J'ai veillé sur ce village, et sur le grand amour qui vous unit.",
+            "Depuis ma source, j'ai vu le grand amour qui vous unit.",
             "Un petit être m'a été confié. Un bébé sans famille pour le chérir.",
             "Votre foyer est si plein d'amour…|Voulez-vous élever cet enfant comme le vôtre ?",
             "Un bébé… pour nous ? Oui ! Nous l'aimerons de tout notre cœur !",
@@ -441,7 +441,7 @@ LINES: dict[str, dict[str, list[str]]] = {
         ],
         "g": [
             "Willkommen an meiner Quelle, ihr beiden. Habt keine Angst. Ich bin die Erntegöttin.",
-            "Ich habe über dieses Dorf gewacht und über die große Liebe, die euch verbindet.",
+            "Von meiner Quelle aus habe ich die große Liebe gesehen, die euch verbindet.",
             "Ein Kleines ist in meine Obhut gekommen. Ein Baby ohne Familie.",
             "Euer Zuhause ist so voller Liebe …|Wollt ihr dieses Kind als euer eigenes großziehen?",
             "Ein Baby … für uns? Ja! Wir werden es von ganzem Herzen lieben!",
@@ -452,7 +452,7 @@ LINES: dict[str, dict[str, list[str]]] = {
         ],
         "i": [
             "Benvenuti alla mia sorgente. Non abbiate paura. Sono la Dea delle messi.",
-            "Ho vegliato su questo villaggio e sul grande amore che vi unisce.",
+            "Dalla mia sorgente ho visto il grande amore che vi unisce.",
             "Un piccolo è stato affidato a me. Un bimbo senza una famiglia che lo abbracci.",
             "La vostra casa è così piena d'amore…|Vorreste crescere questo bimbo come vostro figlio?",
             "Un bimbo… per noi? Sì! Lo ameremo con tutto il cuore!",
