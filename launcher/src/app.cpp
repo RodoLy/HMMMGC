@@ -7,7 +7,6 @@
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
-#include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -21,8 +20,6 @@ namespace {
 
 using texts::Text;
 using texts::text;
-
-constexpr const char* PACKAGE_VERSION = HMMM_PACKAGE_VERSION;
 
 // The disc images the dialog offers.
 constexpr const char* DISC_PATTERN = "iso;gcm;rvz;wia;gcz;ciso";
@@ -73,26 +70,9 @@ void App::apply_language() {
 
 void App::save_settings() { settings_.save(player_.settings); }
 
-void App::read_prepared() {
-    prepared_ = {};
-    std::ifstream stream(player_.game / "prepared.json", std::ios::binary);
-    const nlohmann::json document = nlohmann::json::parse(stream, nullptr, /*allow_exceptions=*/false);
-    if (!document.is_object()) {
-        return;
-    }
-    prepared_.exists = true;
-    prepared_.game = document.value("game", "");
-    prepared_.disc = document.value("disc", "");
-    prepared_.source_disc = document.value("source_disc", "");
-    prepared_.program = document.value("program", "");
-    prepared_.package_version = document.value("package_version", "");
-}
+void App::read_prepared() { prepared_ = PreparedGame::read(player_); }
 
-bool App::prepared_is_current() const {
-    return prepared_.exists && prepared_.package_version == PACKAGE_VERSION && !prepared_.program.empty() &&
-           file_exists(player_.game / paths::from_utf8(prepared_.program)) &&
-           file_exists(paths::from_utf8(prepared_.disc));
-}
+bool App::prepared_is_current() const { return prepared_.is_current(player_); }
 
 // The disc the player chose before, if it is still there.
 std::string App::remembered_disc() const {
@@ -105,19 +85,7 @@ std::string App::remembered_disc() const {
 }
 
 // The mods the package's runtime has (the kit's recipe), which are the game's.
-std::vector<std::string> App::package_mods() const {
-    std::ifstream stream(package_.kit / "recipe.json", std::ios::binary);
-    const nlohmann::json recipe = nlohmann::json::parse(stream, nullptr, /*allow_exceptions=*/false);
-    std::vector<std::string> ids;
-    if (recipe.is_object() && recipe.contains("mods") && recipe["mods"].is_array()) {
-        for (const auto& id : recipe["mods"]) {
-            if (id.is_string()) {
-                ids.push_back(id.get<std::string>());
-            }
-        }
-    }
-    return ids;
-}
+std::vector<std::string> App::package_mods() const { return kit_mods(package_); }
 
 std::string App::error_message(const std::string& reason) const {
     const std::pair<const char*, Text> reasons[] = {
@@ -161,7 +129,7 @@ void App::start_preparation(const std::string& disc) {
     settings_.set(settings::DISC_IMAGE, disc);
     save_settings();
     toast_.clear();
-    preparation_.start(package_, player_, disc, PACKAGE_VERSION);
+    preparation_.start(package_, player_, disc, HMMM_PACKAGE_VERSION);
     if (tab_ == Tab::Game) {
         selected_ = 0;
     }
@@ -179,47 +147,8 @@ void App::play() {
     if (!prepared_is_current()) {
         return;
     }
-    std::vector<std::string> enabled;
-    std::vector<std::pair<std::string, std::string>> environment;
-    for (const mods::Mod& mod : mods_) {
-        if (settings_.mod_enabled(mod.id)) {
-            enabled.push_back(mod.id);
-        }
-        for (const mods::Setting& setting : mod.settings) {
-            if (!setting.environment.empty()) {
-                const int value =
-                    settings_.number(setting.key.c_str(), setting.fallback, setting.minimum, setting.maximum);
-                environment.emplace_back(setting.environment, std::to_string(value));
-            }
-        }
-    }
-    std::string mod_list;
-    for (const std::string& id : enabled) {
-        mod_list += (mod_list.empty() ? "" : ",") + id;
-    }
-    // SDL writes numbers with a point whatever the computer's language: the game reads "1.5".
-    char resolution[16];
-    SDL_snprintf(resolution, sizeof(resolution), "%g",
-                 settings::resolution_scale(settings_.one_of(settings::RESOLUTION, settings::RESOLUTIONS)));
-
-    ChildProcess::Options options;
-    options.arguments = {
-        paths::utf8(player_.game / paths::from_utf8(prepared_.program)),
-        "--disc", prepared_.disc,
-        "--symbols", paths::utf8(package_.symbols),
-        "--settings", paths::utf8(player_.settings),
-        "--mods", mod_list.empty() ? "none" : mod_list,
-        "--resolution-scale", resolution,
-        "--fullscreen", settings_.flag(settings::FULLSCREEN, false) ? "1" : "0",
-        "--widescreen", settings_.flag(settings::WIDESCREEN, false) ? "1" : "0",
-        "--frame-rate", std::to_string(settings_.one_of(settings::FRAME_RATE, settings::FRAME_RATES)),
-        "--volume", std::to_string(settings_.number(settings::VOLUME, 100, 0, 100)),
-    };
-    options.environment = std::move(environment);
-    options.working_directory = paths::utf8(player_.game);
-    options.output_file = paths::utf8(player_.game_log);
     std::string error;
-    game_ = ChildProcess::start(options, error);
+    game_ = ChildProcess::start(game_start_options(package_, player_, settings_, mods_, prepared_), error);
     if (game_ == nullptr) {
         toast_ = std::string(text(Text::GameNotStarted)) + " (" + error + ")";
         return;
@@ -388,7 +317,7 @@ std::vector<App::Row> App::game_rows() {
             play_row.hint = text(Text::Cancelled);
         } else if (disc.empty()) {
             play_row.hint = text(Text::ChooseDiscHint);
-        } else if (prepared_.exists && prepared_.package_version != PACKAGE_VERSION) {
+        } else if (prepared_.exists && prepared_.package_version != HMMM_PACKAGE_VERSION) {
             play_row.hint = text(Text::UpdateBody);
         } else {
             play_row.hint = text(Text::PrepareHint);

@@ -10,6 +10,7 @@
 #include "child_process.h"
 #include "controls.h"
 #include "controls_profile.h"
+#include "game_start.h"
 #include "mods.h"
 #include "paths.h"
 #include "preparation.h"
@@ -129,15 +130,7 @@ private:
     bool quit_ = false;
     bool still_ = false;
 
-    struct Prepared {
-        bool exists = false;
-        std::string game;
-        std::string disc;
-        std::string source_disc;
-        std::string program;
-        std::string package_version;
-    };
-    Prepared prepared_;
+    PreparedGame prepared_;
     Preparation preparation_;
     Preparation::State seen_state_ = Preparation::State::Idle;
     std::unique_ptr<ChildProcess> game_;

@@ -10,8 +10,11 @@
 //   A disc image given (or dropped on the program) is prepared right away, as if chosen.
 //   --screen game|options|mods|controls opens that tab first (to look at it).
 //   --still draws without animations (to take pictures of the tabs that can be compared).
+//   --prepare <disc image> and --play do what Prepare and Play do, without the window, for another
+//   launcher (headless.h).
 
 #include "app.h"
+#include "headless.h"
 #include "lettering.h"
 #include "look.h"
 
@@ -38,6 +41,8 @@ struct Arguments {
     std::string disc;
     std::optional<App::Tab> tab;
     bool still = false;
+    std::optional<std::string> prepare;  // --prepare: the disc to prepare, without the window
+    bool play = false;                   // --play: start the game, without the window
 };
 
 Arguments parse_arguments(int argc, char** argv) {
@@ -57,6 +62,10 @@ Arguments parse_arguments(int argc, char** argv) {
             }
         } else if (argument == "--still") {
             arguments.still = true;
+        } else if (argument == "--prepare" && i + 1 < argc) {
+            arguments.prepare = argv[++i];
+        } else if (argument == "--play") {
+            arguments.play = true;
         } else if (!argument.starts_with("-")) {
             arguments.disc = argument;
         }
@@ -105,6 +114,12 @@ void round_corners(SDL_Window* window) {
 int main(int argc, char** argv) {
     const Arguments arguments = parse_arguments(argc, argv);
     SDL_SetAppMetadata(WINDOW_TITLE, HMMM_PACKAGE_VERSION, "io.github.rodoly.hmmmgc.launcher");
+    if (arguments.prepare) {
+        return headless::prepare(*arguments.prepare);
+    }
+    if (arguments.play) {
+        return headless::play();
+    }
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, WINDOW_TITLE, SDL_GetError(), nullptr);
         return 1;
