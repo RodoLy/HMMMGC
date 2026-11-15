@@ -1,2 +1,5 @@
-// The launcher's Windows resources: its application manifest (resource 1, type 24).
+// The launcher's Windows resources: its application manifest (resource 1, type 24) and its icon,
+// the musical note in a bubble (made by tools/make_launcher_icon.py). Windows shows the first icon
+// of the program in Explorer and on the taskbar, and SDL gives it to the launcher's window.
 1 24 "launcher.manifest"
+1 ICON "launcher.ico"
