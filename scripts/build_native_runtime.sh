@@ -138,6 +138,13 @@ size_crop_grid() {
     python3 "$REPOSITORY_ROOT/tools/size_crop_grid.py" --translation "$TRANSLATED_GAME_DIRECTORY"
 }
 
+# So is the farm's mesh of tilled soil, for the far_camera mod (tools/size_ground_mesh.py,
+# runtime/src/ground_mesh.h).
+size_ground_mesh() {
+    step "Letting the runtime size the farm's mesh of tilled soil"
+    python3 "$REPOSITORY_ROOT/tools/size_ground_mesh.py" --translation "$TRANSLATED_GAME_DIRECTORY"
+}
+
 # The mods are compiled into the runtime; the translated code gets a call at every place
 # where they act (tools/insert_mod_hooks.py), and the mods' names for the game's functions
 # come from symbols.txt (tools/export_mod_symbols.py).
@@ -171,6 +178,7 @@ main() {
     build_translator
     translate_game
     size_crop_grid
+    size_ground_mesh
     mark_mod_hooks
     compile_runtime "$@"
     step "Done"

@@ -14,8 +14,9 @@ scripts/build_native_runtime.sh, with the kit in place of compiling the runtime:
                 the SHA-1 of its main.dol) and main.dol is read out of it
   2. translate  the translator turns main.dol into C++ (tools/write_translator_project.py
                 writes its project)
-  3. adapt      the farm's crop grid (tools/size_crop_grid.py) and the places where the mods
-                act (tools/insert_mod_hooks.py)
+  3. adapt      the farm's crop grid (tools/size_crop_grid.py), its mesh of tilled soil
+                (tools/size_ground_mesh.py) and the places where the mods act
+                (tools/insert_mod_hooks.py)
   4. compile    the translated game, with the kit's commands, on every processor
   5. link       the game with the kit's runtime, into the program
   6. finish     the files the program needs beside it, and prepared.json
@@ -330,7 +331,9 @@ def translate(dol: Path, translation: Path, translator: Path) -> None:
 
 def adapt(game: Path, recipe: dict, kit: Path, c_compiler: Path) -> None:
     run(python_tool("size_crop_grid.py", "--translation", game), "the crop grid")
-    progress(1, 2)
+    progress(1, 3)
+    run(python_tool("size_ground_mesh.py", "--translation", game), "the mesh of tilled soil")
+    progress(2, 3)
     mods = [argument for mod in recipe["mods"] for argument in ("--mod", mod)]
     symbol_header = recipe["symbol_header"].replace("{kit}", kit.as_posix())
     run(
@@ -346,7 +349,7 @@ def adapt(game: Path, recipe: dict, kit: Path, c_compiler: Path) -> None:
         ),
         "the mod hooks",
     )
-    progress(2, 2)
+    progress(3, 3)
 
 
 # -- Compiling and linking ------------------------------------------------------------------------

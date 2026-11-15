@@ -261,8 +261,11 @@ pieza por pieza, en el orden de arriba)
       propia (`crop_grid.h`; con zoom 0.5, 41 por 41 y hasta 16 casillas a los
       lados, y 51 por 51 y 21 en panorámica). El tamaño se elige al abrir el
       juego, con el zoom del launcher; con zoom 1 o más cerca queda el cuadro
-      del juego. Y con los personajes (gente, niños, mascotas y animales de
-      granja): cada uno se esconde y se detiene si está a más de unas 14
+      del juego. La tierra labrada y regada la dibuja otro objeto (GROUND), una
+      malla de 20 por 20 puntos alrededor del jugador; con el mod far_camera
+      `tools/size_ground_mesh.py` la deja de 50 por 50, con su propio lugar
+      para sus listas de dibujo (`ground_mesh.h`). Y con los personajes (gente,
+      niños, mascotas y animales de granja): cada uno se esconde y se detiene si está a más de unas 14
       unidades del punto que sigue la cámara (el juego compara con 25 una
       medida que es raíz de 3 veces la distancia), y alejado la gente y las
       gallinas aparecían de golpe cerca de las orillas. Mientras el zoom

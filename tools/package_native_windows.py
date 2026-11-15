@@ -71,6 +71,7 @@ PREPARATION_TOOLS = (
     "prepare_game.py",
     "write_translator_project.py",
     "size_crop_grid.py",
+    "size_ground_mesh.py",
     "insert_mod_hooks.py",
 )
 # What of the repository the tools read, relative to its root.

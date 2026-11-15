@@ -40,7 +40,7 @@ python3 tools/prepare_game.py --disc <imagen> --kit <kit> --translator <Translat
 |---|---|
 | `disc` | Si la imagen está comprimida (RVZ, WIA, GCZ, CISO, WBFS), nodtool la convierte a ISO en `<carpeta>/disc/G4AEE9.iso`. Comprueba que el disco sea Harvest Moon: Magical Melody de EE. UU. (`G4AEE9`, revisión 0) y que su `main.dol` tenga el SHA-1 que espera el port, y lo saca de la imagen. |
 | `translate` | `tools/write_translator_project.py` escribe el proyecto y el traductor traduce `main.dol` a C++. |
-| `adapt` | La cuadrícula de cultivos (`tools/size_crop_grid.py`) y los lugares donde actúan los mods (`tools/insert_mod_hooks.py`). |
+| `adapt` | La cuadrícula de cultivos (`tools/size_crop_grid.py`), la malla de tierra labrada (`tools/size_ground_mesh.py`) y los lugares donde actúan los mods (`tools/insert_mod_hooks.py`). |
 | `compile` | Compila el juego traducido con los comandos del kit, en todos los procesadores a la vez. |
 | `link` | Lo enlaza con el runtime del kit: el programa. |
 | `finish` | Copia junto al programa lo que necesita (en Windows, las DLL de Dawn) y escribe `prepared.json`. |
@@ -235,7 +235,7 @@ python3 tools/prepare_game.py --disc <image> --kit <kit> --translator <Translato
 |---|---|
 | `disc` | If the image is compressed (RVZ, WIA, GCZ, CISO, WBFS), nodtool converts it to ISO in `<folder>/disc/G4AEE9.iso`. It checks that the disc is Harvest Moon: Magical Melody for the USA (`G4AEE9`, revision 0) and that its `main.dol` has the SHA-1 the port expects, and takes it out of the image. |
 | `translate` | `tools/write_translator_project.py` writes the project and the translator translates `main.dol` to C++. |
-| `adapt` | The crop grid (`tools/size_crop_grid.py`) and the places where the mods act (`tools/insert_mod_hooks.py`). |
+| `adapt` | The crop grid (`tools/size_crop_grid.py`), the mesh of tilled soil (`tools/size_ground_mesh.py`) and the places where the mods act (`tools/insert_mod_hooks.py`). |
 | `compile` | Compiles the translated game with the kit's commands, on every processor at once. |
 | `link` | Links it with the kit's runtime: the program. |
 | `finish` | Copies beside the program what it needs (on Windows, Dawn's DLLs) and writes `prepared.json`. |

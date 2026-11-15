@@ -50,8 +50,8 @@ namespace crop_grid {
 void size_for_view(float zoom, bool widescreen);
 
 // The biggest grid the runtime has room for, whatever the view: for the far_camera mod, whose
-// camera reaches past what size_for_view() works out for zoom 0.5 in some places of the farm (the
-// tilled soil of the outer rows was missing at the top of the screen).
+// camera (the game's farthest, then zoomed out to 50%) reaches past what size_for_view() works
+// out for zoom 0.5. The tilled soil under the crops is another object's (ground_mesh.h).
 void size_for_farthest_view();
 
 // Whether the grid sized when the game started also covers the view of that zoom and shape;

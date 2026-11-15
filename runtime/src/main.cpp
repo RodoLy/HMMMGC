@@ -23,6 +23,7 @@
 #include "graphics/camera_view.h"
 #include "graphics/far_camera.h"
 #include "graphics/frame_interpolation.h"
+#include "ground_mesh.h"
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
@@ -149,10 +150,11 @@ int main(int argc, char** argv) {
         InitializeDataSections();
         console_boot::prepare_memory(disc);
         game_language::apply(disc, settings::GAME_LANGUAGES[player_options::current().language()]);
-        // With the game's data in memory: the farm's grid of crops, for the farthest the camera can
-        // go (the far_camera mod pulls it back past the game's limit).
+        // With the game's data in memory: the farm's grid of crops and its mesh of tilled soil, for
+        // the farthest the camera can go (the far_camera mod pulls it back past the game's limit).
         if (player_options::mod_enabled(far_camera::MOD_ID)) {
             crop_grid::size_for_farthest_view();
+            ground_mesh::size_for_farthest_view();
         }
         std::vector<std::string> enabled_mods;
         for (const std::string& id : native_mods::compiled_in()) {
