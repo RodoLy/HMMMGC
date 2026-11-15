@@ -178,6 +178,26 @@
       "when": { "mods/longer_days": "true" }
     },
     {
+      "id": "gentle_stamina",
+      "label": "Gentler stamina",
+      "group": "Mods",
+      "help": "Tools, fishing and work spend less stamina.",
+      "choices": [
+        { "label": "Off", "set": { "mods/gentle_stamina": "false" } },
+        { "label": "On", "set": { "mods/gentle_stamina": "true" } }
+      ],
+      "defaults": { "mods/gentle_stamina": "false" }
+    },
+    {
+      "id": "stamina_cost_percent",
+      "label": "Stamina spent",
+      "group": "Mods",
+      "help": "100% is what the original game spends; 50% is half.",
+      "slider": { "key": "staminaCostPercent", "min": 10, "max": 100, "step": 10, "format": "%g" },
+      "defaults": { "staminaCostPercent": "50" },
+      "when": { "mods/gentle_stamina": "true" }
+    },
+    {
       "id": "far_camera",
       "label": "Farther camera",
       "group": "Mods",

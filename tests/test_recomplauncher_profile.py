@@ -13,6 +13,8 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
 REPOSITORY = Path(__file__).resolve().parent.parent
 PROFILE_FILE = REPOSITORY / "packaging" / "native" / "recomplauncher.json"
 PROFILE = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))
@@ -69,6 +71,7 @@ def test_the_options_are_those_of_settings_json_with_the_values_the_game_accepts
         "volume": setting_name("VOLUME"),
         "player_speed_percent": setting_name("PLAYER_SPEED"),
         "day_length_percent": mod_setting("longer_days")["key"],
+        "stamina_cost_percent": mod_setting("gentle_stamina")["key"],
     }
 
 
@@ -78,16 +81,20 @@ def mod_setting(mod_id: str) -> dict:
     return setting
 
 
-def test_the_day_length_slider_has_the_limits_of_the_mod():
-    setting = mod_setting("longer_days")
-    slider = next(entry for entry in PROFILE["settings"] if entry["id"] == "day_length_percent")
+@pytest.mark.parametrize(
+    ("mod_id", "slider_id"),
+    [("longer_days", "day_length_percent"), ("gentle_stamina", "stamina_cost_percent")],
+)
+def test_a_mod_s_slider_has_the_limits_of_the_mod(mod_id: str, slider_id: str):
+    setting = mod_setting(mod_id)
+    slider = next(entry for entry in PROFILE["settings"] if entry["id"] == slider_id)
     assert (slider["slider"]["min"], slider["slider"]["max"], slider["slider"]["step"]) == (
         setting["minimum"],
         setting["maximum"],
         setting["step"],
     )
     assert slider["defaults"] == {setting["key"]: str(setting["default"])}
-    assert slider["when"] == {"mods/longer_days": "true"}
+    assert slider["when"] == {f"mods/{mod_id}": "true"}
 
 
 def test_every_mod_of_the_runtime_can_be_turned_on():

@@ -1,0 +1,32 @@
+{
+  "id": "gentle_stamina",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Estamina más amable",
+    "en": "Gentler stamina"
+  },
+  "summary": {
+    "es": "Las herramientas, la pesca y el trabajo gastan menos estamina.",
+    "en": "Tools, fishing and work spend less stamina."
+  },
+  "description": {
+    "es": "Hace que todo lo que gasta estamina (las herramientas, la pesca, correr mucho) gaste solo una parte: 100% es el juego original y 50% la mitad. Lo que devuelve estamina, como comer o dormir, no cambia, y el cansancio sigue haciendo que el trabajo cueste más.",
+    "en": "Makes everything that spends stamina (the tools, fishing, running a long way) spend only a share of it: 100% is the original game and 50% half. What gives stamina back, such as eating or sleeping, does not change, and being tired still makes work cost more."
+  },
+  "settings": [
+    {
+      "type": "percent",
+      "key": "staminaCostPercent",
+      "environment": "HM_MM_STAMINA_COST_PERCENT",
+      "minimum": 10,
+      "maximum": 100,
+      "default": 50,
+      "step": 10,
+      "label": {
+        "es": "Estamina que se gasta",
+        "en": "Stamina spent"
+      }
+    }
+  ]
+}
