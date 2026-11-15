@@ -96,8 +96,12 @@ target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
 target_link_libraries(HarvestMoonMM PRIVATE launcher_imgui SDL3::SDL3-static nlohmann_json::nlohmann_json)
 if(WIN32)
     # The manifest: UTF-8 as the program's code page (paths with any letter), and sharp text on
-    # screens with scaling. The C++ runtime is linked in, so that only Windows' DLLs are needed.
+    # screens with scaling; and the icon. The C++ runtime is linked in, so that only Windows' DLLs
+    # are needed.
     target_sources(HarvestMoonMM PRIVATE windows/launcher.rc)
+    # The resource compiler does not tell which files the .rc reads: a new icon rebuilds it too.
+    set_source_files_properties(windows/launcher.rc PROPERTIES OBJECT_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.manifest;${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.ico")
     target_link_options(HarvestMoonMM PRIVATE -static)
     # The rounded corners of the window without a frame (Windows 11).
     target_link_libraries(HarvestMoonMM PRIVATE dwmapi)
