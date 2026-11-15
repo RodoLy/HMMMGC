@@ -1,0 +1,22 @@
+{
+  "id": "marry_anyone",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Casarse con quien quieras",
+    "en": "Marry anyone"
+  },
+  "summary": {
+    "es": "Cualquiera de las veinte parejas, seas chico o chica.",
+    "en": "Any of the twenty partners, as the boy or as the girl."
+  },
+  "description": {
+    "es": "En el juego original, el chico solo puede casarse con las diez chicas y la chica con los diez chicos. Con este mod puedes cortejar a cualquiera de los veinte: sus escenas de amor salen igual, aceptan la pluma azul, la boda se hace con su propia escena (te viste como tu personaje) y vive en tu casa como tu pareja. Si tu pareja es del mismo sexo que tú, en sus primeras palabras de casados te llama esposa o esposo según seas, y no hay embarazo: la escena para tener un hijo llegará en una versión próxima.",
+    "en": "In the original game the boy can only marry the ten girls and the girl the ten boys. With this mod you can court any of the twenty: their love scenes play as well, they accept the blue feather, the wedding uses their own scene (dressing you as your character) and they live in your house as your spouse. If your spouse is of your own sex, their first words as a married couple call you husband or wife as you are, and there is no pregnancy: the scene to have a child will come in a later version."
+  },
+  "warning": {
+    "es": "Si te casas o te comprometes con alguien de tu mismo sexo, esa partida lo sigue usando aunque lo desactives. En las demás partidas, desactivado no hace nada.",
+    "en": "If you marry or get engaged to someone of your own sex, that save keeps using it even if you turn it off. In other saves, turned off it does nothing."
+  },
+  "settings": []
+}

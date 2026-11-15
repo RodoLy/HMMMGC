@@ -130,6 +130,7 @@ enum class Text {
     ModNamePlayerSpeed,
     ModNameCarrySpeed,
     ModNameFarCamera,
+    ModNameMarryAnyone,
 
     ModOn,
     ModOff,

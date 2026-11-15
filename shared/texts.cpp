@@ -141,6 +141,7 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::ModNamePlayerSpeed, "Personaje más rápido", "Faster character"},
     {Text::ModNameCarrySpeed, "Sin frenos al cargar", "No slowdown when carrying"},
     {Text::ModNameFarCamera, "Cámara más lejos", "Farther camera"},
+    {Text::ModNameMarryAnyone, "Casarse con quien quieras", "Marry anyone"},
     {Text::ControllerSettings, "Ajustes del control", "Controller settings"},
     {Text::HideMenu, "Ocultar (F10)", "Hide (F10)"},
     {Text::GameLanguage, "Idioma", "Language"},

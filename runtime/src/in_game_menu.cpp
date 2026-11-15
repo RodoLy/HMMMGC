@@ -322,6 +322,7 @@ std::string mod_name(const std::string& id) {
         {"player_speed", Text::ModNamePlayerSpeed},
         {"carry_speed", Text::ModNameCarrySpeed},
         {"far_camera", Text::ModNameFarCamera},
+        {"marry_anyone", Text::ModNameMarryAnyone},
     };
     for (const auto& [known, name] : names) {
         if (id == known) {

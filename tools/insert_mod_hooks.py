@@ -26,7 +26,7 @@ hook. Running the tool again does nothing new: every insertion carries a marker.
 
 Usage / Uso:
     python3 tools/insert_mod_hooks.py --mod jamie_marriage --mod player_speed --mod carry_speed \
-        --mod far_camera
+        --mod far_camera --mod marry_anyone
 """
 
 import argparse
