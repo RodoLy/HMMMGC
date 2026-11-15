@@ -5,6 +5,7 @@
 #include "guest_memory.h"
 #include "runtime_log.h"
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstring>
@@ -26,11 +27,15 @@ uint32_t hmmm_ground_mesh_marks = 0x802B9008u + 5200;
 namespace ground_mesh {
 namespace {
 
-// Points to a side: the game's, and with the mod. The mesh reaches the bigger one less 1 tiles
-// west and north of the player (24) and the bigger one to the east and south (25), as far as the
-// farm's grid of crops for the farthest view (crop_grid.cpp).
+// Points to a side: the game's, and for the farthest view (zoom 0.5), where the mesh reaches 24
+// tiles west and north of the player and 25 to the east and south, as far as the farm's grid of
+// crops (crop_grid.cpp). In between the size grows with the zoom, in steps of 6 points: a new
+// size starts the mesh over (every point's height is looked up again in one frame), so it only
+// changes every few presses of the game's button.
 constexpr uint32_t GAME_SIZE = 20;
 constexpr uint32_t FARTHEST_SIZE = 50;
+constexpr uint32_t SIZE_STEP = 6;
+constexpr float FARTHEST_ZOOM = 0.5f;
 // The game's constant with the tiles the mesh starts west and north of the player (read only by
 // fn_80064108), to check that this is the game the translation was changed for.
 constexpr uint32_t BEHIND_CONSTANT = 0x80323060u;
@@ -53,6 +58,11 @@ constexpr uint32_t ROOM_SIZE = 0x80322584u;
 constexpr uint32_t ROOM_TAKEN = 0x80322588u;
 constexpr uint32_t ROOM_OFFSET = 0x8032258Cu;
 constexpr std::array<uint32_t, 5> ROOM_WORDS{ROOM_START, ROOM_NEXT, ROOM_SIZE, ROOM_TAKEN, ROOM_OFFSET};
+// Where fn_80064108 keeps the mesh's first tile of the frame before; fn_8006490C starts it at
+// -10000, so that every point is new to the next update.
+constexpr uint32_t PREVIOUS_FIRST_TILE_X = 0x80321E70u;
+constexpr uint32_t PREVIOUS_FIRST_TILE_Z = 0x80321E74u;
+constexpr uint32_t NO_PREVIOUS_TILE = static_cast<uint32_t>(-10000);
 
 bool g_bigger = false;
 // A room for each of the two display lists of a drawing (the soil, then the marks), used in
@@ -64,6 +74,27 @@ uint32_t g_next_room = 0;
 std::array<uint32_t, ROOM_WORDS.size()> g_game_room{};
 bool g_lent = false;
 
+// The size for a zoom: the game's at zoom 1, the farthest at zoom 0.5, and in between the next
+// step up from a straight line between them.
+uint32_t size_for_zoom(float zoom) {
+    const float far = std::clamp((1.f - zoom) / (1.f - FARTHEST_ZOOM), 0.f, 1.f);
+    const float needed = static_cast<float>(GAME_SIZE) + far * static_cast<float>(FARTHEST_SIZE - GAME_SIZE);
+    uint32_t size = GAME_SIZE;
+    while (static_cast<float>(size) < needed && size < FARTHEST_SIZE) {
+        size = std::min(size + SIZE_STEP, FARTHEST_SIZE);
+    }
+    return size;
+}
+
+void use_size(uint32_t size) {
+    hmmm_ground_mesh_size = size;
+    hmmm_ground_mesh_squares = size - 1;
+    hmmm_ground_mesh_points = size * size;
+    hmmm_ground_mesh_row = size * POSITION_BYTES;
+    hmmm_ground_mesh_corners = (size - 1) * (size - 1) * 6;
+    hmmm_ground_mesh_behind = static_cast<float>(size / 2 - 1);
+}
+
 }  // namespace
 
 void size_for_farthest_view() {
@@ -73,14 +104,9 @@ void size_for_farthest_view() {
                              "the size of the mesh of tilled soil is not where it was expected; it stays the game's");
         return;
     }
-    const uint32_t size = FARTHEST_SIZE;
-    const uint32_t points = size * size;
-    hmmm_ground_mesh_size = size;
-    hmmm_ground_mesh_squares = size - 1;
-    hmmm_ground_mesh_points = points;
-    hmmm_ground_mesh_row = size * POSITION_BYTES;
-    hmmm_ground_mesh_corners = (size - 1) * (size - 1) * 6;
-    hmmm_ground_mesh_behind = static_cast<float>(size / 2 - 1);
+    // The tables and the rooms, for the farthest; the mesh starts with the game's size.
+    use_size(FARTHEST_SIZE);
+    const uint32_t points = hmmm_ground_mesh_points;
     hmmm_ground_mesh_positions = guest_memory::reserve_runtime_memory(points * POSITION_BYTES, 32);
     hmmm_ground_mesh_soil = guest_memory::reserve_runtime_memory(points, 32);
     hmmm_ground_mesh_marks = guest_memory::reserve_runtime_memory(points, 32);
@@ -88,10 +114,26 @@ void size_for_farthest_view() {
     for (uint32_t& room : g_list_rooms) {
         room = guest_memory::reserve_runtime_memory(g_list_room_size, 32);
     }
+    use_size(GAME_SIZE);
     g_bigger = true;
     hmmm_ground_mesh_reset();
-    runtime_log::info("farm", "tilled soil drawn up to %u tiles from the player (the game's %u)", size / 2 - 1,
-                      GAME_SIZE / 2 - 1);
+    runtime_log::info("farm", "tilled soil drawn up to %u tiles from the player when the camera is farthest",
+                      FARTHEST_SIZE / 2 - 1);
+}
+
+void follow_zoom(float zoom) {
+    if (!g_bigger) {
+        return;
+    }
+    const uint32_t size = size_for_zoom(zoom);
+    if (size == hmmm_ground_mesh_size) {
+        return;
+    }
+    use_size(size);
+    hmmm_ground_mesh_reset();
+    guest_memory::write32(PREVIOUS_FIRST_TILE_X, NO_PREVIOUS_TILE);
+    guest_memory::write32(PREVIOUS_FIRST_TILE_Z, NO_PREVIOUS_TILE);
+    runtime_log::info("farm", "tilled soil drawn up to %u tiles from the player", size / 2 - 1);
 }
 
 }  // namespace ground_mesh

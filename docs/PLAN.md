@@ -263,8 +263,8 @@ pieza por pieza, en el orden de arriba)
       juego, con el zoom del launcher; con zoom 1 o más cerca queda el cuadro
       del juego. La tierra labrada y regada la dibuja otro objeto (GROUND), una
       malla de 20 por 20 puntos alrededor del jugador; con el mod far_camera
-      `tools/size_ground_mesh.py` la deja de 50 por 50, con su propio lugar
-      para sus listas de dibujo (`ground_mesh.h`). Y con los personajes (gente,
+      `tools/size_ground_mesh.py` la agranda con el zoom, hasta 50 por 50, con
+      su propio lugar para sus listas de dibujo (`ground_mesh.h`). Y con los personajes (gente,
       niños, mascotas y animales de granja): cada uno se esconde y se detiene si está a más de unas 14
       unidades del punto que sigue la cámara (el juego compara con 25 una
       medida que es raíz de 3 veces la distancia), y alejado la gente y las

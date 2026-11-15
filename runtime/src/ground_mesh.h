@@ -16,8 +16,9 @@
 //
 // With the mod, the runtime gives the game a bigger mesh: tools/size_ground_mesh.py changes
 // the game's translated GROUND functions to take the mesh's size and the addresses of its
-// tables from the variables below, and size_for_farthest_view() sets them, putting the
-// bigger tables in the runtime's memory (guest_memory.h). Its display lists no longer fit in
+// tables from the variables below; size_for_farthest_view() puts tables for the farthest view
+// in the runtime's memory (guest_memory.h), and follow_zoom() sizes the mesh for the zoom of
+// each frame, so that with the camera close the game does no more work than it did. Its display lists no longer fit in
 // the game's room, so each of the two gets a room of its own in the runtime's memory, lent
 // to the game's functions just while it is made (hmmm_ground_mesh_list_begins and _ends).
 // Without the mod the variables keep the game's own size and tables, so the game draws
@@ -51,8 +52,13 @@ void hmmm_ground_mesh_list_ends();
 namespace ground_mesh {
 
 // Called before the game runs, once its data is in memory (main.cpp), when the far_camera
-// mod is on: the mesh for the farthest the camera goes (as far as the farm's grid of crops,
-// crop_grid.h).
+// mod is on: room for the mesh of the farthest the camera goes (as far as the farm's grid of
+// crops, crop_grid.h). The mesh keeps the game's size until follow_zoom() changes it.
 void size_for_farthest_view();
+
+// Called before every frame (aurora_host.cpp) with the zoom of the picture (camera_view.h): the
+// mesh's size for it, from the game's at zoom 1 to the farthest at zoom 0.5. Does nothing
+// without size_for_farthest_view().
+void follow_zoom(float zoom);
 
 }  // namespace ground_mesh
