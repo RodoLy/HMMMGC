@@ -5,6 +5,7 @@
 #include <SDL3/SDL_stdinc.h>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <fstream>
 #include <system_error>
 #include <utility>
@@ -69,6 +70,10 @@ ChildProcess::Options game_start_options(const paths::Package& package, const pa
                 environment.emplace_back(setting.environment, std::to_string(value));
             }
         }
+    }
+    // The cheats mod is not in the Mods tab: it goes with the cheats that are on.
+    if (!settings.cheats_on().empty() && std::ranges::find(enabled, settings::CHEATS_MOD) == enabled.end()) {
+        enabled.emplace_back(settings::CHEATS_MOD);
     }
     std::string mod_list;
     for (const std::string& id : enabled) {

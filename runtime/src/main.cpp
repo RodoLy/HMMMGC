@@ -163,6 +163,13 @@ int main(int argc, char** argv) {
             }
         }
         player_options::note_running_mods(enabled_mods);
+        // The cheats mod reads which cheats are on from its variable (shared/settings.h).
+        const std::string cheats = player_options::current().cheats_on();
+#ifdef _WIN32
+        _putenv_s(settings::CHEATS_VARIABLE, cheats.c_str());
+#else
+        setenv(settings::CHEATS_VARIABLE, cheats.c_str(), 1);
+#endif
         native_mods::load(&enabled_mods);
 
         CpuContext& cpu = GetPersistentCpuContext();

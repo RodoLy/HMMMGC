@@ -360,6 +360,9 @@ void draw_mods_menu() {
     }
     const settings::Settings& settings = player_options::current();
     for (const std::string& id : native_mods::compiled_in()) {
+        if (id == settings::CHEATS_MOD) {
+            continue;  // on when a cheat is, in the launcher's options
+        }
         bool on = settings.mod_enabled(id);
         const std::string label = mod_name(id) + "###" + id;
         if (ImGui::Checkbox(label.c_str(), &on)) {

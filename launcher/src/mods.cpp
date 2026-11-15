@@ -41,6 +41,10 @@ std::vector<Mod> load(const std::filesystem::path& folder, const std::vector<std
         mod.name = id;
         std::ifstream stream(folder / id / "mod.json", std::ios::binary);
         const nlohmann::json manifest = nlohmann::json::parse(stream, nullptr, /*allow_exceptions=*/false);
+        // A mod that the launcher turns on by itself (the cheats, from the options) is not listed.
+        if (manifest.is_object() && manifest.value("hidden", false)) {
+            continue;
+        }
         if (manifest.is_object()) {
             mod.version = text_of(manifest, "version");
             if (const auto authors = manifest.find("authors"); authors != manifest.end() && authors->is_array()) {

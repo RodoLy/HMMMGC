@@ -41,6 +41,14 @@ inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the gam
 inline constexpr const char* LANGUAGE = "language";  // of the game's dialogues, the launcher and the menu
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
 
+// The cheats, each a switch in the object "cheats" of the file ({"cheats": {"stopTime": true}}). The
+// cheats mod (mods/cheats) does them: the runtime loads it when one is on and gives it the names of
+// those that are on, separated by commas, in CHEATS_VARIABLE.
+inline constexpr const char* CHEATS = "cheats";
+inline constexpr const char* CHEATS_MOD = "cheats";
+inline constexpr const char* CHEATS_VARIABLE = "HM_MM_CHEATS";
+inline constexpr const char* CHEAT_NAMES[] = {"infiniteStamina", "infiniteMoney", "stopTime", "maxFriendship"};
+
 inline constexpr int RESOLUTIONS[] = {0, 480, 720, 1080, 1440};
 // How many times bigger than the console's 640x480 the game draws for a resolution (0 follows
 // the window): 720 lines is 1.5 times.
@@ -63,8 +71,15 @@ public:
     void set(const char* name, const nlohmann::json& value);
 
     // A mod is off unless the file says it is on: the game is the original one until the player chooses.
+    // The cheats mod is on when a cheat is.
     bool mod_enabled(const std::string& id) const;
     void set_mod_enabled(const std::string& id, bool enabled);
+
+    // A cheat of CHEAT_NAMES; all are off unless the file says otherwise.
+    bool cheat(const std::string& name) const;
+    void set_cheat(const std::string& name, bool on);
+    // The names of the cheats that are on, separated by commas (empty when none is).
+    std::string cheats_on() const;
 
 private:
     nlohmann::json document_ = nlohmann::json::object();

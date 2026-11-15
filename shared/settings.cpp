@@ -79,6 +79,9 @@ int Settings::language() const {
 void Settings::set(const char* name, const nlohmann::json& value) { document_[name] = value; }
 
 bool Settings::mod_enabled(const std::string& id) const {
+    if (id == CHEATS_MOD) {
+        return !cheats_on().empty();
+    }
     const auto mods = document_.find(MODS);
     if (mods == document_.end() || !mods->is_object()) {
         return false;
@@ -92,6 +95,32 @@ void Settings::set_mod_enabled(const std::string& id, bool enabled) {
         document_[MODS] = nlohmann::json::object();
     }
     document_[MODS][id] = enabled;
+}
+
+bool Settings::cheat(const std::string& name) const {
+    const auto cheats = document_.find(CHEATS);
+    if (cheats == document_.end() || !cheats->is_object()) {
+        return false;
+    }
+    const auto found = cheats->find(name);
+    return found != cheats->end() && found->is_boolean() && found->get<bool>();
+}
+
+void Settings::set_cheat(const std::string& name, bool on) {
+    if (!document_.contains(CHEATS) || !document_[CHEATS].is_object()) {
+        document_[CHEATS] = nlohmann::json::object();
+    }
+    document_[CHEATS][name] = on;
+}
+
+std::string Settings::cheats_on() const {
+    std::string names;
+    for (const char* name : CHEAT_NAMES) {
+        if (cheat(name)) {
+            names += (names.empty() ? "" : ",") + std::string(name);
+        }
+    }
+    return names;
 }
 
 }  // namespace settings

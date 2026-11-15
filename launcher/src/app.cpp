@@ -464,6 +464,27 @@ std::vector<App::Row> App::options_rows() {
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
+
+    // The cheats: switches like the ones above, kept in settings.json's "cheats" (shared/settings.h).
+    const auto cheat = [&](const char* name, Text label, Text hint) {
+        Row row;
+        const bool on = settings_.cheat(name);
+        row.label = text(label);
+        row.hint = text(hint);
+        row.value = on ? text(Text::ModOn) : text(Text::ModOff);
+        row.tone = on ? Tone::On : Tone::Off;
+        row.arrows = true;
+        row.change = [this, name, changed](int) {
+            settings_.set_cheat(name, !settings_.cheat(name));
+            changed();
+        };
+        row.activate = [change = row.change] { change(1); };
+        rows.push_back(std::move(row));
+    };
+    cheat("infiniteStamina", Text::CheatInfiniteStamina, Text::CheatInfiniteStaminaHint);
+    cheat("infiniteMoney", Text::CheatInfiniteMoney, Text::CheatInfiniteMoneyHint);
+    cheat("stopTime", Text::CheatStopTime, Text::CheatStopTimeHint);
+    cheat("maxFriendship", Text::CheatMaxFriendship, Text::CheatMaxFriendshipHint);
     return rows;
 }
 
