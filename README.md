@@ -101,6 +101,15 @@ the controller.
 All come off, like the original game; you turn them on in the Mods tab. How to make one:
 [mods/README.md](mods/README.md).
 
+### Cheats
+
+At the end of the launcher's Options tab (and in RecompLauncher, in their own group) there are four
+cheats, all off until you turn them on: **infinite stamina** (work spends none), **infinite money**
+(it stays at 999,999 G), **stop time** (the clock does not move; sleeping still goes on to the next
+day) and **maximum friendship** (with everyone; it cannot be undone in that save, and love and rival
+scenes may start). They are kept in `settings.json`, under `cheats`, and the `cheats` mod does them
+([mods/cheats/mod.c](mods/cheats/mod.c)).
+
 #### Marry Jamie, working in the game
 
 <table>

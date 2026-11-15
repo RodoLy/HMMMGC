@@ -32,7 +32,7 @@
       "file": [{ "path": "{local}/HarvestMoonMM/settings.json" }]
     }
   ],
-  "groups": [{ "id": "Mods" }],
+  "groups": [{ "id": "Mods" }, { "id": "Cheats" }],
   "settings": [
     {
       "id": "language",
@@ -227,6 +227,50 @@
         { "label": "On", "set": { "mods/far_camera": "true" } }
       ],
       "defaults": { "mods/far_camera": "false" }
+    },
+    {
+      "id": "cheat_infinite_stamina",
+      "label": "Infinite stamina",
+      "group": "Cheats",
+      "help": "Work spends no stamina.",
+      "choices": [
+        { "label": "Off", "set": { "cheats/infiniteStamina": "false" } },
+        { "label": "On", "set": { "cheats/infiniteStamina": "true" } }
+      ],
+      "defaults": { "cheats/infiniteStamina": "false" }
+    },
+    {
+      "id": "cheat_infinite_money",
+      "label": "Infinite money",
+      "group": "Cheats",
+      "help": "Your money stays at 999,999 G.",
+      "choices": [
+        { "label": "Off", "set": { "cheats/infiniteMoney": "false" } },
+        { "label": "On", "set": { "cheats/infiniteMoney": "true" } }
+      ],
+      "defaults": { "cheats/infiniteMoney": "false" }
+    },
+    {
+      "id": "cheat_stop_time",
+      "label": "Stop time",
+      "group": "Cheats",
+      "help": "The clock does not move; sleeping still goes on to the next day.",
+      "choices": [
+        { "label": "Off", "set": { "cheats/stopTime": "false" } },
+        { "label": "On", "set": { "cheats/stopTime": "true" } }
+      ],
+      "defaults": { "cheats/stopTime": "false" }
+    },
+    {
+      "id": "cheat_max_friendship",
+      "label": "Maximum friendship",
+      "group": "Cheats",
+      "help": "Friendship with everyone goes to the maximum, and it cannot be undone in that save: love and rival scenes may start.",
+      "choices": [
+        { "label": "Off", "set": { "cheats/maxFriendship": "false" } },
+        { "label": "On", "set": { "cheats/maxFriendship": "true" } }
+      ],
+      "defaults": { "cheats/maxFriendship": "false" }
     }
   ],
   "saves": ["{local}/HarvestMoonMM/Native/USA"],

@@ -35,7 +35,7 @@ dentro de otra (inline); un hook de retorno no, así que esa función se rechaza
 Usage / Uso:
     python3 tools/insert_mod_hooks.py --mod jamie_marriage --mod player_speed --mod carry_speed \
         --mod far_camera --mod marry_anyone --mod longer_days \
-        --mod gentle_stamina --mod faster_tools
+        --mod gentle_stamina --mod faster_tools --mod cheats
 """
 
 import argparse

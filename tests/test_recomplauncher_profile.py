@@ -112,7 +112,21 @@ def test_every_mod_of_the_runtime_can_be_turned_on():
         for key in choice["set"]
         if key.startswith(mods_key + "/")
     }
-    assert turned_on == set(runtime_mods)
+    # The cheats mod has no switch of its own: it goes with the cheats (the next test).
+    assert turned_on == set(runtime_mods) - {"cheats"}
+
+
+def test_every_cheat_can_be_turned_on():
+    names = re.findall(r'"(\w+)"', re.search(r"CHEAT_NAMES\[\] = \{([^}]*)\}", SETTINGS_HEADER).group(1))
+    cheats_key = re.search(r'CHEATS = "([^"]+)"', SETTINGS_HEADER).group(1)
+    turned_on = {
+        key.split("/", 1)[1]
+        for setting in PROFILE["settings"]
+        for choice in setting.get("choices", [])
+        for key in choice["set"]
+        if key.startswith(cheats_key + "/")
+    }
+    assert turned_on == set(names)
 
 
 def test_the_saves_and_the_logs_are_in_the_player_s_folder():

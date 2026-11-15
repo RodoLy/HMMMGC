@@ -102,6 +102,15 @@ recibe el control.
 Todos vienen apagados, como el juego original; los enciendes en la pestaña Mods. Cómo hacer
 uno: [mods/README.md](mods/README.md).
 
+### Trucos
+
+Al final de la pestaña Opciones del launcher (y en RecompLauncher, en su propio grupo) hay cuatro
+trucos, todos apagados hasta que los enciendes: **estamina infinita** (trabajar no gasta), **dinero
+infinito** (se queda en 999,999 G), **detener el tiempo** (el reloj no avanza; dormir sigue pasando
+al día siguiente) y **amistad al máximo** (con todos; no se puede deshacer en esa partida, y pueden
+empezar escenas de amor y de rivales). Se guardan en `settings.json`, en `cheats`, y los hace el mod
+`cheats` ([mods/cheats/mod.c](mods/cheats/mod.c)).
+
 #### Casarse con Jamie, funcionando en el juego
 
 <table>

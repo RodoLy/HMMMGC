@@ -1,0 +1,18 @@
+{
+  "id": "cheats",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "hidden": true,
+  "name": {
+    "es": "Trucos",
+    "en": "Cheats"
+  },
+  "summary": {
+    "es": "Los trucos que enciendes en Opciones.",
+    "en": "The cheats you turn on in Options."
+  },
+  "description": {
+    "es": "No se enciende aquí: el launcher lo usa cuando enciendes un truco en la pestaña Opciones (estamina infinita, dinero infinito, detener el tiempo, amistad al máximo).",
+    "en": "It is not turned on here: the launcher uses it when you turn on a cheat in the Options tab (infinite stamina, infinite money, stop time, maximum friendship)."
+  }
+}
