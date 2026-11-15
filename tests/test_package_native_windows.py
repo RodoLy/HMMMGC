@@ -137,6 +137,18 @@ def test_the_package_has_the_launcher_and_the_builder_laid_out_like_the_reposito
     assert "builder/tools/package_native_windows.py" not in files
 
 
+def test_a_mod_goes_with_the_headers_its_mod_c_includes(tmp_path):
+    # marry_anyone's mod.c includes adoption_scene.h: without it the preparation cannot read its
+    # hooks, as happened with the packages of v0.3.0.
+    inputs = made_up_inputs(tmp_path)
+    recipe = json.loads((inputs.kit / "recipe.json").read_text())
+    recipe["mods"] = ["marry_anyone"]
+    (inputs.kit / "recipe.json").write_text(json.dumps(recipe))
+    files = files_of(assemble(inputs))
+    for expected in ("mod.c", "mod.json", "adoption_scene.h"):
+        assert f"builder/mods/marry_anyone/{expected}" in files, expected
+
+
 def test_recomplauncher_json_goes_beside_the_launcher_with_the_package_s_version(tmp_path):
     inputs = dataclasses.replace(made_up_inputs(tmp_path), package_version="v9.8.7")
     profile = json.loads((assemble(inputs) / "recomplauncher.json").read_text(encoding="utf-8"))

@@ -16,7 +16,8 @@ The game's program is made on the player's computer from the player's own disc
                         find each other:
         tools/          tools/prepare_game.py and the tools it runs, with what they import
         config/G4AEE9/symbols.txt, runtime/src/ (read by the translator), runtime/mod_api/,
-        mods/           the mods of the kit (their mod.c, read for their hooks, and mod.json)
+        mods/           the mods of the kit (their mod.c and the headers beside it, read for
+                        their hooks, and mod.json)
         kit/            the runtime kit (tools/make_runtime_kit.py)
         translator/     WiiCompiled's translator, published as a Windows program with its .NET
         python/         a Python for Windows, trimmed to the interpreter and the standard library
@@ -174,6 +175,17 @@ def check_no_game_data(folder: Path) -> None:
             raise PackageError(f"the package would hold a file that looks like game data: {path}")
 
 
+def mod_files(mod_folder: Path) -> list[Path]:
+    """What the preparation reads of a mod: its mod.json, its mod.c and every file mod.c includes
+    from its own folder (the hooks are found by preprocessing mod.c, which needs them all).
+
+    Lo que la preparación lee de un mod: su mod.json, su mod.c y los archivos de su carpeta que
+    mod.c incluye."""
+    files = [mod_folder / "mod.c", mod_folder / "mod.json"]
+    files += sorted(path for path in mod_folder.glob("*.h") if path.is_file())
+    return files
+
+
 def copy_file(source: Path, destination: Path) -> None:
     if not source.is_file():
         raise PackageError(f"not found: {source}")
@@ -264,8 +276,8 @@ def assemble(inputs: Inputs) -> Path:
     for relative in REPOSITORY_FOLDERS:
         copy_folder(REPOSITORY / relative, builder / relative, REPOSITORY_FOLDERS_EXCLUDED)
     for mod in recipe.get("mods", []):
-        for name in ("mod.c", "mod.json"):
-            copy_file(REPOSITORY / "mods" / mod / name, builder / "mods" / mod / name)
+        for source in mod_files(REPOSITORY / "mods" / mod):
+            copy_file(source, builder / "mods" / mod / source.name)
     copy_folder(inputs.kit, builder / "kit")
     copy_folder(inputs.translator, builder / "translator")
     if not (builder / "translator" / "Translator.Cli.exe").is_file():
