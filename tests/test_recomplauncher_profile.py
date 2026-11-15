@@ -72,6 +72,7 @@ def test_the_options_are_those_of_settings_json_with_the_values_the_game_accepts
         "player_speed_percent": setting_name("PLAYER_SPEED"),
         "day_length_percent": mod_setting("longer_days")["key"],
         "stamina_cost_percent": mod_setting("gentle_stamina")["key"],
+        "tool_experience_percent": mod_setting("faster_tools")["key"],
     }
 
 
@@ -83,7 +84,11 @@ def mod_setting(mod_id: str) -> dict:
 
 @pytest.mark.parametrize(
     ("mod_id", "slider_id"),
-    [("longer_days", "day_length_percent"), ("gentle_stamina", "stamina_cost_percent")],
+    [
+        ("longer_days", "day_length_percent"),
+        ("gentle_stamina", "stamina_cost_percent"),
+        ("faster_tools", "tool_experience_percent"),
+    ],
 )
 def test_a_mod_s_slider_has_the_limits_of_the_mod(mod_id: str, slider_id: str):
     setting = mod_setting(mod_id)

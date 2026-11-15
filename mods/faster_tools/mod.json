@@ -1,0 +1,32 @@
+{
+  "id": "faster_tools",
+  "version": "0.1.0",
+  "authors": ["HMMMGC"],
+  "name": {
+    "es": "Herramientas que suben rápido",
+    "en": "Faster tools"
+  },
+  "summary": {
+    "es": "Las herramientas ganan experiencia más rápido.",
+    "en": "The tools gain experience faster."
+  },
+  "description": {
+    "es": "Cada uso de una herramienta cuenta más para que suba de nivel: 100% es el juego original y 200% el doble de rápido. Por ahora no cambia una de las herramientas, la que el juego sube de otra manera.",
+    "en": "Each use of a tool counts for more towards its next level: 100% is the original game and 200% twice as fast. For now it does not change one of the tools, the one that the game raises in another way."
+  },
+  "settings": [
+    {
+      "type": "percent",
+      "key": "toolExperiencePercent",
+      "environment": "HM_MM_TOOL_EXPERIENCE_PERCENT",
+      "minimum": 100,
+      "maximum": 400,
+      "default": 200,
+      "step": 50,
+      "label": {
+        "es": "Experiencia de las herramientas",
+        "en": "Experience of the tools"
+      }
+    }
+  ]
+}

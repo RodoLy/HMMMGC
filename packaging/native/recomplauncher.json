@@ -198,6 +198,26 @@
       "when": { "mods/gentle_stamina": "true" }
     },
     {
+      "id": "faster_tools",
+      "label": "Faster tools",
+      "group": "Mods",
+      "help": "The tools gain experience faster.",
+      "choices": [
+        { "label": "Off", "set": { "mods/faster_tools": "false" } },
+        { "label": "On", "set": { "mods/faster_tools": "true" } }
+      ],
+      "defaults": { "mods/faster_tools": "false" }
+    },
+    {
+      "id": "tool_experience_percent",
+      "label": "Experience of the tools",
+      "group": "Mods",
+      "help": "100% is the original game; 200% is twice as fast.",
+      "slider": { "key": "toolExperiencePercent", "min": 100, "max": 400, "step": 50, "format": "%g" },
+      "defaults": { "toolExperiencePercent": "200" },
+      "when": { "mods/faster_tools": "true" }
+    },
+    {
       "id": "far_camera",
       "label": "Farther camera",
       "group": "Mods",

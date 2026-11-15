@@ -40,7 +40,7 @@ readonly RUNTIME_BUILD_DIRECTORY="$BUILD_DIRECTORY/runtime"
 readonly TRANSLATOR_PROJECT="$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli"
 readonly TRANSLATOR="$TRANSLATOR_PROJECT/bin/Release/net8.0/Translator.Cli.dll"
 # The mods of mods/ that go into the runtime (NATIVE_MODS="" for none).
-readonly NATIVE_MODS="${NATIVE_MODS-jamie_marriage player_speed carry_speed far_camera marry_anyone}"
+readonly NATIVE_MODS="${NATIVE_MODS-jamie_marriage player_speed carry_speed far_camera marry_anyone longer_days gentle_stamina faster_tools}"
 
 fail() {
     printf 'error: %s\n' "$*" >&2
