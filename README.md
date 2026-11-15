@@ -96,7 +96,6 @@ the controller.
 | **Farther camera** (0.1.0) | In the game, up and down on the D-pad bring the camera closer and pull it back. With this mod, holding down past the game's limit keeps pulling it back, until much more of the farm is in view; up brings it back. Only outdoors: rooms and scenes keep the game's camera. |
 | **Longer days** (0.1.0) | The game's clock goes more slowly, so each day gives more time to farm, fish and visit: from 100% (the original day) to 400% (a day four times as long), 150% by default. Sleeping, the events and the start of the day do not change. |
 | **Gentler stamina** (0.1.0) | Everything that spends stamina (the tools, fishing, running a long way) spends only a share of it, from 10% to 100% (the original game), 50% by default. Eating and sleeping give it back as always, and being tired still makes work cost more. |
-| **Gentler stamina** (0.1.0) | Everything that spends stamina (the tools, fishing, running a long way) spends only a share of it, from 10% to 100% (the original game), 50% by default. Eating and sleeping give it back as always, and being tired still makes work cost more. |
 
 All come off, like the original game; you turn them on in the Mods tab. How to make one:
 [mods/README.md](mods/README.md).

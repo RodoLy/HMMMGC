@@ -97,7 +97,6 @@ recibe el control.
 | **Cámara más lejos** (0.1.0) | En el juego, la cruceta arriba y abajo acerca y aleja la cámara. Con este mod, si sigues presionando abajo al llegar al tope del juego, se sigue alejando hasta que se ve mucho más de la granja; arriba la regresa. Solo al aire libre: los cuartos y las escenas conservan la cámara del juego. |
 | **Días más largos** (0.1.0) | El reloj del juego avanza más despacio, para tener más tiempo cada día para cultivar, pescar y visitar: de 100% (el día del juego original) a 400% (un día cuatro veces más largo), 150% por omisión. Dormir, los eventos y el inicio del día no cambian. |
 | **Estamina más amable** (0.1.0) | Todo lo que gasta estamina (las herramientas, la pesca, correr mucho) gasta solo una parte, de 10% a 100% (el juego original), 50% por omisión. Comer y dormir la devuelven como siempre, y el cansancio sigue haciendo que el trabajo cueste más. |
-| **Estamina más amable** (0.1.0) | Todo lo que gasta estamina (las herramientas, la pesca, correr mucho) gasta solo una parte, de 10% a 100% (el juego original), 50% por omisión. Comer y dormir la devuelven como siempre, y el cansancio sigue haciendo que el trabajo cueste más. |
 
 Todos vienen apagados, como el juego original; los enciendes en la pestaña Mods. Cómo hacer
 uno: [mods/README.md](mods/README.md).
