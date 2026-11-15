@@ -901,8 +901,10 @@ terraza de arriba, donde está su estatua; si sigue de piedra, viene un duende (
 pareja la mira de frente y la cámara de la escena (`92(1)`, `133(0, 0, 0)`, `83` y `80`) los ve desde el
 sur, a su altura. La Diosa (o el duende) les cuenta que llegó un bebé sin familia y les pregunta si
 quieren criarlo; la pareja acepta, el jugador escribe el nombre (`126(5, 0)` y `127`, la misma
-pantalla del parto) y luego, en la casa, coloca la cuna (`128` y `129`). Al final recibe la nota
-musical del parto (la 51), con la subrutina del parto, para que las cien notas se puedan juntar. El
+pantalla del parto) y ahí mismo recibe la nota musical del parto (la 51), con la subrutina del parto,
+para que las cien notas se puedan juntar. Al final, en la casa, coloca la cuna (`128` y `129`). La nota
+va en el manantial porque la subrutina acerca la cámara al jugador, y después de la pantalla de muebles
+la casa está vacía: la cámara quedaba mirando una pared. El
 mod también apaga el bit 5 de la pareja: su primera plática después del parto habla de haber dado a
 luz.
 
@@ -1869,9 +1871,11 @@ the upper terrace, where her statue is; while she is still stone, a sprite comes
 couple faces her and the scene's camera (`92(1)`, `133(0, 0, 0)`, `83` and `80`) sees them from the
 south, at their height. The Goddess (or the sprite) tells them that a baby with no family has come and
 asks whether they would raise it; the couple accepts, the player writes the name (`126(5, 0)` and
-`127`, the birth's own screen) and then, at home, places the crib (`128` and `129`). At the end the
-player gets the birth's musical note (51), through the birth's subroutine, so that all hundred notes
-can be gathered. The mod also clears the spouse's bit 5: their first talk after a birth is about
+`127`, the birth's own screen) and gets the birth's musical note (51) right there, through the
+birth's subroutine, so that all hundred notes can be gathered. At the end, at home, the player places
+the crib (`128` and `129`). The note is given at the spring because the subroutine brings the camera
+to the player, and after the furniture screen the house is empty: the camera was left looking at a
+wall. The mod also clears the spouse's bit 5: their first talk after a birth is about
 having given birth.
 
 **Test in the game (2026-11-15).** With a copy of the player's save, married to Basil (as the boy) and

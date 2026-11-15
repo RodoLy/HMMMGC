@@ -6,11 +6,11 @@ Escribe la escena de la adopción de mods/marry_anyone: su script y sus líneas,
 A couple of the same sex cannot have the game's pregnancy and birth (Eve_conce and Eve_child). With
 marry_anyone, when the game would start the pregnancy for such a couple, the mod counts the days of the
 pregnancy as over instead, so that the next morning the game starts the birth's event; and when the game loads
-that event's script and messages, the mod writes this scene over them. In it the Harvest Goddess comes to the
-house: she has watched over the couple's love, and she has a baby with no family. The couple takes the baby,
-the player names it, the Goddess leaves a crib and the player places it, and the player gets the birth's
-musical note. The game's own code for the birth (the field check's block) keeps doing the rest: the child
-exists from then on as with any couple.
+that event's script and messages, the mod writes this scene over them. In it the couple meets the Harvest
+Goddess (or one of her sprites) at her spring: she has seen the couple's love, and she has a baby with no
+family. The couple takes the baby, the player names it and gets the birth's musical note, and the Goddess
+leaves a crib at home that the player places. The game's own code for the birth (the field check's block)
+keeps doing the rest: the child exists from then on as with any couple.
 
 The script is assembled here, from what the game's scripts do (docs/SCRIPTS.md, "The adoption"). Each
 built-in is called as the birth scenes call it; the comment of each step says which. The lines are new, in
@@ -344,6 +344,18 @@ def scene_script(visitor: str) -> tuple[bytes, list[int]]:
     say(scene, SPOUSE_THANKS)
     motion(scene, PLAYER, 0)
     motion(scene, SPOUSE, 0)
+    wait(scene, 1)
+
+    # The musical note of the birth, here at the spring, where the player is in sight. (The birth scenes
+    # give it in a room with the family; after the screen of the furniture the house is empty and the
+    # camera has nothing to look at.) Then the camera of the scene again, for the visitor's last words.
+    scene.push(BIRTH_NOTE)
+    scene.branch(CALL, "note")
+    scene.builtin(92, 1)
+    scene.builtin(133, 0, 0, 0)
+    scene.builtin(83, *CAMERA_LOOKS_AT)
+    scene.builtin(80, *CAMERA_STANDS_AT)
+    wait(scene, 0.5)
     say(scene, A_CRIB)
     end_of_a_part(scene)
 
@@ -368,9 +380,7 @@ def scene_script(visitor: str) -> tuple[bytes, list[int]]:
     scene.builtin(129)
     wait(scene, 0.1)
 
-    # The musical note of the birth, then the end of the event.
-    scene.push(BIRTH_NOTE)
-    scene.branch(CALL, "note")
+    # The end of the event.
     scene.builtin(66)
     scene.builtin(67)
     scene.builtin(105, 0, -127, 3000)
