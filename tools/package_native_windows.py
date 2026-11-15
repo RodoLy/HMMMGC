@@ -9,6 +9,8 @@ The game's program is made on the player's computer from the player's own disc
 (docs/NATIVE_PACKAGE.md), so the package carries:
 
     HarvestMoonMM.exe   the launcher (launcher/)
+    recomplauncher.json how RecompLauncher sets the game up and starts it (packaging/native/), with
+                        the package's version as the version of its setup step
     README.txt, LICENSE.txt, THIRD_PARTY_NOTICES.txt, VERSIONS.txt, licenses/
     builder/            what prepares the game, laid out like this repository so that its tools
                         find each other:
@@ -37,7 +39,7 @@ si algún archivo parece datos del juego.
 Usage / Uso:
     python3 tools/package_native_windows.py --architecture arm64 --launcher L --kit K --translator T \\
         --python P --llvm-mingw M --nodtool N --visual-cpp-runtime V --output-directory O [--zip Z] \\
-        [--version NAME=VALUE ...] [--license NAME=FILE ...] [--licenses-directory D]
+        [--package-version V] [--version NAME=VALUE ...] [--license NAME=FILE ...] [--licenses-directory D]
 """
 
 import argparse
@@ -65,6 +67,7 @@ REPOSITORY = Path(__file__).resolve().parent.parent
 TOOLS = REPOSITORY / "tools"
 PACKAGE_FILES = REPOSITORY / "packaging" / "native"
 LAUNCHER_NAME = "HarvestMoonMM.exe"
+RECOMPLAUNCHER_PROFILE = "recomplauncher.json"
 ARCHITECTURES = {"arm64": "aarch64-w64-mingw32", "x64": "x86_64-w64-mingw32"}
 # The tools the preparation runs; what they import comes with them.
 PREPARATION_TOOLS = (
@@ -123,6 +126,7 @@ class Inputs:
     nodtool: Path
     visual_cpp_runtime: Path  # the DLLs of Microsoft.VC*.CRT, for the package's processor
     output_directory: Path
+    package_version: str = "dev"  # the launcher's (HMMM_PACKAGE_VERSION), such as v0.2.0
     versions: dict[str, str] = field(default_factory=dict)
     licenses: dict[str, Path] = field(default_factory=dict)
     licenses_directory: Path | None = None  # every file in it goes to licenses/
@@ -227,6 +231,16 @@ def windows_text(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\n", "\r\n")
 
 
+def write_recomplauncher_profile(package: Path, package_version: str) -> None:
+    """recomplauncher.json beside the launcher. The version of its setup step is the package's: a game
+    prepared by another package is prepared again (the launcher's own window does the same)."""
+    profile = json.loads((PACKAGE_FILES / RECOMPLAUNCHER_PROFILE).read_text(encoding="utf-8"))
+    profile["prepare"]["version"] = package_version
+    (package / RECOMPLAUNCHER_PROFILE).write_text(
+        json.dumps(profile, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+
+
 def assemble(inputs: Inputs) -> Path:
     if inputs.architecture not in ARCHITECTURES:
         raise PackageError(f"the architecture must be one of {', '.join(ARCHITECTURES)}")
@@ -237,6 +251,7 @@ def assemble(inputs: Inputs) -> Path:
     builder = package / "builder"
 
     copy_file(inputs.launcher, package / LAUNCHER_NAME)
+    write_recomplauncher_profile(package, inputs.package_version)
     for tool in sorted(
         {
             *PREPARATION_TOOLS,
@@ -332,6 +347,9 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--output-directory", type=Path, required=True)
     parser.add_argument("--zip", type=Path, help="also write the package as this zip")
     parser.add_argument(
+        "--package-version", default="dev", help="the launcher's version (HMMM_PACKAGE_VERSION), as v0.2.0"
+    )
+    parser.add_argument(
         "--version", type=key_value, action="append", default=[], help="NAME=VALUE for VERSIONS.txt"
     )
     parser.add_argument(
@@ -353,6 +371,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         nodtool=arguments.nodtool,
         visual_cpp_runtime=arguments.visual_cpp_runtime,
         output_directory=arguments.output_directory,
+        package_version=arguments.package_version,
         versions=dict(arguments.version),
         licenses={name: Path(path) for name, path in arguments.license},
         licenses_directory=arguments.licenses_directory,

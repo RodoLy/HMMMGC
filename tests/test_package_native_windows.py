@@ -5,6 +5,7 @@ Pruebas del armado del paquete nativo para Windows y de las descargas que lleva,
 inventadas. No necesitan el juego, ni una compilación, ni la red.
 """
 
+import dataclasses
 import json
 import re
 import sys
@@ -109,6 +110,7 @@ def test_the_package_has_the_launcher_and_the_builder_laid_out_like_the_reposito
     files = files_of(package)
     for expected in (
         "HarvestMoonMM.exe",
+        "recomplauncher.json",
         "README.txt",
         "LICENSE.txt",
         "THIRD_PARTY_NOTICES.txt",
@@ -133,6 +135,14 @@ def test_the_package_has_the_launcher_and_the_builder_laid_out_like_the_reposito
     # Only the mods of the kit, and none of the tools that the preparation does not run.
     assert not any(path.startswith("builder/mods/jamie_marriage/") for path in files)
     assert "builder/tools/package_native_windows.py" not in files
+
+
+def test_recomplauncher_json_goes_beside_the_launcher_with_the_package_s_version(tmp_path):
+    inputs = dataclasses.replace(made_up_inputs(tmp_path), package_version="v9.8.7")
+    profile = json.loads((assemble(inputs) / "recomplauncher.json").read_text(encoding="utf-8"))
+    assert profile["prepare"]["version"] == "v9.8.7"
+    assert profile["start"]["program"] == [package_native_windows.LAUNCHER_NAME]
+    assert profile["prepare"]["program"] == [package_native_windows.LAUNCHER_NAME]
 
 
 def test_the_preparation_s_tools_bring_what_they_import():

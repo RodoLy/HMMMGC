@@ -247,7 +247,7 @@ jobs:
             --python "$TOOLS_DIRECTORY/python" --llvm-mingw "$TOOLS_DIRECTORY/llvm-mingw" \
             --nodtool "$TOOLS_DIRECTORY/nodtool/nodtool.exe" --visual-cpp-runtime build/visual-cpp-runtime \
             --licenses-directory build/licenses \
-            --output-directory build/dist --zip "build/dist/$PACKAGE_ZIP" \
+            --output-directory build/dist --zip "build/dist/$PACKAGE_ZIP" --package-version "$VERSION" \
             --version "HMMMGC=$VERSION ($GITHUB_SHA)" \
             --version "WiiCompiled=$(git -C "$WIICOMPILED_DIRECTORY" rev-parse HEAD)" \
             --version "aurora=$(git -C "$WIICOMPILED_DIRECTORY/aurora-main" rev-parse HEAD)" \

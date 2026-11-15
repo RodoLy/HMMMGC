@@ -96,6 +96,18 @@ Dónde queda cada cosa del jugador: `%LOCALAPPDATA%\HarvestMoonMM` en Windows
 partidas, `native.log`, `prepare.log` y, en `Native/Game`, el programa
 preparado, `prepared.json` y, si hizo falta convertir el disco, su ISO.
 
+Sin su ventana, para otro launcher (`launcher/src/headless.h`):
+`HarvestMoonMM --prepare <imagen>` prepara el juego como «Preparar el juego»,
+imprime líneas `progress <0 a 1> <paso>` y termina con 0 cuando el juego está
+listo (o con 1 tras una línea `error <razón> <texto>`); `HarvestMoonMM --play`
+lo arranca como «Jugar», espera a que se cierre y termina con su código (3 si
+el juego no lo preparó este paquete, 4 si no se pudo arrancar). Así lo usa
+RecompLauncher, que lee cómo en `recomplauncher.json`, junto al launcher en el
+paquete (`packaging/native/recomplauncher.json`, con la versión del paquete
+como la de su paso de preparación): revisa el disco, lo prepara, muestra las
+opciones y los mods de `settings.json` en la página del juego y lo arranca. Sin
+esos argumentos, el launcher abre su ventana como siempre.
+
 Compilarlo (Linux; para Windows, con el *toolchain* de llvm-mingw):
 
 ```sh
@@ -168,6 +180,7 @@ Después, para cada procesador, ARM64 y x64, en Linux:
 | En el paquete | Qué es |
 |---|---|
 | `HarvestMoonMM.exe` | El launcher. |
+| `recomplauncher.json` | Cómo RecompLauncher prepara el juego y lo arranca. |
 | `README.txt`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.txt`, `VERSIONS.txt`, `licenses/` | Las instrucciones, en español e inglés, y las licencias. |
 | `builder/tools`, `builder/config`, `builder/runtime`, `builder/mods` | Las herramientas de la preparación y lo que leen, con la misma estructura que este repositorio. |
 | `builder/kit` | El kit del runtime, con las DLL que van junto al juego: Dawn, libpng, zlib y parte del runtime de Visual C++. |
@@ -292,6 +305,18 @@ Where the player's things go: `%LOCALAPPDATA%\HarvestMoonMM` on Windows
 saves, `native.log`, `prepare.log` and, in `Native/Game`, the prepared
 program, `prepared.json` and, if the disc had to be converted, its ISO.
 
+Without its window, for another launcher (`launcher/src/headless.h`):
+`HarvestMoonMM --prepare <image>` prepares the game as "Prepare the game"
+does, prints lines `progress <0 to 1> <step>` and ends with 0 when the game is
+ready (or with 1 after a line `error <reason> <text>`); `HarvestMoonMM --play`
+starts it as "Play" does, waits for it to close and ends with its code (3 when
+this package did not prepare the game, 4 when it could not be started). That
+is how RecompLauncher uses it, reading how in `recomplauncher.json`, beside the
+launcher in the package (`packaging/native/recomplauncher.json`, with the
+package's version as that of its setup step): it checks the disc, prepares the
+game, shows the options and the mods of `settings.json` on the game's page and
+starts it. Without those arguments the launcher opens its window as always.
+
 Building it (Linux; for Windows, with the llvm-mingw toolchain):
 
 ```sh
@@ -363,6 +388,7 @@ minute or two. Then, for each processor, ARM64 and x64, on Linux:
 | In the package | What it is |
 |---|---|
 | `HarvestMoonMM.exe` | The launcher. |
+| `recomplauncher.json` | How RecompLauncher prepares the game and starts it. |
 | `README.txt`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.txt`, `VERSIONS.txt`, `licenses/` | The instructions, in Spanish and English, and the licenses. |
 | `builder/tools`, `builder/config`, `builder/runtime`, `builder/mods` | The preparation's tools and what they read, laid out like this repository. |
 | `builder/kit` | The runtime kit, with the DLLs that go beside the game: Dawn, libpng, zlib and part of the Visual C++ runtime. |
