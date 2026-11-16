@@ -44,11 +44,6 @@ enum class ButtonColor { Orange, Green, Gray };
 // A button like the box of the date: a rounded orange (or green) bar with white lettering.
 bool menu_button(const char* label, ImVec2 size, ButtonColor color = ButtonColor::Orange, bool enabled = true);
 
-// The same button's shape and lettering drawn at `min`..`max` on `draw`, without being a widget:
-// for the touch buttons over the game (runtime/src/input/touch_buttons.cpp). `held` sinks it, and
-// `opacity` (0 to 1) lets the game show through.
-void button_shape(ImDrawList* draw, ImVec2 min, ImVec2 max, const char* label, ButtonColor color, bool held,
-                  float opacity);
 
 // A panel like a dialogue box, from `min` to `max`, with `title` where the speaker's name goes.
 // What goes in it is drawn between begin_panel and end_panel, in a child window that scrolls.

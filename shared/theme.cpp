@@ -366,42 +366,6 @@ bool menu_button(const char* label, ImVec2 size, ButtonColor color_name, bool en
     return pressed && enabled;
 }
 
-void button_shape(ImDrawList* draw, ImVec2 min, ImVec2 max, const char* label, ButtonColor color_name, bool held,
-                  float opacity) {
-    ImU32 top = ORANGE_TOP;
-    ImU32 bottom = ORANGE_BOTTOM;
-    ImU32 edge = ORANGE_EDGE;
-    if (color_name == ButtonColor::Green) {
-        top = GREEN_TOP;
-        bottom = GREEN_BOTTOM;
-        edge = GREEN_EDGE;
-    } else if (color_name == ButtonColor::Gray) {
-        top = GRAY_TOP;
-        bottom = GRAY_BOTTOM;
-        edge = GRAY_EDGE;
-    }
-    const auto faded = [opacity](ImU32 color) {
-        const auto alpha = static_cast<int>(((color >> IM_COL32_A_SHIFT) & 0xFF) * opacity);
-        return (color & ~IM_COL32_A_MASK) | (static_cast<ImU32>(alpha) << IM_COL32_A_SHIFT);
-    };
-    const float rounding = std::min(max.x - min.x, max.y - min.y) * 0.5f;
-    const float depth = std::max(px(3), (max.y - min.y) * 0.06f);
-    const ImVec2 shift(0, held ? depth * 0.7f : 0.f);
-    draw->AddRectFilled(min + ImVec2(0, depth), max + ImVec2(0, depth), faded(edge), rounding);
-    gradient_rect(draw, min + shift, max + shift, faded(held ? bottom : top), faded(held ? top : bottom), rounding);
-    draw->AddRectFilled(min + shift + ImVec2(rounding * 0.6f, (max.y - min.y) * 0.08f),
-                        ImVec2(max.x - rounding * 0.6f, min.y + shift.y + (max.y - min.y) * 0.42f),
-                        faded(IM_COL32(255, 255, 255, 60)), rounding);
-    draw->AddRect(min + shift, max + shift, faded(edge), rounding, 0, px(2.5f));
-    if (label != nullptr && *label != '\0' && g_fonts.button != nullptr) {
-        ImFont* font = g_fonts.button;
-        const float size = (max.y - min.y) * 0.46f;
-        const ImVec2 extent = text_size(font, size, label);
-        outlined_text(draw, font, size, (min + max) * 0.5f + shift - extent * 0.5f, faded(WHITE), faded(edge),
-                      px(2.5f), label);
-    }
-}
-
 void begin_panel(const char* id, ImVec2 min, ImVec2 max, const char* title) {
     ImDrawList* draw = ImGui::GetWindowDrawList();
     const float rounding = px(28);

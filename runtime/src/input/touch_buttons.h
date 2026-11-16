@@ -1,9 +1,12 @@
-// The touch buttons: a GameCube controller drawn over the game for a phone or a tablet, with the
-// look of the options menu (shared/theme.h, after the game's own buttons and boxes), which plays
-// as controller 1 together with whatever else plays there (a controller, the keyboard).
+// The touch buttons: a GameCube controller drawn over the game for a phone or a tablet, which
+// plays as controller 1 together with whatever else plays there (a controller, the keyboard). They
+// are drawn as the game draws the controller's buttons on its own screen (coins and beans with a
+// dark blue edge and the letter pressed in), in the GameCube controller's colors, and see-through,
+// so that the game shows under them also where a wide screen puts it there.
 //
 // Los botones táctiles: un control de GameCube dibujado sobre el juego para un celular o una
-// tablet, con el aspecto del menú de opciones, que juega como el control 1 junto con lo demás.
+// tablet, que juega como el control 1 junto con lo demás. Se dibujan como el juego dibuja los
+// botones del control en su pantalla, con los colores del control de GameCube, y semitransparentes.
 //
 // On the left, the Control Stick (the finger moves its knob, as far as its ring) and the D-Pad; on
 // the right, A (the big green one), B, X and Y where the GameCube has them; L and R at the top
