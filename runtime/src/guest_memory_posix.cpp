@@ -1,7 +1,7 @@
-// guest_memory_host.h on Linux (and other POSIX systems with memfd): one memory file per
-// shared memory, mapped with mmap at fixed addresses inside the reservation.
+// guest_memory_host.h on Linux and Android: one memory file per shared memory, mapped with
+// mmap at fixed addresses inside the reservation. (macOS: guest_memory_macos.cpp.)
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
 
 #include "guest_memory.h"
 #include "guest_memory_host.h"
@@ -9,6 +9,7 @@
 #include "guest_abi/guest_abi.h"
 
 #include <sys/mman.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #include <cerrno>
@@ -23,7 +24,12 @@ namespace {
 std::string system_error(const char* what) { return std::string(what) + ": " + std::strerror(errno); }
 
 int create_memory_file(const char* name, size_t size) {
+#if defined(__ANDROID__)
+    // Android's C library has memfd_create only from Android 11; the system call is older.
+    const int fd = static_cast<int>(syscall(__NR_memfd_create, name, MFD_CLOEXEC));
+#else
     const int fd = memfd_create(name, MFD_CLOEXEC);
+#endif
     if (fd < 0 || ftruncate(fd, static_cast<off_t>(size)) != 0) {
         throw std::runtime_error(system_error("creating a memory file"));
     }
@@ -78,4 +84,4 @@ GuestSpace map_guest_space(bool readable_registers) {
 
 }  // namespace guest_memory::host
 
-#endif  // !defined(_WIN32)
+#endif  // !defined(_WIN32) && !defined(__APPLE__)
