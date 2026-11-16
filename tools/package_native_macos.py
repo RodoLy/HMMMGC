@@ -56,7 +56,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from macho_binaries import MachOError, check_programs  # noqa: E402
 from package_native_unix import PYTHON_EXCLUDED, copy_keeping_links  # noqa: E402
-
 from package_native_windows import (  # noqa: E402
     PACKAGE_FILES,
     PREPARATION_TOOLS,

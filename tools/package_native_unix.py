@@ -54,7 +54,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from elf_binaries import ElfError, check_programs, read_elf_binary  # noqa: E402
-
 from package_native_windows import (  # noqa: E402
     PACKAGE_FILES,
     PREPARATION_TOOLS,
