@@ -112,6 +112,10 @@ if(WIN32)
     set_source_files_properties(windows/launcher.rc PROPERTIES OBJECT_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.manifest;${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.ico")
     target_link_options(HarvestMoonMM PRIVATE -static)
+    # A release launcher leaves out the debugging information (-s): the libraries linked in bring
+    # some along, the player has no use for it, and several antivirus engines took the program for
+    # a trojan with it (BitDefender's Gen:Variant.Lazy and those using its engine) and not without.
+    target_link_options(HarvestMoonMM PRIVATE $<$<CONFIG:Release>:-s>)
     # The rounded corners of the window without a frame (Windows 11).
     target_link_libraries(HarvestMoonMM PRIVATE dwmapi)
 endif()
