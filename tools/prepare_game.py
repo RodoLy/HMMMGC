@@ -31,7 +31,9 @@ is a step of the protocol below, and any other line is detail for the log.
 
 The reasons of @error, which the launcher explains to the player in their language:
 not_a_disc, compressed (no nodtool to convert it), wrong_game, wrong_version, modified_game,
-tool_failed (the text says which and why) and setup (the package is not complete).
+tool_failed (the text says which and why), setup (the package is not complete) and no_compiler
+(a Mac without Apple's Command Line Tools, whose clang compiles the game there: the installer
+is opened, and the preparation can run again once they are installed).
 
 Un paquete de la versión nativa no lleva el juego: lleva el runtime ya compilado, el traductor de
 WiiCompiled, un compilador y esto. El launcher lo corre la primera vez y otra vez cuando se
@@ -456,6 +458,21 @@ def link_game(objects: list[Path], program: Path, recipe: dict, kit: Path, cxx: 
 # -- The whole preparation ------------------------------------------------------------------------
 
 
+def check_apple_command_line_tools() -> None:
+    """On a Mac the game is compiled with Apple's clang, from the Command Line Tools (or Xcode).
+    Without them, /usr/bin/clang++ is only a stub that offers to install them: this opens that
+    installer, and stops the preparation until they are there."""
+    if sys.platform != "darwin":
+        return
+    found = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True)
+    if found.returncode == 0 and Path(found.stdout.strip()).is_dir():
+        return
+    subprocess.run(["xcode-select", "--install"], capture_output=True)
+    raise PreparationError(
+        "no_compiler", "Apple's Command Line Tools are not installed (xcode-select --install installs them)"
+    )
+
+
 def find_compiler(name: str, toolchain: Path | None) -> Path:
     """A compiler of the toolchain's bin/ (a package's), or of the PATH (a developer's)."""
     if toolchain is not None:
@@ -485,6 +502,8 @@ def prepare(arguments: argparse.Namespace) -> Path:
         raise PreparationError(
             "setup", f"the kit's recipe has format {recipe.get('format')}, not {RECIPE_FORMAT}"
         )
+    if arguments.toolchain is None:
+        check_apple_command_line_tools()
     cxx = find_compiler(recipe["cxx_compiler"], arguments.toolchain)
     cc = find_compiler(recipe["c_compiler"], arguments.toolchain)
     if work.exists():

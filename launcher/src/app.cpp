@@ -80,7 +80,7 @@ std::string App::error_message(const std::string& reason) const {
         {"not_a_disc", Text::ErrorNotADisc},     {"compressed", Text::ErrorCompressed},
         {"wrong_game", Text::ErrorWrongGame},    {"wrong_version", Text::ErrorWrongVersion},
         {"modified_game", Text::ErrorModifiedGame}, {"setup", Text::ErrorSetup},
-        {"not_started", Text::ErrorNotStarted},
+        {"not_started", Text::ErrorNotStarted}, {"no_compiler", Text::ErrorNoCompiler},
     };
     for (const auto& [name, message] : reasons) {
         if (reason == name) {

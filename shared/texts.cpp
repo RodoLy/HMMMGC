@@ -100,6 +100,11 @@ constexpr Translation TRANSLATIONS[] = {
      "Something failed while preparing the game. The details are in the log."},
     {Text::ErrorSetup, "Al paquete le falta algo para preparar el juego. Vuelve a descargarlo.",
      "The package lacks something it needs to prepare the game. Download it again."},
+    {Text::ErrorNoCompiler,
+     "Tu Mac necesita las herramientas de línea de comandos de Apple para preparar el juego. Se abrió su "
+     "instalador: instálalas y vuelve a preparar el juego.",
+     "Your Mac needs Apple's Command Line Tools to prepare the game. Their installer has opened: install "
+     "them and prepare the game again."},
     {Text::ErrorNotStarted, "No se pudo empezar la preparación.", "The preparation could not start."},
     {Text::GameNotStarted, "No se pudo abrir el juego.", "The game could not be opened."},
     {Text::GameFailed, "El juego se cerró por un error. Los detalles están en el registro.",

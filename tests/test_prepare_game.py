@@ -175,3 +175,31 @@ def test_the_game_s_sources_are_the_ones_cmake_lists_biggest_first(tmp_path):
         "data_sections_init.cpp",
         "small.cpp",
     ]
+
+
+def test_on_a_mac_without_the_command_line_tools_their_installer_opens_and_the_preparation_stops(
+    monkeypatch, tmp_path
+):
+    commands = []
+
+    def run(command, **_):
+        commands.append(command)
+        return prepare_game.subprocess.CompletedProcess(
+            command, 2, "", "unable to get active developer directory"
+        )
+
+    monkeypatch.setattr(prepare_game.sys, "platform", "darwin")
+    monkeypatch.setattr(prepare_game.subprocess, "run", run)
+    with pytest.raises(prepare_game.PreparationError) as stopped:
+        prepare_game.check_apple_command_line_tools()
+    assert stopped.value.reason == "no_compiler"
+    assert ["xcode-select", "--install"] in commands
+
+
+def test_on_a_mac_with_the_command_line_tools_the_preparation_goes_on(monkeypatch, tmp_path):
+    def run(command, **_):
+        return prepare_game.subprocess.CompletedProcess(command, 0, f"{tmp_path}\n", "")
+
+    monkeypatch.setattr(prepare_game.sys, "platform", "darwin")
+    monkeypatch.setattr(prepare_game.subprocess, "run", run)
+    prepare_game.check_apple_command_line_tools()
