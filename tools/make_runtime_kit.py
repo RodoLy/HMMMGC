@@ -35,6 +35,8 @@ The kit's layout:
     lib/          the runtime's objects and libraries, as the link command names them
     include/      the headers the translated game is compiled with (WiiCompiled's guest ABI)
                   and the header of the names of the game's functions for the mods
+    sysroot/      on Android, the NDK's sysroot the game is compiled and linked with (put there
+                  by tools/package_native_android.py; the recipe calls it {kit}/sysroot)
     bin/          the DLLs the program needs beside it (on Windows): those of
                   --runtime-files-directory (Dawn's), and those that the program and they
                   import, from the build (libpng's and zlib's) or from --dll-directory (the
@@ -160,16 +162,39 @@ def link_command(build_directory: Path) -> list[str]:
     raise KitError(f"no link in the last command of the program: {commands[-1][:200]}")
 
 
+# The sysroot's place in the kit (an Android kit carries the NDK's, trimmed by the package).
+SYSROOT_OPTION = "--sysroot={kit}/sysroot"
+
+
 class PathRewriter:
     """Replaces the paths of this computer in a command by the recipe's placeholders."""
 
-    def __init__(self, kit: Kit, wiicompiled_include: Path, dropped_include_directories: Sequence[Path]):
+    def __init__(
+        self,
+        kit: Kit,
+        wiicompiled_include: Path,
+        dropped_include_directories: Sequence[Path],
+        sysroot: Path | None = None,
+    ):
         self.kit = kit
         self.prefixes = [
             (STUB_GAME_DIRECTORY.resolve(), "{translation}"),
             (wiicompiled_include.resolve(), "{kit}/include"),
         ]
         self.dropped = [directory.resolve() for directory in dropped_include_directories]
+        self.sysroot = sysroot.resolve() if sysroot is not None else None
+
+    def sysroot_option(self, word: str) -> str | None:
+        """--sysroot=<the build's sysroot> as the kit's ({kit}/sysroot, which the package fills in);
+        None when `word` is not a --sysroot option. Another sysroot stops the kit."""
+        if not word.startswith("--sysroot="):
+            return None
+        given = Path(word.split("=", 1)[1]).resolve()
+        if self.sysroot is None or given != self.sysroot:
+            raise KitError(
+                f"a command uses {word}: give that sysroot with --sysroot, for the kit to carry it"
+            )
+        return SYSROOT_OPTION
 
     def directory(self, path: Path) -> str | None:
         """The placeholder form of an include directory; None when it is to be dropped."""
@@ -192,6 +217,8 @@ def compile_flags(command: list[str], rewriter: PathRewriter) -> list[str]:
     for word in words:
         if word in ("-o", "-c", "-MF", "-MT", "-MQ"):
             next(words)  # the output, the source or a dependency file: prepare_game.py's own
+        elif (sysroot := rewriter.sysroot_option(word)) is not None:
+            flags.append(sysroot)
         elif word == "-isysroot":
             next(words)  # the macOS SDK of the computer that built the kit (see SDK_LIBRARY)
         elif word in ("-MD", "-MMD") or word.startswith("-isysroot") or DEBUG_INFORMATION.fullmatch(word):
@@ -209,7 +236,7 @@ def compile_flags(command: list[str], rewriter: PathRewriter) -> list[str]:
     return flags
 
 
-def link_arguments(command: list[str], kit: Kit) -> list[str]:
+def link_arguments(command: list[str], kit: Kit, rewriter: PathRewriter | None = None) -> list[str]:
     """The options and inputs of the link command, with the game's objects, the program and
     every file as placeholders. The files of the build are copied into the kit."""
     build = kit.build_directory.resolve()
@@ -223,6 +250,8 @@ def link_arguments(command: list[str], kit: Kit) -> list[str]:
         elif word.startswith(game_objects):
             if "{game_objects}" not in arguments:
                 arguments.append("{game_objects}")
+        elif rewriter is not None and (sysroot := rewriter.sysroot_option(word)) is not None:
+            arguments.append(sysroot)
         elif word.startswith("-Wl,--out-implib,"):
             continue  # an import library of the program, which nothing uses
         elif word.startswith(("-Wl,-rpath,", "-Wl,-rpath-link,")):
@@ -307,9 +336,12 @@ def make_kit(
     dropped_include_directories: Sequence[Path],
     runtime_file_directories: Sequence[Path] = (),
     dll_directories: Sequence[Path] = (),
+    sysroot: Path | None = None,
+    extra_link_arguments: Sequence[str] = (),
+    extra_link_files: Sequence[Path] = (),
 ) -> dict:
     system, processor = target_system(build_directory)
-    executable = PROGRAM_TARGET + (".exe" if system == "Windows" else "")
+    executable = {"Windows": PROGRAM_TARGET + ".exe", "Android": "libmain.so"}.get(system, PROGRAM_TARGET)
     if not (build_directory / executable).is_file():
         raise KitError(
             f"{build_directory / executable} is missing: build the runtime with the stand-in game first"
@@ -325,7 +357,7 @@ def make_kit(
     for folder in ("lib", "include", "bin"):
         (out / folder).mkdir(parents=True)
     kit = Kit(out, build_directory)
-    rewriter = PathRewriter(kit, wiicompiled_include, dropped_include_directories)
+    rewriter = PathRewriter(kit, wiicompiled_include, dropped_include_directories, sysroot)
 
     compile_game = compile_command(build_directory, STUB_GAME_DIRECTORY / "data_sections_init.cpp")
     # On Windows and macOS the build assembles a copy of the blobs converted for COFF or Mach-O
@@ -363,7 +395,13 @@ def make_kit(
         # COFF objects (Windows) name the read-only section differently and have no stack note;
         # runtime/CMakeLists.txt converts the translated data blobs the same way.
         "coff_sections": system == "Windows",
-        "link": link_arguments(link, kit),
+        # The extra arguments and files go last: on Android they are the libraries that the NDK's
+        # clang links by itself and another clang does not have (see --extra-link-file).
+        "link": [
+            *link_arguments(link, kit, rewriter),
+            *extra_link_arguments,
+            *(kit.library(path) for path in extra_link_files),
+        ],
         "runtime_files": runtime_files,
         "mods": [mod for mod in cache_value(build_directory, "NATIVE_MODS").split(";") if mod],
         "symbol_header": "{kit}/include/" + SYMBOL_HEADER.name,
@@ -407,6 +445,27 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
         help="a folder from which only the DLLs that the program and its runtime files import go beside "
         "it (the Visual C++ runtime); repeat for several",
     )
+    parser.add_argument(
+        "--sysroot",
+        type=Path,
+        help="the sysroot the build used (--sysroot=..., an Android NDK's): the recipe names it "
+        "{kit}/sysroot, "
+        "and the package puts it there",
+    )
+    parser.add_argument(
+        "--extra-link-argument",
+        action="append",
+        default=[],
+        help="an argument added at the end of the link; repeat for several (use --extra-link-argument=-x)",
+    )
+    parser.add_argument(
+        "--extra-link-file",
+        type=Path,
+        action="append",
+        default=[],
+        help="a library copied into the kit and added at the end of the link (the NDK clang's own builtins, "
+        "which the player's clang does not have for Android); repeat for several",
+    )
     return parser.parse_args(argv)
 
 
@@ -420,6 +479,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.drop_include_directory,
             arguments.runtime_files_directory,
             arguments.dll_directory,
+            arguments.sysroot,
+            arguments.extra_link_argument,
+            arguments.extra_link_file,
         )
     except (KitError, subprocess.CalledProcessError, OSError) as problem:
         print(f"error: {problem}", file=sys.stderr)

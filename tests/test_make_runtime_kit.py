@@ -184,6 +184,33 @@ def test_the_macos_sdk_is_left_to_the_player_s_clang_and_its_libraries_are_named
     assert compile_flags(compile_command, rewriter) == ["-arch", "arm64", "-mmacosx-version-min=13.0"]
 
 
+def test_the_build_s_sysroot_becomes_the_kit_s_and_another_one_stops_it(kit, wiicompiled_include, tmp_path):
+    ndk_sysroot = tmp_path / "ndk" / "sysroot"
+    rewriter = PathRewriter(kit, wiicompiled_include, [], ndk_sysroot)
+    command = ["clang++", "--target=aarch64-none-linux-android26", f"--sysroot={ndk_sysroot}", "-c", "a.cpp"]
+    assert compile_flags(command, rewriter) == [
+        "--target=aarch64-none-linux-android26",
+        "--sysroot={kit}/sysroot",
+    ]
+    link = [
+        "clang++",
+        f"--sysroot={ndk_sysroot}",
+        "-shared",
+        "CMakeFiles/translated_game.dir/a.o",
+        "-o",
+        "libmain.so",
+    ]
+    assert link_arguments(link, kit, rewriter) == [
+        "--sysroot={kit}/sysroot",
+        "-shared",
+        "{game_objects}",
+        "-o",
+        "{output}",
+    ]
+    with pytest.raises(KitError, match="give that sysroot"):
+        compile_flags(["clang++", "--sysroot=/somewhere/else", "-c", "a.cpp"], rewriter)
+
+
 def test_a_folder_of_this_computer_for_shared_libraries_stops_the_kit(kit):
     with pytest.raises(KitError, match="static"):
         link_arguments(["clang++", "CMakeFiles/translated_game.dir/a.o", "-Wl,-rpath,/home/me/zlib"], kit)
