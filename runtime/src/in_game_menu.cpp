@@ -272,8 +272,12 @@ bool draw_picture_menu(settings::Settings& settings) {
             ImGui::EndMenu();
         }
         changed |= flag_item(settings, settings::SHOW_FRAME_RATE, Text::ShowFrameRate);
+#if defined(__ANDROID__)
+        // The touch buttons' options, only where the buttons are part of playing: a computer shows
+        // them only on a touch screen, and its launcher has these options too.
         changed |= flag_item(settings, settings::HIDE_TOUCH_BUTTONS, Text::HideTouchButtons);
         changed |= flag_item(settings, settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo);
+#endif
         ImGui::EndMenu();
     }
     return changed;

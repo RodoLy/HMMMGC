@@ -291,8 +291,9 @@ menú está abierto (ahí tocar funciona como el ratón). En una computadora,
 `HMMM_TOUCH_BUTTONS=1` los muestra desde el inicio. En Android vuelven solos si
 el control se desconecta.
 
-La opción «Sin botones táctiles con control» (en Imagen del menú y en las
-Opciones del launcher; `hideTouchButtons` en `settings.json`) los apaga del todo
+La opción «Sin botones táctiles con control» (en Imagen del menú del juego en
+Android y en las Opciones del launcher, que pasa su `settings.json` a la app de
+Android; `hideTouchButtons`) los apaga del todo
 mientras haya un control conectado como control 1: no salen ni al tocar la
 pantalla, y tocarla no hace nada. Si el control se desconecta, vuelven, para no
 quedarse sin forma de jugar. Otra opción, «Sin botón TURBO táctil» (en el
@@ -595,8 +596,9 @@ the menu is open (where touching works as the mouse does). On a computer,
 `HMMM_TOUCH_BUTTONS=1` shows them from the start. On Android they come back by
 themselves when the controller is disconnected.
 
-The option "No touch buttons with a controller" (under Picture in the menu and
-in the launcher's Options; `hideTouchButtons` in `settings.json`) turns them off
+The option "No touch buttons with a controller" (under Picture in the game's
+menu on Android, and in the launcher's Options, which gives its `settings.json`
+to the Android app; `hideTouchButtons`) turns them off
 altogether while a controller is connected as controller 1: they do not show
 even when the screen is touched, and touching it does nothing. When the
 controller is disconnected they come back, so that the game can still be played.
