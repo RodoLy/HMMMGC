@@ -236,13 +236,36 @@ def compile_flags(command: list[str], rewriter: PathRewriter) -> list[str]:
     return flags
 
 
+def without_dependency_file(command: list[str]) -> list[str]:
+    """The link command without the file in which the linker writes what it read for Ninja (newer
+    CMake asks for it with -Xlinker --dependency-file=...): a file of the build's folder, which a
+    player's computer does not have."""
+    kept: list[str] = []
+    skip = False
+    for index, word in enumerate(command):
+        if skip:
+            skip = False
+            continue
+        if (
+            word == "-Xlinker"
+            and index + 1 < len(command)
+            and command[index + 1].startswith("--dependency-file")
+        ):
+            skip = True
+            continue
+        if word.startswith("-Wl,--dependency-file"):
+            continue
+        kept.append(word)
+    return kept
+
+
 def link_arguments(command: list[str], kit: Kit, rewriter: PathRewriter | None = None) -> list[str]:
     """The options and inputs of the link command, with the game's objects, the program and
     every file as placeholders. The files of the build are copied into the kit."""
     build = kit.build_directory.resolve()
     game_objects = "CMakeFiles/translated_game.dir/"
     arguments: list[str] = []
-    words = iter(command[1:])
+    words = iter(without_dependency_file(command)[1:])
     for word in words:
         if word == "-o":
             next(words)

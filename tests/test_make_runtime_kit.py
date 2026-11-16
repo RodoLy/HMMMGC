@@ -221,6 +221,17 @@ def test_a_library_the_player_s_compiler_lacks_becomes_the_kit_s_copy(kit, tmp_p
     assert (kit.out / "lib" / "000_libatomic.a").read_bytes() == b"!<arch>\n"
 
 
+def test_the_linker_s_dependency_file_for_ninja_is_left_out(kit):
+    command = [
+        "clang++",
+        "-Xlinker",
+        "--dependency-file=CMakeFiles/hmmm-native.dir/link.d",
+        "-Wl,--dependency-file=x.d",
+    ]
+    command += ["CMakeFiles/translated_game.dir/a.o", "-o", "hmmm-native"]
+    assert link_arguments(command, kit) == ["{game_objects}", "-o", "{output}"]
+
+
 def test_a_folder_of_this_computer_for_shared_libraries_stops_the_kit(kit):
     with pytest.raises(KitError, match="static"):
         link_arguments(["clang++", "CMakeFiles/translated_game.dir/a.o", "-Wl,-rpath,/home/me/zlib"], kit)
