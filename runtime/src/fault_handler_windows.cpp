@@ -1,7 +1,12 @@
 // fault_handler.h on Windows: a vectored exception handler sees the faults. A read of a
-// hardware register through a pointer is carried out here on ARM64 (see fault_handler.h);
-// any other fault in the guest space is reported. Faults outside the guest space are left
-// to whoever handles them, and reported if nobody does.
+// hardware register through a pointer is answered here: on x86-64 with the processor's single
+// step (the register page is opened for that one load and closed again when the processor stops
+// after it, as fault_handler_posix.cpp does on Linux), on ARM64 by carrying out the load
+// (arm64_register_read.h). Any other fault in the guest space is reported. Faults outside the
+// guest space are left to whoever handles them, and reported if nobody does.
+//
+// fault_handler.h en Windows. Las lecturas de registros del hardware con un puntero se atienden
+// aquí: en x86-64 con el paso a paso del procesador, en ARM64 haciendo la carga.
 
 #if defined(_WIN32)
 
@@ -34,7 +39,40 @@ bool is_inside_guest_space(uintptr_t host_address) {
     return flat_base != 0 && host_address - flat_base < GuestFlat::kGuestSpaceSize;
 }
 
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_X64) || defined(__x86_64__)
+
+constexpr ULONG_PTR ACCESS_WAS_READ = 0;    // ExceptionInformation[0] of an access violation
+constexpr DWORD TRAP_FLAG = 0x100;          // EFLAGS.TF: trap after the next instruction
+constexpr SIZE_T REGISTER_PAGE_SIZE = 4096;  // x86-64 pages are 4 KiB on Windows
+
+// The register page opened for the one instruction that is being single-stepped.
+thread_local uint8_t* t_opened_register_page = nullptr;
+
+// Brings the register up to date before the load sees it, opens its page, and asks the
+// processor to stop again right after the load (handled in close_after_one_load).
+bool open_for_one_load(uint32_t guest_address, CONTEXT& context) {
+    hardware_registers::prepare_trapped_read(guest_address, reinterpret_cast<const void*>(context.Rip));
+    auto* page = reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(guest_memory::flat_base() + guest_address) &
+                                            ~static_cast<uintptr_t>(REGISTER_PAGE_SIZE - 1));
+    DWORD previous = 0;
+    if (!VirtualProtect(page, REGISTER_PAGE_SIZE, PAGE_READONLY, &previous)) {
+        return false;
+    }
+    t_opened_register_page = page;
+    context.EFlags |= TRAP_FLAG;
+    return true;
+}
+
+// The processor stopped after the load: the page is closed again.
+LONG close_after_one_load(CONTEXT& context) {
+    DWORD previous = 0;
+    VirtualProtect(t_opened_register_page, REGISTER_PAGE_SIZE, PAGE_NOACCESS, &previous);
+    t_opened_register_page = nullptr;
+    context.EFlags &= ~TRAP_FLAG;
+    return EXCEPTION_CONTINUE_EXECUTION;
+}
+
+#elif defined(_M_ARM64) || defined(__aarch64__)
 
 // The registers of a thread as Windows keeps them in the CONTEXT of an exception.
 class WindowsRegisters final : public arm64_register_read::Registers {
@@ -56,6 +94,11 @@ private:
 
 LONG CALLBACK on_exception(EXCEPTION_POINTERS* exception) {
     const EXCEPTION_RECORD& record = *exception->ExceptionRecord;
+#if defined(_M_X64) || defined(__x86_64__)
+    if (record.ExceptionCode == EXCEPTION_SINGLE_STEP && t_opened_register_page != nullptr) {
+        return close_after_one_load(*exception->ContextRecord);
+    }
+#endif
     if (record.ExceptionCode != EXCEPTION_ACCESS_VIOLATION || record.NumberParameters < 2) {
         return EXCEPTION_CONTINUE_SEARCH;
     }
@@ -66,7 +109,12 @@ LONG CALLBACK on_exception(EXCEPTION_POINTERS* exception) {
     const auto guest_address =
         static_cast<uint32_t>(fault_address - reinterpret_cast<uintptr_t>(guest_memory::flat_base()));
     const bool is_write = record.ExceptionInformation[0] == ACCESS_WAS_WRITE;
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_X64) || defined(__x86_64__)
+    if (record.ExceptionInformation[0] == ACCESS_WAS_READ && guest_memory::is_hardware_register(guest_address) &&
+        open_for_one_load(guest_address, *exception->ContextRecord)) {
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+#elif defined(_M_ARM64) || defined(__aarch64__)
     WindowsRegisters registers(*exception->ContextRecord);
     if (!is_write && guest_memory::is_hardware_register(guest_address) && arm64_register_read::carry_out(registers)) {
         return EXCEPTION_CONTINUE_EXECUTION;

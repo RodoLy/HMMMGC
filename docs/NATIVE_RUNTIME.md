@@ -259,7 +259,12 @@ jugador; el paquete público compilará esa parte en la PC de cada jugador.
 - Las lecturas de registros por puntero (`fault_handler_posix.cpp`): en x86-64
   con el paso a paso del procesador, con los registros donde los guarda Linux o
   macOS; en ARM64 (Linux, Android, macOS) el manejador hace la carga él mismo,
-  con la misma parte que Windows ARM64 (`arm64_register_read.h`).
+  con la misma parte que Windows ARM64 (`arm64_register_read.h`). En Windows
+  x64 (`fault_handler_windows.cpp`) también es el paso a paso: el manejador de
+  excepciones abre la página para esa lectura (`VirtualProtect`), prende la
+  bandera de trampa (`EFlags`) y la vuelve a cerrar en la excepción de un paso.
+  Hasta la v0.4.0 Windows x64 no lo tenía, y el juego se cerraba en el primer
+  acceso así (`EXIGetID`, al arrancar).
 - En Android el juego es `libmain.so`, que carga la actividad de Java de SDL y
   arranca con `SDL_main`; el registro va a `native.log` en la carpeta del
   jugador, dentro del almacenamiento de la app.
@@ -565,7 +570,12 @@ player; the public package will compile that part on each player's PC.
 - The register reads through pointers (`fault_handler_posix.cpp`): on x86-64
   with the processor's single step, with the registers where Linux or macOS
   keeps them; on ARM64 (Linux, Android, macOS) the handler does the load
-  itself, with the same part as Windows ARM64 (`arm64_register_read.h`).
+  itself, with the same part as Windows ARM64 (`arm64_register_read.h`). On
+  Windows x64 (`fault_handler_windows.cpp`) it is the single step too: the
+  exception handler opens the page for that read (`VirtualProtect`), sets the
+  trap flag (`EFlags`) and closes the page again on the single-step exception.
+  Up to v0.4.0 Windows x64 lacked it, and the game closed at the first such
+  read (`EXIGetID`, while starting).
 - On Android the game is `libmain.so`, which SDL's Java activity loads and
   starts with `SDL_main`; the log goes to `native.log` in the player's folder,
   in the app's storage.
