@@ -12,7 +12,9 @@ size of the icon is drawn on its own, large, and then reduced, so the small ones
 the note is a little bigger in them to be read.
 
 Writes launcher/windows/launcher.ico (16 to 256 pixels), which launcher/windows/launcher.rc puts
-in HarvestMoonMM.exe, and launcher/windows/launcher-icon.png (256 pixels), to look at. Needs
+in HarvestMoonMM.exe, launcher/windows/launcher-icon.png (256 pixels), to look at, and
+launcher/macos/HarvestMoonMM.icns (16 to 1024 pixels), the icon of the Mac app
+(tools/package_native_macos.py puts it in the app). Needs
 Pillow (python3 -m pip install pillow); the icon is kept in the repository, so it is only needed
 to change it.
 
@@ -29,6 +31,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 REPOSITORY = Path(__file__).resolve().parent.parent
 NOTE_FONT = REPOSITORY / "launcher" / "fonts" / "DejaVuSans-Bold-symbols.ttf"
 OUTPUT = REPOSITORY / "launcher" / "windows"
+MACOS_OUTPUT = REPOSITORY / "launcher" / "macos"
+MACOS_SIZE = 1024  # the largest size of a Mac icon; Pillow writes the smaller ones from it
 SIZES = (16, 24, 32, 48, 64, 128, 256)
 DRAWN_AT = 1024  # every size is drawn this big, then reduced
 
@@ -121,7 +125,10 @@ def main() -> None:
     icons = [icon(bubble, size) for size in SIZES]
     icons[-1].save(OUTPUT / "launcher-icon.png")
     icons[-1].save(OUTPUT / "launcher.ico", sizes=[(size, size) for size in SIZES], append_images=icons[:-1])
-    print(f"wrote {OUTPUT / 'launcher.ico'} and {OUTPUT / 'launcher-icon.png'}")
+    MACOS_OUTPUT.mkdir(exist_ok=True)
+    icon(bubble, MACOS_SIZE).save(MACOS_OUTPUT / "HarvestMoonMM.icns")
+    written = (OUTPUT / "launcher.ico", OUTPUT / "launcher-icon.png", MACOS_OUTPUT / "HarvestMoonMM.icns")
+    print("wrote " + ", ".join(str(path) for path in written))
 
 
 if __name__ == "__main__":
