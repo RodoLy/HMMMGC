@@ -164,6 +164,14 @@ scenes may start). They are kept in `settings.json`, under `cheats`, and the `ch
     <td align="center">The launcher's mods</td>
     <td align="center">The launcher's options</td>
   </tr>
+  <tr>
+    <td><img src="docs/images/android-farm.jpg" alt="The farm at a phone's size (20:9), with the touch buttons"></td>
+    <td><img src="docs/images/android-title.jpg" alt="The game's opening at a phone's size, with A, the stick, the right arrow and TURBO pressed"></td>
+  </tr>
+  <tr>
+    <td align="center">At a phone's size (20:9), with the touch buttons</td>
+    <td align="center">A, the stick, the right arrow and TURBO pressed</td>
+  </tr>
 </table>
 
 ## Playing
@@ -219,12 +227,19 @@ Command Line Tools; if your Mac does not have them, the launcher opens their
 installer. Everything of yours goes in
 `~/Library/Application Support/HarvestMoonMM`.
 
-**On Android.** Download the Android zip too and unzip it inside the folder of
-the Windows or Linux package. The launcher then has **Make the Android app** on
-the Game tab: it makes `HarvestMoonMM.apk` from your disc, in a few minutes.
-Copy it and the disc's `.iso` to the phone (Android 8 or newer, ARM64, with
-Vulkan), install the app, and choose the `.iso` the first time you open it. It
-plays with a controller or with touch buttons drawn over the game.
+**On Android.** Download `HarvestMoonMM-<version>.apk` from the release and
+install it on the phone (Android 8 or newer, ARM64, with Vulkan). Put your disc
+image on the phone too, as `.iso` or `.gcm` (an `.rvz` can be turned into an
+`.iso` with Dolphin: right-click the game → *Convert File*). The first time the
+app opens it asks for the disc, checks it and copies it into the app (1.4 GB;
+you can delete your copy afterwards). The APK has the game's code translated to
+ARM64, but none of its graphics, music or text: those always come from your
+disc. It plays with a controller or with touch buttons drawn over the game. To
+update, install the new APK over the old one: your saves stay.
+
+If you would rather make the APK yourself from your disc: download the Android
+zip too, unzip it inside the folder of the Windows or Linux package, and use
+**Make the Android app** on the launcher's Game tab.
 
 **With [RecompLauncher](https://recomplauncher.com).** The package has a
 `recomplauncher.json`, so RecompLauncher can install it, check your disc

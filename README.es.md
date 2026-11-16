@@ -165,6 +165,14 @@ empezar escenas de amor y de rivales). Se guardan en `settings.json`, en `cheats
     <td align="center">Los mods del launcher</td>
     <td align="center">Las opciones del launcher</td>
   </tr>
+  <tr>
+    <td><img src="docs/images/android-farm.jpg" alt="La granja al tamaño de un celular (20:9), con los botones táctiles"></td>
+    <td><img src="docs/images/android-title.jpg" alt="La apertura del juego al tamaño de un celular, con A, el stick, la flecha derecha y TURBO apretados"></td>
+  </tr>
+  <tr>
+    <td align="center">Al tamaño de un celular (20:9), con los botones táctiles</td>
+    <td align="center">A, el stick, la flecha derecha y TURBO apretados</td>
+  </tr>
 </table>
 
 ## Cómo jugar
@@ -222,12 +230,20 @@ macOS 15, si no aparece: intenta abrirlo, luego *Configuración del Sistema* →
 las Command Line Tools de Apple; si tu Mac no las tiene, el launcher abre su
 instalador. Todo lo tuyo queda en `~/Library/Application Support/HarvestMoonMM`.
 
-**En Android.** Descarga también el zip de Android y descomprímelo dentro de la
-carpeta del paquete de Windows o de Linux. El launcher tiene entonces **Hacer la
-app de Android** en la pestaña Juego: hace `HarvestMoonMM.apk` con tu disco, en
-unos minutos. Cópiala al celular junto con el `.iso` del disco (Android 8 o más
-nuevo, ARM64, con Vulkan), instala la app y elige el `.iso` la primera vez que
-la abras. Se juega con control o con botones táctiles dibujados sobre el juego.
+**En Android.** Descarga `HarvestMoonMM-<versión>.apk` del release e instálala
+en el celular (Android 8 o más nuevo, ARM64, con Vulkan). Pon también en el
+celular la imagen de tu disco, en `.iso` o `.gcm` (una `.rvz` se convierte a
+`.iso` con Dolphin: clic derecho en el juego → *Convertir archivo*). La primera
+vez que abres la app te pide el disco, lo revisa y lo copia a la app (1.4 GB;
+después puedes borrar tu copia). El APK trae el código del juego traducido a
+ARM64, pero nada de sus gráficos, música ni textos: eso siempre sale de tu
+disco. Se juega con control o con botones táctiles dibujados sobre el juego.
+Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
+quedan.
+
+Si prefieres hacer el APK tú mismo con tu disco: descarga también el zip de
+Android, descomprímelo dentro de la carpeta del paquete de Windows o de Linux y
+usa **Hacer la app de Android** en la pestaña Juego del launcher.
 
 **Con [RecompLauncher](https://recomplauncher.com).** El paquete trae un
 `recomplauncher.json`, así que RecompLauncher puede instalarlo, revisar la

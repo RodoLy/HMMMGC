@@ -9,6 +9,9 @@ Qué es
   computadora y con tu propio disco, la app de Android del juego. Este paquete
   NO trae el juego.
 
+  Si solo quieres jugar, no necesitas esto: el release trae la app ya hecha,
+  HarvestMoonMM-<versión>.apk. Instálala y elige tu disco al abrirla.
+
 Lo que necesitas
   - El paquete de Windows o de Linux del juego, de la misma versión que este.
   - La imagen de tu disco de Harvest Moon: Magical Melody de Estados Unidos
@@ -53,6 +56,10 @@ What it is
   What the Windows or Linux package needs to make, on your computer and from
   your own disc, the game's Android app. This package does NOT include the
   game.
+
+  If you only want to play, you do not need this: the release has the app
+  already made, HarvestMoonMM-<version>.apk. Install it and choose your disc
+  when you open it.
 
 What you need
   - The Windows or Linux package of the game, of the same version as this one.

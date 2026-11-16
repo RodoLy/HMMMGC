@@ -12,8 +12,8 @@ a un jugador sin que el paquete lleve nada del juego.
 ### Qué lleva el paquete y qué no
 
 El programa del juego (`hmmm-native`) es el código del juego traducido a C++ y
-compilado junto con el runtime, así que no se puede repartir. El paquete lleva
-todo lo demás, y el programa se hace en la computadora de cada jugador, con su
+compilado junto con el runtime, y el paquete de computadora no lo trae (en
+Android sí: ver «El APK listo de cada versión»). El paquete lleva todo lo demás, y el programa se hace en la computadora de cada jugador, con su
 propio disco, la primera vez que juega:
 
 - el runtime ya compilado, sin el juego: el **kit del runtime**;
@@ -311,6 +311,35 @@ Así se probó: en GitHub el kit compila y enlaza con el clang de llvm-mingw,
 `libandroid`, `libOpenSLES`, `libGLESv1_CM`, `libGLESv2`) y `apksigner` aprueba
 la firma v2 de la app; en un celular de verdad todavía no.
 
+### El APK listo de cada versión
+
+Cada release trae también `HarvestMoonMM-<versión>.apk`, la app ya hecha, como
+lo hacen otras recompilaciones con versión de Android (DriftDroid, de Mario
+Kart Wii sobre WiiCompiled, y Skies of Arcadia Legends Recompiled): el APK trae
+el código del juego traducido a ARM64 (`lib/arm64-v8a/libmain.so`, con los
+datos iniciales del ejecutable), pero nada de los archivos del disco (modelos,
+texturas, música, textos), que la app lee de la imagen del jugador. Empieza con
+las opciones de siempre (no lleva ningún `settings.json`).
+
+Lo hace quien publica la versión, en su computadora y con su propio disco,
+con los mismos paquetes del release (el de Linux o el de Windows, con el de
+Android descomprimido dentro), como lo haría el launcher pero sin el
+`settings.json` de un jugador:
+
+```
+cd HarvestMoonMM-linux-x64/builder
+python/bin/python3 tools/make_android_app.py --disc <G4AEE9.iso> --android android \
+    --translator translator/Translator.Cli --toolchain clang --nodtool nodtool/nodtool \
+    --key <release-key.json> --out <carpeta>
+```
+
+y se sube el `HarvestMoonMM.apk` que escribe, con el nombre
+`HarvestMoonMM-<versión>.apk`. La llave (`release-key.json`) es siempre la
+misma, para que cada versión se instale encima de la anterior y conserve las
+partidas; se guarda fuera del repositorio y nunca se sube. Si no existe,
+`make_android_app.py` hace una nueva (y entonces el APK ya no se instala
+encima de los anteriores).
+
 ### Probarlo en Linux
 
 ```sh
@@ -340,8 +369,9 @@ reaches a player without the package carrying anything of the game.
 ### What the package carries and what it does not
 
 The game's program (`hmmm-native`) is the game's code translated to C++ and
-compiled together with the runtime, so it cannot be handed out. The package
-carries everything else, and the program is made on each player's computer,
+compiled together with the runtime, and the computer package does not carry it
+(on Android it does: see "The ready APK of each version"). The package carries
+everything else, and the program is made on each player's computer,
 from their own disc, the first time they play:
 
 - the runtime already compiled, without the game: the **runtime kit**;
@@ -637,6 +667,35 @@ How it was tried: on GitHub the kit compiles and links with llvm-mingw's clang,
 `libmain.so` only asks for Android's libraries (`libc`, `libm`, `libdl`, `liblog`,
 `libandroid`, `libOpenSLES`, `libGLESv1_CM`, `libGLESv2`) and `apksigner` passes
 the app's v2 signature; on a real phone not yet.
+
+### The ready APK of each version
+
+Each release also carries `HarvestMoonMM-<version>.apk`, the app already made,
+as other recompilations with an Android version do (DriftDroid, of Mario Kart
+Wii on WiiCompiled, and Skies of Arcadia Legends Recompiled): the APK carries
+the game's code translated to ARM64 (`lib/arm64-v8a/libmain.so`, with the
+executable's initial data), but none of the disc's files (models, textures,
+music, text), which the app reads from the player's image. It starts with the
+usual options (it carries no `settings.json`).
+
+Whoever publishes the version makes it, on their computer and from their own
+disc, with the release's own packages (the Linux or the Windows one, with the
+Android one unpacked inside), as the launcher would but without a player's
+`settings.json`:
+
+```
+cd HarvestMoonMM-linux-x64/builder
+python/bin/python3 tools/make_android_app.py --disc <G4AEE9.iso> --android android \
+    --translator translator/Translator.Cli --toolchain clang --nodtool nodtool/nodtool \
+    --key <release-key.json> --out <folder>
+```
+
+and uploads the `HarvestMoonMM.apk` it writes, named
+`HarvestMoonMM-<version>.apk`. The key (`release-key.json`) is always the same
+one, so that each version installs over the one before and keeps the saves; it
+is kept outside the repository and never uploaded. If it does not exist,
+`make_android_app.py` makes a new one (and the APK then no longer installs over
+the earlier ones).
 
 ### Trying it on Linux
 
