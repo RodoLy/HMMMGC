@@ -10,8 +10,8 @@
 
 Una versión nativa para PC de *Harvest Moon: Magical Melody* de GameCube. El
 código del propio juego se traduce por adelantado a C++ y se compila en un
-programa de Windows que corre en tu procesador, Intel, AMD o ARM, sin ningún
-emulador de por medio. Se juega en pantalla ancha, a la resolución de tu
+programa de Windows o de Linux que corre en tu procesador, Intel, AMD o ARM,
+sin ningún emulador de por medio. Se juega en pantalla ancha, a la resolución de tu
 pantalla y a 60 o 120 cuadros por segundo, con un launcher, un menú de
 opciones dentro del juego y mods, entre ellos uno con el que el juego sigue
 después de casarte con Jamie.
@@ -173,10 +173,10 @@ empezar escenas de amor y de rivales). Se guardan en `settings.json`, en `cheats
 
 | | Requisitos mínimos |
 |---|---|
-| Sistema | Windows 10 (versión 1903 o más nueva) o Windows 11, de 64 bits. |
+| Sistema | Windows 10 (versión 1903 o más nueva) o Windows 11, de 64 bits. O un Linux de 64 bits con glibc 2.38 o más nueva: Ubuntu 24.04 o más nuevo, Debian 13, Fedora 39 o más nuevo, Arch, SteamOS 3.6 o más nuevo (Steam Deck). |
 | Procesador | Intel o AMD con SSE4.2 (Intel desde 2008, AMD desde 2011): el paquete **x64**. Uno ARM como el Snapdragon: el paquete **arm64**. |
 | Memoria | 4 GB de RAM; mejor 8 GB. La primera vez, el juego se compila en tu computadora, con un compilador por cada núcleo del procesador, de hasta unos 250 MB cada uno. |
-| Gráficos | Una tarjeta gráfica, o los gráficos del procesador, con Direct3D 12. |
+| Gráficos | Una tarjeta gráfica, o los gráficos del procesador, con Direct3D 12 (Windows) o Vulkan (Linux). |
 | Disco | Unos 3 GB libres: el paquete descomprimido (unos 550 MB), el `.iso` al que se convierte una imagen `.rvz` y el juego preparado (unos 100 MB). |
 | Juego | Tu disco de *Harvest Moon: Magical Melody* de Estados Unidos (`G4AEE9`), como imagen: `.iso`, `.gcm` o `.rvz` (el formato comprimido de Dolphin). El launcher revisa que sea ese juego y esa versión. |
 
@@ -206,6 +206,13 @@ Descargas, Documentos, el Escritorio, una carpeta `Games`, junto a
 `HarvestMoonMM.exe` o en una carpeta de la lista de juegos de Dolphin, el
 launcher la encuentra solo y **Preparar el juego** la usa, así que no
 necesitas el mouse para elegirla.
+
+**En Linux.** Descarga el `.tar.gz` de tu procesador, descomprímelo y abre
+`HarvestMoonMM`; de ahí en adelante es igual que en Windows. Trae su propio
+compilador, así que no hay nada que instalar, tampoco en la Steam Deck (en el
+modo escritorio; después agrega `HarvestMoonMM` a Steam como juego que no es
+de Steam para jugarlo desde el modo juego). Todo lo tuyo queda en
+`~/.local/share/HarvestMoonMM`.
 
 **Con [RecompLauncher](https://recomplauncher.com).** El paquete trae un
 `recomplauncher.json`, así que RecompLauncher puede instalarlo, revisar la
@@ -302,7 +309,8 @@ de pruebas del mod de Jamie.
 - El juego en español, francés, alemán o italiano: el disco americano trae
   las traducciones de un lanzamiento europeo que nunca salió.
 - Más mods: trucos, y adelantar las escenas.
-- Actualizar desde el launcher, un programa firmado y un paquete para Linux.
+- Actualizar desde el launcher, un programa firmado y paquetes para macOS y
+  Android.
 - Después, las dos versiones de Wii del juego sobre el mismo runtime.
 
 ## Para desarrolladores
@@ -310,8 +318,8 @@ de pruebas del mod de Jamie.
 - El runtime nativo en Linux: `scripts/build_native_runtime.sh`
   ([runtime/README.md](runtime/README.md)). Necesita tu disco extraído en
   `orig/G4AEE9`.
-- El launcher y el paquete de Windows, que GitHub Actions arma cuando se
-  publica una versión: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md).
+- El launcher y los paquetes de Windows y Linux, que GitHub Actions arma
+  cuando se publica una versión: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md).
 - Cómo se analizó el juego: [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md),
   [docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) (4 486 funciones, validadas
   contra el índice de excepciones de CodeWarrior) y

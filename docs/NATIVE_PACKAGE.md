@@ -17,7 +17,8 @@ todo lo demás, y el programa se hace en la computadora de cada jugador, con su
 propio disco, la primera vez que juega:
 
 - el runtime ya compilado, sin el juego: el **kit del runtime**;
-- el traductor de WiiCompiled, un compilador de C++ (llvm-mingw) y Python;
+- el traductor de WiiCompiled, un compilador de C++ (llvm-mingw; en Linux, su
+  clang con un sysroot) y Python;
 - las herramientas de este repositorio que preparan el juego, los símbolos
   (`config/G4AEE9/symbols.txt`), el código del runtime que el traductor lee y
   el de los mods;
@@ -191,6 +192,42 @@ En Windows, el runtime y el launcher llevan un manifiesto que les da UTF-8 como
 página de códigos, para que funcionen las rutas con cualquier letra (un usuario
 llamado «Pérez», por ejemplo).
 
+### El paquete de Linux (`.github/workflows/package-native-linux.yml`)
+
+Igual que el de Windows, pero hecho en una máquina Linux de cada procesador
+(x64 y ARM64), y con el compilador adentro, porque un Linux no siempre tiene
+las cabeceras y bibliotecas para compilar (la Steam Deck no trae ninguna):
+
+1. El runtime se compila con el clang de llvm-mingw para Linux (el mismo que
+   va en el paquete: su clang también compila para Linux), sin tomar nada del
+   sistema (`-DAURORA_USE_SYSTEM_DEPENDENCIES=OFF`, todo estático) y con
+   libstdc++ adentro del programa (`-static-libstdc++`). Así el juego solo
+   necesita glibc en la computadora del jugador. Dawn es el que aurora baja ya
+   compilado, y es el que pide glibc 2.38.
+2. `tools/make_runtime_kit.py` deja las bibliotecas del sistema por nombre
+   (`-lm`), para que el compilador las busque en su sysroot, y se niega a
+   seguir si el programa buscaría bibliotecas en una carpeta de la máquina que
+   lo compiló (`-Wl,-rpath`).
+3. `tools/make_linux_sysroot.py` arma el sysroot: las cabeceras y bibliotecas
+   de glibc y del runtime de GCC de esa misma máquina (los paquetes de Ubuntu
+   con los que se compiló el kit), sacadas de lo que dice dpkg, con sus
+   versiones y licencias, y lo prueba compilando y corriendo un programa.
+4. `tools/package_native_unix.py` arma el `.tar.gz` (que guarda los enlaces y
+   qué archivos son programas): el launcher, `builder/` como en Windows, y en
+   `builder/clang` clang y lld recortados, con el sysroot y una configuración
+   junto a clang (`bin/clang.cfg`, `bin/clang++.cfg`: `--sysroot` y
+   `-fuse-ld=lld`), así que la preparación lo corre como a cualquier clang. Se
+   niega a terminar si algún programa no arrancaría: lee de cada uno
+   (`tools/elf_binaries.py`) el procesador, las bibliotecas que necesita y la
+   glibc más nueva que pide, y anota esa en `VERSIONS.txt`.
+5. Al final, compila y corre un programa con el compilador del paquete ya
+   descomprimido y sin nada del sistema en el `PATH`.
+
+Se probó así en la nube con el paquete x64 y el disco del juego: el launcher
+del paquete, con el `PATH` vacío, preparó el juego en 2 minutos y 18 segundos
+(`HarvestMoonMM --prepare`), y el juego preparado, que solo pide libc y libm,
+llegó al menú del título y arrancó con `--play`.
+
 ### Probarlo en Linux
 
 ```sh
@@ -225,7 +262,8 @@ carries everything else, and the program is made on each player's computer,
 from their own disc, the first time they play:
 
 - the runtime already compiled, without the game: the **runtime kit**;
-- WiiCompiled's translator, a C++ compiler (llvm-mingw) and Python;
+- WiiCompiled's translator, a C++ compiler (llvm-mingw; on Linux, its clang
+  with a sysroot) and Python;
 - the tools of this repository that prepare the game, the symbols
   (`config/G4AEE9/symbols.txt`), the runtime's code that the translator reads
   and the mods' code;
@@ -398,6 +436,42 @@ minute or two. Then, for each processor, ARM64 and x64, on Linux:
 On Windows, the runtime and the launcher carry a manifest that gives them UTF-8
 as their code page, so that paths with any letter work (a user named "Pérez",
 for example).
+
+### The Linux package (`.github/workflows/package-native-linux.yml`)
+
+Like the Windows one, but made on a Linux runner of each processor (x64 and
+ARM64), and with the compiler inside, because a Linux computer does not always
+have the headers and libraries that compiling needs (the Steam Deck has none):
+
+1. The runtime is compiled with llvm-mingw's clang for Linux (the same one
+   that goes in the package: its clang also compiles for Linux), taking nothing
+   from the system (`-DAURORA_USE_SYSTEM_DEPENDENCIES=OFF`, everything static)
+   and with libstdc++ inside the program (`-static-libstdc++`). The game then
+   needs only glibc on the player's computer. Dawn is the one aurora downloads
+   already built, and it is what asks for glibc 2.38.
+2. `tools/make_runtime_kit.py` names the system's libraries (`-lm`), so that
+   the compiler looks for them in its sysroot, and stops when the program would
+   look for libraries in a folder of the computer that built it
+   (`-Wl,-rpath`).
+3. `tools/make_linux_sysroot.py` makes the sysroot: the headers and libraries
+   of glibc and of GCC's runtime of that same runner (the Ubuntu packages the
+   kit was compiled with), taken from what dpkg lists, with their versions and
+   licenses, and tries it by compiling and running a program.
+4. `tools/package_native_unix.py` assembles the `.tar.gz` (which keeps the
+   links and which files are programs): the launcher, `builder/` as on Windows,
+   and in `builder/clang` clang and lld trimmed, with the sysroot and a
+   configuration beside clang (`bin/clang.cfg`, `bin/clang++.cfg`: `--sysroot`
+   and `-fuse-ld=lld`), so the preparation runs it like any clang. It refuses
+   to finish when a program would not start: it reads from each one
+   (`tools/elf_binaries.py`) the processor, the libraries it needs and the
+   newest glibc it asks for, and writes that one in `VERSIONS.txt`.
+5. At the end, it compiles and runs a program with the package's compiler,
+   unpacked, with nothing of the system on the `PATH`.
+
+It was tried this way in the cloud with the x64 package and the game's disc:
+the package's launcher, with an empty `PATH`, prepared the game in 2 minutes
+and 18 seconds (`HarvestMoonMM --prepare`), and the prepared game, which only
+asks for libc and libm, reached the title menu and started with `--play`.
 
 ### Trying it on Linux
 
