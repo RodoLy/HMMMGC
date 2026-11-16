@@ -439,5 +439,8 @@ se ofrecen con esos mismos términos.
 
 Este es un proyecto de fans, sin relación con Natsume, Marvelous ni Nintendo.
 *Harvest Moon: Magical Melody* lo desarrolló Marvelous Interactive y lo
-publicó Natsume. Ninguna parte del juego está en este repositorio ni en sus
-descargas.
+publicó Natsume. Ninguna parte del juego está en este repositorio ni en los
+paquetes de computadora. El APK de Android listo de cada release trae el
+código del juego traducido a ARM64, como las versiones de Android de otras
+recompilaciones, pero nada de los archivos del disco (gráficos, música,
+textos), que siempre salen del disco del propio jugador.
