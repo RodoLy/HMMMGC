@@ -14,7 +14,8 @@ the note is a little bigger in them to be read.
 Writes launcher/windows/launcher.ico (16 to 256 pixels), which launcher/windows/launcher.rc puts
 in HarvestMoonMM.exe, launcher/windows/launcher-icon.png (256 pixels), to look at, and
 launcher/macos/HarvestMoonMM.icns (16 to 1024 pixels), the icon of the Mac app
-(tools/package_native_macos.py puts it in the app). Needs
+(tools/package_native_macos.py puts it in the app), and the Android app's icon in each density
+(android/app/src/main/res/mipmap-*/ic_launcher.png). Needs
 Pillow (python3 -m pip install pillow); the icon is kept in the repository, so it is only needed
 to change it.
 
@@ -33,6 +34,8 @@ NOTE_FONT = REPOSITORY / "launcher" / "fonts" / "DejaVuSans-Bold-symbols.ttf"
 OUTPUT = REPOSITORY / "launcher" / "windows"
 MACOS_OUTPUT = REPOSITORY / "launcher" / "macos"
 MACOS_SIZE = 1024  # the largest size of a Mac icon; Pillow writes the smaller ones from it
+ANDROID_RESOURCES = REPOSITORY / "android" / "app" / "src" / "main" / "res"
+ANDROID_SIZES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}  # a launcher icon's
 SIZES = (16, 24, 32, 48, 64, 128, 256)
 DRAWN_AT = 1024  # every size is drawn this big, then reduced
 
@@ -127,7 +130,16 @@ def main() -> None:
     icons[-1].save(OUTPUT / "launcher.ico", sizes=[(size, size) for size in SIZES], append_images=icons[:-1])
     MACOS_OUTPUT.mkdir(exist_ok=True)
     icon(bubble, MACOS_SIZE).save(MACOS_OUTPUT / "HarvestMoonMM.icns")
-    written = (OUTPUT / "launcher.ico", OUTPUT / "launcher-icon.png", MACOS_OUTPUT / "HarvestMoonMM.icns")
+    for density, size in ANDROID_SIZES.items():
+        folder = ANDROID_RESOURCES / f"mipmap-{density}"
+        folder.mkdir(parents=True, exist_ok=True)
+        icon(bubble, size).save(folder / "ic_launcher.png")
+    written = (
+        OUTPUT / "launcher.ico",
+        OUTPUT / "launcher-icon.png",
+        MACOS_OUTPUT / "HarvestMoonMM.icns",
+        ANDROID_RESOURCES,
+    )
     print("wrote " + ", ".join(str(path) for path in written))
 
 
