@@ -1,6 +1,7 @@
 // See in_game_menu.h.
 
 #include "in_game_menu.h"
+#include "input/touch_buttons.h"
 
 #include "crop_grid.h"
 #include "controls_editor.h"
@@ -481,7 +482,7 @@ void before_frame() {
     const bool b = gamepad != nullptr && SDL_GetGamepadButton(gamepad, game_b_button());
     g_b_pressed = b && !g_b_held;
     g_b_held = b;
-    if (g_open || player_options::show_frame_rate()) {
+    if (g_open || player_options::show_frame_rate() || touch_buttons::visible()) {
         get_ready();
         fit_to_window();
         g_lettering_ready = true;
@@ -518,6 +519,12 @@ void draw() {
 }
 
 bool is_open() { return g_open; }
+
+void open_from_touch() {
+    if (!g_open) {
+        open();
+    }
+}
 
 bool quit_requested() { return g_quit; }
 

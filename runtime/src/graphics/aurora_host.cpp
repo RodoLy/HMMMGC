@@ -14,6 +14,7 @@
 #include "graphics/map_draw_range.h"
 #include "graphics/shadow_range.h"
 #include "in_game_menu.h"
+#include "input/touch_buttons.h"
 #include "player_folder.h"
 #include "player_options.h"
 #include "runtime_log.h"
@@ -194,6 +195,7 @@ void initialize() {
 bool is_initialized() { return g_initialized; }
 
 void present_frame() {
+    touch_buttons::draw();
     in_game_menu::draw();
     frame_interpolation::schedule_frame();
     aurora_end_frame();
@@ -226,6 +228,7 @@ bool process_events() {
         if (event->type == AURORA_EXIT) {
             g_window_closed = true;
         } else if (event->type == AURORA_SDL_EVENT) {
+            touch_buttons::handle_event(event->sdl);
             in_game_menu::handle_event(event->sdl);
         } else if (event->type == AURORA_WINDOW_RESIZED) {
             const AuroraWindowSize& size = event->windowSize;

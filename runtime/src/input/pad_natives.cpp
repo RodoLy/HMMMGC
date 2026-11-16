@@ -15,6 +15,7 @@
 #include "guest_memory.h"
 #include "controls_editor.h"
 #include "in_game_menu.h"
+#include "input/touch_buttons.h"
 #include "native_functions.h"
 
 #include <SDL3/SDL_scancode.h>
@@ -114,6 +115,8 @@ uint32_t PADReadNative(uint32_t status_address) {
     choose_keyboard_or_gamepad();
     PADStatus statuses[PAD_CHANMAX]{};
     const uint32_t rumble_ports = PADRead(statuses);
+    // The touch buttons play as controller 1 too, with whatever else plays there (touch_buttons.h).
+    touch_buttons::add_to(statuses[PAD_CHAN0]);
     // Nothing reaches the game while the options menu is open (in_game_menu.h).
     in_game_menu::hold_back_controllers(statuses);
     for (uint32_t port = 0; port < PAD_CHANMAX; ++port) {

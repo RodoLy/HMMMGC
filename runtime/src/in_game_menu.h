@@ -33,6 +33,9 @@ void draw();
 
 bool is_open();
 
+// The touch buttons' button for the menu (input/touch_buttons.h): opens it, as F10 does.
+void open_from_touch();
+
 // Whether the player chose "Quit the game" (aurora_host.cpp then closes it, as the window's close
 // button does).
 bool quit_requested();

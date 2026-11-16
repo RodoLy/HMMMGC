@@ -105,6 +105,7 @@ constexpr Translation TRANSLATIONS[] = {
      "instalador: instálalas y vuelve a preparar el juego.",
      "Your Mac needs Apple's Command Line Tools to prepare the game. Their installer has opened: install "
      "them and prepare the game again."},
+    {Text::TouchOptions, "Opciones", "Options"},
     {Text::ErrorNotStarted, "No se pudo empezar la preparación.", "The preparation could not start."},
     {Text::GameNotStarted, "No se pudo abrir el juego.", "The game could not be opened."},
     {Text::GameFailed, "El juego se cerró por un error. Los detalles están en el registro.",

@@ -72,6 +72,7 @@ enum class Text {
     ErrorToolFailed,
     ErrorSetup,
     ErrorNoCompiler,
+    TouchOptions,
     ErrorNotStarted,
     GameNotStarted,
     GameFailed,
