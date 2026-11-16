@@ -97,9 +97,14 @@ Package find_package() {
 #endif
     package.prepare_script = builder / "tools" / "prepare_game.py";
     package.kit = builder / "kit";
+    // Published for Windows, for Linux or macOS (a program of the same name without .exe), or a
+    // developer's build run with dotnet.
     package.translator = first_existing({builder / "translator" / "Translator.Cli.exe",
+                                         builder / "translator" / "Translator.Cli",
                                          builder / "translator" / "Translator.Cli.dll"});
-    package.toolchain = first_existing({builder / "llvm-mingw"});
+    // The package's compiler: llvm-mingw on Windows, its clang with a sysroot on Linux. A Mac has
+    // none: Apple's clang is used, from the Command Line Tools.
+    package.toolchain = first_existing({builder / "llvm-mingw", builder / "clang"});
     package.nodtool = first_existing({builder / "nodtool" / "nodtool.exe", builder / "nodtool" / "nodtool"});
     package.symbols = builder / "config" / "G4AEE9" / "symbols.txt";
     package.mods = builder / "mods";
