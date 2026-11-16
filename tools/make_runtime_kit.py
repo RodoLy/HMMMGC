@@ -66,9 +66,12 @@ SYMBOL_HEADER = REPOSITORY / "build" / "G4AEE9_symbols.h"
 PROGRAM_TARGET = "hmmm-native"
 # Changes when the recipe's meaning changes; prepare_game.py refuses a format it does not know.
 RECIPE_FORMAT = 1
-# Libraries of the system that a Linux build links by path: they are on every Linux computer
-# that can build the runtime, so they stay as they are (only for trying the kit on Linux).
+# Libraries of the system that a Linux build links by path. The recipe names them as the linker
+# looks for them (/usr/lib/x86_64-linux-gnu/libm.so becomes -lm), so that they are found where
+# the compiler of the player's computer looks: its own system, or the package's sysroot
+# (tools/make_linux_sysroot.py).
 SYSTEM_LIBRARY_DIRECTORIES = (Path("/usr/lib"), Path("/lib"), Path("/usr/lib64"), Path("/lib64"))
+SHARED_LIBRARY_NAME = re.compile(r"lib(.+)\.so(\.\d+)*")
 # Compiler options that only give debugging information, which nobody uses on a player's
 # computer and which makes the game's objects several times bigger and slower to write.
 DEBUG_INFORMATION = re.compile(r"-g\d?|-gdwarf(-\d)?|-gcodeview")
@@ -216,6 +219,12 @@ def link_arguments(command: list[str], kit: Kit) -> list[str]:
                 arguments.append("{game_objects}")
         elif word.startswith("-Wl,--out-implib,"):
             continue  # an import library of the program, which nothing uses
+        elif word.startswith(("-Wl,-rpath,", "-Wl,-rpath-link,")):
+            # A folder of this computer where the program would look for shared libraries: the kit
+            # only works when everything it links is in it, or is a part of the system.
+            raise KitError(
+                f"the link command has {word}: build the libraries static (-DBUILD_SHARED_LIBS=OFF)"
+            )
         elif word in ("-I", "-isystem", "-idirafter", "-iquote"):
             next(words)  # the compile flags that CMake also passes to the link, where they do nothing
         elif re.fullmatch(r"(-I|-isystem|-idirafter|-iquote).+", word):
@@ -227,7 +236,12 @@ def link_arguments(command: list[str], kit: Kit) -> list[str]:
         else:
             path = Path(word) if Path(word).is_absolute() else build / word
             if any(path.resolve().is_relative_to(directory) for directory in SYSTEM_LIBRARY_DIRECTORIES):
-                arguments.append(str(path))
+                name = SHARED_LIBRARY_NAME.fullmatch(path.name)
+                if name is None:
+                    raise KitError(
+                        f"the link command has {word}, a library of the system the kit cannot name"
+                    )
+                arguments.append(f"-l{name[1]}")
             else:
                 arguments.append(kit.library(path))
     if "{game_objects}" not in arguments:

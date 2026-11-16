@@ -149,6 +149,16 @@ def test_a_library_path_of_this_computer_is_refused(kit):
         link_arguments(["clang++", "-L/home/someone/lib", "-o", "hmmm-native"], kit)
 
 
+def test_a_library_of_the_system_is_named_as_the_linker_looks_for_it(kit):
+    command = ["clang++", "CMakeFiles/translated_game.dir/a.o", "/usr/lib/x86_64-linux-gnu/libbz2.so"]
+    assert link_arguments(command + ["-lm"], kit) == ["{game_objects}", "-lbz2", "-lm"]
+
+
+def test_a_folder_of_this_computer_for_shared_libraries_stops_the_kit(kit):
+    with pytest.raises(KitError, match="static"):
+        link_arguments(["clang++", "CMakeFiles/translated_game.dir/a.o", "-Wl,-rpath,/home/me/zlib"], kit)
+
+
 def test_the_target_comes_from_cmake_s_system_file(tmp_path):
     system_file = tmp_path / "CMakeFiles" / "3.28.3" / "CMakeSystem.cmake"
     system_file.parent.mkdir(parents=True)
