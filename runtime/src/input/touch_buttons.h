@@ -11,7 +11,8 @@
 // On the left, the Control Stick (the finger moves its knob, as far as its ring) and the D-Pad; on
 // the right, A (the big green one), B, X and Y where the GameCube has them; L and R at the top
 // corners with Z under R; START at the bottom in the middle, and at the top in the middle a button
-// that opens the options menu (in_game_menu.h), as F10 does. Several fingers press several buttons
+// that opens the options menu (in_game_menu.h), as F10 does; under L, TURBO runs the game faster
+// while it is held, as the turbo's key (Tab) does. Several fingers press several buttons
 // at once, and a finger that slides from one button onto another moves to it.
 //
 // They show when the screen is touched (and from the start on Android, unless a controller is
@@ -36,6 +37,9 @@ bool visible();
 
 // Inside each frame of the game, before it ends (aurora_host.cpp).
 void draw();
+
+// Whether a finger holds TURBO (aurora_host.cpp then runs the game faster, see game_clock.h).
+bool turbo_held();
 
 // What the fingers press, added to what controller 1 reads (input/pad_natives.cpp).
 void add_to(PADStatus& status);

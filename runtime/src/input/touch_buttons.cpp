@@ -46,15 +46,17 @@ constexpr Sint16 STICK_MOVED = 12000;
 //   Bean                X and Y, pale beans curved around A;
 //   GrayCapsule         L, R and START, pale capsules (a rectangle with round ends);
 //   PurpleCapsule       Z;
-//   CreamCapsule        the menu's, which the GameCube does not have, in the cream of the game's boxes;
+//   CreamCapsule        the menu's and the turbo's, which the GameCube does not have, in the cream of
+//                       the game's boxes;
 //   Pad                 an arm of the D-Pad, a pale cross drawn once for the four.
 enum class Look { GreenCoin, RedCoin, Bean, GrayCapsule, PurpleCapsule, CreamCapsule, Pad };
 
 // The D-Pad's arrows are drawn, not written: the game's lettering has no arrows.
 enum class Arrow { None, Up, Down, Left, Right };
 
-// What a button does: press the controller's buttons, or open the options menu (as F10 does).
-enum class Job { Pad, Menu };
+// What a button does: press the controller's buttons, open the options menu (as F10 does), or
+// run the game faster while it is held (as the turbo's key, Tab, does).
+enum class Job { Pad, Menu, Turbo };
 
 struct Button {
     const char* label;  // nullptr: from the texts (the menu's)
@@ -68,7 +70,7 @@ struct Button {
     Arrow arrow = Arrow::None;
 };
 
-const std::array<Button, 13> BUTTONS = {{
+const std::array<Button, 14> BUTTONS = {{
     {"A", Job::Pad, PAD_BUTTON_A, Look::GreenCoin, -2.3f, -2.0f, 1.7f, 1.7f},
     {"B", Job::Pad, PAD_BUTTON_B, Look::RedCoin, -4.15f, -1.15f, 1.1f, 1.1f},
     {"X", Job::Pad, PAD_BUTTON_X, Look::Bean, -0.85f, -3.35f, 1.15f, 1.15f},
@@ -78,6 +80,7 @@ const std::array<Button, 13> BUTTONS = {{
     {"Z", Job::Pad, PAD_TRIGGER_Z, Look::PurpleCapsule, -1.4f, 1.75f, 1.6f, 0.68f},
     {"START", Job::Pad, PAD_BUTTON_START, Look::GrayCapsule, 0.f, -0.7f, 2.0f, 0.7f, true},
     {nullptr, Job::Menu, 0, Look::CreamCapsule, 0.f, 0.65f, 2.2f, 0.7f, true},
+    {"TURBO", Job::Turbo, 0, Look::CreamCapsule, 1.4f, 1.75f, 1.6f, 0.68f},  // under L, as Z is under R
     {"", Job::Pad, PAD_BUTTON_UP, Look::Pad, 2.4f, -6.15f, 0.75f, 0.75f, false, Arrow::Up},
     {"", Job::Pad, PAD_BUTTON_DOWN, Look::Pad, 2.4f, -4.75f, 0.75f, 0.75f, false, Arrow::Down},
     {"", Job::Pad, PAD_BUTTON_LEFT, Look::Pad, 1.7f, -5.45f, 0.75f, 0.75f, false, Arrow::Left},
@@ -516,6 +519,18 @@ void draw() {
             draw_button(draw, BUTTONS[index], held(index));
         }
     }
+}
+
+bool turbo_held() {
+    if (!visible()) {
+        return false;
+    }
+    for (int index = 0; index < static_cast<int>(BUTTONS.size()); ++index) {
+        if (BUTTONS[index].job == Job::Turbo && held(index)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void add_to(PADStatus& status) {

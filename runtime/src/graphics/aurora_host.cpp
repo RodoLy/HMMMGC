@@ -213,9 +213,9 @@ void present_frame() {
     shadow_range::update();
     ground_mesh::follow_zoom(camera_view::zoom());
     // The turbo: the whole game runs at game_clock::TURBO_SPEED_PERCENT while its key (Tab, or
-    // the one chosen in the controls) or its gamepad button is held; not while the options menu is
-    // open, where Tab moves between its controls.
-    game_clock::set_turbo(!in_game_menu::is_open() && controls_editor::turbo_held());
+    // the one chosen in the controls), its gamepad button or the touch button TURBO is held; not
+    // while the options menu is open, where Tab moves between its controls.
+    game_clock::set_turbo(!in_game_menu::is_open() && (controls_editor::turbo_held() || touch_buttons::turbo_held()));
     // The menu's shortcut on the controller and its lettering for the window's size, before the
     // next frame starts (and with it ImGui's).
     in_game_menu::before_frame();

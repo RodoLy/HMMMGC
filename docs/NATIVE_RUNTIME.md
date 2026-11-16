@@ -269,7 +269,9 @@ jugador; el paquete público compilará esa parte en la PC de cada jugador.
 **Qué.** Un control de GameCube dibujado sobre el juego para un celular o una
 tablet (`input/touch_buttons.cpp`): el stick y la cruceta a la izquierda; A
 (grande y verde), B, X y Y a la derecha donde los tiene la GameCube; L, R y Z
-arriba; START abajo; y arriba en medio un botón que abre las opciones, como F10.
+arriba; START abajo; arriba en medio un botón que abre las opciones, como F10;
+y bajo L, TURBO, que mientras se aprieta acelera el juego como la tecla del
+turbo (Tab).
 Juegan como el control 1, junto con lo demás que juegue ahí: se suman a lo que
 lee `PADRead`. Varios dedos aprietan varios botones, y un dedo que se desliza
 pasa de un botón al siguiente.
@@ -278,8 +280,8 @@ Se dibujan como el juego dibuja los botones del control en su pantalla (en la
 granja, A, B y X arriba a la derecha): A y B son monedas, X y Y frijoles
 curvados alrededor de A, todos con un borde azul oscuro y la letra hundida.
 Llevan los colores del control de GameCube (A verde, B roja, Z morada; X, Y, L,
-R, START, el stick y la cruceta claros), y el de las opciones, que la GameCube
-no tiene, va en crema. Son semitransparentes (el relleno al 42 %, al 80 %
+R, START, el stick y la cruceta claros), y los de las opciones y el turbo, que la
+GameCube no tiene, van en crema. Son semitransparentes (el relleno al 42 %, al 80 %
 cuando se aprietan; las letras y los bordes más fuertes), para que el juego se
 vea debajo también en pantalla ancha, donde el juego llega hasta los bordes.
 
@@ -296,7 +298,7 @@ pantalla, y tocarla no hace nada. Si el control se desconecta, vuelven, para no
 quedarse sin forma de jugar. Se probó cómo se ven, en el juego en Linux; tocarlos
 solo se puede probar en una pantalla táctil.
 
-![Los botones táctiles sobre el juego en pantalla ancha, sueltos y con A, el stick y la flecha derecha apretados](images/touch-buttons.jpg)
+![Los botones táctiles sobre el juego en pantalla ancha, sueltos y con A, el stick, la flecha derecha y TURBO apretados](images/touch-buttons.jpg)
 
 ### Qué sigue
 
@@ -570,8 +572,9 @@ player; the public package will compile that part on each player's PC.
 **What.** A GameCube controller drawn over the game for a phone or a tablet
 (`input/touch_buttons.cpp`): the stick and the D-Pad on the left; A (big and green),
 B, X and Y on the right where the GameCube has them; L, R and Z at the top;
-START at the bottom; and at the top in the middle a button that opens the
-options, as F10 does. They play as controller 1, together with whatever else
+START at the bottom; at the top in the middle a button that opens the options,
+as F10 does; and under L, TURBO, which while held runs the game faster as the
+turbo's key (Tab) does. They play as controller 1, together with whatever else
 plays there: they are added to what `PADRead` reads. Several fingers press
 several buttons, and a finger that slides goes from one button to the next.
 
@@ -579,8 +582,8 @@ They are drawn as the game draws the controller's buttons on its own screen
 (on the farm, A, B and X at the top right): A and B are coins, X and Y beans
 curved around A, all with a dark blue edge and the letter pressed in. They have
 the GameCube controller's colors (A green, B red, Z purple; X, Y, L, R, START,
-the stick and the D-Pad pale), and the options' button, which the GameCube does
-not have, is cream. They are see-through (the faces at 42 %, 80 % while pressed;
+the stick and the D-Pad pale), and the options' and turbo's buttons, which the GameCube
+does not have, are cream. They are see-through (the faces at 42 %, 80 % while pressed;
 the letters and the edges stronger), so that the game shows under them also on
 a wide screen, where the game reaches the edges.
 
@@ -598,7 +601,7 @@ controller is disconnected they come back, so that the game can still be played.
 How they look was tried in the game on Linux; touching them can only be tried
 on a touch screen.
 
-![The touch buttons over the game on a wide screen, at rest and with A, the stick and the right arrow pressed](images/touch-buttons.jpg)
+![The touch buttons over the game on a wide screen, at rest and with A, the stick, the right arrow and TURBO pressed](images/touch-buttons.jpg)
 
 ### What comes next
 
