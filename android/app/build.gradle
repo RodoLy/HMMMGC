@@ -1,0 +1,64 @@
+// The shell app: SDL's Java activity (from the SDL that aurora compiles, given as sdlJava),
+// aurora's surface (auroraJava) and this app's two activities. The game, libmain.so, is not in
+// it: tools/make_android_app.py adds it on the player's computer and signs the app there, so the
+// shell is built unsigned.
+//
+// La app base: la actividad de Java de SDL, la superficie de aurora y las dos actividades de esta
+// app. El juego se agrega en la computadora del jugador, que también la firma.
+plugins {
+    id "com.android.application"
+}
+
+def required(String name) {
+    if (!project.hasProperty(name)) {
+        throw new GradleException("give -P${name}=... (see .github/workflows/package-native-android.yml)")
+    }
+    return project.property(name)
+}
+
+android {
+    namespace "io.github.rodoly.hmmmgc"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "io.github.rodoly.hmmmgc"
+        minSdk 26
+        targetSdk 35
+        versionCode Integer.parseInt(project.findProperty("versionCode") ?: "1")
+        versionName project.findProperty("versionName") ?: "dev"
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += [required("sdlJava"), required("auroraJava")]
+        }
+    }
+
+    // The game's library goes in compressed and Android unpacks it when the app is installed
+    // (android:extractNativeLibs), so the app made on the player's computer needs no alignment
+    // for it.
+    packaging {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

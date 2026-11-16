@@ -1,0 +1,17 @@
+// The Android app without the game (the shell): docs/NATIVE_PACKAGE.md, "The Android app".
+// La app de Android sin el juego.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "HarvestMoonMM"
+include ":app"

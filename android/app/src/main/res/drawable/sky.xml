@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The sky of the game's title screen (shared/theme.cpp: SKY_TOP to SKY_HORIZON). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:angle="270" android:startColor="#2B58AC" android:centerColor="#588CD6" android:endColor="#B8D8F2" />
+</shape>

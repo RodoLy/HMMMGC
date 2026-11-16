@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="explanation">La primera vez, el juego necesita la imagen de tu disco: el .iso de Harvest Moon: Magical Melody de Estados Unidos. Cópialo al celular (la computadora que hizo la app te lo puede dar) y elígelo. Se copia a la app una sola vez, y después el juego abre directo.</string>
+    <string name="choose">Elegir la imagen del disco</string>
+    <string name="checking">Revisando la imagen del disco…</string>
+    <string name="copying">Copiando la imagen del disco… %1$d%%</string>
+    <string name="not_the_game">Ese archivo no es el disco de Harvest Moon: Magical Melody de Estados Unidos. Si es un .rvz, elige el .iso que hizo la computadora.</string>
+    <string name="not_whole">Esa imagen del disco no está completa (o está comprimida, como un .rvz). Elige el .iso que hizo la computadora.</string>
+    <string name="not_read">No se pudo leer la imagen del disco. Inténtalo otra vez, o vuelve a copiarla al celular.</string>
+    <string name="no_space">No hay suficiente espacio libre: la imagen del disco necesita unos 1.5 GB.</string>
+</resources>

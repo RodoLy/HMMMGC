@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Harvest Moon MM</string>
+    <string name="title">Harvest Moon: Magical Melody</string>
+    <string name="explanation">The first time, the game needs your disc image: the .iso of Harvest Moon: Magical Melody for the USA. Copy it to the phone (the computer that made the app can give it to you) and choose it. It is copied into the app once, and then the game opens straight away.</string>
+    <string name="choose">Choose the disc image</string>
+    <string name="checking">Checking the disc image…</string>
+    <string name="copying">Copying the disc image… %1$d%%</string>
+    <string name="not_the_game">That file is not the disc of Harvest Moon: Magical Melody for the USA. If it is an .rvz, choose the .iso that the computer made instead.</string>
+    <string name="not_whole">That disc image is not whole (or it is compressed, like an .rvz). Choose the .iso that the computer made.</string>
+    <string name="not_read">The disc image could not be read. Try again, or copy it to the phone again.</string>
+    <string name="no_space">There is not enough free space: the disc image needs about 1.5 GB.</string>
+</resources>

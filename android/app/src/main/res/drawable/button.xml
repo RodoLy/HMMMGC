@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An orange button like the box of the date (shared/theme.cpp: ORANGE_TOP, ORANGE_BOTTOM, ORANGE_EDGE). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape>
+            <gradient android:angle="270" android:startColor="#D6DCE2" android:endColor="#A4ACB6" />
+            <corners android:radius="28dp" />
+            <stroke android:width="3dp" android:color="#626A74" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape>
+            <gradient android:angle="270" android:startColor="#EE8426" android:endColor="#FDC860" />
+            <corners android:radius="28dp" />
+            <stroke android:width="3dp" android:color="#A04C12" />
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <gradient android:angle="270" android:startColor="#FDC860" android:endColor="#EE8426" />
+            <corners android:radius="28dp" />
+            <stroke android:width="3dp" android:color="#A04C12" />
+        </shape>
+    </item>
+</selector>

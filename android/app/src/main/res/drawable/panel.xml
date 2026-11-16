@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A panel like the game's dialogue boxes (shared/theme.cpp: PANEL_TOP, PANEL_BOTTOM). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:angle="270" android:startColor="#FAF9FBFE" android:endColor="#FAE4ECF5" />
+    <corners android:radius="22dp" />
+    <stroke android:width="3dp" android:color="#FFE2AA62" />
+</shape>

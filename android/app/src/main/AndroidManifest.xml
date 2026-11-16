@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The app: DiscActivity opens first, asks for the disc image the first time, and starts
+  GameActivity, which runs the game (SDL's activity, with aurora's surface).
+  La app: DiscActivity abre primero, pide la imagen del disco la primera vez y arranca
+  GameActivity, que corre el juego.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The game draws with Vulkan (Dawn) and plays with a controller or the touch buttons. -->
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x400003" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+
+    <!-- The controller's rumble, and controllers over Bluetooth (SDL). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:appCategory="game"
+        android:isGame="true"
+        android:hardwareAccelerated="true"
+        android:extractNativeLibs="true">
+
+        <activity
+            android:name=".DiscActivity"
+            android:exported="true"
+            android:theme="@style/Disc">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".GameActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:screenOrientation="sensorLandscape"
+            android:preferMinimalPostProcessing="true"
+            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+    </application>
+</manifest>

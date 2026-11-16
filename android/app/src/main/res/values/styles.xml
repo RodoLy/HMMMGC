@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Disc" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#2B58AC</item>
+        <item name="android:navigationBarColor">#B8D8F2</item>
+    </style>
+</resources>
