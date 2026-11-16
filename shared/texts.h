@@ -19,6 +19,7 @@ enum class Text {
     Play,
     Options,
     Mods,
+    Cheats,
     Controls,
     Exit,
     ChangeDisc,

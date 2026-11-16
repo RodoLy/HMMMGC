@@ -67,8 +67,8 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
 ### El launcher
 
 `HarvestMoonMM.exe` prepara el juego a partir de tu disco y lo arranca. Sus
-cuatro pestañas son **Juego** (preparar, jugar, cambiar el disco, elegir el
-idioma), **Opciones** (la tabla de arriba), **Mods** y **Controles** (muestra
+cinco pestañas son **Juego** (preparar, jugar, cambiar el disco, elegir el
+idioma), **Opciones** (la tabla de arriba), **Mods**, **Trucos** y **Controles** (muestra
 la asignación y qué es cada botón de tu control en el de GameCube). Habla
 español e inglés, y se usa con el mouse, el teclado o un control. Si algo
 falla, dice por qué en palabras sencillas (otro juego, otra versión del juego,
@@ -104,7 +104,7 @@ uno: [mods/README.md](mods/README.md).
 
 ### Trucos
 
-Al final de la pestaña Opciones del launcher (y en RecompLauncher, en su propio grupo) hay cuatro
+En la pestaña Trucos del launcher (y en RecompLauncher, en su propio grupo) hay cuatro
 trucos, todos apagados hasta que los enciendes: **estamina infinita** (trabajar no gasta), **dinero
 infinito** (se queda en 999,999 G), **detener el tiempo** (el reloj no avanza; dormir sigue pasando
 al día siguiente) y **amistad al máximo** (con todos; no se puede deshacer en esa partida, y pueden

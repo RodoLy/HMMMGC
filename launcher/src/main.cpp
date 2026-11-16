@@ -54,7 +54,8 @@ Arguments parse_arguments(int argc, char** argv) {
             const std::string name = argv[++i];
             const std::pair<const char*, App::Tab> tabs[] = {
                 {"game", App::Tab::Game},       {"home", App::Tab::Game},         {"disc", App::Tab::Game},
-                {"options", App::Tab::Options}, {"mods", App::Tab::Mods},         {"controls", App::Tab::Controls},
+                {"options", App::Tab::Options}, {"mods", App::Tab::Mods},         {"cheats", App::Tab::Cheats},
+                {"controls", App::Tab::Controls},
             };
             for (const auto& [tab_name, tab] : tabs) {
                 if (name == tab_name) {

@@ -258,6 +258,7 @@ void App::move_selection(int step) {
     const int count = tab_ == Tab::Mods         ? static_cast<int>(mods_.size())
                       : tab_ == Tab::Game       ? static_cast<int>(game_rows().size())
                       : tab_ == Tab::Options    ? static_cast<int>(options_rows().size())
+                      : tab_ == Tab::Cheats     ? static_cast<int>(cheats_rows().size())
                                                 : static_cast<int>(controls_rows().size());
     if (count == 0) {
         return;
@@ -519,10 +520,17 @@ std::vector<App::Row> App::options_rows() {
     flag(settings::HIDE_TOUCH_BUTTONS, Text::HideTouchButtons, Text::HideTouchButtonsHint);
     flag(settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo, Text::HideTouchTurboHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
+    return rows;
+}
 
-    // The cheats: switches like the ones above, kept in settings.json's "cheats" (shared/settings.h).
+// The Cheats tab: a switch for each cheat, kept in settings.json's "cheats" (shared/settings.h). They
+// are carried out by the hidden mod mods/cheats, which the game loads when one of them is on.
+std::vector<App::Row> App::cheats_rows() {
+    std::vector<Row> rows;
+    const auto changed = [this] { save_settings(); };
     const auto cheat = [&](const char* name, Text label, Text hint) {
         Row row;
+        row.symbol = "\xE2\x9C\xBF";  // ✿
         const bool on = settings_.cheat(name);
         row.label = text(label);
         row.hint = text(hint);
@@ -710,6 +718,7 @@ void App::frame(double seconds) {
         switch (tab_) {
         case Tab::Game: return game_rows();
         case Tab::Options: return options_rows();
+        case Tab::Cheats: return cheats_rows();
         case Tab::Controls: return controls_rows();
         case Tab::Mods: break;
         }

@@ -65,9 +65,9 @@ from it, on your computer, the first time you play.
 
 ### The launcher
 
-`HarvestMoonMM.exe` prepares the game from your disc and starts it. Its four
+`HarvestMoonMM.exe` prepares the game from your disc and starts it. Its five
 tabs are **Game** (prepare, play, change the disc, choose the language), **Options**
-(the table above), **Mods** and **Controls** (it shows the mapping and what
+(the table above), **Mods**, **Cheats** and **Controls** (it shows the mapping and what
 each button of your controller is on the GameCube's). It speaks English and
 Spanish, and is used with the mouse, the keyboard or a controller. If
 something fails it says why in plain words (another game, another version of
@@ -103,7 +103,7 @@ All come off, like the original game; you turn them on in the Mods tab. How to m
 
 ### Cheats
 
-At the end of the launcher's Options tab (and in RecompLauncher, in their own group) there are four
+On the launcher's Cheats tab (and in RecompLauncher, in their own group) there are four
 cheats, all off until you turn them on: **infinite stamina** (work spends none), **infinite money**
 (it stays at 999,999 G), **stop time** (the clock does not move; sleeping still goes on to the next
 day) and **maximum friendship** (with everyone; it cannot be undone in that save, and love and rival

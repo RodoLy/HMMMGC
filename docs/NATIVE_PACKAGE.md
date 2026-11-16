@@ -69,7 +69,7 @@ renderizador 2D de SDL3 y Dear ImGui, sin nada del juego. Se ve como su diseño
 marco del sistema, con su propia barra de título; arriba, una franja rosa con un
 medallón como de disco, el nombre de la pestaña en letras con contorno, el
 disco, el estado del juego, los idiomas, la salida y la versión; a la
-izquierda, cuatro pestañas; en medio, un panel con sus filas; abajo, un cuadro
+izquierda, cinco pestañas; en medio, un panel con sus filas; abajo, un cuadro
 como los de diálogo del juego que dice qué hace la fila elegida; y detrás, un
 fondo de cuadros que se mueve y burbujas con notas. Las letras son Baloo 2 y
 Dosis (libres; `launcher/fonts/README.md`). Al abrirse, las piezas entran con
@@ -427,7 +427,7 @@ renderer and Dear ImGui, with nothing of the game. It looks as its design
 ("Launcher v4", made in Claude Design), piece by piece: a window without the
 system's frame, with its own title bar; at the top, a pink band with a
 medallion like a record, the tab's name in outlined letters, the disc, the
-state of the game, the languages, the exit and the version; on the left, four
+state of the game, the languages, the exit and the version; on the left, five
 tabs; in the middle, a panel with its rows; at the bottom, a box like the
 game's dialogue boxes that says what the chosen row does; and behind, a moving
 checkerboard and bubbles with notes. The letters are Baloo 2 and Dosis (free;

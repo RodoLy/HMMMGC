@@ -38,7 +38,8 @@ std::string disc_name(const std::string& code);
 
 class App {
 public:
-    enum class Tab { Game, Options, Mods, Controls };
+    enum class Tab { Game, Options, Mods, Cheats, Controls };
+    static constexpr int TAB_COUNT = 5;
 
     // `disc`: an image given when the launcher was started (dropped on it), prepared at once.
     // `still`: no animations (to take pictures of the tabs that can be compared).
@@ -93,6 +94,7 @@ private:
 
     std::vector<Row> game_rows();
     std::vector<Row> options_rows();
+    std::vector<Row> cheats_rows();
     std::vector<Row> controls_rows();
     std::string preparation_text() const;
     static std::string stage_text(const Preparation& preparation);

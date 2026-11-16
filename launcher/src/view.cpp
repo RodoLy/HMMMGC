@@ -50,11 +50,12 @@ constexpr ImU32 BAR_TOP = rgb(0xd2ffe0);      // the green of the bars and the s
 constexpr ImU32 BAR_BOTTOM = rgb(0x6fd89a);
 
 // The symbol of each tab, in the medallion and on the tab, and the color of its rows' squares.
-// ♪ and ⚙ in the medallion; for Mods and Controls it is drawn (draw_disc_with_plus, draw_controller).
-constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "", ""};
+// ♪, ⚙ and ✿ (Cheats) in the medallion; for Mods and Controls it is drawn (draw_disc_with_plus,
+// draw_controller).
+constexpr const char* TAB_SYMBOLS[] = {"\xE2\x99\xAA", "\xE2\x9A\x99", "", "\xE2\x9C\xBF", ""};
 constexpr size_t MODS_TAB = 2;
-constexpr size_t CONTROLS_TAB = 3;
-constexpr ImU32 TAB_COLORS[] = {rgb(0xf08a2c), rgb(0x4aa0d8), rgb(0x5ab04a), rgb(0x9a6ad0)};
+constexpr size_t CONTROLS_TAB = 4;
+constexpr ImU32 TAB_COLORS[] = {rgb(0xf08a2c), rgb(0x4aa0d8), rgb(0x5ab04a), rgb(0xe0559a), rgb(0x9a6ad0)};
 
 constexpr const char* NOTE = "\xE2\x99\xAA";        // ♪
 constexpr const char* LEFT_ARROW = "\xE2\x97\x80";  // ◀
@@ -216,11 +217,11 @@ void App::handle_keys(const std::vector<Row>& rows) {
         return;
     }
     if (pressed({ImGuiKey_Q, ImGuiKey_GamepadL1}, false)) {
-        choose_tab(static_cast<Tab>((static_cast<int>(tab_) + 3) % 4));
+        choose_tab(static_cast<Tab>((static_cast<int>(tab_) + TAB_COUNT - 1) % TAB_COUNT));
         return;
     }
     if (pressed({ImGuiKey_E, ImGuiKey_GamepadR1}, false)) {
-        choose_tab(static_cast<Tab>((static_cast<int>(tab_) + 1) % 4));
+        choose_tab(static_cast<Tab>((static_cast<int>(tab_) + 1) % TAB_COUNT));
         return;
     }
     if (pressed({ImGuiKey_UpArrow, ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadLStickUp}, true)) {
@@ -419,7 +420,9 @@ void App::draw_header(ImDrawList* draw, double seconds) {
                                  .shadows = {{{.y = 3.f, .color = rgb(0xb03a5c)}}}});
         look::draw_text(draw, shoulder, button.x + 10.f, look::baseline_in_line(shoulder, button.y, 30.f), labels[i]);
         if (clicked(button.x, button.y, button.w, button.h)) {
-            later([this, i] { choose_tab(static_cast<Tab>((static_cast<int>(tab_) + (i == 0 ? 3 : 1)) % 4)); });
+            later([this, i] {
+                choose_tab(static_cast<Tab>((static_cast<int>(tab_) + (i == 0 ? TAB_COUNT - 1 : 1)) % TAB_COUNT));
+            });
         }
     }
 
@@ -429,7 +432,8 @@ void App::draw_header(ImDrawList* draw, double seconds) {
                              .border = 6.f, .border_color = rgb(0xffffff),
                              .shadows = {{{.y = 5.f, .color = PINK_DARK}}}});
     draw_tab_symbol(draw, tab, 62, 110.f, 106.f + TOP, ORANGE, rgb(0xfff3d6));
-    const char* names[] = {text(Text::GameTab), text(Text::Options), text(Text::Mods), text(Text::Controls)};
+    const char* names[] = {text(Text::GameTab), text(Text::Options), text(Text::Mods), text(Text::Cheats),
+                           text(Text::Controls)};
     TextStyle section = style(Face::Baloo800, 58, 0.02f, rgb(0xeaf45c));
     section.stroke = 9.f;
     section.stroke_color = rgb(0x43206f);
@@ -535,12 +539,13 @@ void App::draw_header(ImDrawList* draw, double seconds) {
 
 void App::draw_tabs(ImDrawList* draw, double seconds) {
     // At the left of the panel, one under the other, each with its name; the chosen one wider and
-    // joined to it.
-    const char* names[] = {text(Text::GameTab), text(Text::Options), text(Text::Mods), text(Text::Controls)};
-    for (int i = 0; i < 4; ++i) {
+    // joined to it. Five fit beside the panel at 62 apart.
+    const char* names[] = {text(Text::GameTab), text(Text::Options), text(Text::Mods), text(Text::Cheats),
+                           text(Text::Controls)};
+    for (int i = 0; i < TAB_COUNT; ++i) {
         const bool chosen = i == static_cast<int>(tab_);
         const float width = chosen ? 154.f : 136.f;
-        const Rect tab = at(244.f - (chosen ? 0.f : 6.f) - width, 258.f + static_cast<float>(i) * 76.f, width, 68.f);
+        const Rect tab = at(244.f - (chosen ? 0.f : 6.f) - width, 248.f + static_cast<float>(i) * 62.f, width, 56.f);
         const Slide slide = slide_in(seconds, 0.7f + static_cast<float>(i) * 0.08f, 0.4f, still_);
         const look::Moved moved(draw, slide.dx, 0.f, slide.opacity);
         const Corners corners(16.f, 0.f, 0.f, 16.f);
@@ -584,6 +589,11 @@ void App::draw_panel(ImDrawList* draw, double seconds, const std::vector<Row>& r
         const auto on =
             std::ranges::count_if(mods_, [&](const mods::Mod& mod) { return settings_.mod_enabled(mod.id); });
         title = texts::format(Text::PanelModsOn, static_cast<int>(on), static_cast<int>(mods_.size()));
+    } else if (tab_ == Tab::Cheats) {
+        const auto on =
+            std::ranges::count_if(settings::CHEAT_NAMES, [&](const char* name) { return settings_.cheat(name); });
+        const auto all = static_cast<int>(std::size(settings::CHEAT_NAMES));
+        title = texts::format(Text::PanelModsOn, static_cast<int>(on), all);
     } else if (tab_ == Tab::Controls) {
         title = text(Text::PanelDevices);
     }
