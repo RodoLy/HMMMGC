@@ -1,0 +1,251 @@
+name: Native macOS packages
+
+# Builds the packages of the native version for macOS, for Apple silicon (arm64) and for Intel Macs
+# (x64): the launcher as a Mac app, the runtime compiled without the game (the kit) and everything
+# that prepares the game on the player's Mac from the player's own disc (docs/NATIVE_PACKAGE.md).
+# On a Mac the game is compiled with Apple's clang, from the Command Line Tools, so the package
+# carries no compiler. No game data is involved at any point.
+#
+# It runs when a release is published, and then adds the two zips to it, or when asked for: Actions
+# tab > Native macOS packages > Run workflow (the zips are then kept as artifacts). Both are built on
+# a Mac with Apple silicon; the Intel one is compiled for x86-64 there, as WiiCompiled does.
+#
+# Arma los paquetes de la versión nativa para macOS (Apple silicon e Intel). Corre al publicar una
+# versión, y entonces le agrega los dos zip, o cuando se pide a mano. Los dos se arman en una Mac con
+# Apple silicon. No toca datos del juego en ningún momento.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: macOS ${{ matrix.architecture }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: arm64
+            dotnet_runtime: osx-arm64
+          - architecture: x64
+            dotnet_runtime: osx-x64
+    env:
+      ARCHITECTURE: ${{ matrix.architecture }}
+      TOOLS_DIRECTORY: ${{ github.workspace }}/build/tools
+      WIICOMPILED_DIRECTORY: ${{ github.workspace }}/build/wiicompiled
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      # The oldest macOS the packages run on: that of Dawn's macOS packages, which aurora downloads.
+      MACOSX_DEPLOYMENT_TARGET: "12.0"
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # As in the Windows packages: a newer .NET of the runner would be picked over the 8.
+      - name: Use .NET 8 for every dotnet command
+        run: |
+          printf '{ "sdk": { "version": "8.0.100", "rollForward": "latestFeature" } }\n' > global.json
+          dotnet --version
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      # The same as in the Windows packages. / Igual que en los paquetes de Windows.
+      - name: Choose the version of the package
+        run: |
+          if [[ -n "$RELEASE_TAG" ]]; then
+            version="$RELEASE_TAG"
+            shown="$RELEASE_TAG"
+          else
+            version="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
+            last=$(git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
+            shown="${last:+$last+}"
+            shown="${shown:-dev}"
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "SHOWN_VERSION=$shown" >> "$GITHUB_ENV"
+          echo "PACKAGE_ARCHIVE=HarvestMoonMM-native-$version-macos-$ARCHITECTURE.zip" >> "$GITHUB_ENV"
+          echo "Version: $version"
+
+      - name: Download WiiCompiled and apply the patches
+        run: |
+          url=$(sed -n 's/^readonly WIICOMPILED_URL="\(.*\)"$/\1/p' scripts/build_native_runtime.sh)
+          commit=$(sed -n 's/^readonly WIICOMPILED_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_native_runtime.sh)
+          [[ -n "$url" && -n "$commit" ]] || { echo "WiiCompiled's address or commit not found" >&2; exit 1; }
+          git clone --filter=blob:none --no-checkout "$url" "$WIICOMPILED_DIRECTORY"
+          git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$commit"
+          git -C "$WIICOMPILED_DIRECTORY" submodule update --init aurora-main
+          for patch in patches/wiicompiled/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY" apply "$GITHUB_WORKSPACE/$patch"
+          done
+          for patch in patches/aurora/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY/aurora-main" apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Download the package's tools (pinned versions, hashes checked)
+        run: |
+          python tools/fetch_native_package_tools.py --system macos --architecture "$ARCHITECTURE" \
+            --destination "$TOOLS_DIRECTORY"
+
+      - name: Write the names of the game's functions for the mods
+        run: python tools/export_mod_symbols.py
+
+      # With Apple's clang, the one the player's Mac compiles the game with, and with every library
+      # of aurora built here (none from Homebrew). For Intel Macs, the toolchain file compiles for
+      # x86-64, for every Intel Mac that runs macOS 12.
+      - name: Build the runtime with the stand-in game
+        run: |
+          extra=()
+          if [[ "$ARCHITECTURE" == x64 ]]; then
+            extra=(-DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/packaging/native/macos-x86_64-toolchain.cmake" -DX86_CPU_PROFILE=v2)
+          fi
+          cmake -S runtime -B build/runtime-kit -G Ninja "${extra[@]}" \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
+            -DWIICOMPILED_DIR="$WIICOMPILED_DIRECTORY" -DTRANSLATED_GAME_DIR="$GITHUB_WORKSPACE/runtime/kit/stub_game" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DAURORA_USE_SYSTEM_DEPENDENCIES=OFF \
+            -DBUILD_SHARED_LIBS=OFF -DFT_DISABLE_BZIP2=ON \
+            -DAURORA_SDL3_LIBUSB=OFF -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=static
+          cmake --build build/runtime-kit
+
+      - name: Make the runtime kit
+        run: |
+          python tools/make_runtime_kit.py --build-directory build/runtime-kit \
+            --wiicompiled-directory "$WIICOMPILED_DIRECTORY" --out build/kit
+          python -c "import json; r = json.load(open('build/kit/recipe.json')); print(r['processor'], r['compile'], [w for w in r['link'] if not w.startswith('{kit}')])"
+
+      # The kit's recipe as the player's Mac runs it, with Apple's clang: it must compile and link.
+      - name: Try the kit as a player's Mac uses it
+        run: python tools/try_runtime_kit.py --kit build/kit --out build/try-kit
+
+      - name: Build the launcher
+        run: |
+          extra=()
+          if [[ "$ARCHITECTURE" == x64 ]]; then
+            extra=(-DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/packaging/native/macos-x86_64-toolchain.cmake")
+          fi
+          cmake -S launcher -B build/launcher -G Ninja "${extra[@]}" \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
+            -DHMMM_PACKAGE_VERSION="$VERSION" -DHMMM_SHOWN_VERSION="$SHOWN_VERSION"
+          cmake --build build/launcher
+
+      # A Mac program with its own .NET, so that the player installs nothing.
+      - name: Publish the translator for macOS
+        # See the Windows packages: VERSION would become the translator's version.
+        run: |
+          env -u VERSION dotnet publish "$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli" --configuration Release \
+            --runtime "${{ matrix.dotnet_runtime }}" --self-contained true --output build/translator --nologo \
+            -p:NuGetAudit=false -p:InvariantGlobalization=true
+
+      - name: Gather the license texts
+        run: |
+          licenses=build/licenses
+          mkdir -p "$licenses"
+          for folder in build/runtime-kit/_deps/*-src build/launcher/_deps/*-src; do
+            name=$(basename "$folder" -src)
+            for file in LICENSE LICENSE.txt LICENSE.TXT LICENSE.md LICENSE.MIT COPYING COPYING.txt docs/FTL.TXT; do
+              if [[ -f "$folder/$file" ]]; then cp "$folder/$file" "$licenses/$name-$(basename "$file")"; fi
+            done
+          done
+          cp "$WIICOMPILED_DIRECTORY/LICENSE" "$licenses/WiiCompiled-LICENSE.txt"
+          cp "$WIICOMPILED_DIRECTORY/aurora-main/LICENSE" "$licenses/aurora-LICENSE.txt"
+          cp shared/fonts/OFL.txt "$licenses/RoundedMplus1c-OFL.txt"
+          cp launcher/fonts/OFL-Baloo2.txt "$licenses/Baloo2-OFL.txt"
+          cp launcher/fonts/OFL-Dosis.txt "$licenses/Dosis-OFL.txt"
+          cp launcher/fonts/LICENSE-DejaVu.txt "$licenses/DejaVu-LICENSE.txt"
+          dawn_ref=$(sed -n 's/^_aurora_dependency_version(AURORA_DAWN_REF "\([0-9a-f]\{40\}\)".*/\1/p' \
+            "$WIICOMPILED_DIRECTORY/aurora-main/cmake/AuroraDependencyVersions.cmake")
+          curl --fail --silent --show-error --location --retry 3 --output "$licenses/Dawn-LICENSE.txt" \
+            "https://raw.githubusercontent.com/encounter/dawn/$dawn_ref/LICENSE"
+          nod_version=$(sed -n 's/^NODTOOL_VERSION = "\(.*\)"$/\1/p' tools/fetch_native_package_tools.py)
+          for file in LICENSE-MIT LICENSE-APACHE; do
+            curl --fail --silent --show-error --location --retry 3 --output "$licenses/nod-$file.txt" \
+              "https://raw.githubusercontent.com/encounter/nod/$nod_version/$file"
+          done
+          ls -l "$licenses"
+
+      - name: Assemble the package
+        run: |
+          python tools/package_native_macos.py --architecture "$ARCHITECTURE" \
+            --launcher build/launcher/HarvestMoonMM --kit build/kit --translator build/translator \
+            --python "$TOOLS_DIRECTORY/python" --nodtool "$TOOLS_DIRECTORY/nodtool/nodtool" \
+            --icon launcher/macos/HarvestMoonMM.icns --licenses-directory build/licenses \
+            --output-directory build/dist --archive "build/dist/$PACKAGE_ARCHIVE" --package-version "$VERSION" \
+            --version "HMMMGC=$VERSION ($GITHUB_SHA)" \
+            --version "WiiCompiled=$(git -C "$WIICOMPILED_DIRECTORY" rev-parse HEAD)" \
+            --version "aurora=$(git -C "$WIICOMPILED_DIRECTORY/aurora-main" rev-parse HEAD)" \
+            --version "patches=$(cd patches && printf '%s ' wiicompiled/*.patch aurora/*.patch)" \
+            --version ".NET=$(dotnet --version)" \
+            --version "Apple clang=$(clang --version | head -n 1)"
+          cat "build/dist/HarvestMoonMM-macos-$ARCHITECTURE/VERSIONS.txt"
+          ls -l build/dist
+
+      # The package's own Python, translator and nodtool, unpacked from the zip as a player gets them:
+      # they start. Only on the runner's own processor.
+      # El Python, el traductor y nodtool del paquete, sacados del zip como los recibe un jugador: arrancan.
+      - name: Try the package's tools
+        if: matrix.architecture == 'arm64'
+        run: |
+          mkdir -p build/try && ditto -x -k "build/dist/$PACKAGE_ARCHIVE" build/try
+          builder="build/try/HarvestMoonMM-macos-$ARCHITECTURE/HarvestMoonMM.app/Contents/Resources/builder"
+          "$builder/python/bin/python3" -c "import json, hashlib, concurrent.futures; print('python ok')"
+          "$builder/translator/Translator.Cli" > build/try/translator.txt
+          sed -n '1,3p' build/try/translator.txt
+          "$builder/nodtool/nodtool" --version
+          "$builder/python/bin/python3" "$builder/tools/prepare_game.py" --help > build/try/prepare.txt
+
+      # A manual run: the package is uploaded as it is (one zip, not a zip around it).
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'release'
+        with:
+          path: build/dist/*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'release'
+        with:
+          name: HarvestMoonMM-native-macos-${{ matrix.architecture }}
+          path: build/dist/*.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  # Only for a published release: adds the two packages to it. The only job that can write.
+  release:
+    name: Add the packages to the release
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: HarvestMoonMM-native-macos-*
+          merge-multiple: true
+          path: packages
+
+      - name: Upload the zips to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" packages/*.zip --clobber --repo "$GITHUB_REPOSITORY"

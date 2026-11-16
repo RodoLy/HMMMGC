@@ -8,15 +8,18 @@ una compilación, ni una Mac, ni la red.
 import dataclasses
 import json
 import plistlib
+import re
 import stat
 import sys
 import zipfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+import package_native_macos  # noqa: E402
 from made_up_macho_binary import write_macho_binary  # noqa: E402
 from package_native_macos import Inputs, PackageError, assemble, bundle_version, write_archive  # noqa: E402
 
@@ -156,3 +159,26 @@ def test_the_zip_keeps_the_links_and_the_programs_in_one_folder(tmp_path):
     launcher = entries["HarvestMoonMM-macos-arm64/HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM"]
     assert (launcher.external_attr >> 16) & 0o111
 
+
+WORKFLOW = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "package-native-macos.yml"
+
+
+def test_the_workflow_builds_both_processors_and_only_the_release_job_can_write():
+    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    assert set(workflow[True]) == {"release", "workflow_dispatch"}
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow["jobs"]["release"]["permissions"] == {"contents": "write"}
+    matrix = workflow["jobs"]["package"]["strategy"]["matrix"]["include"]
+    assert {entry["architecture"] for entry in matrix} == set(package_native_macos.ARCHITECTURES)
+
+
+def test_the_workflow_gives_the_assembler_only_options_it_has_and_reads_the_folder_it_writes():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    start = text.index("tools/package_native_macos.py")
+    given = set(re.findall(r"(--[a-z-]+)", text[start : text.index("cat ", start)]))
+    known = set(package_native_macos.make_parser()._option_string_actions)
+    assert given <= known, given - known
+    assert "build/dist/HarvestMoonMM-macos-$ARCHITECTURE/VERSIONS.txt" in text
+    assert "macos-$ARCHITECTURE.zip" in text  # RecompLauncher picks the file by "macos" and the processor
+    # The icon it is given is the one tools/make_launcher_icon.py writes.
+    assert (WORKFLOW.parent.parent.parent / "launcher" / "macos" / "HarvestMoonMM.icns").is_file()
