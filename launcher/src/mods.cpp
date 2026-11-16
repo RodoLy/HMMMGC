@@ -6,6 +6,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <fstream>
 
 namespace mods {
@@ -60,6 +61,7 @@ std::vector<Mod> load(const std::filesystem::path& folder, const std::vector<std
             mod.summary = translated(manifest, "summary");
             mod.description = translated(manifest, "description");
             mod.warning = translated(manifest, "warning");
+            mod.quality_of_life = text_of(manifest, "category") == "quality_of_life";
             if (const auto settings = manifest.find("settings"); settings != manifest.end() && settings->is_array()) {
                 for (const auto& entry : *settings) {
                     if (!entry.is_object() || entry.value("type", "") != "percent") {
@@ -81,6 +83,7 @@ std::vector<Mod> load(const std::filesystem::path& folder, const std::vector<std
         }
         loaded.push_back(std::move(mod));
     }
+    std::stable_partition(loaded.begin(), loaded.end(), [](const Mod& mod) { return !mod.quality_of_life; });
     return loaded;
 }
 

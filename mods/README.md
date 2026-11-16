@@ -155,7 +155,12 @@ llega a cada lugar donde actúan.
 Cada uno de esos mods tiene además un manifiesto, `mod.json`, que es lo que
 muestra el launcher de la versión nativa en su pantalla de mods: el nombre, una
 línea, la descripción y un aviso opcional, en español y en inglés, la versión
-(la misma que su `mod.c`), los autores y sus ajustes. Un ajuste es un
+(la misma que su `mod.c`), los autores, su categoría y sus ajustes. Los mods con
+`"category": "quality_of_life"` (`player_speed`, `carry_speed`, `far_camera`,
+`longer_days`, `gentle_stamina` y `faster_tools`), que solo hacen el juego más
+cómodo, salen al final bajo «Calidad de vida», en el launcher y en el menú del
+juego (F10); en el perfil de RecompLauncher son el grupo «Quality of life». Un
+ajuste es un
 porcentaje que el launcher guarda en `settings.json` y le pasa al juego en una
 variable de entorno, que el mod lee al empezar (el de `player_speed`:
 `HM_MM_PLAYER_SPEED_PERCENT`). `tests/test_mod_manifests.py` revisa que
@@ -311,7 +316,12 @@ each place where they act.
 Each of those mods also has a manifest, `mod.json`, which is what the native
 version's launcher shows on its mods screen: the name, a line, the description
 and an optional warning, in Spanish and in English, the version (the same as
-its `mod.c`), the authors and its settings. A setting is a percentage that the
+its `mod.c`), the authors, its category and its settings. The mods with
+`"category": "quality_of_life"` (`player_speed`, `carry_speed`, `far_camera`,
+`longer_days`, `gentle_stamina` and `faster_tools`), which only make the game
+more comfortable, come last under "Quality of life", in the launcher and in the
+game's menu (F10); in the RecompLauncher profile they are the "Quality of life"
+group. A setting is a percentage that the
 launcher keeps in `settings.json` and passes to the game in an environment
 variable, which the mod reads when it starts (`player_speed`'s:
 `HM_MM_PLAYER_SPEED_PERCENT`). `tests/test_mod_manifests.py` checks that they

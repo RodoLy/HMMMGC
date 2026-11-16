@@ -32,7 +32,7 @@
       "file": [{ "path": "{local}/HarvestMoonMM/settings.json" }]
     }
   ],
-  "groups": [{ "id": "Mods" }, { "id": "Cheats" }],
+  "groups": [{ "id": "Mods" }, { "id": "Quality of life" }, { "id": "Cheats" }],
   "settings": [
     {
       "id": "language",
@@ -148,7 +148,7 @@
     {
       "id": "player_speed",
       "label": "Faster character",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "The character walks and runs faster.",
       "choices": [
         { "label": "Off", "set": { "mods/player_speed": "false" } },
@@ -159,7 +159,7 @@
     {
       "id": "player_speed_percent",
       "label": "Character speed",
-      "group": "Mods",
+      "group": "Quality of life",
       "slider": { "key": "playerSpeedPercent", "min": 25, "max": 300, "step": 5, "format": "%g" },
       "defaults": { "playerSpeedPercent": "100" },
       "when": { "mods/player_speed": "true" }
@@ -168,7 +168,7 @@
       "id": "carry_speed",
       "label": "No slowdown when carrying",
       "help": "The character runs even when carrying something or holding a tool.",
-      "group": "Mods",
+      "group": "Quality of life",
       "choices": [
         { "label": "Off", "set": { "mods/carry_speed": "false" } },
         { "label": "On", "set": { "mods/carry_speed": "true" } }
@@ -178,7 +178,7 @@
     {
       "id": "longer_days",
       "label": "Longer days",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "The game's clock goes more slowly, so each day gives more time.",
       "choices": [
         { "label": "Off", "set": { "mods/longer_days": "false" } },
@@ -189,7 +189,7 @@
     {
       "id": "day_length_percent",
       "label": "Length of the day",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "100% is the original game's day; 200% is a day twice as long.",
       "slider": { "key": "dayLengthPercent", "min": 100, "max": 400, "step": 25, "format": "%g" },
       "defaults": { "dayLengthPercent": "150" },
@@ -198,7 +198,7 @@
     {
       "id": "gentle_stamina",
       "label": "Gentler stamina",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "Tools, fishing and work spend less stamina.",
       "choices": [
         { "label": "Off", "set": { "mods/gentle_stamina": "false" } },
@@ -209,7 +209,7 @@
     {
       "id": "stamina_cost_percent",
       "label": "Stamina spent",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "100% is what the original game spends; 50% is half.",
       "slider": { "key": "staminaCostPercent", "min": 10, "max": 100, "step": 10, "format": "%g" },
       "defaults": { "staminaCostPercent": "50" },
@@ -218,7 +218,7 @@
     {
       "id": "faster_tools",
       "label": "Faster tools",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "The tools gain experience faster.",
       "choices": [
         { "label": "Off", "set": { "mods/faster_tools": "false" } },
@@ -229,7 +229,7 @@
     {
       "id": "tool_experience_percent",
       "label": "Experience of the tools",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "100% is the original game; 200% is twice as fast.",
       "slider": { "key": "toolExperiencePercent", "min": 100, "max": 400, "step": 50, "format": "%g" },
       "defaults": { "toolExperiencePercent": "200" },
@@ -238,7 +238,7 @@
     {
       "id": "far_camera",
       "label": "Farther camera",
-      "group": "Mods",
+      "group": "Quality of life",
       "help": "The button that pulls the camera back goes farther.",
       "choices": [
         { "label": "Off", "set": { "mods/far_camera": "false" } },

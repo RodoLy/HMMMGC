@@ -2,6 +2,7 @@
   "id": "longer_days",
   "version": "0.1.0",
   "authors": ["HMMMGC"],
+  "category": "quality_of_life",
   "name": {
     "es": "Días más largos",
     "en": "Longer days"

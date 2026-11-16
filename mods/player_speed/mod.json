@@ -2,6 +2,7 @@
   "id": "player_speed",
   "version": "0.1.0",
   "authors": ["HMMMGC"],
+  "category": "quality_of_life",
   "name": {
     "es": "Personaje más rápido",
     "en": "Faster character"

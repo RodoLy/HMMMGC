@@ -2,6 +2,7 @@
   "id": "faster_tools",
   "version": "0.1.0",
   "authors": ["HMMMGC"],
+  "category": "quality_of_life",
   "name": {
     "es": "Herramientas que suben rápido",
     "en": "Faster tools"

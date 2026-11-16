@@ -3,7 +3,9 @@
 // Los mods con los que se prepara el juego, como los describen sus manifiestos.
 //
 // A manifest gives a mod's name, a short line and a description in each language, its version
-// and authors, an optional warning shown when it is turned off, and its settings: a percentage
+// and authors, its category ("quality_of_life" for the mods that only make the game more
+// comfortable, listed under their own heading; none for the rest), an optional warning shown when
+// it is turned off, and its settings: a percentage
 // that the launcher keeps in settings.json and passes to the game in an environment variable
 // (the mod reads it when the game starts).
 #pragma once
@@ -32,11 +34,13 @@ struct Mod {
     std::string summary;
     std::string description;
     std::string warning;      // shown when it is on, to read before turning it off; may be empty
+    bool quality_of_life = false;  // listed under "Quality of life"
     std::vector<Setting> settings;
 };
 
 // The manifests of `ids` under `folder` (builder/mods/), in the language the launcher uses
-// now. A mod without a readable manifest is listed by its id alone.
+// now, in the order of `ids` but with the quality of life mods after the others. A mod without a
+// readable manifest is listed by its id alone.
 std::vector<Mod> load(const std::filesystem::path& folder, const std::vector<std::string>& ids);
 
 }  // namespace mods

@@ -2,6 +2,7 @@
   "id": "far_camera",
   "version": "0.1.0",
   "authors": ["HMMMGC"],
+  "category": "quality_of_life",
   "name": {
     "es": "Cámara más lejos",
     "en": "Farther camera"

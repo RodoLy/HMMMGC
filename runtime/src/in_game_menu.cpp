@@ -27,6 +27,7 @@
 #include <iterator>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace in_game_menu {
 namespace {
@@ -330,6 +331,9 @@ std::string mod_name(const std::string& id) {
         {"carry_speed", Text::ModNameCarrySpeed},
         {"far_camera", Text::ModNameFarCamera},
         {"marry_anyone", Text::ModNameMarryAnyone},
+        {"longer_days", Text::ModNameLongerDays},
+        {"gentle_stamina", Text::ModNameGentleStamina},
+        {"faster_tools", Text::ModNameFasterTools},
     };
     for (const auto& [known, name] : names) {
         if (id == known) {
@@ -359,6 +363,37 @@ void draw_player_speed(bool mod_on) {
     ImGui::EndDisabled();
 }
 
+// The mods that only make the game more comfortable ("category": "quality_of_life" in their
+// mod.json), shown after the others under their own heading, as the launcher shows them.
+bool is_quality_of_life(const std::string& id) {
+    for (const char* comfort :
+         {"player_speed", "carry_speed", "far_camera", "longer_days", "gentle_stamina", "faster_tools"}) {
+        if (id == comfort) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// One mod's switch, with when a change to it counts.
+void draw_mod_switch(const settings::Settings& settings, const std::string& id) {
+    bool on = settings.mod_enabled(id);
+    const std::string label = mod_name(id) + "###" + id;
+    if (ImGui::Checkbox(label.c_str(), &on)) {
+        player_options::set_mod_enabled(id, on);
+    }
+    // Each mod says when a change to it counts: at once, or when the game is restarted.
+    ImGui::SameLine();
+    if (native_mods::switches_while_running(id)) {
+        ImGui::TextDisabled("(%s)", text(Text::ModAppliesAtOnce));
+    } else {
+        ImGui::TextColored(RESTART_COLOR, "(%s)", text(Text::NeedsRestart));
+    }
+    if (id == "player_speed") {
+        draw_player_speed(on);
+    }
+}
+
 // The mods that are compiled in, with a switch each. The game keeps the mods it started with, so
 // a change waits for the next start.
 void draw_mods_menu() {
@@ -366,24 +401,21 @@ void draw_mods_menu() {
         return;
     }
     const settings::Settings& settings = player_options::current();
+    std::vector<std::string> comfort;
     for (const std::string& id : native_mods::compiled_in()) {
         if (id == settings::CHEATS_MOD) {
             continue;  // on when a cheat is, in the launcher's options
         }
-        bool on = settings.mod_enabled(id);
-        const std::string label = mod_name(id) + "###" + id;
-        if (ImGui::Checkbox(label.c_str(), &on)) {
-            player_options::set_mod_enabled(id, on);
-        }
-        // Each mod says when a change to it counts: at once, or when the game is restarted.
-        ImGui::SameLine();
-        if (native_mods::switches_while_running(id)) {
-            ImGui::TextDisabled("(%s)", text(Text::ModAppliesAtOnce));
+        if (is_quality_of_life(id)) {
+            comfort.push_back(id);
         } else {
-            ImGui::TextColored(RESTART_COLOR, "(%s)", text(Text::NeedsRestart));
+            draw_mod_switch(settings, id);
         }
-        if (id == "player_speed") {
-            draw_player_speed(on);
+    }
+    if (!comfort.empty()) {
+        ImGui::SeparatorText(text(Text::QualityOfLife));
+        for (const std::string& id : comfort) {
+            draw_mod_switch(settings, id);
         }
     }
     ImGui::EndMenu();

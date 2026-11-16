@@ -2,6 +2,7 @@
   "id": "carry_speed",
   "version": "0.1.0",
   "authors": ["HMMMGC"],
+  "category": "quality_of_life",
   "name": {
     "es": "Sin frenos al cargar",
     "en": "No slowdown when carrying"

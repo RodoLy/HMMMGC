@@ -716,10 +716,21 @@ void App::draw_mods(ImDrawList* draw, double seconds) {
         return;
     }
     selected_ = std::clamp(selected_, 0, static_cast<int>(mods_.size()) - 1);
-    const float total = static_cast<float>(mods_.size()) * 76.f - 8.f;
-    const float row_top = static_cast<float>(selected_) * 76.f;
+    // The quality of life mods come last (mods::load), under their own heading, which takes the
+    // room of HEADING above the first of them.
+    constexpr float HEADING = 46.f;
+    const size_t first_comfort = static_cast<size_t>(
+        std::find_if(mods_.begin(), mods_.end(), [](const mods::Mod& mod) { return mod.quality_of_life; }) -
+        mods_.begin());
+    const auto row_y = [&](size_t i) {
+        return static_cast<float>(i) * 76.f + (i >= first_comfort ? HEADING : 0.f);
+    };
+    const float total = row_y(mods_.size() - 1) + 68.f;
+    const float row_top = row_y(static_cast<size_t>(selected_));
     if (follow_selection_) {
-        scroll_ = std::clamp(scroll_, row_top + 68.f - height, row_top);
+        // The first quality of life mod brings its heading into view with it.
+        const float shown_top = static_cast<size_t>(selected_) == first_comfort ? row_top - HEADING : row_top;
+        scroll_ = std::clamp(scroll_, row_top + 68.f - height, shown_top);
     }
     scroll_ = std::clamp(scroll_, 0.f, std::max(0.f, total - height));
     list_total_ = total;
@@ -733,11 +744,22 @@ void App::draw_mods(ImDrawList* draw, double seconds) {
     const TextStyle about = style(Face::Dosis700, 16, 0.06f, rgb(0xd6e4ff));
     int hovered_row = -1;
     draw->PushClipRect(look::to_window(ImVec2(150.f, top)), look::to_window(ImVec2(1218.f, top + height)), true);
+    if (first_comfort < mods_.size()) {
+        // Baloo 800 at 26 has the letters of every text (lettering.cpp), as the chosen mod's name.
+        TextStyle heading = style(Face::Baloo800, 26, 0.02f, rgb(0xeaf45c));
+        heading.stroke = 4.f;
+        heading.stroke_color = rgb(0x43206f);
+        heading.shadow_y = 2.f;
+        heading.shadow_color = rgb(0x43206f);
+        const float heading_top = top + row_y(first_comfort) - HEADING - scroll_ + 4.f;
+        look::draw_text(draw, heading, 266.f, look::baseline_in_line(heading, heading_top, 36.f),
+                        text(Text::QualityOfLife));
+    }
     for (size_t i = 0; i < mods_.size(); ++i) {
         const mods::Mod& mod = mods_[i];
         const bool chosen = static_cast<int>(i) == selected_;
         const bool on = settings_.mod_enabled(mod.id);
-        const Rect box = {262.f, top + static_cast<float>(i) * 76.f - scroll_, 360.f, 68.f};
+        const Rect box = {262.f, top + row_y(i) - scroll_, 360.f, 68.f};
         look::draw_box(draw, Box{.rect = box, .radius = 14.f, .background = chosen ? rgb(0x2a767f) : rgb(0x2d5f95),
                                  .border = 3.f, .border_color = chosen ? rgb(0xa6ece4) : rgb(0x5c8fc2)});
         // The switch.

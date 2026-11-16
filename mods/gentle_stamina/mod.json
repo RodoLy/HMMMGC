@@ -2,6 +2,7 @@
   "id": "gentle_stamina",
   "version": "0.1.0",
   "authors": ["HMMMGC"],
+  "category": "quality_of_life",
   "name": {
     "es": "Estamina más amable",
     "en": "Gentler stamina"

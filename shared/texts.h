@@ -152,6 +152,10 @@ enum class Text {
     ModNameCarrySpeed,
     ModNameFarCamera,
     ModNameMarryAnyone,
+    ModNameLongerDays,
+    ModNameGentleStamina,
+    ModNameFasterTools,
+    QualityOfLife,
 
     ModOn,
     ModOff,
