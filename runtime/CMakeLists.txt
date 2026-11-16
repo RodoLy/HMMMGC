@@ -127,9 +127,10 @@ set(AURORA_ENABLE_DVD OFF CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_CARD ON CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_THP OFF CACHE BOOL "" FORCE)
 set(AURORA_ENABLE_RMLUI OFF CACHE BOOL "" FORCE)
-# aurora uses std::jthread, which the C++ library of Apple's clang before LLVM 20 (Xcode 16)
-# only has as an experimental part. Only the compiling needs it: those parts are in the headers.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+# aurora uses std::jthread, which libc++ before LLVM 20 only has as an experimental part: the
+# libc++ of Apple's clang (Xcode 16) and of the Android NDK (r27). Only the compiling needs it:
+# those parts are in the headers.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR ANDROID)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fexperimental-library>)
 endif()
 set(AURORA_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
