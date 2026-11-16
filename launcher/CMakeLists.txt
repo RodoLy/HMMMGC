@@ -99,6 +99,15 @@ if(WIN32)
     # screens with scaling; and the icon. The C++ runtime is linked in, so that only Windows' DLLs
     # are needed.
     target_sources(HarvestMoonMM PRIVATE windows/launcher.rc)
+    # The version resource (windows/version.rc.in): Windows' Properties and antivirus programs read
+    # it, and a program without one looks more suspicious to them. "v0.4.1" gives 0,4,1,0; a
+    # version without numbers ("dev") gives 0,0,0,0.
+    set(HMMM_VERSION_NUMBERS "0,0,0,0")
+    if(HMMM_PACKAGE_VERSION MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+        set(HMMM_VERSION_NUMBERS "${CMAKE_MATCH_1},${CMAKE_MATCH_2},${CMAKE_MATCH_3},0")
+    endif()
+    configure_file(windows/version.rc.in "${CMAKE_CURRENT_BINARY_DIR}/version.rc" @ONLY)
+    target_sources(HarvestMoonMM PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/version.rc")
     # The resource compiler does not tell which files the .rc reads: a new icon rebuilds it too.
     set_source_files_properties(windows/launcher.rc PROPERTIES OBJECT_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.manifest;${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.ico")
