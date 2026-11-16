@@ -18,7 +18,7 @@ propio disco, la primera vez que juega:
 
 - el runtime ya compilado, sin el juego: el **kit del runtime**;
 - el traductor de WiiCompiled, un compilador de C++ (llvm-mingw; en Linux, su
-  clang con un sysroot) y Python;
+  clang con un sysroot; en Mac ninguno: se usa el clang de Apple) y Python;
 - las herramientas de este repositorio que preparan el juego, los símbolos
   (`config/G4AEE9/symbols.txt`), el código del runtime que el traductor lee y
   el de los mods;
@@ -228,6 +228,43 @@ del paquete, con el `PATH` vacío, preparó el juego en 2 minutos y 18 segundos
 (`HarvestMoonMM --prepare`), y el juego preparado, que solo pide libc y libm,
 llegó al menú del título y arrancó con `--play`.
 
+### El paquete de macOS (`.github/workflows/package-native-macos.yml`)
+
+Para las Mac con Apple Silicon (arm64) y con Intel (x64), los dos hechos en una
+Mac con Apple Silicon de GitHub (el de Intel, compilado para x86-64 ahí, con
+`packaging/native/macos-x86_64-toolchain.cmake`, como lo hace WiiCompiled):
+
+1. El runtime se compila con el clang de Apple para macOS 12 o más nuevo (lo
+   que pide el Dawn que baja aurora), sin bibliotecas de Homebrew. aurora usa
+   `std::jthread`, que la libc++ de Xcode 16 solo da como experimental: el
+   C++ se compila con `-fexperimental-library` (solo las cabeceras lo usan).
+   Los datos del juego traducido se convierten a una sección de Mach-O, como
+   en Windows a COFF; el traductor, cuando corre en una Mac, ya los escribe
+   así.
+2. `tools/make_runtime_kit.py` deja fuera el SDK de la máquina (`-isysroot`) y
+   nombra las bibliotecas del SDK (`-lz`): en la Mac del jugador el clang de
+   Apple usa su propio SDK.
+3. `tools/try_runtime_kit.py` compila el sustituto del juego con la receta del
+   kit y lo enlaza, como lo haría la Mac del jugador.
+4. `tools/package_native_macos.py` arma `HarvestMoonMM.app`: el launcher en
+   `Contents/MacOS`, `builder/` en `Contents/Resources` (SDL le dice al
+   launcher que esa es su carpeta), el ícono, y un `Info.plist` con el macOS
+   más viejo que piden sus programas (lo lee de cada uno,
+   `tools/macho_binaries.py`). Al lado van los textos (README, licencias). El
+   zip guarda los enlaces y qué archivos son programas.
+5. Por último, el Python, el traductor y nodtool del paquete se corren
+   sacados del zip.
+
+No lleva compilador: el juego se compila con el clang de Apple, de las
+Command Line Tools. Si la Mac no las tiene, la preparación abre su instalador
+y termina con `no_compiler`, que el launcher explica. Como la app no está
+firmada por Apple, macOS marca como en cuarentena todo lo que se baja; el
+launcher, que el jugador abrió, le quita esa marca a su `builder/` para que la
+preparación pueda correr sus herramientas.
+
+Así se probó: en GitHub los dos paquetes se arman y su kit compila y enlaza;
+en una Mac de verdad todavía no.
+
 ### Probarlo en Linux
 
 ```sh
@@ -263,7 +300,7 @@ from their own disc, the first time they play:
 
 - the runtime already compiled, without the game: the **runtime kit**;
 - WiiCompiled's translator, a C++ compiler (llvm-mingw; on Linux, its clang
-  with a sysroot) and Python;
+  with a sysroot; on a Mac none: Apple's clang is used) and Python;
 - the tools of this repository that prepare the game, the symbols
   (`config/G4AEE9/symbols.txt`), the runtime's code that the translator reads
   and the mods' code;
@@ -472,6 +509,42 @@ It was tried this way in the cloud with the x64 package and the game's disc:
 the package's launcher, with an empty `PATH`, prepared the game in 2 minutes
 and 18 seconds (`HarvestMoonMM --prepare`), and the prepared game, which only
 asks for libc and libm, reached the title menu and started with `--play`.
+
+### The macOS package (`.github/workflows/package-native-macos.yml`)
+
+For the Macs with Apple silicon (arm64) and with Intel (x64), both made on a
+GitHub Mac with Apple silicon (the Intel one compiled for x86-64 there, with
+`packaging/native/macos-x86_64-toolchain.cmake`, as WiiCompiled does):
+
+1. The runtime is compiled with Apple's clang for macOS 12 or newer (what the
+   Dawn that aurora downloads asks for), with no library from Homebrew. aurora
+   uses `std::jthread`, which Xcode 16's libc++ only gives as experimental: C++
+   is compiled with `-fexperimental-library` (only the headers use it). The
+   translated game's data are converted to a Mach-O section, as to COFF on
+   Windows; the translator, when it runs on a Mac, already writes them so.
+2. `tools/make_runtime_kit.py` leaves out the computer's SDK (`-isysroot`) and
+   names the SDK's libraries (`-lz`): on the player's Mac, Apple's clang uses
+   its own SDK.
+3. `tools/try_runtime_kit.py` compiles the stand-in game with the kit's recipe
+   and links it, as the player's Mac would.
+4. `tools/package_native_macos.py` assembles `HarvestMoonMM.app`: the launcher
+   in `Contents/MacOS`, `builder/` in `Contents/Resources` (SDL tells the
+   launcher that is its folder), the icon, and an `Info.plist` with the oldest
+   macOS its programs ask for (read from each one, `tools/macho_binaries.py`).
+   The texts (README, licenses) go beside it. The zip keeps the links and which
+   files are programs.
+5. At the end, the package's Python, translator and nodtool are run, taken out
+   of the zip.
+
+It carries no compiler: the game is compiled with Apple's clang, from the
+Command Line Tools. When the Mac does not have them, the preparation opens their
+installer and ends with `no_compiler`, which the launcher explains. As the app
+is not signed by Apple, macOS quarantines everything downloaded; the launcher,
+which the player opened, takes that mark off its `builder/` so that the
+preparation can run its tools.
+
+How it was tried: on GitHub both packages are made and their kit compiles and
+links; on a real Mac not yet.
 
 ### Trying it on Linux
 

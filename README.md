@@ -10,8 +10,8 @@
 
 A native PC version of *Harvest Moon: Magical Melody* for the GameCube. The
 game's own code is translated ahead of time into C++ and compiled into a
-Windows or Linux program that runs on your processor, Intel, AMD or ARM, with
-no emulator in between. It plays in widescreen, at your screen's resolution and
+Windows, Linux or Mac program that runs on your processor, Intel, AMD or ARM,
+with no emulator in between. It plays in widescreen, at your screen's resolution and
 at 60 or 120 frames a second, with a launcher, an options menu inside the game
 and mods, among them one that lets the game go on after marrying Jamie.
 
@@ -172,10 +172,10 @@ scenes may start). They are kept in `settings.json`, under `cheats`, and the `ch
 
 | | Minimum requirements |
 |---|---|
-| System | Windows 10 (version 1903 or newer) or Windows 11, 64-bit. Or a 64-bit Linux with glibc 2.38 or newer: Ubuntu 24.04 or newer, Debian 13, Fedora 39 or newer, Arch, SteamOS 3.6 or newer (Steam Deck). |
+| System | Windows 10 (version 1903 or newer) or Windows 11, 64-bit. Or a 64-bit Linux with glibc 2.38 or newer: Ubuntu 24.04 or newer, Debian 13, Fedora 39 or newer, Arch, SteamOS 3.6 or newer (Steam Deck). Or macOS 12 or newer, with Apple silicon or Intel. |
 | Processor | Intel or AMD with SSE4.2 (Intel from 2008 on, AMD from 2011 on): the **x64** package. An ARM one such as the Snapdragon: the **arm64** package. |
 | Memory | 4 GB of RAM; 8 GB is better. The first time, the game is compiled on your computer, with one compiler per processor core of up to about 250 MB each. |
-| Graphics | A graphics card, or the graphics of the processor, with Direct3D 12 (Windows) or Vulkan (Linux). |
+| Graphics | A graphics card, or the graphics of the processor, with Direct3D 12 (Windows), Vulkan (Linux) or Metal (Mac). |
 | Disk | About 3 GB free: the unzipped package (about 550 MB), the `.iso` that an `.rvz` image is converted to, and the prepared game (about 100 MB). |
 | Game | Your disc of *Harvest Moon: Magical Melody* for the USA (`G4AEE9`), as an image: `.iso`, `.gcm` or `.rvz` (Dolphin's compressed format). The launcher checks that it is that game and that version. |
 
@@ -209,6 +209,15 @@ in a folder of Dolphin's game list, the launcher finds it by itself and
 compiler, so there is nothing to install, also on the Steam Deck (in desktop
 mode; then add `HarvestMoonMM` to Steam as a non-Steam game to play it from
 game mode). Everything of yours goes in `~/.local/share/HarvestMoonMM`.
+
+**On a Mac.** Download the zip for your Mac (`arm64` for Apple silicon, `x64`
+for Intel), unzip it and move `HarvestMoonMM.app` to Applications. It is not
+signed by Apple, so open it the first time with right-click → *Open* (on
+macOS 15, if that is not offered: try to open it, then *System Settings* →
+*Privacy & Security* → *Open Anyway*). The game is compiled with Apple's
+Command Line Tools; if your Mac does not have them, the launcher opens their
+installer. Everything of yours goes in
+`~/Library/Application Support/HarvestMoonMM`.
 
 **With [RecompLauncher](https://recomplauncher.com).** The package has a
 `recomplauncher.json`, so RecompLauncher can install it, check your disc
@@ -305,8 +314,7 @@ test bench of the Jamie mod.
 - The game in Spanish, French, German or Italian: the American disc carries
   the translations of a European release that never came out.
 - More mods: cheats, and fast-forwarding the scenes.
-- Updating from the launcher, a signed program, and packages for macOS and
-  Android.
+- Updating from the launcher, a signed program, and an Android app.
 - Later, the two Wii versions of the game on the same runtime.
 
 ## For developers
@@ -314,7 +322,7 @@ test bench of the Jamie mod.
 - The native runtime on Linux: `scripts/build_native_runtime.sh`
   ([runtime/README.md](runtime/README.md)). It needs your disc extracted in
   `orig/G4AEE9`.
-- The launcher and the Windows and Linux packages, which GitHub Actions builds
+- The launcher and the Windows, Linux and macOS packages, which GitHub Actions builds
   when a version is published: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md).
 - How the game was analysed: [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md),
   [docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) (4,486 functions, checked
