@@ -1,0 +1,81 @@
+Third-party notices / Avisos de terceros
+========================================
+
+This package puts together free software from several authors. The game is NOT
+included. The list says what each part is, where it is in the package, its
+license and where its source is. The license texts are in the "licenses"
+folder, or inside the folder of the part when it brings its own. The exact
+versions are in VERSIONS.txt. The source of this project, and the patches it
+applies to the parts below, is at https://github.com/RodoLy/HMMMGC; if
+anything of that cannot be obtained there, ask for it by opening an issue.
+
+Este paquete junta software libre de varios autores. El juego NO está incluido.
+La lista dice qué es cada parte, dónde está en el paquete, su licencia y dónde
+está su código. Los textos de las licencias están en la carpeta "licenses", o
+dentro de la carpeta de la parte cuando trae los suyos. Las versiones exactas
+están en VERSIONS.txt. El código de este proyecto, y los parches que aplica a
+las partes de abajo, están en https://github.com/RodoLy/HMMMGC; si algo de eso
+no se puede conseguir allí, pídelo abriendo un issue.
+
+
+The paths below are inside HarvestMoonMM.app/Contents/Resources. / Las rutas
+de abajo están dentro de HarvestMoonMM.app/Contents/Resources.
+
+
+This project / Este proyecto
+  HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM, and in
+  HarvestMoonMM.app/Contents/Resources: builder/tools, builder/runtime,
+  builder/mods, builder/kit (the runtime / el runtime), builder/config
+  License: GPL-3.0-or-later (LICENSE.txt). https://github.com/RodoLy/HMMMGC
+
+WiiCompiled: the translator, the guest ABI headers and two runtime helpers /
+el traductor, los encabezados de la ABI y dos ayudantes del runtime
+  builder/translator, builder/kit
+  License: GPL-3.0 (licenses/WiiCompiled-LICENSE.txt).
+  https://github.com/patchzyy/wiicompiled
+
+aurora: the GameCube's graphics, controllers and memory card on WebGPU / los
+gráficos, controles y memory card de la GameCube sobre WebGPU
+  builder/kit
+  License: MIT (licenses/aurora-LICENSE.txt). https://github.com/encounter/aurora
+
+Dawn (WebGPU)
+  builder/kit/lib (libwebgpu_dawn.a)
+  License: BSD-3-Clause (licenses/Dawn-LICENSE.txt).
+  https://github.com/encounter/dawn
+
+Libraries inside the runtime and the launcher / Bibliotecas dentro del runtime
+y del launcher: SDL3 (zlib), Dear ImGui (MIT), nlohmann/json (MIT), fmt (MIT),
+xxHash (BSD-2-Clause), Abseil (Apache-2.0), FreeType (FTL), SQLite (public
+domain), zstd (BSD-3-Clause), Tracy (BSD-3-Clause), libpng (libpng license),
+zlib-ng (zlib license). Their license texts are in the licenses folder.
+
+Baloo 2 and Dosis (the launcher's lettering / las letras del launcher)
+  inside HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM
+  License: SIL Open Font License 1.1 (licenses/Baloo2-OFL.txt,
+  licenses/Dosis-OFL.txt). https://github.com/google/fonts
+
+DejaVu Sans: the launcher's symbols / los símbolos del launcher
+  inside HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM
+  License: Bitstream Vera's, with DejaVu's changes in the public domain
+  (licenses/DejaVu-LICENSE.txt). https://github.com/dejavu-fonts/dejavu-fonts
+
+M PLUS Rounded 1c (the lettering of the options menu in the game / las letras
+del menú de opciones del juego)
+  inside builder/kit and HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM
+  License: SIL Open Font License 1.1 (licenses/RoundedMplus1c-OFL.txt).
+  https://github.com/google/fonts
+
+.NET runtime (inside the translator / dentro del traductor)
+  builder/translator
+  License: MIT. https://github.com/dotnet/runtime
+
+Python (python-build-standalone)
+  builder/python
+  License: PSF License (builder/python/lib/python3.*/LICENSE.txt).
+  https://github.com/astral-sh/python-build-standalone
+
+nod (nodtool): reads and converts disc images / lee y convierte imágenes de disco
+  builder/nodtool
+  License: MIT or Apache-2.0 (licenses/nod-LICENSE-MIT.txt,
+  licenses/nod-LICENSE-APACHE.txt). https://github.com/encounter/nod
