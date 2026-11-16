@@ -41,6 +41,7 @@ bool widescreen();
 unsigned frame_rate();          // 30, 60 or 120
 unsigned volume_percent();      // 0 (silent) to 100 (the game's own)
 bool show_frame_rate();         // over the game, at the top right (in_game_menu.h)
+bool hide_touch_buttons();      // while a controller is connected (input/touch_buttons.h)
 // Whether the mod `id` is on: in the command line's list, or not turned off in settings.json.
 bool mod_enabled(const std::string& id);
 // The mods the game started with (main.cpp tells it): the menu compares them with the settings.

@@ -38,6 +38,8 @@ inline constexpr const char* GAME_LANGUAGES[] = {"en", "es", "fr", "de", "it"};
 inline constexpr const char* GAME_LANGUAGE_NAMES[] = {"English", "Espa\xC3\xB1ol", ("Fran\xC3\xA7" "ais"), "Deutsch",
                                                         "Italiano"};
 inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the game, at the top right
+// No touch buttons while a controller plays as controller 1 (runtime/src/input/touch_buttons.h).
+inline constexpr const char* HIDE_TOUCH_BUTTONS = "hideTouchButtons";
 inline constexpr const char* LANGUAGE = "language";  // of the game's dialogues, the launcher and the menu
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
 

@@ -106,6 +106,15 @@
       "defaults": { "showFrameRate": "false" }
     },
     {
+      "id": "hide_touch_buttons",
+      "label": "No touch buttons with a controller",
+      "choices": [
+        { "label": "Off", "set": { "hideTouchButtons": "false" } },
+        { "label": "On", "set": { "hideTouchButtons": "true" } }
+      ],
+      "defaults": { "hideTouchButtons": "false" }
+    },
+    {
       "id": "jamie_marriage",
       "label": "Marry Jamie",
       "group": "Mods",

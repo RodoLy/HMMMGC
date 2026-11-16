@@ -112,6 +112,7 @@ bool widescreen() { return g_options.widescreen; }
 unsigned frame_rate() { return g_options.frame_rate; }
 unsigned volume_percent() { return g_options.volume_percent; }
 bool show_frame_rate() { return g_settings.flag(settings::SHOW_FRAME_RATE, false); }
+bool hide_touch_buttons() { return g_settings.flag(settings::HIDE_TOUCH_BUTTONS, false); }
 
 bool mod_enabled(const std::string& id) {
     if (g_given_mods) {

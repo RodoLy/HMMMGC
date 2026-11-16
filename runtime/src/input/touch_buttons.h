@@ -12,8 +12,10 @@
 // at once, and a finger that slides from one button onto another moves to it.
 //
 // They show when the screen is touched (and from the start on Android, unless a controller is
-// connected), and hide when a controller or the keyboard is used, or while the options menu is
-// open, where touching works as the mouse does.
+// connected, and again on Android when the controller is disconnected), and hide when a controller
+// or the keyboard is used, or while the options menu is open, where touching works as the mouse
+// does. With the option "No touch buttons with a controller" (settings.json's hideTouchButtons)
+// they do not show at all while a controller is connected, not even when the screen is touched.
 #pragma once
 
 #include <dolphin/pad.h>

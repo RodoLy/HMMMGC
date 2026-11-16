@@ -28,6 +28,7 @@ bool fullscreen(settings::Settings& settings, bool focus = false);
 bool widescreen(settings::Settings& settings, bool focus = false);
 bool frame_rate(settings::Settings& settings, bool focus = false);
 bool show_frame_rate(settings::Settings& settings, bool focus = false);
+bool hide_touch_buttons(settings::Settings& settings, bool focus = false);
 bool volume(settings::Settings& settings, bool focus = false);
 
 }  // namespace option_rows

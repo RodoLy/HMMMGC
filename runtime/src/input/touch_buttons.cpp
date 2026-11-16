@@ -3,6 +3,7 @@
 #include "input/touch_buttons.h"
 
 #include "in_game_menu.h"
+#include "player_options.h"
 #include "texts.h"
 #include "theme.h"
 
@@ -147,6 +148,28 @@ void hide() {
     g_fingers.clear();
 }
 
+// The player's choice in the options (settings.json's hideTouchButtons): none while a controller
+// plays as controller 1, whatever touches the screen.
+bool kept_away_by_controller() { return player_options::hide_touch_buttons() && PADGetIndexForPort(PAD_CHAN0) >= 0; }
+
+// A phone that starts with a controller connected starts without the buttons, and one whose
+// controller goes away (unplugged, out of battery) gets them back at once, so that the game can
+// still be played.
+void watch_controller() {
+#if defined(__ANDROID__)
+    static bool first_frame = true;
+    static bool had_controller = false;
+    const bool has_controller = PADGetIndexForPort(PAD_CHAN0) >= 0;
+    if (first_frame && has_controller) {
+        hide();
+    } else if (had_controller && !has_controller) {
+        g_visible = true;
+    }
+    first_frame = false;
+    had_controller = has_controller;
+#endif
+}
+
 void finger_down(SDL_FingerID id, ImVec2 point) {
     g_visible = true;
     const int control = control_at(point);
@@ -217,7 +240,7 @@ void handle_event(const SDL_Event& event) {
     case SDL_EVENT_FINGER_MOTION:
     case SDL_EVENT_FINGER_UP:
     case SDL_EVENT_FINGER_CANCELED: {
-        if (in_game_menu::is_open() || g_screen.x <= 0.f) {
+        if (in_game_menu::is_open() || g_screen.x <= 0.f || kept_away_by_controller()) {
             g_fingers.clear();
             return;
         }
@@ -246,10 +269,11 @@ void handle_event(const SDL_Event& event) {
     }
 }
 
-bool visible() { return g_visible && !in_game_menu::is_open(); }
+bool visible() { return g_visible && !in_game_menu::is_open() && !kept_away_by_controller(); }
 
 void draw() {
     g_screen = ImGui::GetIO().DisplaySize;
+    watch_controller();
     // The lettering is made in in_game_menu::before_frame, after the first frame.
     if (!visible() || g_screen.x <= 0.f || theme::fonts().button == nullptr) {
         return;

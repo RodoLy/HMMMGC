@@ -278,8 +278,15 @@ pasa de un botón al siguiente.
 Se muestran en Android desde el inicio (salvo que haya un control) o al tocar
 la pantalla, y se esconden cuando se usa un control o el teclado, o mientras el
 menú está abierto (ahí tocar funciona como el ratón). En una computadora,
-`HMMM_TOUCH_BUTTONS=1` los muestra desde el inicio. Se probó cómo se ven, en el
-juego en Linux; tocarlos solo se puede probar en una pantalla táctil.
+`HMMM_TOUCH_BUTTONS=1` los muestra desde el inicio. En Android vuelven solos si
+el control se desconecta.
+
+La opción «Sin botones táctiles con control» (en Imagen del menú y en las
+Opciones del launcher; `hideTouchButtons` en `settings.json`) los apaga del todo
+mientras haya un control conectado como control 1: no salen ni al tocar la
+pantalla, y tocarla no hace nada. Si el control se desconecta, vuelven, para no
+quedarse sin forma de jugar. Se probó cómo se ven, en el juego en Linux; tocarlos
+solo se puede probar en una pantalla táctil.
 
 ![Los botones táctiles sobre la pantalla del título](images/touch-buttons.png)
 
@@ -564,8 +571,16 @@ several buttons, and a finger that slides goes from one button to the next.
 They show on Android from the start (unless there is a controller) or when the
 screen is touched, and hide when a controller or the keyboard is used, or while
 the menu is open (where touching works as the mouse does). On a computer,
-`HMMM_TOUCH_BUTTONS=1` shows them from the start. How they look was tried in the
-game on Linux; touching them can only be tried on a touch screen.
+`HMMM_TOUCH_BUTTONS=1` shows them from the start. On Android they come back by
+themselves when the controller is disconnected.
+
+The option "No touch buttons with a controller" (under Picture in the menu and
+in the launcher's Options; `hideTouchButtons` in `settings.json`) turns them off
+altogether while a controller is connected as controller 1: they do not show
+even when the screen is touched, and touching it does nothing. When the
+controller is disconnected they come back, so that the game can still be played.
+How they look was tried in the game on Linux; touching them can only be tried
+on a touch screen.
 
 ![The touch buttons over the title screen](images/touch-buttons.png)
 
