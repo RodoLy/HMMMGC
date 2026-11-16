@@ -288,6 +288,15 @@ def link_arguments(command: list[str], kit: Kit, rewriter: PathRewriter | None =
     return arguments
 
 
+def with_library_files(arguments: list[str], library_files: dict[str, Path], kit: Kit) -> list[str]:
+    """The link's -l<name> of `library_files` replaced by the kit's copy of their file: libraries that
+    the build's compiler finds in a folder of its own (the NDK's libatomic) and the player's does not."""
+    return [
+        kit.library(library_files[word[2:]]) if word[2:] in library_files and word.startswith("-l") else word
+        for word in arguments
+    ]
+
+
 def runtime_dlls(
     program: Path,
     build_directory: Path,
@@ -339,6 +348,7 @@ def make_kit(
     sysroot: Path | None = None,
     extra_link_arguments: Sequence[str] = (),
     extra_link_files: Sequence[Path] = (),
+    library_files: dict[str, Path] | None = None,
 ) -> dict:
     system, processor = target_system(build_directory)
     executable = {"Windows": PROGRAM_TARGET + ".exe", "Android": "libmain.so"}.get(system, PROGRAM_TARGET)
@@ -398,7 +408,7 @@ def make_kit(
         # The extra arguments and files go last: on Android they are the libraries that the NDK's
         # clang links by itself and another clang does not have (see --extra-link-file).
         "link": [
-            *link_arguments(link, kit, rewriter),
+            *with_library_files(link_arguments(link, kit, rewriter), library_files or {}, kit),
             *extra_link_arguments,
             *(kit.library(path) for path in extra_link_files),
         ],
@@ -466,6 +476,14 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
         help="a library copied into the kit and added at the end of the link (the NDK clang's own builtins, "
         "which the player's clang does not have for Android); repeat for several",
     )
+    parser.add_argument(
+        "--library-file",
+        action="append",
+        default=[],
+        metavar="NAME=FILE",
+        help="the link's -lNAME becomes the kit's copy of FILE (-latomic: the NDK's libatomic.a); "
+        "repeat for several",
+    )
     return parser.parse_args(argv)
 
 
@@ -482,6 +500,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.sysroot,
             arguments.extra_link_argument,
             arguments.extra_link_file,
+            {name: Path(path) for name, _, path in (text.partition("=") for text in arguments.library_file)},
         )
     except (KitError, subprocess.CalledProcessError, OSError) as problem:
         print(f"error: {problem}", file=sys.stderr)

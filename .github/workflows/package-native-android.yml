@@ -124,19 +124,21 @@ jobs:
           cmake --build build/runtime-kit -- -k 0
 
       # The NDK's clang links two libraries by itself that the player's clang does not have for
-      # Android, its builtins and its unwinder: they go into the kit, and the recipe names every
-      # default library itself (-nodefaultlibs).
+      # Android, its builtins and its unwinder, and keeps libatomic (which the build asks for with
+      # -latomic) in its own folder: they go into the kit, and the recipe names every default library
+      # itself (-nodefaultlibs).
       - name: Make the runtime kit
         run: |
           target="--target=aarch64-linux-android$ANDROID_API"
           builtins=$("$NDK_CLANG" "$target" --rtlib=compiler-rt -print-libgcc-file-name)
           unwinder=$("$NDK_CLANG" "$target" -print-file-name=libunwind.a)
-          ls -l "$builtins" "$unwinder"
+          atomic=$("$NDK_CLANG" "$target" -print-file-name=libatomic.a)
+          ls -l "$builtins" "$unwinder" "$atomic"
           python tools/make_runtime_kit.py --build-directory build/runtime-kit \
             --wiicompiled-directory "$WIICOMPILED_DIRECTORY" --out build/kit --sysroot "$NDK_SYSROOT" \
             --extra-link-argument=-fuse-ld=lld --extra-link-argument=-nodefaultlibs \
             --extra-link-argument=-lc++_static --extra-link-argument=-lc++abi \
-            --extra-link-file "$builtins" --extra-link-file "$unwinder" \
+            --extra-link-file "$builtins" --extra-link-file "$unwinder" --library-file "atomic=$atomic" \
             --extra-link-argument=-lc --extra-link-argument=-lm --extra-link-argument=-ldl
           python -c "import json; r = json.load(open('build/kit/recipe.json')); print(r['compile'], [w for w in r['link'] if not w.startswith('{kit}/lib/0')])"
 

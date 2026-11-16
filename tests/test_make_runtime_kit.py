@@ -21,6 +21,7 @@ from make_runtime_kit import (  # noqa: E402
     link_arguments,
     runtime_dlls,
     target_system,
+    with_library_files,
 )
 
 
@@ -209,6 +210,15 @@ def test_the_build_s_sysroot_becomes_the_kit_s_and_another_one_stops_it(kit, wii
     ]
     with pytest.raises(KitError, match="give that sysroot"):
         compile_flags(["clang++", "--sysroot=/somewhere/else", "-c", "a.cpp"], rewriter)
+
+
+def test_a_library_the_player_s_compiler_lacks_becomes_the_kit_s_copy(kit, tmp_path):
+    atomic = tmp_path / "ndk" / "libatomic.a"
+    atomic.parent.mkdir()
+    atomic.write_bytes(b"!<arch>\n")
+    arguments = with_library_files(["{game_objects}", "-latomic", "-lm"], {"atomic": atomic}, kit)
+    assert arguments == ["{game_objects}", "{kit}/lib/000_libatomic.a", "-lm"]
+    assert (kit.out / "lib" / "000_libatomic.a").read_bytes() == b"!<arch>\n"
 
 
 def test_a_folder_of_this_computer_for_shared_libraries_stops_the_kit(kit):
