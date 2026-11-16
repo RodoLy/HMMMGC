@@ -1,0 +1,229 @@
+name: Native Android package
+
+# Builds the Android package: what the Windows and Linux packages need to make the game's Android
+# app on the player's computer, from the player's own disc (docs/NATIVE_PACKAGE.md, "The Android
+# app"): the runtime compiled for Android (ARM64) with the NDK, and the app without the game (the
+# shell), built with Gradle. No game data is involved at any point.
+#
+# It runs when a release is published, and then adds the zip to it, or when asked for: Actions tab >
+# Native Android package > Run workflow (the zip is then kept as an artifact). At the end it does what
+# a player's Linux computer would do with it: it compiles the stand-in game with the package's
+# llvm-mingw clang and the kit, makes the app with tools/android_apk.py, and checks the app's
+# signature with Android's apksigner.
+#
+# Arma el paquete de Android: lo que los paquetes de Windows y Linux necesitan para hacer la app de
+# Android del juego en la computadora del jugador. Corre al publicar una versión o cuando se pide a
+# mano. No toca datos del juego en ningún momento.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The NDK, the Android version the app runs on from (8.0) and the SDK it is built with.
+  NDK_VERSION: "27.2.12479018"
+  ANDROID_API: "26"
+  ANDROID_SDK_PLATFORM: "35"
+  BUILD_TOOLS_VERSION: "35.0.0"
+  GRADLE_VERSION: "8.11.1"
+
+jobs:
+  package:
+    name: Android arm64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      TOOLS_DIRECTORY: ${{ github.workspace }}/build/tools
+      WIICOMPILED_DIRECTORY: ${{ github.workspace }}/build/wiicompiled
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Install Ninja and the Android NDK, platform and build tools
+        run: |
+          sudo apt-get update && sudo apt-get install --yes ninja-build
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install "ndk;$NDK_VERSION" "platforms;android-$ANDROID_SDK_PLATFORM" \
+            "build-tools;$BUILD_TOOLS_VERSION" > /dev/null
+          ndk="$ANDROID_HOME/ndk/$NDK_VERSION"
+          echo "NDK=$ndk" >> "$GITHUB_ENV"
+          echo "NDK_SYSROOT=$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot" >> "$GITHUB_ENV"
+          echo "NDK_CLANG=$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" >> "$GITHUB_ENV"
+
+      # As in the other packages; Android also wants a number that grows with each version, so that
+      # a newer app installs over an older one: v0.4.0 is 400, and a manual run's is 1.
+      - name: Choose the version of the package
+        run: |
+          if [[ -n "$RELEASE_TAG" ]]; then
+            version="$RELEASE_TAG"
+          else
+            version="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
+          fi
+          code=1
+          if [[ "$version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            code=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
+          echo "PACKAGE_ZIP=HarvestMoonMM-native-$version-android.zip" >> "$GITHUB_ENV"
+          echo "Version: $version ($code)"
+
+      - name: Download WiiCompiled and apply the patches
+        run: |
+          url=$(sed -n 's/^readonly WIICOMPILED_URL="\(.*\)"$/\1/p' scripts/build_native_runtime.sh)
+          commit=$(sed -n 's/^readonly WIICOMPILED_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_native_runtime.sh)
+          [[ -n "$url" && -n "$commit" ]] || { echo "WiiCompiled's address or commit not found" >&2; exit 1; }
+          git clone --filter=blob:none --no-checkout "$url" "$WIICOMPILED_DIRECTORY"
+          git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$commit"
+          git -C "$WIICOMPILED_DIRECTORY" submodule update --init aurora-main
+          for patch in patches/wiicompiled/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY" apply "$GITHUB_WORKSPACE/$patch"
+          done
+          for patch in patches/aurora/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY/aurora-main" apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Write the names of the game's functions for the mods
+        run: python tools/export_mod_symbols.py
+
+      # With the NDK, every library of aurora built here and the C++ library linked in.
+      - name: Build the runtime for Android with the stand-in game
+        run: |
+          cmake -S runtime -B build/runtime-kit -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM="android-$ANDROID_API" -DANDROID_STL=c++_static \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWIICOMPILED_DIR="$WIICOMPILED_DIRECTORY" -DTRANSLATED_GAME_DIR="$GITHUB_WORKSPACE/runtime/kit/stub_game" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DAURORA_USE_SYSTEM_DEPENDENCIES=OFF \
+            -DBUILD_SHARED_LIBS=OFF -DFT_DISABLE_BZIP2=ON \
+            -DAURORA_SDL3_LIBUSB=OFF -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=static
+          # Keep going after an error, so that one run shows them all.
+          cmake --build build/runtime-kit -- -k 0
+
+      # The NDK's clang links two libraries by itself that the player's clang does not have for
+      # Android, its builtins and its unwinder: they go into the kit, and the recipe names every
+      # default library itself (-nodefaultlibs).
+      - name: Make the runtime kit
+        run: |
+          target="--target=aarch64-linux-android$ANDROID_API"
+          builtins=$("$NDK_CLANG" "$target" --rtlib=compiler-rt -print-libgcc-file-name)
+          unwinder=$("$NDK_CLANG" "$target" -print-file-name=libunwind.a)
+          ls -l "$builtins" "$unwinder"
+          python tools/make_runtime_kit.py --build-directory build/runtime-kit \
+            --wiicompiled-directory "$WIICOMPILED_DIRECTORY" --out build/kit --sysroot "$NDK_SYSROOT" \
+            --extra-link-argument=-fuse-ld=lld --extra-link-argument=-nodefaultlibs \
+            --extra-link-argument=-lc++_static --extra-link-argument=-lc++abi \
+            --extra-link-file "$builtins" --extra-link-file "$unwinder" \
+            --extra-link-argument=-lc --extra-link-argument=-lm --extra-link-argument=-ldl
+          python -c "import json; r = json.load(open('build/kit/recipe.json')); print(r['compile'], [w for w in r['link'] if not w.startswith('{kit}/lib/0')])"
+
+      # The app without the game: SDL's Java activity from the SDL that aurora compiled (with
+      # aurora's patches), aurora's surface, and the app's own activities (android/).
+      - name: Build the shell app
+        run: |
+          gradle -p android --no-daemon assembleRelease \
+            -PsdlJava="$PWD/build/runtime-kit/_deps/sdl-src/android-project/app/src/main/java" \
+            -PauroraJava="$WIICOMPILED_DIRECTORY/aurora-main/platforms/android/java" \
+            -PversionName="$VERSION" -PversionCode="$VERSION_CODE"
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk build/shell.apk
+          ls -l build/shell.apk
+
+      - name: Gather the license texts
+        run: |
+          licenses=build/licenses
+          mkdir -p "$licenses"
+          cp "$NDK/NOTICE" "$licenses/Android-NDK-NOTICE.txt"
+          for folder in build/runtime-kit/_deps/*-src; do
+            name=$(basename "$folder" -src)
+            for file in LICENSE LICENSE.txt LICENSE.TXT LICENSE.md COPYING docs/FTL.TXT; do
+              if [[ -f "$folder/$file" ]]; then cp "$folder/$file" "$licenses/$name-$(basename "$file")"; fi
+            done
+          done
+          cp "$WIICOMPILED_DIRECTORY/LICENSE" "$licenses/WiiCompiled-LICENSE.txt"
+          cp "$WIICOMPILED_DIRECTORY/aurora-main/LICENSE" "$licenses/aurora-LICENSE.txt"
+          ls -l "$licenses"
+
+      - name: Assemble the package
+        run: |
+          python tools/package_native_android.py --kit build/kit --ndk-sysroot "$NDK_SYSROOT" \
+            --shell build/shell.apk --licenses-directory build/licenses --output-directory build/dist \
+            --archive "build/dist/$PACKAGE_ZIP" --package-version "$VERSION" \
+            --version "HMMMGC=$VERSION ($GITHUB_SHA)" --version "NDK=$NDK_VERSION" \
+            --version "WiiCompiled=$(git -C "$WIICOMPILED_DIRECTORY" rev-parse HEAD)" \
+            --version "aurora=$(git -C "$WIICOMPILED_DIRECTORY/aurora-main" rev-parse HEAD)"
+          cat build/dist/HarvestMoonMM-android/builder/android/VERSIONS.txt
+          ls -l build/dist
+
+      # What a player's Linux computer does with the package: its clang (llvm-mingw's) compiles the
+      # stand-in game for Android with the kit and links libmain.so, the app is made and signed with
+      # a new key, and Android's apksigner checks the signature.
+      - name: Make an app with the stand-in game, as a player's computer would
+        run: |
+          python tools/fetch_native_package_tools.py --system linux --architecture x64 --destination "$TOOLS_DIRECTORY"
+          android=build/dist/HarvestMoonMM-android/builder/android
+          python tools/try_runtime_kit.py --kit "$android/kit" --out build/try --toolchain "$TOOLS_DIRECTORY/llvm-mingw"
+          python -c "import sys; sys.path.insert(0, 'tools'); from elf_binaries import read_elf_binary; from pathlib import Path; b = read_elf_binary(Path('build/try/libmain.so')); print(b.machine, b.needed)"
+          python tools/android_apk.py --shell "$android/shell.apk" --key build/try/android-key.json \
+            --out build/try/HarvestMoonMM.apk --add lib/arm64-v8a/libmain.so=build/try/libmain.so
+          "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" verify --verbose build/try/HarvestMoonMM.apk
+          "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/aapt2" dump badging build/try/HarvestMoonMM.apk > build/try/badging.txt
+          sed -n '1,12p' build/try/badging.txt
+
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'release'
+        with:
+          path: build/dist/*.zip
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'release'
+        with:
+          name: HarvestMoonMM-native-android
+          path: build/dist/*.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  # Only for a published release: adds the package to it. The only job that can write.
+  release:
+    name: Add the package to the release
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: HarvestMoonMM-native-android
+          path: packages
+
+      - name: Upload the zip to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" packages/*.zip --clobber --repo "$GITHUB_REPOSITORY"
