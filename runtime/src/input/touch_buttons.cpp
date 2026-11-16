@@ -90,6 +90,10 @@ const std::array<Button, 14> BUTTONS = {{
 // from it and how wide they are.
 constexpr float PAD_X = 2.4f, PAD_Y = -5.45f;
 constexpr float PAD_REACH = 1.08f, PAD_ARM = 0.72f;
+// Whether a button is on the screen: all are, but TURBO when the player took it off in the options
+// (settings.json's hideTouchTurbo).
+bool shown(const Button& button) { return button.job != Job::Turbo || !player_options::hide_touch_turbo(); }
+
 constexpr int STICK = -1;  // what a finger holds when it is on the stick
 constexpr int NOTHING = -2;
 
@@ -134,6 +138,9 @@ int control_at(ImVec2 point) {
     int closest = NOTHING;
     float closest_distance = 0.f;
     for (int index = 0; index < static_cast<int>(BUTTONS.size()); ++index) {
+        if (!shown(BUTTONS[index])) {
+            continue;
+        }
         const auto [min, max] = rectangle(BUTTONS[index]);
         if (point.x < min.x - slack || point.x > max.x + slack || point.y < min.y - slack || point.y > max.y + slack) {
             continue;
@@ -515,7 +522,7 @@ void draw() {
     draw_stick(draw);
     draw_pad(draw);
     for (int index = 0; index < static_cast<int>(BUTTONS.size()); ++index) {
-        if (BUTTONS[index].look != Look::Pad) {
+        if (BUTTONS[index].look != Look::Pad && shown(BUTTONS[index])) {
             draw_button(draw, BUTTONS[index], held(index));
         }
     }
@@ -526,7 +533,7 @@ bool turbo_held() {
         return false;
     }
     for (int index = 0; index < static_cast<int>(BUTTONS.size()); ++index) {
-        if (BUTTONS[index].job == Job::Turbo && held(index)) {
+        if (BUTTONS[index].job == Job::Turbo && shown(BUTTONS[index]) && held(index)) {
             return true;
         }
     }

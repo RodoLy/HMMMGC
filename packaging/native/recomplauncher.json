@@ -115,6 +115,15 @@
       "defaults": { "hideTouchButtons": "false" }
     },
     {
+      "id": "hide_touch_turbo",
+      "label": "No TURBO touch button",
+      "choices": [
+        { "label": "Off", "set": { "hideTouchTurbo": "false" } },
+        { "label": "On", "set": { "hideTouchTurbo": "true" } }
+      ],
+      "defaults": { "hideTouchTurbo": "false" }
+    },
+    {
       "id": "jamie_marriage",
       "label": "Marry Jamie",
       "group": "Mods",

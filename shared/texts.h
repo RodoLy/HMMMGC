@@ -100,6 +100,8 @@ enum class Text {
     ShowFrameRateHint,
     HideTouchButtons,
     HideTouchButtonsHint,
+    HideTouchTurbo,
+    HideTouchTurboHint,
     CheatInfiniteStamina,
     CheatInfiniteStaminaHint,
     CheatInfiniteMoney,

@@ -128,6 +128,10 @@ bool hide_touch_buttons(settings::Settings& settings, bool focus) {
                     focus);
 }
 
+bool hide_touch_turbo(settings::Settings& settings, bool focus) {
+    return flag_row(settings, settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo, Text::HideTouchTurboHint, focus);
+}
+
 bool volume(settings::Settings& settings, bool focus) {
     return percent_row(settings, settings::VOLUME, 100, 0, 100, 5, Text::Volume, Text::VolumeHint, focus);
 }

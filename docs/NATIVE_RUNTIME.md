@@ -295,7 +295,9 @@ La opción «Sin botones táctiles con control» (en Imagen del menú y en las
 Opciones del launcher; `hideTouchButtons` en `settings.json`) los apaga del todo
 mientras haya un control conectado como control 1: no salen ni al tocar la
 pantalla, y tocarla no hace nada. Si el control se desconecta, vuelven, para no
-quedarse sin forma de jugar. Se probó cómo se ven, en el juego en Linux; tocarlos
+quedarse sin forma de jugar. Otra opción, «Sin botón TURBO táctil» (en el
+mismo lugar; `hideTouchTurbo`), quita solo TURBO de la pantalla; Tab y el botón
+del control siguen acelerando. Se probó cómo se ven, en el juego en Linux; tocarlos
 solo se puede probar en una pantalla táctil.
 
 ![Los botones táctiles sobre el juego en pantalla ancha, sueltos y con A, el stick, la flecha derecha y TURBO apretados](images/touch-buttons.jpg)
@@ -598,7 +600,9 @@ in the launcher's Options; `hideTouchButtons` in `settings.json`) turns them off
 altogether while a controller is connected as controller 1: they do not show
 even when the screen is touched, and touching it does nothing. When the
 controller is disconnected they come back, so that the game can still be played.
-How they look was tried in the game on Linux; touching them can only be tried
+Another option, "No TURBO touch button" (in the same places; `hideTouchTurbo`),
+takes only TURBO off the screen; Tab and the controller's button still speed the
+game up. How they look was tried in the game on Linux; touching them can only be tried
 on a touch screen.
 
 ![The touch buttons over the game on a wide screen, at rest and with A, the stick, the right arrow and TURBO pressed](images/touch-buttons.jpg)

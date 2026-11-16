@@ -12,7 +12,8 @@
 // the right, A (the big green one), B, X and Y where the GameCube has them; L and R at the top
 // corners with Z under R; START at the bottom in the middle, and at the top in the middle a button
 // that opens the options menu (in_game_menu.h), as F10 does; under L, TURBO runs the game faster
-// while it is held, as the turbo's key (Tab) does. Several fingers press several buttons
+// while it is held, as the turbo's key (Tab) does (the option "No TURBO touch button",
+// settings.json's hideTouchTurbo, takes it off the screen). Several fingers press several buttons
 // at once, and a finger that slides from one button onto another moves to it.
 //
 // They show when the screen is touched (and from the start on Android, unless a controller is

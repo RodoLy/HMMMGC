@@ -517,6 +517,7 @@ std::vector<App::Row> App::options_rows() {
            Text::FrameRateHint);
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
     flag(settings::HIDE_TOUCH_BUTTONS, Text::HideTouchButtons, Text::HideTouchButtonsHint);
+    flag(settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo, Text::HideTouchTurboHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
 
     // The cheats: switches like the ones above, kept in settings.json's "cheats" (shared/settings.h).

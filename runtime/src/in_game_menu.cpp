@@ -273,6 +273,7 @@ bool draw_picture_menu(settings::Settings& settings) {
         }
         changed |= flag_item(settings, settings::SHOW_FRAME_RATE, Text::ShowFrameRate);
         changed |= flag_item(settings, settings::HIDE_TOUCH_BUTTONS, Text::HideTouchButtons);
+        changed |= flag_item(settings, settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo);
         ImGui::EndMenu();
     }
     return changed;
