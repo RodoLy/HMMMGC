@@ -123,7 +123,8 @@ jobs:
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DAURORA_USE_SYSTEM_DEPENDENCIES=OFF \
             -DBUILD_SHARED_LIBS=OFF -DFT_DISABLE_BZIP2=ON \
             -DAURORA_SDL3_LIBUSB=OFF -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=static
-          cmake --build build/runtime-kit
+          # Keep going after an error, so that one run shows them all.
+          cmake --build build/runtime-kit -- -k 0
 
       - name: Make the runtime kit
         run: |

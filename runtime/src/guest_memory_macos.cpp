@@ -15,6 +15,7 @@
 #include "guest_abi/guest_abi.h"
 
 #include <mach/mach.h>
+#include <mach/mach_error.h>
 #include <mach/mach_vm.h>
 #include <sys/mman.h>
 
