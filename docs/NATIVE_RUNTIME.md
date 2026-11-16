@@ -246,6 +246,43 @@ puntero la hace el manejador, decodificando la carga (`arm64_load.h`). El
 ejecutable lleva el código traducido de su disco, así que solo se le entregó al
 jugador; el paquete público compilará esa parte en la PC de cada jugador.
 
+### Linux, macOS y Android (2026-11-15)
+
+**Cómo.** El mismo runtime, con lo que cambia en cada sistema:
+
+- La memoria del juego: en Linux y Android, archivos de memoria (`memfd`) puestos
+  con `mmap` (`guest_memory_posix.cpp`; en Android por la llamada al sistema,
+  que es más vieja que la función); en macOS, las llamadas de memoria de Mach
+  (`mach_vm_allocate` y `mach_vm_remap`, `guest_memory_macos.cpp`), como lo
+  hace WiiCompiled allá. Todas las regiones están alineadas a 16 KB, el tamaño
+  de página de las Mac con Apple Silicon.
+- Las lecturas de registros por puntero (`fault_handler_posix.cpp`): en x86-64
+  con el paso a paso del procesador, con los registros donde los guarda Linux o
+  macOS; en ARM64 (Linux, Android, macOS) el manejador hace la carga él mismo,
+  con la misma parte que Windows ARM64 (`arm64_register_read.h`).
+- En Android el juego es `libmain.so`, que carga la actividad de Java de SDL y
+  arranca con `SDL_main`; el registro va a `native.log` en la carpeta del
+  jugador, dentro del almacenamiento de la app.
+
+### Los botones táctiles (2026-11-15)
+
+**Qué.** Un control de GameCube dibujado sobre el juego para un celular o una
+tablet (`input/touch_buttons.cpp`), con la forma de los botones del menú de
+opciones (`theme::button_shape`): el stick y la cruceta a la izquierda; A
+(grande y verde), B, X y Y a la derecha donde los tiene la GameCube; L, R y Z
+arriba; START abajo; y arriba en medio un botón que abre las opciones, como F10.
+Juegan como el control 1, junto con lo demás que juegue ahí: se suman a lo que
+lee `PADRead`. Varios dedos aprietan varios botones, y un dedo que se desliza
+pasa de un botón al siguiente.
+
+Se muestran en Android desde el inicio (salvo que haya un control) o al tocar
+la pantalla, y se esconden cuando se usa un control o el teclado, o mientras el
+menú está abierto (ahí tocar funciona como el ratón). En una computadora,
+`HMMM_TOUCH_BUTTONS=1` los muestra desde el inicio. Se probó cómo se ven, en el
+juego en Linux; tocarlos solo se puede probar en una pantalla táctil.
+
+![Los botones táctiles sobre la pantalla del título](images/touch-buttons.png)
+
 ### Qué sigue
 
 1. El paquete público para Windows: las bibliotecas compiladas en GitHub
@@ -494,6 +531,43 @@ cannot stop after one instruction, a register read through a pointer is done
 by the handler, which decodes the load (`arm64_load.h`). The executable holds
 the code translated from the player's disc, so it was only handed to the
 player; the public package will compile that part on each player's PC.
+
+### Linux, macOS and Android (2026-11-15)
+
+**How.** The same runtime, with what changes on each system:
+
+- The game's memory: on Linux and Android, memory files (`memfd`) mapped with
+  `mmap` (`guest_memory_posix.cpp`; on Android through the system call, which
+  is older than the function); on macOS, Mach's memory calls
+  (`mach_vm_allocate` and `mach_vm_remap`, `guest_memory_macos.cpp`), as
+  WiiCompiled does there. Every region is aligned to 16 KB, the page size of
+  the Macs with Apple silicon.
+- The register reads through pointers (`fault_handler_posix.cpp`): on x86-64
+  with the processor's single step, with the registers where Linux or macOS
+  keeps them; on ARM64 (Linux, Android, macOS) the handler does the load
+  itself, with the same part as Windows ARM64 (`arm64_register_read.h`).
+- On Android the game is `libmain.so`, which SDL's Java activity loads and
+  starts with `SDL_main`; the log goes to `native.log` in the player's folder,
+  in the app's storage.
+
+### The touch buttons (2026-11-15)
+
+**What.** A GameCube controller drawn over the game for a phone or a tablet
+(`input/touch_buttons.cpp`), with the shape of the options menu's buttons
+(`theme::button_shape`): the stick and the D-Pad on the left; A (big and green),
+B, X and Y on the right where the GameCube has them; L, R and Z at the top;
+START at the bottom; and at the top in the middle a button that opens the
+options, as F10 does. They play as controller 1, together with whatever else
+plays there: they are added to what `PADRead` reads. Several fingers press
+several buttons, and a finger that slides goes from one button to the next.
+
+They show on Android from the start (unless there is a controller) or when the
+screen is touched, and hide when a controller or the keyboard is used, or while
+the menu is open (where touching works as the mouse does). On a computer,
+`HMMM_TOUCH_BUTTONS=1` shows them from the start. How they look was tried in the
+game on Linux; touching them can only be tried on a touch screen.
+
+![The touch buttons over the title screen](images/touch-buttons.png)
 
 ### What comes next
 

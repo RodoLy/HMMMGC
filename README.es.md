@@ -222,6 +222,13 @@ macOS 15, si no aparece: intenta abrirlo, luego *Configuración del Sistema* →
 las Command Line Tools de Apple; si tu Mac no las tiene, el launcher abre su
 instalador. Todo lo tuyo queda en `~/Library/Application Support/HarvestMoonMM`.
 
+**En Android.** Descarga también el zip de Android y descomprímelo dentro de la
+carpeta del paquete de Windows o de Linux. El launcher tiene entonces **Hacer la
+app de Android** en la pestaña Juego: hace `HarvestMoonMM.apk` con tu disco, en
+unos minutos. Cópiala al celular junto con el `.iso` del disco (Android 8 o más
+nuevo, ARM64, con Vulkan), instala la app y elige el `.iso` la primera vez que
+la abras. Se juega con control o con botones táctiles dibujados sobre el juego.
+
 **Con [RecompLauncher](https://recomplauncher.com).** El paquete trae un
 `recomplauncher.json`, así que RecompLauncher puede instalarlo, revisar la
 imagen de tu disco, preparar el juego sin abrir la ventana del launcher,
@@ -317,7 +324,7 @@ de pruebas del mod de Jamie.
 - El juego en español, francés, alemán o italiano: el disco americano trae
   las traducciones de un lanzamiento europeo que nunca salió.
 - Más mods: trucos, y adelantar las escenas.
-- Actualizar desde el launcher, un programa firmado y una app de Android.
+- Actualizar desde el launcher, y un programa firmado.
 - Después, las dos versiones de Wii del juego sobre el mismo runtime.
 
 ## Para desarrolladores

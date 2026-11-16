@@ -265,6 +265,52 @@ preparación pueda correr sus herramientas.
 Así se probó: en GitHub los dos paquetes se arman y su kit compila y enlaza;
 en una Mac de verdad todavía no.
 
+### La app de Android (`.github/workflows/package-native-android.yml`)
+
+La app se hace en la computadora del jugador, con su disco, como se prepara el
+juego, y la hace el paquete de Windows o de Linux: ya tiene el traductor,
+Python y un clang (el de llvm-mingw) que también compila para Android. El
+paquete de Android trae solo lo que es para Android, y se descomprime dentro de
+la carpeta del paquete de computadora (queda en `builder/android`):
+
+- `kit/`: el runtime compilado para Android (ARM64, Android 8 o más nuevo) con
+  el NDK, y en `kit/sysroot` el sysroot del NDK recortado a ARM64 y a esa
+  versión de Android. El clang del NDK enlaza solo sus bibliotecas propias
+  (`libclang_rt.builtins`, `libunwind`), que el clang de la computadora no
+  tiene para Android: van en el kit, y la receta nombra cada biblioteca
+  (`-nodefaultlibs`). `make_runtime_kit.py --sysroot` escribe el sysroot del
+  NDK como `{kit}/sysroot`.
+- `shell.apk`: la app sin el juego, hecha con Gradle (`android/`): la actividad
+  de Java de SDL (del SDL que compila aurora, con sus parches), la superficie
+  de aurora, y dos actividades propias. `DiscActivity` abre primero: la primera
+  vez pide la imagen del disco (.iso), revisa que sea el juego y la copia al
+  almacenamiento de la app, con el estilo del juego (el cielo, un panel como
+  los cuadros de diálogo, un botón naranja); después arranca `GameActivity`,
+  que corre el juego con el disco y la carpeta del jugador. No está firmada.
+
+En la computadora, «Hacer la app de Android» (pestaña Juego del launcher) corre
+`tools/make_android_app.py`: los mismos pasos que `prepare_game.py` (el disco,
+la traducción, la adaptación), luego compila el juego para Android con la
+receta del kit (sin la configuración del clang de la computadora,
+`--no-default-config`) y enlaza `libmain.so`. `tools/android_apk.py` agrega a
+la app `libmain.so` y el `settings.json` del jugador (sus mods y opciones, con
+los que empieza la app), alinea los archivos sin comprimir y la firma con el
+esquema de firma v2 de Android, solo con Python: una llave RSA de 2048 bits y
+un certificado propio, hechos la primera vez y guardados en la carpeta del
+jugador (`android-key.json`), para que cada app nueva se instale encima de la
+anterior y conserve las partidas. El disco no va en la app (pesa 1.4 GB): el
+launcher dice dónde está la .iso para copiarla al celular.
+
+El workflow, al final, hace lo que haría una computadora con Linux: compila el
+sustituto del juego con el clang de llvm-mingw y el kit, hace la app y revisa
+su firma con `apksigner` de Android. Los botones táctiles están en
+[NATIVE_RUNTIME.md](NATIVE_RUNTIME.md).
+
+Así se probó: en GitHub el kit compila y enlaza con el clang de llvm-mingw,
+`libmain.so` solo pide bibliotecas de Android (`libc`, `libm`, `libdl`, `liblog`,
+`libandroid`, `libOpenSLES`, `libGLESv1_CM`, `libGLESv2`) y `apksigner` aprueba
+la firma v2 de la app; en un celular de verdad todavía no.
+
 ### Probarlo en Linux
 
 ```sh
@@ -545,6 +591,52 @@ preparation can run its tools.
 
 How it was tried: on GitHub both packages are made and their kit compiles and
 links; on a real Mac not yet.
+
+### The Android app (`.github/workflows/package-native-android.yml`)
+
+The app is made on the player's computer, from their disc, as the game is
+prepared, and the Windows or Linux package makes it: it already has the
+translator, Python and a clang (llvm-mingw's) that also compiles for Android.
+The Android package brings only what is for Android, and is unpacked inside the
+computer package's folder (it goes in `builder/android`):
+
+- `kit/`: the runtime compiled for Android (ARM64, Android 8 or newer) with the
+  NDK, and in `kit/sysroot` the NDK's sysroot trimmed to ARM64 and to that
+  Android version. The NDK's clang links two libraries of its own by itself
+  (`libclang_rt.builtins`, `libunwind`), which the computer's clang does not
+  have for Android: they go in the kit, and the recipe names every library
+  (`-nodefaultlibs`). `make_runtime_kit.py --sysroot` writes the NDK's sysroot
+  as `{kit}/sysroot`.
+- `shell.apk`: the app without the game, made with Gradle (`android/`): SDL's
+  Java activity (from the SDL that aurora compiles, with its patches), aurora's
+  surface, and two activities of its own. `DiscActivity` opens first: the
+  first time it asks for the disc image (.iso), checks that it is the game and
+  copies it into the app's storage, in the game's style (the sky, a panel like
+  the dialogue boxes, an orange button); then it starts `GameActivity`, which
+  runs the game with the disc and the player's folder. It is not signed.
+
+On the computer, "Make the Android app" (the launcher's Game tab) runs
+`tools/make_android_app.py`: the same steps as `prepare_game.py` (the disc, the
+translation, the adapting), then it compiles the game for Android with the
+kit's recipe (without the computer clang's configuration,
+`--no-default-config`) and links `libmain.so`. `tools/android_apk.py` adds
+`libmain.so` and the player's `settings.json` (their mods and options, which the
+app starts with) to the app, aligns the stored files and signs it with
+Android's APK Signature Scheme v2, with Python alone: an RSA key of 2048 bits
+and a self-signed certificate, made the first time and kept in the player's
+folder (`android-key.json`), so that each new app installs over the last and
+keeps the saves. The disc does not go in the app (it is 1.4 GB): the launcher
+says where the .iso is, to copy it to the phone.
+
+At the end, the workflow does what a Linux computer would do: it compiles the
+stand-in game with llvm-mingw's clang and the kit, makes the app and checks its
+signature with Android's `apksigner`. The touch buttons are in
+[NATIVE_RUNTIME.md](NATIVE_RUNTIME.md).
+
+How it was tried: on GitHub the kit compiles and links with llvm-mingw's clang,
+`libmain.so` only asks for Android's libraries (`libc`, `libm`, `libdl`, `liblog`,
+`libandroid`, `libOpenSLES`, `libGLESv1_CM`, `libGLESv2`) and `apksigner` passes
+the app's v2 signature; on a real phone not yet.
 
 ### Trying it on Linux
 
