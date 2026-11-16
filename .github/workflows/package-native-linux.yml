@@ -1,0 +1,260 @@
+name: Native Linux packages
+
+# Builds the packages of the native version for Linux, for x64 and for ARM64: the launcher, the
+# runtime compiled without the game (the kit) and everything that prepares the game on the player's
+# computer from the player's own disc (docs/NATIVE_PACKAGE.md), including a compiler with its
+# sysroot, so that the player installs nothing. No game data is involved at any point.
+#
+# It runs when a release is published, and then adds the two .tar.gz to it, or when asked for:
+# Actions tab > Native Linux packages > Run workflow (the packages are then kept as artifacts). Each
+# package is built on a Linux runner of its own processor, with the compiler that it carries, so
+# the game is compiled on the player's computer exactly as the kit was.
+#
+# Arma los paquetes de la versión nativa para Linux (x64 y ARM64). Corre al publicar una versión, y
+# entonces le agrega los dos .tar.gz, o cuando se pide a mano. Cada uno se arma en una máquina Linux
+# de su procesador, con el compilador que lleva. No toca datos del juego en ningún momento.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Linux ${{ matrix.architecture }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: x64
+            runner: ubuntu-24.04
+            dotnet_runtime: linux-x64
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            dotnet_runtime: linux-arm64
+    env:
+      ARCHITECTURE: ${{ matrix.architecture }}
+      TOOLS_DIRECTORY: ${{ github.workspace }}/build/tools
+      WIICOMPILED_DIRECTORY: ${{ github.workspace }}/build/wiicompiled
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # As in the Windows packages: the runner's .NET 10 would be picked over the 8 and fail to
+      # restore the translator. / Como en los paquetes de Windows: se usa el .NET 8.
+      - name: Use .NET 8 for every dotnet command
+        run: |
+          printf '{ "sdk": { "version": "8.0.100", "rollForward": "latestFeature" } }\n' > global.json
+          dotnet --version
+
+      # Ninja, and the headers that SDL3 is compiled with so that it can open its window and play
+      # sound on X11 and Wayland, with PipeWire, PulseAudio or ALSA. SDL3 only reads them when it is
+      # compiled: on the player's computer it loads each of those libraries if it is there.
+      - name: Install Ninja and the headers SDL3 is compiled with
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ninja-build \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxfixes-dev \
+            libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl-dev \
+            libgl-dev libdrm-dev libgbm-dev libasound2-dev libpulse-dev libpipewire-0.3-dev \
+            libudev-dev libdbus-1-dev
+
+      # The same as in the Windows packages. / Igual que en los paquetes de Windows.
+      - name: Choose the version of the package
+        run: |
+          if [[ -n "$RELEASE_TAG" ]]; then
+            version="$RELEASE_TAG"
+            shown="$RELEASE_TAG"
+          else
+            version="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
+            last=$(git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
+            shown="${last:+$last+}"
+            shown="${shown:-dev}"
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "SHOWN_VERSION=$shown" >> "$GITHUB_ENV"
+          echo "PACKAGE_ARCHIVE=HarvestMoonMM-native-$version-linux-$ARCHITECTURE.tar.gz" >> "$GITHUB_ENV"
+          echo "Version: $version"
+
+      - name: Download WiiCompiled and apply the patches
+        run: |
+          url=$(sed -n 's/^readonly WIICOMPILED_URL="\(.*\)"$/\1/p' scripts/build_native_runtime.sh)
+          commit=$(sed -n 's/^readonly WIICOMPILED_COMMIT="\([0-9a-f]\{40\}\)"$/\1/p' scripts/build_native_runtime.sh)
+          [[ -n "$url" && -n "$commit" ]] || { echo "WiiCompiled's address or commit not found" >&2; exit 1; }
+          git clone --filter=blob:none --no-checkout "$url" "$WIICOMPILED_DIRECTORY"
+          git -C "$WIICOMPILED_DIRECTORY" checkout --quiet "$commit"
+          git -C "$WIICOMPILED_DIRECTORY" submodule update --init aurora-main
+          for patch in patches/wiicompiled/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY" apply "$GITHUB_WORKSPACE/$patch"
+          done
+          for patch in patches/aurora/*.patch; do
+            git -C "$WIICOMPILED_DIRECTORY/aurora-main" apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Download the package's tools (pinned versions, hashes checked)
+        run: |
+          python tools/fetch_native_package_tools.py --system linux --architecture "$ARCHITECTURE" \
+            --destination "$TOOLS_DIRECTORY"
+          echo "CLANG=$TOOLS_DIRECTORY/llvm-mingw/bin/clang" >> "$GITHUB_ENV"
+          echo "CLANGXX=$TOOLS_DIRECTORY/llvm-mingw/bin/clang++" >> "$GITHUB_ENV"
+
+      - name: Write the names of the game's functions for the mods
+        run: python tools/export_mod_symbols.py
+
+      # With the clang of the package (llvm-mingw's, which also compiles for Linux), and with every
+      # library of aurora built here and linked in, not taken from the runner: the game then needs
+      # nothing on the player's computer but glibc. libstdc++ goes inside the program too, so an older
+      # one on the player's computer does not matter. x64 is built for every x86-64 processor of the
+      # last fifteen years.
+      - name: Build the runtime with the stand-in game
+        run: |
+          extra=()
+          if [[ "$ARCHITECTURE" == x64 ]]; then extra=(-DX86_CPU_PROFILE=v2); fi
+          cmake -S runtime -B build/runtime-kit -G Ninja \
+            -DCMAKE_C_COMPILER="$CLANG" -DCMAKE_CXX_COMPILER="$CLANGXX" -DCMAKE_LINKER_TYPE=LLD \
+            -DCMAKE_BUILD_TYPE=Release "${extra[@]}" \
+            "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc" \
+            -DWIICOMPILED_DIR="$WIICOMPILED_DIRECTORY" -DTRANSLATED_GAME_DIR="$GITHUB_WORKSPACE/runtime/kit/stub_game" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DAURORA_USE_SYSTEM_DEPENDENCIES=OFF \
+            -DBUILD_SHARED_LIBS=OFF -DFT_DISABLE_BZIP2=ON \
+            -DAURORA_SDL3_LIBUSB=OFF -DAURORA_SDL3_PROVIDER=vendor -DAURORA_SDL3_LINKAGE=static
+          cmake --build build/runtime-kit
+
+      - name: Make the runtime kit
+        run: |
+          python tools/make_runtime_kit.py --build-directory build/runtime-kit \
+            --wiicompiled-directory "$WIICOMPILED_DIRECTORY" --out build/kit
+          echo "The game will be linked with: $(python -c "import json; print(' '.join(w for w in json.load(open('build/kit/recipe.json'))['link'] if w.startswith('-l')))")"
+
+      # The headers and libraries of this runner that the kit was compiled with, for the player's
+      # computer, checked by building and running a program with them.
+      - name: Make the sysroot
+        run: python tools/make_linux_sysroot.py --compiler "$CLANGXX" --out build/sysroot --check-compiler
+
+      - name: Build the launcher
+        run: |
+          cmake -S launcher -B build/launcher -G Ninja \
+            -DCMAKE_C_COMPILER="$CLANG" -DCMAKE_CXX_COMPILER="$CLANGXX" -DCMAKE_LINKER_TYPE=LLD \
+            -DCMAKE_BUILD_TYPE=Release "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc" \
+            -DHMMM_PACKAGE_VERSION="$VERSION" -DHMMM_SHOWN_VERSION="$SHOWN_VERSION"
+          cmake --build build/launcher
+
+      # A Linux program with its own .NET, so that the player installs nothing. Without ICU, which
+      # not every Linux has and the translator does not need.
+      - name: Publish the translator for Linux
+        # See the Windows packages: VERSION would become the translator's version.
+        run: |
+          env -u VERSION dotnet publish "$WIICOMPILED_DIRECTORY/translator/src/Translator.Cli" --configuration Release \
+            --runtime "${{ matrix.dotnet_runtime }}" --self-contained true --output build/translator --nologo \
+            -p:NuGetAudit=false -p:InvariantGlobalization=true
+
+      - name: Gather the license texts
+        run: |
+          licenses=build/licenses
+          mkdir -p "$licenses"
+          for folder in build/runtime-kit/_deps/*-src build/launcher/_deps/*-src; do
+            name=$(basename "$folder" -src)
+            for file in LICENSE LICENSE.txt LICENSE.TXT LICENSE.md LICENSE.MIT COPYING COPYING.txt docs/FTL.TXT; do
+              if [[ -f "$folder/$file" ]]; then cp "$folder/$file" "$licenses/$name-$(basename "$file")"; fi
+            done
+          done
+          cp "$WIICOMPILED_DIRECTORY/LICENSE" "$licenses/WiiCompiled-LICENSE.txt"
+          cp "$WIICOMPILED_DIRECTORY/aurora-main/LICENSE" "$licenses/aurora-LICENSE.txt"
+          cp shared/fonts/OFL.txt "$licenses/RoundedMplus1c-OFL.txt"
+          cp launcher/fonts/OFL-Baloo2.txt "$licenses/Baloo2-OFL.txt"
+          cp launcher/fonts/OFL-Dosis.txt "$licenses/Dosis-OFL.txt"
+          cp launcher/fonts/LICENSE-DejaVu.txt "$licenses/DejaVu-LICENSE.txt"
+          dawn_ref=$(sed -n 's/^_aurora_dependency_version(AURORA_DAWN_REF "\([0-9a-f]\{40\}\)".*/\1/p' \
+            "$WIICOMPILED_DIRECTORY/aurora-main/cmake/AuroraDependencyVersions.cmake")
+          curl --fail --silent --show-error --location --retry 3 --output "$licenses/Dawn-LICENSE.txt" \
+            "https://raw.githubusercontent.com/encounter/dawn/$dawn_ref/LICENSE"
+          nod_version=$(sed -n 's/^NODTOOL_VERSION = "\(.*\)"$/\1/p' tools/fetch_native_package_tools.py)
+          for file in LICENSE-MIT LICENSE-APACHE; do
+            curl --fail --silent --show-error --location --retry 3 --output "$licenses/nod-$file.txt" \
+              "https://raw.githubusercontent.com/encounter/nod/$nod_version/$file"
+          done
+          ls -l "$licenses"
+
+      - name: Assemble the package
+        run: |
+          python tools/package_native_unix.py --architecture "$ARCHITECTURE" \
+            --launcher build/launcher/HarvestMoonMM --kit build/kit --translator build/translator \
+            --python "$TOOLS_DIRECTORY/python" --llvm-mingw "$TOOLS_DIRECTORY/llvm-mingw" --sysroot build/sysroot \
+            --nodtool "$TOOLS_DIRECTORY/nodtool/nodtool" --licenses-directory build/licenses \
+            --output-directory build/dist --archive "build/dist/$PACKAGE_ARCHIVE" --package-version "$VERSION" \
+            --version "HMMMGC=$VERSION ($GITHUB_SHA)" \
+            --version "WiiCompiled=$(git -C "$WIICOMPILED_DIRECTORY" rev-parse HEAD)" \
+            --version "aurora=$(git -C "$WIICOMPILED_DIRECTORY/aurora-main" rev-parse HEAD)" \
+            --version "patches=$(cd patches && printf '%s ' wiicompiled/*.patch aurora/*.patch)" \
+            --version ".NET=$(dotnet --version)"
+          cat "build/dist/HarvestMoonMM-linux-$ARCHITECTURE/VERSIONS.txt"
+          ls -l build/dist
+
+      # The package's own compiler, as the preparation runs it, with nothing of the runner: a program
+      # that the kit's recipe would compile and link, built and run from the unpacked package.
+      # El compilador del propio paquete, como lo corre la preparación, sin nada de la máquina.
+      - name: Try the package's compiler
+        run: |
+          mkdir -p build/try && tar xzf "build/dist/$PACKAGE_ARCHIVE" -C build/try
+          clang="$PWD/build/try/HarvestMoonMM-linux-$ARCHITECTURE/builder/clang/bin/clang++"
+          printf '#include <cstdio>\n#include <string>\nint main() { std::string s = "ok"; std::puts(s.c_str()); }\n' \
+            > build/try/check.cpp
+          env -i PATH=/nonexistent "$clang" -std=gnu++20 -O2 -static-libstdc++ -static-libgcc -pthread \
+            build/try/check.cpp -o build/try/check -lm
+          [[ "$(build/try/check)" == ok ]]
+
+      # A manual run: the package is uploaded as it is (one .tar.gz, not a zip around it).
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'release'
+        with:
+          path: build/dist/*.tar.gz
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'release'
+        with:
+          name: HarvestMoonMM-native-linux-${{ matrix.architecture }}
+          path: build/dist/*.tar.gz
+          retention-days: 14
+          if-no-files-found: error
+
+  # Only for a published release: adds the two packages to it. The only job that can write.
+  release:
+    name: Add the packages to the release
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: HarvestMoonMM-native-linux-*
+          merge-multiple: true
+          path: packages
+
+      - name: Upload the packages to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" packages/*.tar.gz --clobber --repo "$GITHUB_REPOSITORY"

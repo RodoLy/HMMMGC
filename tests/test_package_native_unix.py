@@ -7,14 +7,17 @@ una compilación, ni la red.
 
 import dataclasses
 import json
+import re
 import sys
 import tarfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
+import package_native_unix  # noqa: E402
 from made_up_elf_binary import write_elf_binary  # noqa: E402
 from package_native_unix import Inputs, PackageError, assemble, write_archive  # noqa: E402
 
@@ -183,3 +186,28 @@ def test_the_archive_keeps_the_links_and_the_programs_and_has_one_folder(tmp_pat
     assert members["HarvestMoonMM-linux-x64/HarvestMoonMM"].mode & 0o111
     assert all(member.uid == 0 and member.uname == "" for member in members.values())
 
+
+WORKFLOW = REPOSITORY / ".github" / "workflows" / "package-native-linux.yml"
+
+
+def test_the_workflow_builds_both_processors_and_only_the_release_job_can_write():
+    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    assert set(workflow[True]) == {"release", "workflow_dispatch"}
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow["jobs"]["release"]["permissions"] == {"contents": "write"}
+    matrix = workflow["jobs"]["package"]["strategy"]["matrix"]["include"]
+    assert {entry["architecture"] for entry in matrix} == set(package_native_unix.ARCHITECTURES)
+
+
+def test_the_workflow_gives_the_assembler_only_options_it_has_and_reads_the_folder_it_writes():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assembler = text[
+        text.index("tools/package_native_unix.py") : text.index(
+            "cat ", text.index("tools/package_native_unix.py")
+        )
+    ]
+    given = set(re.findall(r"(--[a-z-]+)", assembler))
+    known = set(package_native_unix.make_parser()._option_string_actions)
+    assert given <= known, given - known
+    assert "build/dist/HarvestMoonMM-linux-$ARCHITECTURE/VERSIONS.txt" in text
+    assert "linux-$ARCHITECTURE.tar.gz" in text  # RecompLauncher picks the file by "linux" and the processor
