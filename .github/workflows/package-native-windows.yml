@@ -87,6 +87,9 @@ jobs:
       WIICOMPILED_DIRECTORY: ${{ github.workspace }}/build/wiicompiled
       RELEASE_TAG: ${{ github.event.release.tag_name }}
       PYTHONUTF8: "1"
+      # The launcher is signed only for a release, and only once the repository has SignPath's
+      # organization (a variable) and token (a secret): docs/CODE_SIGNING.md.
+      SIGN_LAUNCHER: ${{ github.event_name == 'release' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -191,6 +194,38 @@ jobs:
             -DLLVM_MINGW="$TOOLS_DIRECTORY/cross-compiler" -DHMMM_WINDOWS_ARCHITECTURE="$ARCHITECTURE" \
             -DCMAKE_BUILD_TYPE=Release -DHMMM_PACKAGE_VERSION="$VERSION" -DHMMM_SHOWN_VERSION="$SHOWN_VERSION"
           cmake --build build/launcher
+
+      # Signing the launcher (docs/CODE_SIGNING.md): the unsigned HarvestMoonMM.exe goes to SignPath
+      # as an artifact, the publisher approves the request on SignPath's site, and the signed one
+      # comes back in its place before the package is assembled.
+      # Firmar el launcher: el HarvestMoonMM.exe sin firma va a SignPath, quien publica aprueba la
+      # solicitud en el sitio de SignPath y el firmado vuelve a su lugar antes de armar el paquete.
+      - name: Hand the launcher to SignPath
+        id: unsigned-launcher
+        if: env.SIGN_LAUNCHER == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-launcher-${{ matrix.architecture }}
+          path: build/launcher/HarvestMoonMM.exe
+          if-no-files-found: error
+
+      - name: Sign the launcher
+        if: env.SIGN_LAUNCHER == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: HMMMGC
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: launcher
+          github-artifact-id: ${{ steps.unsigned-launcher.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: build/launcher-signed
+
+      - name: Use the signed launcher
+        if: env.SIGN_LAUNCHER == 'true'
+        run: cp build/launcher-signed/HarvestMoonMM.exe build/launcher/HarvestMoonMM.exe
 
       # A Windows program with its own .NET, so that the player installs nothing.
       - name: Publish the translator for Windows
