@@ -106,6 +106,17 @@ constexpr Translation TRANSLATIONS[] = {
      "Your Mac needs Apple's Command Line Tools to prepare the game. Their installer has opened: install "
      "them and prepare the game again."},
     {Text::TouchOptions, "Opciones", "Options"},
+    {Text::AndroidApp, "Hacer la app de Android", "Make the Android app"},
+    {Text::AndroidAppHint,
+     "Hace HarvestMoonMM.apk con tu disco, para instalarla en un celular o tablet con Android. Tarda unos "
+     "minutos, como preparar el juego.",
+     "Makes HarvestMoonMM.apk from your disc, to install it on an Android phone or tablet. It takes a few "
+     "minutes, like preparing the game."},
+    {Text::MakingAndroidApp, "Haciendo la app de Android", "Making the Android app"},
+    {Text::MakingAndroidAppHint, "Elegir esta fila otra vez la detiene.", "Choosing this row again stops it."},
+    {Text::AndroidAppReady,
+     "La app está en %s. Cópiala al celular junto con la imagen .iso del disco, que está en %s.",
+     "The app is in %s. Copy it to the phone together with the disc's .iso image, which is in %s."},
     {Text::ErrorNotStarted, "No se pudo empezar la preparación.", "The preparation could not start."},
     {Text::GameNotStarted, "No se pudo abrir el juego.", "The game could not be opened."},
     {Text::GameFailed, "El juego se cerró por un error. Los detalles están en el registro.",

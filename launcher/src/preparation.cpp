@@ -28,6 +28,48 @@ Preparation::~Preparation() {
 
 bool Preparation::start(const paths::Package& package, const paths::Player& player, const std::string& disc,
                         const std::string& package_version) {
+    return run(
+        {
+            paths::utf8(package.python),
+            paths::utf8(package.prepare_script),
+            "--disc",
+            disc,
+            "--kit",
+            paths::utf8(package.kit),
+            "--translator",
+            paths::utf8(package.translator),
+            "--out",
+            paths::utf8(player.game),
+            "--package-version",
+            package_version,
+        },
+        package, player.prepare_log);
+}
+
+bool Preparation::start_android_app(const paths::Package& package, const paths::Player& player,
+                                    const std::string& disc) {
+    return run(
+        {
+            paths::utf8(package.python),
+            paths::utf8(package.android_script),
+            "--disc",
+            disc,
+            "--android",
+            paths::utf8(package.android),
+            "--translator",
+            paths::utf8(package.translator),
+            "--out",
+            paths::utf8(player.android_app),
+            "--key",
+            paths::utf8(player.android_key),
+            "--settings",
+            paths::utf8(player.settings),
+        },
+        package, player.android_log);
+}
+
+bool Preparation::run(const std::vector<std::string>& arguments, const paths::Package& package,
+                      const std::filesystem::path& log) {
     if (reader_.joinable()) {
         reader_.join();
     }
@@ -36,30 +78,19 @@ bool Preparation::start(const paths::Package& package, const paths::Player& play
     done_ = total_ = 0;
     error_reason_.clear();
     error_text_.clear();
+    made_.clear();
+    disc_to_copy_.clear();
     lines_.clear();
     pending_.clear();
     partial_line_.clear();
     output_closed_ = false;
     started_ = std::chrono::steady_clock::now();
-    log_ = std::ofstream(player.prepare_log, std::ios::binary | std::ios::trunc);
+    log_ = std::ofstream(log, std::ios::binary | std::ios::trunc);
 
     ChildProcess::Options options;
-    options.arguments = {
-        paths::utf8(package.python),
-        paths::utf8(package.prepare_script),
-        "--disc",
-        disc,
-        "--kit",
-        paths::utf8(package.kit),
-        "--translator",
-        paths::utf8(package.translator),
-        "--out",
-        paths::utf8(player.game),
-        "--package-version",
-        package_version,
-        "--jobs",
-        std::to_string(std::max(1, SDL_GetNumLogicalCPUCores())),
-    };
+    options.arguments = arguments;
+    options.arguments.insert(options.arguments.end(),
+                             {"--jobs", std::to_string(std::max(1, SDL_GetNumLogicalCPUCores()))});
     if (!package.toolchain.empty()) {
         options.arguments.insert(options.arguments.end(), {"--toolchain", paths::utf8(package.toolchain)});
     }
@@ -110,7 +141,10 @@ void Preparation::take_line(const std::string& line) {
         log_ << line << '\n';
     }
     if (line.starts_with("@stage ")) {
-        const std::string name = line.substr(7, line.find(' ', 7) - 7);
+        std::string name = line.substr(7, line.find(' ', 7) - 7);
+        if (name == "app") {
+            name = "finish";  // the app's last step, where the program's is
+        }
         const auto found = std::ranges::find_if(STAGES, [&](const char* stage) { return name == stage; });
         if (found != STAGES.end()) {
             stage_ = static_cast<int>(found - STAGES.begin());
@@ -120,13 +154,18 @@ void Preparation::take_line(const std::string& line) {
         done_ = std::atoi(line.c_str() + 10);
         const size_t space = line.find(' ', 10);
         total_ = space == std::string::npos ? 0 : std::atoi(line.c_str() + space + 1);
+    } else if (line.starts_with("@done ")) {
+        made_ = line.substr(6);
+    } else if (line.starts_with("@disc ")) {
+        disc_to_copy_ = line.substr(6);
     } else if (line.starts_with("@error ")) {
         const size_t space = line.find(' ', 7);
         error_reason_ = line.substr(7, space == std::string::npos ? std::string::npos : space - 7);
         error_text_ = space == std::string::npos ? "" : line.substr(space + 1);
     }
     // The details show the tools' lines and the errors; the steps and the progress show themselves.
-    if (!line.starts_with("@stage ") && !line.starts_with("@progress ") && !line.starts_with("@done ")) {
+    if (!line.starts_with("@stage ") && !line.starts_with("@progress ") && !line.starts_with("@done ") &&
+        !line.starts_with("@disc ")) {
         lines_.push_back(line);
         while (lines_.size() > KEPT_LINES) {
             lines_.pop_front();

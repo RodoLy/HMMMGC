@@ -84,6 +84,8 @@ private:
     void choose_disc();
     void start_preparation(const std::string& disc);
     void after_preparation();
+    void start_android_app(const std::string& disc);
+    void after_android_app();
     void play();
     void open_log();
     void choose_tab(Tab tab);
@@ -93,6 +95,11 @@ private:
     std::vector<Row> options_rows();
     std::vector<Row> controls_rows();
     std::string preparation_text() const;
+    static std::string stage_text(const Preparation& preparation);
+    bool preparing_anything() const {
+        return preparation_.state() == Preparation::State::Running ||
+               android_app_.state() == Preparation::State::Running;
+    }
     // The controls tab: a part waits for the key or the button the player presses.
     void start_waiting(int slot);
     void stop_waiting();
@@ -135,6 +142,8 @@ private:
     DiscSearch disc_search_;
     Preparation preparation_;
     Preparation::State seen_state_ = Preparation::State::Idle;
+    Preparation android_app_;  // the Android app being made (tools/make_android_app.py)
+    Preparation::State seen_android_state_ = Preparation::State::Idle;
     std::unique_ptr<ChildProcess> game_;
 
     // The file dialog answers from any thread: what it chose waits here for the next frame.

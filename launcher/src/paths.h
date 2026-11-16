@@ -30,6 +30,10 @@ struct Package {
     std::filesystem::path nodtool;         // empty when there is none
     std::filesystem::path symbols;
     std::filesystem::path mods;
+    // The Android package, unpacked in builder/android, and what makes the app with it; empty when
+    // it is not there, or on a Mac (whose clang cannot link for Android).
+    std::filesystem::path android;
+    std::filesystem::path android_script;
 
     // The parts that are missing, by name ("python", "kit", ...); empty when it is complete.
     std::vector<std::string> missing() const;
@@ -42,6 +46,9 @@ struct Player {
     std::filesystem::path settings;
     std::filesystem::path prepare_log;
     std::filesystem::path game_log;
+    std::filesystem::path android_app;  // HarvestMoonMM/Android: the app made for a phone
+    std::filesystem::path android_key;  // the key that signs it, the same for every app made here
+    std::filesystem::path android_log;
 };
 
 Package find_package();

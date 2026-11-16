@@ -1,7 +1,10 @@
-// The preparation of the game (tools/prepare_game.py), run by the launcher and followed through
-// the lines it prints (its protocol: @stage, @progress, @error, @done).
+// The preparation of the game (tools/prepare_game.py), or the making of the Android app
+// (tools/make_android_app.py, which does the same steps and makes the app at the end), run by the
+// launcher and followed through the lines they print (their protocol: @stage, @progress, @error,
+// @done, and @disc for the app).
 //
-// La preparación del juego, que el launcher corre y sigue por las líneas que imprime.
+// La preparación del juego, o la app de Android, que el launcher corre y sigue por las líneas que
+// imprimen.
 #pragma once
 
 #include "child_process.h"
@@ -21,7 +24,7 @@
 class Preparation {
 public:
     enum class State { Idle, Running, Succeeded, Failed, Cancelled };
-    // The steps, in the order the script names them.
+    // The steps, in the order the script names them (make_android_app.py's last one is "app").
     static constexpr std::array<const char*, 6> STAGES = {"disc", "translate", "adapt", "compile", "link", "finish"};
 
     ~Preparation();
@@ -29,6 +32,8 @@ public:
     // Starts preparing the game from `disc` (UTF-8). False, with error_text(), when it could not start.
     bool start(const paths::Package& package, const paths::Player& player, const std::string& disc,
                const std::string& package_version);
+    // Starts making the Android app from `disc`, into the player's Android folder.
+    bool start_android_app(const paths::Package& package, const paths::Player& player, const std::string& disc);
     // Takes in what the script printed since the last call. Call it once a frame.
     void update();
     void cancel();
@@ -46,8 +51,14 @@ public:
     const std::string& error_text() const { return error_text_; }
     // The last lines it printed, for the details.
     const std::deque<std::string>& lines() const { return lines_; }
+    // What it made (@done: the program, or the app), and for the app the disc image to copy to the
+    // phone (@disc).
+    const std::string& made() const { return made_; }
+    const std::string& disc_to_copy() const { return disc_to_copy_; }
 
 private:
+    bool run(const std::vector<std::string>& arguments, const paths::Package& package,
+             const std::filesystem::path& log);
     void read_output();
     void take_line(const std::string& line);
     void finish(State state);
@@ -66,6 +77,8 @@ private:
     int total_ = 0;
     std::string error_reason_;
     std::string error_text_;
+    std::string made_;
+    std::string disc_to_copy_;
     std::deque<std::string> lines_;
     std::chrono::steady_clock::time_point started_{};
     std::chrono::steady_clock::time_point ended_{};

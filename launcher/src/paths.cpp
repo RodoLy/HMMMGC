@@ -112,6 +112,13 @@ Package find_package() {
     package.nodtool = first_existing({builder / "nodtool" / "nodtool.exe", builder / "nodtool" / "nodtool"});
     package.symbols = builder / "config" / "G4AEE9" / "symbols.txt";
     package.mods = builder / "mods";
+#if !defined(__APPLE__)
+    if (path_exists(builder / "android" / "kit" / "recipe.json") && path_exists(builder / "android" / "shell.apk") &&
+        path_exists(builder / "tools" / "make_android_app.py")) {
+        package.android = builder / "android";
+        package.android_script = builder / "tools" / "make_android_app.py";
+    }
+#endif
     return package;
 }
 
@@ -136,6 +143,9 @@ Player find_player() {
     player.settings = player.root / "settings.json";
     player.prepare_log = player.native / "prepare.log";
     player.game_log = player.native / "native.log";
+    player.android_app = player.root / "Android";
+    player.android_key = player.root / "android-key.json";
+    player.android_log = player.native / "android.log";
     std::error_code error;
     std::filesystem::create_directories(player.native, error);
     return player;

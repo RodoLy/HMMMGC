@@ -123,6 +123,26 @@ void App::start_preparation(const std::string& disc) {
     }
 }
 
+void App::start_android_app(const std::string& disc) {
+    if (!missing_.empty() || preparation_.state() == Preparation::State::Running) {
+        return;
+    }
+    toast_.clear();
+    android_app_.start_android_app(package_, player_, disc);
+}
+
+// The end of making the Android app: where the app is (its folder opens), or what failed.
+void App::after_android_app() {
+    if (android_app_.state() == Preparation::State::Succeeded) {
+        const std::filesystem::path disc = paths::from_utf8(android_app_.disc_to_copy());
+        toast_ = texts::format(Text::AndroidAppReady, paths::utf8(player_.android_app).c_str(),
+                               paths::utf8(disc.parent_path()).c_str());
+        paths::open_in_system(player_.android_app);
+    } else if (android_app_.state() == Preparation::State::Failed) {
+        toast_ = error_message(android_app_.error_reason());
+    }
+}
+
 // What follows the end of a preparation: the game, when it is ready.
 void App::after_preparation() {
     if (preparation_.state() == Preparation::State::Succeeded) {
@@ -250,17 +270,19 @@ void App::move_selection(int step) {
 
 // -- The rows of the tabs -------------------------------------------------------------------------
 
-std::string App::preparation_text() const {
+std::string App::preparation_text() const { return stage_text(preparation_); }
+
+std::string App::stage_text(const Preparation& preparation) {
     constexpr Text STAGES[] = {Text::StageDisc,    Text::StageTranslate, Text::StageAdapt,
                                Text::StageCompile, Text::StageLink,      Text::StageFinish};
-    const int stage = preparation_.stage();
+    const int stage = preparation.stage();
     if (stage < 0 || stage >= static_cast<int>(std::size(STAGES))) {
         return text(Text::PreparingRow);
     }
     std::string said = texts::format(Text::PreparingStage, stage + 1, static_cast<int>(std::size(STAGES))) +
                        text(STAGES[stage]);
-    if (preparation_.stage_total() > 1) {
-        said += " (" + texts::format(Text::StageCount, preparation_.stage_done(), preparation_.stage_total()) + ")";
+    if (preparation.stage_total() > 1) {
+        said += " (" + texts::format(Text::StageCount, preparation.stage_done(), preparation.stage_total()) + ")";
     }
     return said;
 }
@@ -354,6 +376,36 @@ std::vector<App::Row> App::game_rows() {
         }
     }
 
+    // The Android app, when the Android package is unpacked beside this one (paths.h).
+    if (!package_.android.empty() && missing_.empty()) {
+        Row row;
+        row.symbol = "\xE2\x96\xA1";  // □, a phone
+        if (android_app_.state() == Preparation::State::Running) {
+            row.label = text(Text::MakingAndroidApp);
+            row.value = std::to_string(static_cast<int>(android_app_.overall() * 100.f)) + "%";
+            row.tone = Tone::Value;
+            row.hint = stage_text(android_app_) + "\n" + text(Text::MakingAndroidAppHint);
+            row.activate = [this] { android_app_.cancel(); };
+        } else {
+            std::string disc = remembered_disc();
+            if (disc.empty() && !found_discs.empty()) {
+                disc = found_discs.front();
+            }
+            row.label = text(Text::AndroidApp);
+            row.hint = android_app_.state() == Preparation::State::Failed
+                           ? error_message(android_app_.error_reason())
+                           : std::string(text(Text::AndroidAppHint));
+            row.activate = [this, disc] {
+                if (disc.empty()) {
+                    choose_disc();
+                } else if (!preparing_anything()) {
+                    start_android_app(disc);
+                }
+            };
+        }
+        rows.push_back(std::move(row));
+    }
+
     {
         // One language for the game's dialogues and for the launcher, of those the disc has.
         Row row;
@@ -391,6 +443,7 @@ std::vector<App::Row> App::game_rows() {
     exit.hint = text(Text::ExitHint);
     exit.activate = [this] {
         preparation_.cancel();
+        android_app_.cancel();
         quit_ = true;
     };
     rows.push_back(std::move(exit));
@@ -640,6 +693,11 @@ void App::frame(double seconds) {
     if (preparation_.state() != seen_state_) {
         seen_state_ = preparation_.state();
         after_preparation();
+    }
+    android_app_.update();
+    if (android_app_.state() != seen_android_state_) {
+        seen_android_state_ = android_app_.state();
+        after_android_app();
     }
     if (started_ < 0.0) {
         started_ = seconds;
