@@ -153,13 +153,14 @@ def local_imports(script: Path) -> set[str]:
     return found
 
 
-def check_kit(kit: Path) -> dict:
+def check_kit(kit: Path, system: str = "Windows") -> dict:
+    """The kit's recipe, when the kit is for `system` (as CMake names it) and leaves the game out."""
     recipe_file = kit / "recipe.json"
     if not recipe_file.is_file():
         raise PackageError(f"no runtime kit in {kit} (tools/make_runtime_kit.py makes it)")
     recipe = json.loads(recipe_file.read_text(encoding="utf-8"))
-    if recipe.get("system") != "Windows":
-        raise PackageError(f"the kit in {kit} is for {recipe.get('system')}, not Windows")
+    if recipe.get("system") != system:
+        raise PackageError(f"the kit in {kit} is for {recipe.get('system')}, not {system}")
     # The translated game is filled in on the player's computer; a kit that names it would carry it.
     link = recipe.get("link", [])
     if "{game_objects}" not in link or any("translated_game" in word for word in link):
