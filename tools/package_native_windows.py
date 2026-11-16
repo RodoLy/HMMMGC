@@ -77,6 +77,7 @@ PREPARATION_TOOLS = (
     "size_crop_grid.py",
     "size_ground_mesh.py",
     "insert_mod_hooks.py",
+    "make_android_app.py",  # the Android app, when the Android package is unpacked beside it
 )
 # What of the repository the tools read, relative to its root.
 REPOSITORY_FILES = ("config/G4AEE9/symbols.txt",)

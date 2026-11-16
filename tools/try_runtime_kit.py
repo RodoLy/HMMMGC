@@ -6,7 +6,8 @@ Prueba un kit del runtime como lo usa la computadora de un jugador: compila el s
 traducido con la receta del kit y lo enlaza con el runtime del kit, en un programa.
 
 The package workflows run this after making a kit, on the computer that made it and with the
-compiler the player will use (the package's own, or Apple's on a Mac), so that a recipe that
+compiler the player will use (the package's own, or Apple's on a Mac; for the Android kit, the
+computer package's clang, as tools/make_android_app.py runs it), so that a recipe that
 would not compile or link on a player's computer stops the workflow instead of the player. It goes
 through tools/prepare_game.py's own compile and link, with runtime/kit/stub_game in place of the
 game translated from a disc: no game is needed. The stand-in's data are written for the kit's
@@ -28,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import make_android_app  # noqa: E402
 import prepare_game  # noqa: E402
 
 STUB_GAME = Path(__file__).resolve().parent.parent / "runtime" / "kit" / "stub_game"
@@ -50,6 +52,8 @@ def stand_in_for(system: str, out: Path) -> Path:
 
 def try_kit(kit: Path, out: Path, toolchain: Path | None) -> Path:
     recipe = json.loads((kit / "recipe.json").read_text(encoding="utf-8"))
+    if recipe["system"] == "Android":
+        recipe = make_android_app.for_android(recipe)  # as the computer's clang compiles for a phone
     out.mkdir(parents=True, exist_ok=True)
     game = stand_in_for(recipe["system"], out)
     cxx = prepare_game.find_compiler(recipe["cxx_compiler"], toolchain)
