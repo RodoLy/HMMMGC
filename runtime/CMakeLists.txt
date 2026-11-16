@@ -188,7 +188,13 @@ ${native_mod_getters}    nullptr,
 ")
 
 file(GLOB_RECURSE runtime_sources CONFIGURE_DEPENDS src/*.cpp)
-add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
+if(ANDROID)
+    # On Android the game is libmain.so, which SDL's Java activity loads and starts (SDL_main).
+    add_library(hmmm-native SHARED ${runtime_sources} ${native_mod_objects})
+    set_target_properties(hmmm-native PROPERTIES OUTPUT_NAME main)
+else()
+    add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
+endif()
 add_shared_ui(hmmm-native)
 # The far_camera mod gives the runtime how far the camera goes (src/graphics/far_camera.h).
 if("far_camera" IN_LIST NATIVE_MODS)
@@ -210,6 +216,9 @@ if(WIN32)
     target_link_options(hmmm-native PRIVATE -static)
     # The manifest: UTF-8 as the program's code page, for paths with any letter.
     target_sources(hmmm-native PRIVATE windows/hmmm-native.rc)
+elseif(ANDROID)
+    # The system's log (for the crash reports' frames), and the native window and assets.
+    target_link_libraries(hmmm-native PRIVATE log android)
 else()
     # The crash reports name the translated functions (func_XXXXXXXX) with dladdr.
     target_link_options(hmmm-native PRIVATE -rdynamic)

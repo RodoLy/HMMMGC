@@ -34,7 +34,14 @@
 
 #include "guest_abi/guest_abi.h"
 
+#if defined(__ANDROID__)
+// On Android the game is a library that SDL's Java activity loads and starts by calling SDL_main:
+// this header names main so.
+#include <SDL3/SDL_main.h>
+#endif
+
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -122,11 +129,24 @@ Options parse_options(int argc, char** argv) {
     return options;
 }
 
+// On Android nobody reads the program's output, so the log goes to native.log in the player's
+// folder (the app's own storage, which the Java activity gives with --user-folder).
+void keep_the_log_in_the_player_folder([[maybe_unused]] const Options& options) {
+#if defined(__ANDROID__)
+    if (!options.user_folder.empty()) {
+        std::filesystem::create_directories(options.user_folder);
+        std::freopen((std::filesystem::path(options.user_folder) / "native.log").c_str(), "w", stderr);
+        std::setvbuf(stderr, nullptr, _IOLBF, 0);
+    }
+#endif
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
+        keep_the_log_in_the_player_folder(options);
         if (!options.symbols_path.empty() && !guest_symbols::load(options.symbols_path)) {
             runtime_log::warning("boot", "could not read the symbols in %s", options.symbols_path.c_str());
         }
