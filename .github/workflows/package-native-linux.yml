@@ -208,18 +208,16 @@ jobs:
           cat "build/dist/HarvestMoonMM-linux-$ARCHITECTURE/VERSIONS.txt"
           ls -l build/dist
 
-      # The package's own compiler, as the preparation runs it, with nothing of the runner: a program
-      # that the kit's recipe would compile and link, built and run from the unpacked package.
-      # El compilador del propio paquete, como lo corre la preparación, sin nada de la máquina.
-      - name: Try the package's compiler
+      # The package's own Python and compiler, as the preparation runs them, with nothing of the
+      # runner on the PATH: the kit's recipe compiles the stand-in game and links it with the kit.
+      # El Python y el compilador del propio paquete, como los corre la preparación, sin nada de la
+      # máquina en el PATH: la receta del kit compila el sustituto del juego y lo enlaza con el kit.
+      - name: Try the kit as a player's computer uses it
         run: |
           mkdir -p build/try && tar xzf "build/dist/$PACKAGE_ARCHIVE" -C build/try
-          clang="$PWD/build/try/HarvestMoonMM-linux-$ARCHITECTURE/builder/clang/bin/clang++"
-          printf '#include <cstdio>\n#include <string>\nint main() { std::string s = "ok"; std::puts(s.c_str()); }\n' \
-            > build/try/check.cpp
-          env -i PATH=/nonexistent "$clang" -std=gnu++20 -O2 -static-libstdc++ -static-libgcc -pthread \
-            build/try/check.cpp -o build/try/check -lm
-          [[ "$(build/try/check)" == ok ]]
+          package="$PWD/build/try/HarvestMoonMM-linux-$ARCHITECTURE"
+          env -i PATH=/nonexistent HOME="$PWD/build/try" "$package/builder/python/bin/python3" tools/try_runtime_kit.py \
+            --kit "$package/builder/kit" --out build/try/kit --toolchain "$package/builder/clang"
 
       # A manual run: the package is uploaded as it is (one .tar.gz, not a zip around it).
       - uses: actions/upload-artifact@v7
