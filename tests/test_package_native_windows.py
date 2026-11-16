@@ -153,8 +153,9 @@ def test_recomplauncher_json_goes_beside_the_launcher_with_the_package_s_version
     inputs = dataclasses.replace(made_up_inputs(tmp_path), package_version="v9.8.7")
     profile = json.loads((assemble(inputs) / "recomplauncher.json").read_text(encoding="utf-8"))
     assert profile["prepare"]["version"] == "v9.8.7"
-    assert profile["start"]["program"] == [package_native_windows.LAUNCHER_NAME]
-    assert profile["prepare"]["program"] == [package_native_windows.LAUNCHER_NAME]
+    # One profile for every system: RecompLauncher starts the first of the programs that is there.
+    assert profile["start"]["program"][0] == package_native_windows.LAUNCHER_NAME
+    assert profile["prepare"]["program"] == profile["start"]["program"]
 
 
 def test_the_preparation_s_tools_bring_what_they_import():

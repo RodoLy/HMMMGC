@@ -10,7 +10,7 @@
     "dumps": [{ "name": "USA", "size": 1459978240, "crc32": "02778d03" }]
   },
   "prepare": {
-    "program": ["HarvestMoonMM.exe"],
+    "program": ["HarvestMoonMM.exe", "HarvestMoonMM", "HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM"],
     "args": ["--prepare", "{game}"],
     "label": "The game made for your PC from your disc (a few minutes)",
     "timeout": 3600,
@@ -18,7 +18,7 @@
     "done": ["{local}/HarvestMoonMM/Native/Game/prepared.json"]
   },
   "start": {
-    "program": ["HarvestMoonMM.exe"],
+    "program": ["HarvestMoonMM.exe", "HarvestMoonMM", "HarvestMoonMM.app/Contents/MacOS/HarvestMoonMM"],
     "args": ["--play"]
   },
   "exit_codes": {
