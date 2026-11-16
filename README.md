@@ -415,14 +415,6 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.
   licenses, is in
   [packaging/native/THIRD_PARTY_NOTICES.txt](packaging/native/THIRD_PARTY_NOTICES.txt).
 
-## Code signing policy
-
-Free code signing for Windows provided by [SignPath.io](https://about.signpath.io),
-certificate by [SignPath Foundation](https://signpath.org): who signs what, the
-team and the privacy policy are in [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md).
-Waiting for SignPath Foundation to accept the project; until then the packages
-come out unsigned.
-
 ## License
 
 GNU General Public License, version 3 or later (GPL-3.0-or-later); the text

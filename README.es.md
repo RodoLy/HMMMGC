@@ -421,14 +421,6 @@ Antes de contribuir lee [CONTRIBUTING.md](CONTRIBUTING.md).
   licencias, está en
   [packaging/native/THIRD_PARTY_NOTICES.txt](packaging/native/THIRD_PARTY_NOTICES.txt).
 
-## Política de firma de código
-
-Firma de código gratuita para Windows por [SignPath.io](https://about.signpath.io),
-certificado de [SignPath Foundation](https://signpath.org): qué se firma, quién,
-el equipo y la política de privacidad están en [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md).
-Pendiente de que SignPath Foundation acepte el proyecto; hasta entonces los
-paquetes salen sin firma.
-
 ## Licencia
 
 GNU General Public License, versión 3 o posterior (GPL-3.0-or-later); el
