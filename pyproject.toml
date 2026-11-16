@@ -10,7 +10,7 @@ target-version = "py311"
 select = ["E", "W", "F", "I", "N", "B", "SIM", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["check_disc", "codewarrior", "dol", "export_dolrecomp_map", "export_mod_symbols", "fetch_native_package_tools", "fetch_windows_toolchain", "function_finder", "isa_conformance", "lockstep_coverage", "lockstep_report", "lsb", "make_adoption_scene", "made_up_windows_binary", "make_runtime_kit", "moderngekko_automation", "package_native_windows", "package_windows", "ppc", "prepare_game", "ppc_encode", "ppc_mnemonics", "project", "run_isa_conformance", "sdk_libraries", "sdk_names", "sdk_signatures", "symbols", "synthetic", "synthetic_disc", "synthetic_disc_image", "textfiles", "windows_binaries", "write_translator_project"]
+known-first-party = ["android_apk", "check_disc", "codewarrior", "dol", "elf_binaries", "export_dolrecomp_map", "export_mod_symbols", "fetch_native_package_tools", "fetch_windows_toolchain", "function_finder", "isa_conformance", "lockstep_coverage", "lockstep_report", "lsb", "macho_binaries", "made_up_elf_binary", "made_up_macho_binary", "made_up_windows_binary", "make_adoption_scene", "make_android_app", "make_linux_sysroot", "make_runtime_kit", "moderngekko_automation", "package_native_android", "package_native_macos", "package_native_unix", "package_native_windows", "package_windows", "ppc", "ppc_encode", "ppc_mnemonics", "prepare_game", "project", "run_isa_conformance", "sdk_libraries", "sdk_names", "sdk_signatures", "symbols", "synthetic", "synthetic_disc", "synthetic_disc_image", "textfiles", "try_runtime_kit", "windows_binaries", "write_translator_project"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
