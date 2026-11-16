@@ -17,6 +17,7 @@
 #include "headless.h"
 #include "lettering.h"
 #include "look.h"
+#include "paths.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -114,6 +115,7 @@ void round_corners(SDL_Window* window) {
 int main(int argc, char** argv) {
     const Arguments arguments = parse_arguments(argc, argv);
     SDL_SetAppMetadata(WINDOW_TITLE, HMMM_PACKAGE_VERSION, "io.github.rodoly.hmmmgc.launcher");
+    paths::let_the_tools_run(paths::find_package());
     if (arguments.prepare) {
         return headless::prepare(*arguments.prepare);
     }

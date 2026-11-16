@@ -45,6 +45,14 @@ struct Player {
 };
 
 Package find_package();
+
+// On macOS, takes the quarantine mark off the files of the package's builder/. macOS puts it on
+// everything that comes from a download, and then refuses to run a program of the package that the
+// player has not opened from the Finder (Python, the translator, nodtool). The player allowed the
+// launcher by opening it; this lets the preparation run the tools it brings. Does nothing on the
+// other systems, and leaves alone what it cannot change (a package that macOS runs from a
+// read-only copy until it is moved, for example).
+void let_the_tools_run(const Package& package);
 Player find_player();
 
 // Paths as UTF-8 text and back, the same on every system.

@@ -8,6 +8,10 @@
 
 #include <system_error>
 
+#if defined(__APPLE__)
+#include <sys/xattr.h>
+#endif
+
 namespace paths {
 namespace {
 
@@ -109,6 +113,19 @@ Package find_package() {
     package.symbols = builder / "config" / "G4AEE9" / "symbols.txt";
     package.mods = builder / "mods";
     return package;
+}
+
+void let_the_tools_run(const Package& package) {
+#if defined(__APPLE__)
+    std::error_code error;
+    const auto options = std::filesystem::directory_options::skip_permission_denied;
+    for (std::filesystem::recursive_directory_iterator entry(package.builder, options, error), end;
+         !error && entry != end; entry.increment(error)) {
+        removexattr(entry->path().c_str(), "com.apple.quarantine", XATTR_NOFOLLOW);
+    }
+#else
+    (void)package;
+#endif
 }
 
 Player find_player() {
