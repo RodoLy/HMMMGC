@@ -7,7 +7,7 @@
 
 #include "fault_handler.h"
 
-#include "arm64_load.h"
+#include "arm64_register_read.h"
 #include "fault_handler_host.h"
 #include "guest_memory.h"
 #include "hardware/hardware_registers.h"
@@ -36,72 +36,21 @@ bool is_inside_guest_space(uintptr_t host_address) {
 
 #if defined(_M_ARM64) || defined(__aarch64__)
 
-uint64_t general_register(const CONTEXT& context, unsigned number, bool number_31_is_stack_pointer) {
-    if (number == 31) {
-        return number_31_is_stack_pointer ? context.Sp : 0;
-    }
-    return context.X[number];
-}
+// The registers of a thread as Windows keeps them in the CONTEXT of an exception.
+class WindowsRegisters final : public arm64_register_read::Registers {
+public:
+    explicit WindowsRegisters(CONTEXT& context) : context_(context) {}
+    uint64_t pc() const override { return context_.Pc; }
+    void set_pc(uint64_t value) override { context_.Pc = value; }
+    uint64_t general(unsigned number) const override { return context_.X[number]; }
+    void set_general(unsigned number, uint64_t value) override { context_.X[number] = value; }
+    uint64_t stack_pointer() const override { return context_.Sp; }
+    void set_stack_pointer(uint64_t value) override { context_.Sp = value; }
+    uint8_t* vector(unsigned number) override { return reinterpret_cast<uint8_t*>(&context_.V[number]); }
 
-// Carries out the load at the faulting instruction from the current value of the
-// register, and steps over it. False when the instruction is not a load this knows.
-bool emulate_register_read(CONTEXT& context) {
-    uint32_t instruction = 0;
-    std::memcpy(&instruction, reinterpret_cast<const void*>(context.Pc), sizeof(instruction));
-    const std::optional<arm64_load::Load> load = arm64_load::decode(instruction);
-    if (!load) {
-        runtime_log::error("memory", "a register read through a pointer uses instruction 0x%08X, which is not handled",
-                           instruction);
-        return false;
-    }
-    const uint64_t base = general_register(context, load->base, true);
-    const int64_t offset = load->uses_offset_register
-                               ? static_cast<int64_t>(arm64_load::extended_offset(
-                                     *load, general_register(context, load->offset_register, false)))
-                               : load->immediate_offset;
-    const uint64_t address = load->post_index ? base : base + offset;
-    const auto guest_address = static_cast<uint32_t>(address - reinterpret_cast<uintptr_t>(guest_memory::flat_base()));
-    if (!is_inside_guest_space(address) || !guest_memory::is_hardware_register(guest_address) ||
-        !guest_memory::is_hardware_register(guest_address + load->size - 1)) {
-        return false;
-    }
-
-    // Bring the registers it covers up to date, then read them as the instruction would.
-    const auto* pc = reinterpret_cast<const void*>(context.Pc);
-    for (unsigned covered = 0; covered < load->size; covered += 4) {
-        hardware_registers::prepare_trapped_read(guest_address + covered, pc);
-    }
-    uint8_t bytes[16] = {};
-    std::memcpy(bytes,
-                guest_memory::hardware_register_image() + (guest_address - guest_memory::HARDWARE_REGISTERS_BASE),
-                load->size);
-
-    if (load->to_vector_register) {
-        ARM64_NT_NEON128& vector = context.V[load->destination];
-        std::memset(&vector, 0, sizeof(vector));
-        std::memcpy(&vector, bytes, load->size);
-    } else if (load->destination != 31) {
-        uint64_t value = 0;
-        std::memcpy(&value, bytes, load->size);
-        if (load->sign_extend) {
-            const unsigned unused_bits = 64 - load->size * 8;
-            value = static_cast<uint64_t>(static_cast<int64_t>(value << unused_bits) >> unused_bits);
-            if (!load->extend_to_64_bits) {
-                value = static_cast<uint32_t>(value);
-            }
-        }
-        context.X[load->destination] = value;
-    }
-    if (load->writes_back) {
-        if (load->base == 31) {
-            context.Sp = base + offset;
-        } else {
-            context.X[load->base] = base + offset;
-        }
-    }
-    context.Pc += 4;
-    return true;
-}
+private:
+    CONTEXT& context_;
+};
 
 #endif
 
@@ -118,8 +67,8 @@ LONG CALLBACK on_exception(EXCEPTION_POINTERS* exception) {
         static_cast<uint32_t>(fault_address - reinterpret_cast<uintptr_t>(guest_memory::flat_base()));
     const bool is_write = record.ExceptionInformation[0] == ACCESS_WAS_WRITE;
 #if defined(_M_ARM64) || defined(__aarch64__)
-    if (!is_write && guest_memory::is_hardware_register(guest_address) &&
-        emulate_register_read(*exception->ContextRecord)) {
+    WindowsRegisters registers(*exception->ContextRecord);
+    if (!is_write && guest_memory::is_hardware_register(guest_address) && arm64_register_read::carry_out(registers)) {
         return EXCEPTION_CONTINUE_EXECUTION;
     }
 #endif
