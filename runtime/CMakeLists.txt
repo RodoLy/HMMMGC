@@ -57,14 +57,24 @@ file(GLOB translated_shards CONFIGURE_DEPENDS
      "${TRANSLATED_GAME_DIR}/build_shards/base_common/*.cpp"
      "${TRANSLATED_GAME_DIR}/build_shards/base_registration/*.cpp"
      "${TRANSLATED_GAME_DIR}/build_shards/base_dispatch/*.cpp")
-# The data blobs are assembly for ELF objects. Windows objects (COFF) name the read-only
-# section differently and have no stack note, so a converted copy is assembled there.
+# The data blobs are assembly for ELF objects when the translator ran on Linux. Windows
+# objects (COFF) and macOS objects (Mach-O) name the read-only section differently and have
+# no stack note, so a converted copy is assembled there. (The translator writes them for the
+# system it runs on, so a translation made on Windows or on a Mac is already right: the
+# replacements then change nothing.)
 set(translated_blobs "${TRANSLATED_GAME_DIR}/data_sections_init_blobs.S")
-if(WIN32)
+if(WIN32 OR APPLE)
     file(READ "${translated_blobs}" blobs_assembly)
-    string(REPLACE ".section .rodata,\"a\",@progbits" ".section .rdata,\"dr\"" blobs_assembly "${blobs_assembly}")
+    if(WIN32)
+        set(read_only_section ".section .rdata,\"dr\"")
+        set(converted_blobs "${CMAKE_BINARY_DIR}/data_sections_init_blobs_coff.S")
+    else()
+        set(read_only_section ".section __TEXT,__const")
+        set(converted_blobs "${CMAKE_BINARY_DIR}/data_sections_init_blobs_macho.S")
+    endif()
+    string(REPLACE ".section .rodata,\"a\",@progbits" "${read_only_section}" blobs_assembly "${blobs_assembly}")
     string(REPLACE ".section .note.GNU-stack,\"\",@progbits" "" blobs_assembly "${blobs_assembly}")
-    set(translated_blobs "${CMAKE_BINARY_DIR}/data_sections_init_blobs_coff.S")
+    set(translated_blobs "${converted_blobs}")
     file(WRITE "${translated_blobs}" "${blobs_assembly}")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${TRANSLATED_GAME_DIR}/data_sections_init_blobs.S")
 endif()

@@ -71,7 +71,11 @@ RECIPE_FORMAT = 1
 # the compiler of the player's computer looks: its own system, or the package's sysroot
 # (tools/make_linux_sysroot.py).
 SYSTEM_LIBRARY_DIRECTORIES = (Path("/usr/lib"), Path("/lib"), Path("/usr/lib64"), Path("/lib64"))
-SHARED_LIBRARY_NAME = re.compile(r"lib(.+)\.so(\.\d+)*")
+SHARED_LIBRARY_NAME = re.compile(r"lib(.+)\.(so(\.\d+)*|dylib|tbd)")
+# A library of a macOS SDK (.../MacOSX15.2.sdk/usr/lib/libz.tbd). The SDK is wherever the
+# computer's Xcode or Command Line Tools keep it, so the recipe names the library instead, and
+# leaves out the SDK (-isysroot): Apple's clang finds its own SDK on the player's Mac.
+SDK_LIBRARY = re.compile(r".*\.sdk/usr/lib/lib(.+)\.(tbd|dylib)")
 # Compiler options that only give debugging information, which nobody uses on a player's
 # computer and which makes the game's objects several times bigger and slower to write.
 DEBUG_INFORMATION = re.compile(r"-g\d?|-gdwarf(-\d)?|-gcodeview")
@@ -188,7 +192,9 @@ def compile_flags(command: list[str], rewriter: PathRewriter) -> list[str]:
     for word in words:
         if word in ("-o", "-c", "-MF", "-MT", "-MQ"):
             next(words)  # the output, the source or a dependency file: prepare_game.py's own
-        elif word in ("-MD", "-MMD") or DEBUG_INFORMATION.fullmatch(word):
+        elif word == "-isysroot":
+            next(words)  # the macOS SDK of the computer that built the kit (see SDK_LIBRARY)
+        elif word in ("-MD", "-MMD") or word.startswith("-isysroot") or DEBUG_INFORMATION.fullmatch(word):
             continue
         elif word in ("-I", "-isystem", "-idirafter", "-iquote"):
             directory = rewriter.directory(Path(next(words)))
@@ -225,8 +231,12 @@ def link_arguments(command: list[str], kit: Kit) -> list[str]:
             raise KitError(
                 f"the link command has {word}: build the libraries static (-DBUILD_SHARED_LIBS=OFF)"
             )
-        elif word in ("-I", "-isystem", "-idirafter", "-iquote"):
-            next(words)  # the compile flags that CMake also passes to the link, where they do nothing
+        elif word in ("-I", "-isystem", "-idirafter", "-iquote", "-isysroot"):
+            next(words)  # the compile flags that CMake also passes to the link, and the macOS SDK
+        elif word.startswith("-isysroot"):
+            continue
+        elif sdk_library := SDK_LIBRARY.fullmatch(word):
+            arguments.append(f"-l{sdk_library[1]}")
         elif re.fullmatch(r"(-I|-isystem|-idirafter|-iquote).+", word):
             continue
         elif word.startswith("-") or not LINKED_FILE.search(word):
@@ -318,10 +328,13 @@ def make_kit(
     rewriter = PathRewriter(kit, wiicompiled_include, dropped_include_directories)
 
     compile_game = compile_command(build_directory, STUB_GAME_DIRECTORY / "data_sections_init.cpp")
-    # On Windows the build assembles a copy of the blobs converted for COFF (runtime/CMakeLists.txt).
+    # On Windows and macOS the build assembles a copy of the blobs converted for COFF or Mach-O
+    # (runtime/CMakeLists.txt).
     blobs = STUB_GAME_DIRECTORY / "data_sections_init_blobs.S"
     if system == "Windows":
         blobs = build_directory / "data_sections_init_blobs_coff.S"
+    elif system == "Darwin":
+        blobs = build_directory / "data_sections_init_blobs_macho.S"
     assemble_game = compile_command(build_directory, blobs)
     link = link_command(build_directory)
 

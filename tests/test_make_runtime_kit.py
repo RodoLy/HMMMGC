@@ -154,6 +154,36 @@ def test_a_library_of_the_system_is_named_as_the_linker_looks_for_it(kit):
     assert link_arguments(command + ["-lm"], kit) == ["{game_objects}", "-lbz2", "-lm"]
 
 
+def test_the_macos_sdk_is_left_to_the_player_s_clang_and_its_libraries_are_named(kit, wiicompiled_include):
+    sdk = (
+        "/Applications/Xcode_16.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+    )
+    link = ["clang++", "-arch", "arm64", "-isysroot", sdk, "CMakeFiles/translated_game.dir/a.o"]
+    link += [f"{sdk}/usr/lib/libz.tbd", "-framework", "Metal", "-o", "hmmm-native"]
+    assert link_arguments(link, kit) == [
+        "-arch",
+        "arm64",
+        "{game_objects}",
+        "-lz",
+        "-framework",
+        "Metal",
+        "-o",
+        "{output}",
+    ]
+    rewriter = PathRewriter(kit, wiicompiled_include, [])
+    compile_command = [
+        "clang++",
+        "-arch",
+        "arm64",
+        "-isysroot",
+        sdk,
+        "-mmacosx-version-min=13.0",
+        "-c",
+        "a.cpp",
+    ]
+    assert compile_flags(compile_command, rewriter) == ["-arch", "arm64", "-mmacosx-version-min=13.0"]
+
+
 def test_a_folder_of_this_computer_for_shared_libraries_stops_the_kit(kit):
     with pytest.raises(KitError, match="static"):
         link_arguments(["clang++", "CMakeFiles/translated_game.dir/a.o", "-Wl,-rpath,/home/me/zlib"], kit)
