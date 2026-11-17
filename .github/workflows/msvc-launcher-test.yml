@@ -1,0 +1,27 @@
+# A test, on its own branch: the Windows launcher built with Microsoft's compiler (MSVC) instead
+# of llvm-mingw, to see whether antivirus programs flag it less. It only uploads the program as
+# an artifact; nothing is released.
+name: MSVC launcher test
+
+on:
+  push:
+    branches: [msvc-launcher-test]
+
+jobs:
+  launcher:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build the launcher
+        shell: pwsh
+        run: |
+          cmake -S launcher -B build/launcher -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DHMMM_PACKAGE_VERSION=v0.4.2-msvc
+          cmake --build build/launcher
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HarvestMoonMM-msvc
+          path: build/launcher/HarvestMoonMM.exe
+          if-no-files-found: error

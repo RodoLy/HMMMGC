@@ -23,6 +23,9 @@ endif()
 set(HMMM_PACKAGE_VERSION "dev" CACHE STRING "the version of the package, which the launcher records")
 set(HMMM_SHOWN_VERSION "" CACHE STRING "the version the launcher shows, when it is not the package's (a test build)")
 
+# Microsoft's compiler (a test of whether antivirus programs take its build for a trojan less):
+# the C++ runtime linked in, as -static does with the others.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE)
@@ -92,7 +95,12 @@ if(NOT HMMM_SHOWN_VERSION)
 endif()
 target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PACKAGE_VERSION}"
                                                  HMMM_SHOWN_VERSION="${HMMM_SHOWN_VERSION}")
-target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
+if(MSVC)
+    target_compile_options(HarvestMoonMM PRIVATE /W3 /utf-8)
+    target_compile_options(launcher_imgui PRIVATE /utf-8)
+else()
+    target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
+endif()
 target_link_libraries(HarvestMoonMM PRIVATE launcher_imgui SDL3::SDL3-static nlohmann_json::nlohmann_json)
 if(WIN32)
     # The manifest: UTF-8 as the program's code page (paths with any letter), and sharp text on
@@ -111,11 +119,13 @@ if(WIN32)
     # The resource compiler does not tell which files the .rc reads: a new icon rebuilds it too.
     set_source_files_properties(windows/launcher.rc PROPERTIES OBJECT_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.manifest;${CMAKE_CURRENT_SOURCE_DIR}/windows/launcher.ico")
+    if(NOT MSVC)
     target_link_options(HarvestMoonMM PRIVATE -static)
     # A release launcher leaves out the debugging information (-s): the libraries linked in bring
     # some along, the player has no use for it, and several antivirus engines took the program for
     # a trojan with it (BitDefender's Gen:Variant.Lazy and those using its engine) and not without.
     target_link_options(HarvestMoonMM PRIVATE $<$<CONFIG:Release>:-s>)
+    endif()
     # The rounded corners of the window without a frame (Windows 11).
     target_link_libraries(HarvestMoonMM PRIVATE dwmapi)
 endif()
