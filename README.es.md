@@ -8,22 +8,24 @@
 
 <p align="center"><a href="https://recomplauncher.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://recomplauncher.com/assets/press/launcher/badge-light.svg"><img alt="Get it on RecompLauncher" src="https://recomplauncher.com/assets/press/launcher/badge-dark.svg" height="48"></picture></a></p>
 
-Una versión nativa para PC de *Harvest Moon: Magical Melody* de GameCube. El
-código del propio juego se traduce por adelantado a C++ y se compila en un
-programa de Windows, Linux o Mac que corre en tu procesador, Intel, AMD o
-ARM, sin ningún emulador de por medio. Se juega en pantalla ancha, a la resolución de tu
-pantalla y a 60 o 120 cuadros por segundo, con un launcher, un menú de
-opciones dentro del juego y mods, entre ellos uno con el que el juego sigue
-después de casarte con Jamie.
+Una versión nativa de *Harvest Moon: Magical Melody* de GameCube para PC y
+Android. El código del propio juego se traduce por adelantado a C++ y se
+compila en un programa de Windows, Linux o Mac, o en una app de Android, que
+corre en tu procesador, Intel, AMD o ARM, sin ningún emulador de por medio. Se
+juega en pantalla ancha, a la resolución de tu pantalla y a 60 o 120 cuadros
+por segundo, con un launcher, un menú de opciones dentro del juego, trucos y
+mods, entre ellos uno con el que el juego sigue después de casarte con Jamie.
+En el celular se juega con control o con botones táctiles.
 
-El juego no viene incluido: necesitas tu propio disco. El launcher arma el
-juego a partir de él, en tu computadora, la primera vez que juegas.
+El juego no viene incluido: necesitas tu propio disco. En la computadora, el
+launcher arma el juego a partir de él la primera vez que juegas; en Android,
+la app te pide el disco la primera vez que la abres.
 
 > [!NOTE]
-> **Versión 0.1.0, la primera versión jugable.** El juego arranca, se juega,
-> guarda y carga, y ya se jugó en una laptop con Windows y un Snapdragon X.
-> Todavía no se ha jugado de principio a fin, que es lo que significará la
-> 1.0. Espera errores y guarda una copia de tus partidas.
+> **Versión 0.4.2.** El juego arranca, se juega, guarda y carga en Windows,
+> Linux, Mac y Android, y ya se jugó en una laptop con Windows y un
+> Snapdragon X. Todavía no se ha jugado de principio a fin, que es lo que
+> significará la 1.0. Espera errores y guarda una copia de tus partidas.
 
 - [Qué trae](#qué-trae)
 - [Capturas](#capturas)
@@ -42,12 +44,13 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
   código nativo, en x64 o ARM64. Lo que hacía el hardware de la GameCube lo
   hace un runtime escrito para este juego (`runtime/`).
 - **Gráficos** con [aurora](https://github.com/encounter/aurora), que dibuja
-  los gráficos de la GameCube con WebGPU: Direct3D 12 en Windows y Vulkan en
-  Linux.
+  los gráficos de la GameCube con WebGPU: Direct3D 12 en Windows, Vulkan en
+  Linux y Android, y Metal en Mac.
 - **Sonido** con el programa de sonido de la consola (el AX del DSP) reescrito
   en C++ a partir de la emulación de alto nivel de Dolphin, y tocado con SDL.
 - **Controles**: los que SDL conoce (Xbox, PlayStation, Nintendo, adaptadores
-  de GameCube), asignados solos; sin control, el teclado.
+  de GameCube), asignados solos; sin control, el teclado, y en Android los
+  botones táctiles.
 - **Partidas** en una memory card que es una carpeta de archivos `.gci`, como
   en Dolphin, así que puedes traer una partida.
 - **Cargas** directo desde la imagen del disco, sin lector que esperar.
@@ -60,7 +63,8 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
 | Pantalla ancha | El 3D muestra más a los lados. Por ahora los menús y los textos se estiran. |
 | Cuadros por segundo | 30, como el juego, o 60 y 120: el juego dibuja 30 y los demás se hacen entre ellos. |
 | Idioma | Uno para el juego y el launcher: inglés, español, francés, alemán o italiano, los que trae el disco. El launcher y el menú F10 solo están en español e inglés. En el juego cambian los diálogos. Los menús y los nombres de los objetos siguen en inglés. |
-| Turbo | No es una opción: mantén Tab en el juego y va al 300%. |
+| Turbo | No es una opción: mantén Tab en el juego (o TURBO en la pantalla táctil) y va al 300%. |
+| Botones táctiles | Solo en Android: **Sin botones táctiles con control** los quita mientras haya un control conectado (vuelven si se desconecta), y **Sin botón TURBO táctil** quita solo TURBO. |
 | Pantalla completa | También con Alt+Enter mientras juegas. |
 | Contador de cuadros y volumen | Los cuadros por segundo sobre el juego, y el volumen de 0 a 100%. |
 
@@ -68,8 +72,10 @@ juego a partir de él, en tu computadora, la primera vez que juegas.
 
 `HarvestMoonMM.exe` prepara el juego a partir de tu disco y lo arranca. Sus
 cinco pestañas son **Juego** (preparar, jugar, cambiar el disco, elegir el
-idioma), **Opciones** (la tabla de arriba), **Mods**, **Trucos** y **Controles** (muestra
-la asignación y qué es cada botón de tu control en el de GameCube). Habla
+idioma, hacer la app de Android), **Opciones** (la tabla de arriba), **Mods**
+(los de calidad de vida van al final, en su propia sección), **Trucos** y
+**Controles** (muestra la asignación y qué es cada botón de tu control en el
+de GameCube). Habla
 español e inglés, y se usa con el mouse, el teclado o un control. Si algo
 falla, dice por qué en palabras sencillas (otro juego, otra versión del juego,
 una imagen que no pudo leer) y ofrece abrir el registro.
@@ -78,13 +84,16 @@ una imagen que no pudo leer) y ofrece abrir el registro.
 
 ### Opciones dentro del juego
 
-**F10**, o el botón **Select** del control, abre las mismas opciones sin salir
-del juego, en una barra sencilla arriba con menús desplegables: la
-resolución, Imagen, Ajustes del control, Volumen y Mods. Las opciones cambian
-al momento y se guardan para la próxima vez;
-los mods también se prenden o apagan ahí: los dos de la velocidad del personaje
-cambian al momento, y Casarse con Jamie la próxima vez que se abre el juego. Mientras el menú está abierto, el juego no
-recibe el control.
+**F10**, el botón **Select** del control o, en Android, el botón de opciones
+de arriba al centro abre las mismas opciones sin salir del juego, en una barra
+sencilla arriba con menús desplegables: la resolución, Imagen (pantalla
+completa, pantalla ancha, cuadros por segundo y el contador; en Android,
+también las dos opciones de los botones táctiles), Ajustes del control,
+Volumen, Idioma y Mods. Las opciones cambian al momento y se guardan para la
+próxima vez. Los mods también se prenden o apagan ahí, con los de calidad de
+vida aparte: los dos de la velocidad del personaje cambian al momento, y los
+demás la próxima vez que se abre el juego (el menú dice cuál es cuál). Mientras
+el menú está abierto, el juego no recibe el control.
 
 ### Mods
 
@@ -92,6 +101,15 @@ recibe el control.
 |---|---|
 | **Casarse con Jamie** (0.8.0) | En el juego original, la boda con Jamie es el final. Con este mod, la boda se ve y el juego sigue: después de la ceremonia con la Diosa de la Cosecha sale una vez la escena de las notas musicales y apareces en tu casa, ya casado; a la mañana siguiente llega la nota musical de la boda. Desde entonces Jamie vive en la casa como tu pareja y habla como tu pareja, con frases nuevas en los cinco idiomas del disco, tiene cumpleaños (el 22 de invierno), y hay embarazo, parto y los días especiales del matrimonio, como con las demás parejas. Si te casas con Jamie, esa partida sigue usando el mod aunque lo desactives. |
 | **Casarse con quien quieras** (0.2.1, experimental) | En el juego original el chico solo puede casarse con las diez chicas y la chica solo con los diez chicos. Con este mod puedes cortejar y casarte con cualquiera de los veinte, sea cual sea el personaje que elegiste: la pluma azul funciona con todos, las escenas de amor y la boda salen como con cualquier pareja, y en la boda llevas tu propio traje o vestido. Con una pareja del mismo sexo, las primeras palabras de tu pareja dicen «esposo» o «esposa» como debe ser, en los cinco idiomas, y en lugar del embarazo la Diosa de la Cosecha los llama a su estanque y les ofrece un bebé en adopción por su gran amor (si sigue de piedra, viene uno de sus duendes); le pones nombre y colocas su cuna en casa. Si te comprometes o te casas con alguien de tu mismo sexo, esa partida sigue usando el mod aunque lo desactives. |
+
+#### Calidad de vida
+
+Mods que no cambian la historia, solo hacen el día a día más cómodo. En el
+launcher, en el menú F10 y en RecompLauncher salen en su propia sección, al
+final.
+
+| Mod | Qué hace |
+|---|---|
 | **Personaje más rápido** (0.1.0) | El personaje camina y corre más rápido, de 25% a 300% de la velocidad original (150% de entrada), solo mientras lo controlas tú. |
 | **Sin frenos al cargar** (0.1.0) | En el juego original, con algo en las manos el personaje solo camina. Con este mod, con el stick a fondo avanza a la velocidad de correr. |
 | **Cámara más lejos** (0.1.0) | En el juego, la cruceta arriba y abajo acerca y aleja la cámara. Con este mod, si sigues presionando abajo al llegar al tope del juego, se sigue alejando hasta que se ve mucho más de la granja; arriba la regresa. Solo al aire libre: los cuartos y las escenas conservan la cámara del juego. |
@@ -99,7 +117,8 @@ recibe el control.
 | **Estamina más amable** (0.1.0) | Todo lo que gasta estamina (las herramientas, la pesca, correr mucho) gasta solo una parte, de 10% a 100% (el juego original), 50% por omisión. Comer y dormir la devuelven como siempre, y el cansancio sigue haciendo que el trabajo cueste más. |
 | **Herramientas que suben rápido** (0.1.0) | Cada uso de una herramienta cuenta más para que suba de nivel, de 100% (el juego original) a 400%, 200% por omisión. Por ahora no cambia una herramienta, la que el juego sube de otra manera. |
 
-Todos vienen apagados, como el juego original; los enciendes en la pestaña Mods. Cómo hacer
+Todos vienen apagados, como el juego original; los enciendes en la pestaña
+Mods, en el menú F10 o en la página del juego en RecompLauncher. Cómo hacer
 uno: [mods/README.md](mods/README.md).
 
 ### Trucos
@@ -181,11 +200,11 @@ empezar escenas de amor y de rivales). Se guardan en `settings.json`, en `cheats
 
 | | Requisitos mínimos |
 |---|---|
-| Sistema | Windows 10 (versión 1903 o más nueva) o Windows 11, de 64 bits. O un Linux de 64 bits con glibc 2.38 o más nueva: Ubuntu 24.04 o más nuevo, Debian 13, Fedora 39 o más nuevo, Arch, SteamOS 3.6 o más nuevo (Steam Deck). O macOS 12 o más nuevo, con Apple Silicon o Intel. |
+| Sistema | Windows 10 (versión 1903 o más nueva) o Windows 11, de 64 bits. O un Linux de 64 bits con glibc 2.38 o más nueva: Ubuntu 24.04 o más nuevo, Debian 13, Fedora 39 o más nuevo, Arch, SteamOS 3.6 o más nuevo (Steam Deck). O macOS 12 o más nuevo, con Apple Silicon o Intel. O Android 8 o más nuevo, en un celular o tableta ARM64 con Vulkan. |
 | Procesador | Intel o AMD con SSE4.2 (Intel desde 2008, AMD desde 2011): el paquete **x64**. Uno ARM como el Snapdragon: el paquete **arm64**. |
 | Memoria | 4 GB de RAM; mejor 8 GB. La primera vez, el juego se compila en tu computadora, con un compilador por cada núcleo del procesador, de hasta unos 250 MB cada uno. |
-| Gráficos | Una tarjeta gráfica, o los gráficos del procesador, con Direct3D 12 (Windows), Vulkan (Linux) o Metal (Mac). |
-| Disco | Unos 3 GB libres: el paquete descomprimido (unos 550 MB), el `.iso` al que se convierte una imagen `.rvz` y el juego preparado (unos 100 MB). |
+| Gráficos | Una tarjeta gráfica, o los gráficos del procesador, con Direct3D 12 (Windows), Vulkan (Linux y Android) o Metal (Mac). |
+| Disco | Unos 3 GB libres: el paquete descomprimido (unos 550 MB), el `.iso` al que se convierte una imagen `.rvz` y el juego preparado (unos 100 MB). En Android, unos 1.5 GB: la app y la copia del disco (1.4 GB). |
 | Juego | Tu disco de *Harvest Moon: Magical Melody* de Estados Unidos (`G4AEE9`), como imagen: `.iso`, `.gcm` o `.rvz` (el formato comprimido de Dolphin). El launcher revisa que sea ese juego y esa versión. |
 
 Probado en una laptop con Snapdragon X (gráficos Adreno X1-45), que mantiene
@@ -230,6 +249,12 @@ macOS 15, si no aparece: intenta abrirlo, luego *Configuración del Sistema* →
 las Command Line Tools de Apple; si tu Mac no las tiene, el launcher abre su
 instalador. Todo lo tuyo queda en `~/Library/Application Support/HarvestMoonMM`.
 
+Algún antivirus puede marcar `HarvestMoonMM.exe` por error: es un programa
+nuevo y sin firma. Los falsos positivos que han salido se reportaron a cada
+antivirus y se corrigieron; si el tuyo lo marca, puedes revisar el zip en
+[VirusTotal](https://www.virustotal.com) y abrir un
+[issue](https://github.com/RodoLy/HMMMGC/issues).
+
 **En Android.** Descarga `HarvestMoonMM-<versión>.apk` del release e instálala
 en el celular (Android 8 o más nuevo, ARM64, con Vulkan). Pon también en el
 celular la imagen de tu disco, en `.iso` o `.gcm` (una `.rvz` se convierte a
@@ -237,8 +262,8 @@ celular la imagen de tu disco, en `.iso` o `.gcm` (una `.rvz` se convierte a
 vez que abres la app te pide el disco, lo revisa y lo copia a la app (1.4 GB;
 después puedes borrar tu copia). El APK trae el código del juego traducido a
 ARM64, pero nada de sus gráficos, música ni textos: eso siempre sale de tu
-disco. Se juega con control o con botones táctiles dibujados sobre el juego.
-Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
+disco. Se juega con control o con botones táctiles dibujados sobre el juego
+(ve [Controles](#controles)). Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
 quedan.
 
 Si prefieres hacer el APK tú mismo con tu disco: descarga también el zip de
@@ -278,14 +303,33 @@ de entrada, y se le puede dar otra tecla o un botón del control.
 Además: **F10** abre las opciones, mantener **Tab** acelera el juego y
 **Alt+Enter** cambia a pantalla completa.
 
+**Botones táctiles.** En Android, sobre el juego hay un control de GameCube
+dibujado como los botones del propio juego y con sus colores (A verde, B roja,
+Z morada), semitransparente para que el juego se vea debajo: el stick y la
+cruceta a la izquierda; A, B, X y Y a la derecha; L, R y Z arriba; START abajo;
+arriba al centro, el botón de opciones (como F10), y bajo L, **TURBO**, que
+acelera el juego mientras lo mantienes. Se pueden apretar varios a la vez.
+Desaparecen cuando usas un control o el teclado, y vuelven al tocar la
+pantalla o al desconectar el control. Con las opciones de la tabla de arriba
+se quitan mientras haya un control, o se quita solo TURBO.
+
 ### Tus partidas
 
-Están en `%LOCALAPPDATA%\HarvestMoonMM\Native\USA\Card A`, un archivo `.gci`
-por cada archivo de la memory card. Para traer una partida de Dolphin, cuando
-guarda la memory card como carpeta GCI, o de la versión anterior con
-ModernGekko, copia ahí su `E9-G4AE-HARVESTMOON.gci`. Tus elecciones están en
-`%LOCALAPPDATA%\HarvestMoonMM\settings.json`, y los registros, `prepare.log` y
-`native.log`, en la carpeta `Native`.
+Todo lo tuyo está en la carpeta `HarvestMoonMM`:
+
+| Sistema | Carpeta |
+|---|---|
+| Windows | `%LOCALAPPDATA%\HarvestMoonMM` |
+| Linux | `~/.local/share/HarvestMoonMM` |
+| Mac | `~/Library/Application Support/HarvestMoonMM` |
+| Android | Dentro de la app (se queda al actualizar; se borra si la desinstalas) |
+
+Las partidas están en `Native/USA/Card A`, un archivo `.gci` por cada archivo
+de la memory card. Para traer una partida de Dolphin, cuando guarda la memory
+card como carpeta GCI, o de la versión anterior con ModernGekko, copia ahí su
+`E9-G4AE-HARVESTMOON.gci`. Tus elecciones están en `settings.json` y tus
+controles en `controls.json`, y los registros, `prepare.log` y `native.log`, en
+la carpeta `Native`.
 
 Si algo falla, abre un [issue](https://github.com/RodoLy/HMMMGC/issues) con
 el registro.
@@ -300,9 +344,9 @@ main.dol: el código del juego, para el procesador PowerPC de la GameCube
    │  el traductor de WiiCompiled
    ▼
 C++: cada función del juego, como una función de C++
-   │  clang (llvm-mingw), con el kit del runtime, en tu computadora
+   │  clang, con el kit del runtime, en tu computadora
    ▼
-hmmm-native.exe: el juego, como un programa para tu PC
+hmmm-native: el juego, como un programa para tu sistema
 ```
 
 El procesador de la GameCube es un PowerPC, así que su código no puede correr
@@ -314,12 +358,17 @@ registros especiales del procesador, los hilos, alarmas e interrupciones del
 sistema operativo, el disco, la memory card, los controles, los gráficos y el
 sonido.
 
-El C++ traducido es el juego, así que no se puede repartir. La descarga trae
-todo lo demás: el runtime ya compilado (el *kit del runtime*), el traductor,
-un compilador de C++ (llvm-mingw) y Python. El launcher arma el programa en
-tu computadora a partir de tu disco, y nada del paquete sale del disco. Los
-mods se compilan dentro del programa, y los lugares donde actúan se marcan en
-el código traducido.
+Los paquetes de computadora no traen el código traducido: traen todo lo
+demás, el runtime ya compilado (el *kit del runtime*), el traductor, un
+compilador de C++ (llvm-mingw en Windows, su clang en Linux; en Mac, el clang
+de Apple) y Python. El launcher arma el programa en tu computadora a partir de
+tu disco, y nada del paquete sale del disco. Los mods se compilan dentro del
+programa, y los lugares donde actúan se marcan en el código traducido.
+
+Un celular no puede compilar el juego, así que el APK de Android ya trae el
+código traducido y compilado para ARM64, como las versiones de Android de
+otras recompilaciones. Los gráficos, la música y los textos no vienen en él:
+la app los lee siempre de tu disco.
 
 Más: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md) (el paquete y la
 preparación), [runtime/README.md](runtime/README.md) y
@@ -339,8 +388,8 @@ de pruebas del mod de Jamie.
 - Los menús y los textos en 4:3 en pantalla ancha, en vez de estirados.
 - El juego en español, francés, alemán o italiano: el disco americano trae
   las traducciones de un lanzamiento europeo que nunca salió.
-- Más mods: trucos, y adelantar las escenas.
-- Actualizar desde el launcher, y un programa firmado.
+- Más mods: adelantar las escenas.
+- Actualizar desde el launcher.
 - Después, las dos versiones de Wii del juego sobre el mismo runtime.
 
 ## Para desarrolladores
@@ -348,8 +397,10 @@ de pruebas del mod de Jamie.
 - El runtime nativo en Linux: `scripts/build_native_runtime.sh`
   ([runtime/README.md](runtime/README.md)). Necesita tu disco extraído en
   `orig/G4AEE9`.
-- El launcher y los paquetes de Windows, Linux y macOS, que GitHub Actions arma
-  cuando se publica una versión: [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md).
+- El launcher y los paquetes de Windows, Linux, macOS y Android, que GitHub
+  Actions arma cuando se publica una versión, y el APK listo de cada versión:
+  [docs/NATIVE_PACKAGE.md](docs/NATIVE_PACKAGE.md).
+- La app de Android: [android/](android/).
 - Cómo se analizó el juego: [docs/DISC_ANALYSIS.md](docs/DISC_ANALYSIS.md),
   [docs/FUNCTION_MAP.md](docs/FUNCTION_MAP.md) (4 486 funciones, validadas
   contra el índice de excepciones de CodeWarrior) y
