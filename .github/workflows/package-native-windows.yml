@@ -7,15 +7,12 @@ name: Native Windows packages
 #
 # It runs when a release is published, and then adds the two zips to it, or when asked for:
 # Actions tab > Native Windows packages > Run workflow (the zips are then kept as artifacts). Both
-# packages are built on Linux, for Windows, except two things that come from a Windows runner of
-# each processor: the Visual C++ runtime, which Dawn and nodtool use, and the launcher, built with
-# Microsoft's compiler, which antivirus programs do not take for a trojan as they did the
-# llvm-mingw build (launcher/CMakeLists.txt).
+# packages are built on Linux, for Windows; only the Visual C++ runtime, which Dawn and nodtool use,
+# is taken from a Windows runner, the only place where it is.
 #
 # Arma los paquetes de la versión nativa para Windows (ARM64 y x64). Corre al publicar una versión,
-# y entonces le agrega los dos zip, o cuando se pide a mano. Se arman en Linux, salvo el runtime de
-# Visual C++ y el launcher (con el compilador de Microsoft), que salen de una máquina con Windows.
-# No toca datos del juego en ningún momento.
+# y entonces le agrega los dos zip, o cuando se pide a mano. Se arman en Linux; solo el runtime de
+# Visual C++ se toma de una máquina con Windows. No toca datos del juego en ningún momento.
 
 on:
   release:
@@ -75,73 +72,9 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  # The launcher, built with Microsoft's compiler on a Windows runner of each processor, with the
-  # license texts of what it links in (SDL, Dear ImGui, nlohmann/json).
-  launcher:
-    name: Launcher ${{ matrix.architecture }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        include:
-          - architecture: arm64
-            runner: windows-11-arm
-          - architecture: x64
-            runner: windows-latest
-    env:
-      RELEASE_TAG: ${{ github.event.release.tag_name }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.architecture }}
-
-      # The same version as the package job's "Choose the version of the package".
-      - name: Choose the version of the package
-        shell: bash
-        run: |
-          if [[ -n "$RELEASE_TAG" ]]; then
-            version="$RELEASE_TAG"
-            shown="$RELEASE_TAG"
-          else
-            version="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}"
-            last=$(git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
-            shown="${last:+$last+}"
-            shown="${shown:-dev}"
-          fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
-          echo "SHOWN_VERSION=$shown" >> "$GITHUB_ENV"
-
-      - name: Build the launcher
-        shell: pwsh
-        run: |
-          cmake -S launcher -B build/launcher -G Ninja -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl `
-            -DHMMM_PACKAGE_VERSION="$env:VERSION" -DHMMM_SHOWN_VERSION="$env:SHOWN_VERSION"
-          cmake --build build/launcher
-          New-Item -ItemType Directory -Path launcher-out/licenses | Out-Null
-          Copy-Item build/launcher/HarvestMoonMM.exe launcher-out/
-          foreach ($folder in Get-ChildItem build/launcher/_deps -Directory -Filter '*-src') {
-              $name = $folder.Name -replace '-src$', ''
-              foreach ($file in 'LICENSE', 'LICENSE.txt', 'LICENSE.TXT', 'LICENSE.md', 'LICENSE.MIT', 'COPYING', 'COPYING.txt') {
-                  $path = Join-Path $folder.FullName $file
-                  if (Test-Path $path -PathType Leaf) {
-                      Copy-Item $path "launcher-out/licenses/$name-$file"
-                  }
-              }
-          }
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: launcher-${{ matrix.architecture }}
-          path: launcher-out
-          retention-days: 1
-          if-no-files-found: error
-
   package:
     name: Windows ${{ matrix.architecture }}
-    needs: [visual-cpp-runtime, launcher]
+    needs: visual-cpp-runtime
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -161,11 +94,6 @@ jobs:
         with:
           name: visual-cpp-runtime-${{ matrix.architecture }}
           path: build/visual-cpp-runtime
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: launcher-${{ matrix.architecture }}
-          path: build/launcher
 
       - uses: actions/setup-python@v5
         with:
@@ -256,6 +184,14 @@ jobs:
             --drop-include-directory packaging/native/case-shims \
             --runtime-files-directory "$TOOLS_DIRECTORY/dawn/bin" --dll-directory build/visual-cpp-runtime
 
+      - name: Build the launcher
+        run: |
+          cmake -S launcher -B build/launcher -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/packaging/native/windows-toolchain.cmake" \
+            -DLLVM_MINGW="$TOOLS_DIRECTORY/cross-compiler" -DHMMM_WINDOWS_ARCHITECTURE="$ARCHITECTURE" \
+            -DCMAKE_BUILD_TYPE=Release -DHMMM_PACKAGE_VERSION="$VERSION" -DHMMM_SHOWN_VERSION="$SHOWN_VERSION"
+          cmake --build build/launcher
+
       # A Windows program with its own .NET, so that the player installs nothing.
       - name: Publish the translator for Windows
         # MSBuild turns every environment variable into a property, and VERSION (the package's, such as
@@ -271,8 +207,7 @@ jobs:
         run: |
           licenses=build/licenses
           mkdir -p "$licenses"
-          cp build/launcher/licenses/* "$licenses/"
-          for folder in build/runtime-kit/_deps/*-src; do
+          for folder in build/runtime-kit/_deps/*-src build/launcher/_deps/*-src; do
             name=$(basename "$folder" -src)
             for file in LICENSE LICENSE.txt LICENSE.TXT LICENSE.md LICENSE.MIT COPYING COPYING.txt docs/FTL.TXT; do
               if [[ -f "$folder/$file" ]]; then cp "$folder/$file" "$licenses/$name-$(basename "$file")"; fi
