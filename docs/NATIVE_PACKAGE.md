@@ -166,7 +166,10 @@ Después, para cada procesador, ARM64 y x64, en Linux:
    que el juego necesita a su lado. El de x64 se compila para `x86-64-v2`
    (procesadores de unos quince años para acá), y el juego se compila igual en
    la computadora del jugador.
-4. Compila el launcher, con la versión del paquete. La que muestra arriba es la
+4. Compila el launcher, con la versión del paquete, en una máquina con Windows
+   del mismo procesador y con el compilador de Microsoft (MSVC): hecho con
+   llvm-mingw funciona igual, pero varios antivirus lo tomaban por un troyano
+   (BitDefender, Ikarus) y con MSVC no. La versión que muestra arriba es la
    publicada (`v0.1.1`); en una corrida manual, la última publicada con un más
    (`v0.1.1+`).
 5. Publica el traductor como programa de Windows, con su propio .NET.
@@ -525,9 +528,12 @@ minute or two. Then, for each processor, ARM64 and x64, on Linux:
    DLLs that the game needs beside it. The x64 one is built for `x86-64-v2`
    (processors of about the last fifteen years), and the game is compiled the
    same way on the player's computer.
-4. It builds the launcher, with the package's version. The one it shows at the top is the
-   published one (`v0.1.1`); in a manual run, the last published one with a plus
-   (`v0.1.1+`).
+4. It builds the launcher, with the package's version, on a Windows machine of
+   the same processor and with Microsoft's compiler (MSVC): built with
+   llvm-mingw it works the same, but several antivirus engines took it for a
+   trojan (BitDefender, Ikarus) and with MSVC they do not. The version it shows
+   at the top is the published one (`v0.1.1`); in a manual run, the last
+   published one with a plus (`v0.1.1+`).
 5. It publishes the translator as a Windows program, with its own .NET.
 6. It gathers the license texts and assembles the zip
    (`tools/package_native_windows.py`), which refuses to finish if a file looks
