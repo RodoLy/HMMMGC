@@ -21,6 +21,8 @@ function(embed_file_as_array target source symbol)
     file(CONFIGURE OUTPUT "${output}" CONTENT
 "// Written by shared/shared.cmake from ${shown}.
 #include <cstddef>
+using std::size_t;
+#include <cstddef>
 extern const unsigned char ${symbol}[] = {${bytes}};
 extern const size_t ${symbol}_size = ${size};
 ")
