@@ -251,12 +251,6 @@ macOS 15, si no aparece: intenta abrirlo, luego *Configuración del Sistema* →
 las Command Line Tools de Apple; si tu Mac no las tiene, el launcher abre su
 instalador. Todo lo tuyo queda en `~/Library/Application Support/HarvestMoonMM`.
 
-Algún antivirus puede marcar `HarvestMoonMM.exe` por error: es un programa
-nuevo y sin firma. Los falsos positivos que han salido se reportaron a cada
-antivirus y se corrigieron; si el tuyo lo marca, puedes revisar el zip en
-[VirusTotal](https://www.virustotal.com) y abrir un
-[issue](https://github.com/RodoLy/HMMMGC/issues).
-
 **En Android.** Descarga `HarvestMoonMM-<versión>.apk` del release e instálala
 en el celular (Android 8 o más nuevo, ARM64, con Vulkan). Pon también en el
 celular la imagen de tu disco, en `.iso` o `.gcm` (una `.rvz` se convierte a

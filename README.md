@@ -249,12 +249,6 @@ Command Line Tools; if your Mac does not have them, the launcher opens their
 installer. Everything of yours goes in
 `~/Library/Application Support/HarvestMoonMM`.
 
-An antivirus may flag `HarvestMoonMM.exe` by mistake: it is a new program
-with no signature. The false positives that have come up were reported to each
-antivirus and fixed; if yours flags it, you can check the zip on
-[VirusTotal](https://www.virustotal.com) and open an
-[issue](https://github.com/RodoLy/HMMMGC/issues).
-
 **On Android.** Download `HarvestMoonMM-<version>.apk` from the release and
 install it on the phone (Android 8 or newer, ARM64, with Vulkan). Put your disc
 image on the phone too, as `.iso` or `.gcm` (an `.rvz` can be turned into an
