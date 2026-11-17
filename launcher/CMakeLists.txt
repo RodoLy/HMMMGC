@@ -98,6 +98,8 @@ target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PA
 if(MSVC)
     target_compile_options(HarvestMoonMM PRIVATE /W3 /utf-8)
     target_compile_definitions(HarvestMoonMM PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    # The manifest is the one in windows/launcher.rc, not one of the linker's.
+    target_link_options(HarvestMoonMM PRIVATE /MANIFEST:NO)
     target_compile_options(launcher_imgui PRIVATE /utf-8)
 else()
     target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
