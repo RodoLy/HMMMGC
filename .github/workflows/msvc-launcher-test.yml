@@ -19,7 +19,7 @@ jobs:
         shell: pwsh
         run: |
           cmake -S launcher -B build/launcher -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DHMMM_PACKAGE_VERSION=v0.4.2-msvc
-          cmake --build build/launcher
+          cmake --build build/launcher -- -k 0
       - uses: actions/upload-artifact@v4
         with:
           name: HarvestMoonMM-msvc

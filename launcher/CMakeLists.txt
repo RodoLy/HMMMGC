@@ -97,6 +97,7 @@ target_compile_definitions(HarvestMoonMM PRIVATE HMMM_PACKAGE_VERSION="${HMMM_PA
                                                  HMMM_SHOWN_VERSION="${HMMM_SHOWN_VERSION}")
 if(MSVC)
     target_compile_options(HarvestMoonMM PRIVATE /W3 /utf-8)
+    target_compile_definitions(HarvestMoonMM PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
     target_compile_options(launcher_imgui PRIVATE /utf-8)
 else()
     target_compile_options(HarvestMoonMM PRIVATE -Wall -Wextra)
