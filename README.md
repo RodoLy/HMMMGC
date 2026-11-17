@@ -130,6 +130,8 @@ day) and **maximum friendship** (with everyone; it cannot be undone in that save
 scenes may start). They are kept in `settings.json`, under `cheats`, and the `cheats` mod does them
 ([mods/cheats/mod.c](mods/cheats/mod.c)).
 
+![The launcher's Cheats tab, with the four cheats off](docs/images/launcher-cheats-en.png)
+
 #### Marry Jamie, working in the game
 
 <table>
@@ -177,7 +179,7 @@ scenes may start). They are kept in `settings.json`, under `cheats`, and the `ch
     <td align="center">The house in the morning</td>
   </tr>
   <tr>
-    <td><img src="docs/images/launcher-mods-en.png" alt="The launcher's Mods tab, with Marry Jamie chosen"></td>
+    <td><img src="docs/images/launcher-mods-en.png" alt="The launcher's Mods tab, with Marry Jamie chosen and the Quality of life section"></td>
     <td><img src="docs/images/launcher-options-en.png" alt="The launcher's Options tab"></td>
   </tr>
   <tr>

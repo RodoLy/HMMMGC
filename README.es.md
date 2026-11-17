@@ -130,6 +130,8 @@ al día siguiente) y **amistad al máximo** (con todos; no se puede deshacer en 
 empezar escenas de amor y de rivales). Se guardan en `settings.json`, en `cheats`, y los hace el mod
 `cheats` ([mods/cheats/mod.c](mods/cheats/mod.c)).
 
+![La pestaña Trucos del launcher, con los cuatro trucos apagados](docs/images/launcher-cheats-es.png)
+
 #### Casarse con Jamie, funcionando en el juego
 
 <table>
@@ -177,7 +179,7 @@ empezar escenas de amor y de rivales). Se guardan en `settings.json`, en `cheats
     <td align="center">La casa en la mañana</td>
   </tr>
   <tr>
-    <td><img src="docs/images/launcher-mods-es.png" alt="La pestaña Mods del launcher, con Casarse con Jamie elegido"></td>
+    <td><img src="docs/images/launcher-mods-es.png" alt="La pestaña Mods del launcher, con Casarse con Jamie elegido y la sección Calidad de vida"></td>
     <td><img src="docs/images/launcher-options-es.png" alt="La pestaña Opciones del launcher"></td>
   </tr>
   <tr>
