@@ -279,6 +279,7 @@ bool draw_picture_menu(settings::Settings& settings) {
         // them only on a touch screen, and its launcher has these options too.
         changed |= flag_item(settings, settings::HIDE_TOUCH_BUTTONS, Text::HideTouchButtons);
         changed |= flag_item(settings, settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo);
+        changed |= flag_item(settings, settings::SECOND_SCREEN_OFF, Text::SecondScreenOff);
 #endif
         ImGui::EndMenu();
     }
@@ -599,7 +600,7 @@ void before_frame() {
     const bool b = gamepad != nullptr && SDL_GetGamepadButton(gamepad, game_b_button());
     g_b_pressed = b && !g_b_held;
     g_b_held = b;
-    second_screen::update(true);
+    second_screen::update(!player_options::second_screen_off());
     if (g_open || player_options::show_frame_rate() || touch_buttons::visible() || second_screen::available()) {
         get_ready();
         fit_to_window();

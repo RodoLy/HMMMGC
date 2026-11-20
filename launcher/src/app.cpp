@@ -519,6 +519,7 @@ std::vector<App::Row> App::options_rows() {
     flag(settings::SHOW_FRAME_RATE, Text::ShowFrameRate, Text::ShowFrameRateHint);
     flag(settings::HIDE_TOUCH_BUTTONS, Text::HideTouchButtons, Text::HideTouchButtonsHint);
     flag(settings::HIDE_TOUCH_TURBO, Text::HideTouchTurbo, Text::HideTouchTurboHint);
+    flag(settings::SECOND_SCREEN_OFF, Text::SecondScreenOff, Text::SecondScreenOffHint);
     percent(settings::VOLUME, 100, 0, 100, 10, Text::Volume, Text::VolumeHint);
     return rows;
 }

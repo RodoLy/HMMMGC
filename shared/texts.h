@@ -103,6 +103,8 @@ enum class Text {
     HideTouchButtonsHint,
     HideTouchTurbo,
     HideTouchTurboHint,
+    SecondScreenOff,
+    SecondScreenOffHint,
     CheatInfiniteStamina,
     CheatInfiniteStaminaHint,
     CheatInfiniteMoney,

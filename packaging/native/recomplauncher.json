@@ -124,6 +124,15 @@
       "defaults": { "hideTouchTurbo": "false" }
     },
     {
+      "id": "second_screen_off",
+      "label": "No second screen",
+      "choices": [
+        { "label": "Off", "set": { "secondScreenOff": "false" } },
+        { "label": "On", "set": { "secondScreenOff": "true" } }
+      ],
+      "defaults": { "secondScreenOff": "false" }
+    },
+    {
       "id": "jamie_marriage",
       "label": "Marry Jamie",
       "group": "Mods",
