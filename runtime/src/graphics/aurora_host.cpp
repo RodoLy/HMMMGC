@@ -12,6 +12,7 @@
 #include "graphics/far_camera.h"
 #include "graphics/frame_interpolation.h"
 #include "graphics/map_draw_range.h"
+#include "graphics/second_screen.h"
 #include "graphics/shadow_range.h"
 #include "in_game_menu.h"
 #include "input/touch_buttons.h"
@@ -188,6 +189,7 @@ void initialize() {
                       static_cast<int>(info.backend), info.windowSize.width, info.windowSize.height,
                       g_display_options.resolution_scale > 0.f ? "fixed" : "following the window");
     g_initialized = true;
+    second_screen::open_test_window_if_asked();
     begin_next_frame();
     exit_if_window_closed();
 }
@@ -230,6 +232,7 @@ bool process_events() {
         } else if (event->type == AURORA_SDL_EVENT) {
             touch_buttons::handle_event(event->sdl);
             in_game_menu::handle_event(event->sdl);
+            second_screen::handle_event(event->sdl);
         } else if (event->type == AURORA_WINDOW_RESIZED) {
             const AuroraWindowSize& size = event->windowSize;
             camera_view::set_window_size(size.width, size.height);
@@ -280,6 +283,7 @@ void shutdown() {
     if (g_initialized) {
         g_initialized = false;
         audio_output::shutdown();  // the sound plays through the SDL that aurora started
+        second_screen::shutdown();
         aurora_shutdown();
     }
 }
