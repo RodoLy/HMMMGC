@@ -29,6 +29,14 @@ constexpr uint32_t AREA_COUNT = 129;
 // made of several.
 constexpr uint32_t FIELD_AREA_COUNT = 16;
 
+// What the game is doing with the player's input, in the same block as the area: 15 while its
+// menu (the one Y opens) is on the screen, on every page of it, and 0 while the player walks.
+// It turns 15 when the screen has already gone black for the menu. Found by comparing the game's
+// memory with the menu open and closed (2026-11-20).
+constexpr uint32_t PLAYER_MODE = 0x80321D18u;
+constexpr uint32_t PLAYER_MODE_WALKING = 0u;
+constexpr uint32_t PLAYER_MODE_MENU = 15u;
+
 bool no_event_running() {
     const uint32_t manager = guest_memory::read32(EVENT_MANAGER_POINTER);
     return guest_memory::is_cached_main_memory(manager) &&
@@ -51,5 +59,9 @@ bool area_is_outdoors() {
 }  // namespace
 
 bool player_walks_outdoors() { return no_event_running() && area_is_outdoors(); }
+
+bool game_menu_open() { return guest_memory::read32(PLAYER_MODE) == PLAYER_MODE_MENU; }
+
+bool player_walks() { return guest_memory::read32(PLAYER_MODE) == PLAYER_MODE_WALKING; }
 
 }  // namespace game_scene

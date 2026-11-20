@@ -199,6 +199,7 @@ bool is_initialized() { return g_initialized; }
 void present_frame() {
     touch_buttons::draw();
     in_game_menu::draw();
+    second_screen::draw(game_scene::game_menu_open(), game_scene::player_walks());
     frame_interpolation::schedule_frame();
     aurora_end_frame();
     count_frame();
@@ -221,6 +222,7 @@ void present_frame() {
     // The menu's shortcut on the controller and its lettering for the window's size, before the
     // next frame starts (and with it ImGui's).
     in_game_menu::before_frame();
+    second_screen::update(!player_options::second_screen_off());
     begin_next_frame();
     exit_if_window_closed();
 }

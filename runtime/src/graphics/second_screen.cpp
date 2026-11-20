@@ -13,7 +13,6 @@
 #include <backends/imgui_impl_wgpu.h>
 #include <imgui.h>
 
-#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 
 #if defined(__ANDROID__)
@@ -30,6 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <future>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -42,21 +42,14 @@ namespace {
 namespace render_worker = aurora::gfx::render_worker;
 namespace webgpu = aurora::webgpu;
 
-// The menu on the second screen is laid out for this many of the theme's design pixels
-// (shared/theme.h), as the game's screen is for 1280x720: on the AYN Thor's lower screen
-// (1240x1080) that is about one and a half times the design, big enough for a finger.
-constexpr float DESIGN_WIDTH = 800.f;
-constexpr float DESIGN_HEIGHT = 700.f;
-
-// The second screen is drawn again at most this often: a menu needs no more, and every frame
-// drawn there is time taken from the game's.
-constexpr Uint64 FRAME_INTERVAL_NS = 1'000'000'000 / 30;
-
 // How long Android waits, at most, for the second screen to let go of its surface.
 constexpr auto DETACH_TIMEOUT = std::chrono::seconds(1);
 
-// The colour of the screen under the menu: the dark of ImGui's own windows.
-constexpr wgpu::Color BACKGROUND{0.06, 0.06, 0.07, 1.0};
+// The colour of the second screen around the menu and while it is closed.
+constexpr wgpu::Color BACKGROUND{0.03, 0.03, 0.05, 1.0};
+
+// The menu's picture takes at most this much of the screen's height; below it are the buttons.
+constexpr float PICTURE_MOST_HEIGHT = 0.82f;
 
 // Where a surface comes from: the app's window on the other screen, or the test window.
 struct Source {
@@ -66,19 +59,17 @@ struct Source {
     int height = 0;
 };
 
-// A finger of the app, or the test window's mouse (which moves without being pressed).
+// The test window's mouse is a finger while its button is down; when the surface goes, every
+// finger is lifted.
+constexpr int MOUSE_FINGER = -1;
+constexpr int EVERY_FINGER = -2;
+
+// A finger of the app, or the test window's mouse.
 struct Pointer {
-    bool mouse = false;
     Touch action = Touch::Move;
     int finger = 0;
     float x = 0.f;  // from 0 to 1 of the screen
     float y = 0.f;
-};
-
-// A key of the test window's keyboard, for ImGui.
-struct Key {
-    ImGuiKey key = ImGuiKey_None;
-    bool down = false;
 };
 
 void release_android_window(ANativeWindow* window) {
@@ -91,22 +82,37 @@ void release_android_window(ANativeWindow* window) {
 #endif
 }
 
-// ---- Shared between the app's thread and the game's -------------------------------------------
+// One frame of the buttons, kept while the render thread draws it: ImGui's lists are copied, as
+// aurora does with its own frames (aurora-main/lib/imgui.cpp).
+struct FrozenFrame {
+    ImDrawData data;
+    std::vector<std::unique_ptr<ImDrawList>> lists;
+};
+
+// ---- Shared between the threads ----------------------------------------------------------------
 
 std::mutex g_mutex;
 std::optional<Source> g_new_source;  // given, and not yet made into a surface
-std::vector<Pointer> g_pointers;     // not yet given to ImGui
-std::vector<Key> g_keys;
+std::vector<Pointer> g_pointers;     // not yet seen by the game's thread
+std::shared_ptr<FrozenFrame> g_buttons_frame;
 
-// Set by the render thread: the size of the surface that is ready to draw on, 0 when none is.
+// Set by the render thread: the size of the surface that is ready to draw on (0 when none is),
+// and the shape of the game's picture (width / height).
 std::atomic<int> g_ready_width{0};
 std::atomic<int> g_ready_height{0};
+std::atomic<float> g_picture_aspect{4.f / 3.f};
+// Set by the game's thread: whether this frame's picture is the game's menu.
+std::atomic<bool> g_menu_shown{false};
 
 // ---- The render thread's ------------------------------------------------------------------------
 
 wgpu::Surface g_surface;
 wgpu::SurfaceConfiguration g_configuration;
 ANativeWindow* g_window_in_use = nullptr;
+wgpu::Texture g_kept;           // the last picture before the menu, in the surface's format
+wgpu::TextureView g_kept_view;
+wgpu::Extent3D g_kept_size{};
+bool g_showing_menu = false;     // the second screen shows the menu (and goes dark when it closes)
 
 void release_surface() {
     if (g_surface) {
@@ -114,6 +120,9 @@ void release_surface() {
         g_surface = nullptr;
     }
     release_android_window(std::exchange(g_window_in_use, nullptr));
+    g_kept = nullptr;
+    g_kept_view = nullptr;
+    g_showing_menu = false;
     g_ready_width = 0;
     g_ready_height = 0;
 }
@@ -132,7 +141,8 @@ wgpu::Surface create_surface(const Source& source) {
 #endif
 }
 
-// The surface takes the format of aurora's own, because the same ImGui pipelines draw on both.
+// The surface takes the format of aurora's own, because aurora's pipelines (the copy of the picture,
+// ImGui) draw on both.
 bool configure(int width, int height) {
     wgpu::SurfaceCapabilities capabilities;
     if (g_surface.GetCapabilities(webgpu::g_device.GetAdapter(), &capabilities) != wgpu::Status::Success) {
@@ -168,61 +178,197 @@ void make_surface(const Source& source) {
     }
     g_ready_width = source.width;
     g_ready_height = source.height;
-    runtime_log::info("second screen", "the options menu is on the second screen (%dx%d)", source.width,
+    runtime_log::info("second screen", "the game's menu goes to the second screen (%dx%d)", source.width,
                       source.height);
 }
 
-// One frame of ImGui, kept while the render thread draws it: ImGui's lists are copied, as aurora
-// does with its own frames (aurora-main/lib/imgui.cpp).
-struct FrozenFrame {
-    ImDrawData data;
-    std::vector<std::unique_ptr<ImDrawList>> lists;
-};
-
-void draw_frame(const FrozenFrame& frame) {
-    if (!g_surface) {
-        return;
-    }
-    wgpu::SurfaceTexture texture;
-    g_surface.GetCurrentTexture(&texture);
-    if (texture.status == wgpu::SurfaceGetCurrentTextureStatus::Outdated ||
-        texture.status == wgpu::SurfaceGetCurrentTextureStatus::Lost) {
-        g_surface.Configure(&g_configuration);  // the screen turned or changed; the next frame shows
-        return;
-    }
-    if (texture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal &&
-        texture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessSuboptimal) {
-        return;
-    }
-    const wgpu::TextureView view = texture.texture.CreateView();
-    const wgpu::CommandEncoder encoder = webgpu::g_device.CreateCommandEncoder();
+// Draws `picture` into `target` with aurora's copy pipeline, in the given part of it.
+void copy_picture(const wgpu::CommandEncoder& encoder, const wgpu::TextureView& target, wgpu::LoadOp load,
+                  const webgpu::PresentPicture& picture, float left, float top, float width, float height,
+                  const FrozenFrame* buttons) {
     const wgpu::RenderPassColorAttachment attachment{
-        .view = view,
-        .loadOp = wgpu::LoadOp::Clear,
+        .view = target,
+        .loadOp = load,
         .storeOp = wgpu::StoreOp::Store,
         .clearValue = BACKGROUND,
     };
-    const wgpu::RenderPassDescriptor pass_descriptor{
+    const wgpu::RenderPassDescriptor descriptor{
         .label = "Second screen",
         .colorAttachmentCount = 1,
         .colorAttachments = &attachment,
     };
-    const wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&pass_descriptor);
-    // aurora's ImGui renderer: whichever ImGui context is current, it is the same one (frame()).
-    ImGui_ImplWGPU_RenderDrawData(const_cast<ImDrawData*>(&frame.data), pass.Get());
+    const wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&descriptor);
+    if (picture.view && width > 0.f && height > 0.f) {
+        const webgpu::TextureWithSampler source{
+            .texture = picture.texture,
+            .view = picture.view,
+            .size = picture.size,
+            .format = picture.format,
+            .sampler = picture.sampler,
+        };
+        pass.SetPipeline(webgpu::g_CopyPipeline);
+        pass.SetBindGroup(0, webgpu::create_copy_bind_group(source), 0, nullptr);
+        pass.SetViewport(left, top, width, height, 0.f, 1.f);
+        pass.Draw(3);
+    }
+    if (buttons != nullptr && buttons->data.CmdListsCount > 0) {
+        // aurora's ImGui renderer: whichever ImGui context is current, it is the same one
+        // (create_context()).
+        ImGui_ImplWGPU_RenderDrawData(const_cast<ImDrawData*>(&buttons->data), pass.Get());
+    }
     pass.End();
+}
+
+// The picture kept for the window while the menu is open: a copy of each frame's picture while it
+// is closed.
+void keep_picture(const wgpu::CommandEncoder& encoder, const webgpu::PresentPicture& picture) {
+    if (!picture.view || picture.size.width == 0 || picture.size.height == 0) {
+        return;
+    }
+    if (!g_kept || g_kept_size.width != picture.size.width || g_kept_size.height != picture.size.height) {
+        g_kept_size = wgpu::Extent3D{picture.size.width, picture.size.height, 1};
+        const wgpu::TextureDescriptor descriptor{
+            .label = "Picture before the game's menu",
+            .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding,
+            .size = g_kept_size,
+            .format = g_configuration.format,
+        };
+        g_kept = webgpu::g_device.CreateTexture(&descriptor);
+        g_kept_view = g_kept.CreateView();
+    }
+    copy_picture(encoder, g_kept_view, wgpu::LoadOp::Clear, picture, 0.f, 0.f,
+                 static_cast<float>(g_kept_size.width), static_cast<float>(g_kept_size.height), nullptr);
+}
+
+// The part of the second screen the menu's picture takes: as wide as it fits, at the top.
+struct Area {
+    float left, top, width, height;
+};
+Area picture_area(float screen_width, float screen_height, float aspect) {
+    float width = screen_width;
+    float height = width / aspect;
+    if (height > screen_height * PICTURE_MOST_HEIGHT) {
+        height = screen_height * PICTURE_MOST_HEIGHT;
+        width = height * aspect;
+    }
+    return Area{(screen_width - width) * 0.5f, 0.f, width, height};
+}
+
+// The frame's picture, between the two hooks.
+webgpu::PresentPicture g_frame_picture;
+bool g_frame_menu = false;
+
+// aurora's present hook, on the render thread, once a frame (second_screen.h): it only notes the
+// picture, which is drawn elsewhere once the frame's commands are submitted (after_present), and
+// gives the window the kept picture while the menu is open.
+void before_present(const wgpu::CommandEncoder&, webgpu::PresentPicture& picture) {
+    g_frame_picture = {};
+    if (!g_surface) {
+        return;
+    }
+    const float aspect = picture.aspect > 0.f ? picture.aspect
+                         : picture.size.height > 0
+                             ? static_cast<float>(picture.size.width) / static_cast<float>(picture.size.height)
+                             : 4.f / 3.f;
+    g_picture_aspect = aspect;
+    g_frame_picture = picture;
+    g_frame_picture.aspect = aspect;
+    g_frame_menu = g_menu_shown.load();
+    // The window keeps the farm as it was before the menu.
+    if (g_frame_menu && g_kept) {
+        picture.texture = g_kept;
+        picture.view = g_kept_view;
+        picture.size = g_kept_size;
+        picture.format = g_configuration.format;
+    }
+}
+
+// Once the frame is submitted: the picture is kept (menu closed) or drawn on the second screen
+// (menu open), with commands of its own that come after the frame's.
+void after_present() {
+    const webgpu::PresentPicture picture = std::exchange(g_frame_picture, {});
+    if (!g_surface || !picture.view) {
+        return;
+    }
+    const bool menu = g_frame_menu;
+    const wgpu::CommandEncoder encoder = webgpu::g_device.CreateCommandEncoder();
+    if (!menu) {
+        keep_picture(encoder, picture);
+    }
+    bool present = false;
+    if (menu || g_showing_menu) {
+        wgpu::SurfaceTexture texture;
+        g_surface.GetCurrentTexture(&texture);
+        if (texture.status == wgpu::SurfaceGetCurrentTextureStatus::Outdated ||
+            texture.status == wgpu::SurfaceGetCurrentTextureStatus::Lost) {
+            g_surface.Configure(&g_configuration);  // the screen turned or changed; the next frame shows
+        } else if (texture.status == wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal ||
+                   texture.status == wgpu::SurfaceGetCurrentTextureStatus::SuccessSuboptimal) {
+            const wgpu::TextureView target = texture.texture.CreateView();
+            if (menu) {
+                std::shared_ptr<FrozenFrame> buttons;
+                {
+                    std::lock_guard lock(g_mutex);
+                    buttons = g_buttons_frame;
+                }
+                const Area area = picture_area(static_cast<float>(g_configuration.width),
+                                               static_cast<float>(g_configuration.height), picture.aspect);
+                copy_picture(encoder, target, wgpu::LoadOp::Clear, picture, area.left, area.top, area.width,
+                             area.height, buttons.get());
+            } else {
+                // The menu closed: the second screen goes dark until it opens again.
+                copy_picture(encoder, target, wgpu::LoadOp::Clear, webgpu::PresentPicture{}, 0.f, 0.f, 0.f, 0.f,
+                             nullptr);
+            }
+            g_showing_menu = menu;
+            present = true;
+        }
+    }
     const wgpu::CommandBuffer commands = encoder.Finish();
     webgpu::g_queue.Submit(1, &commands);
-    g_surface.Present();
+    if (present) {
+        g_surface.Present();
+    }
 }
 
 // ---- The game's thread --------------------------------------------------------------------------
 
 ImGuiContext* g_context = nullptr;
 SDL_Window* g_test_window = nullptr;
-int g_finger = -1;          // the finger that is ImGui's mouse, -1 when none
-Uint64 g_last_frame_ns = 0;  // when the last frame was queued
-bool g_had_controller = false;
+std::map<int, ImVec2> g_fingers;  // the fingers on the second screen, in its pixels
+// Where fingers touched lately: a tap quicker than a frame still presses its button for a few
+// frames, long enough for the game to read it.
+struct Tap {
+    ImVec2 at;
+    int frames;
+};
+constexpr int TAP_FRAMES = 3;
+std::vector<Tap> g_taps;
+bool g_hooks_set = false;
+
+// The buttons under the menu, and what each plays.
+enum class Job { Left, Up, Down, Right, L, R, B, A };
+struct Button {
+    Job job;
+    const char* label;
+    ImVec2 min;
+    ImVec2 max;
+};
+std::vector<Button> g_buttons;  // as last laid out
+// The menu turns the screen black before the game says it is open (game_scene.h), so the window
+// keeps its picture from the moment Y is pressed, and gives it up if the menu does not come within
+// OPENING_FRAMES.
+constexpr int OPENING_FRAMES = 45;
+int g_opening_frames = 0;
+// The game turns the screen black between the menu's pages too, where it may not say that its menu
+// is open for a frame or two: the menu stays on the second screen that long after it closes.
+constexpr int CLOSING_FRAMES = 8;
+int g_closing_frames = 0;
+bool g_y_held = false;
+bool g_player_walked = false;  // at the end of the last frame, before the game reads the controller
+uint16_t g_held_buttons = 0;     // PAD_BUTTON_* the fingers hold
+int g_stick_x = 0;
+int g_stick_y = 0;
 
 // A surface given since the last frame is made on the render thread. The lock is held while it is
 // queued, so that a detach() that comes meanwhile is queued after it and lets it go.
@@ -235,7 +381,7 @@ void take_new_source() {
     render_worker::enqueue_work([source] { make_surface(source); });
 }
 
-// The second ImGui context: its own size and input, and aurora's fonts and renderer.
+// The second ImGui context: its own size, and aurora's fonts and renderer.
 void create_context() {
     ImGuiContext* game = ImGui::GetCurrentContext();
     const ImGuiIO& game_io = ImGui::GetIO();
@@ -246,101 +392,160 @@ void create_context() {
     io.LogFilename = nullptr;
     io.BackendRendererUserData = game_io.BackendRendererUserData;
     io.BackendRendererName = "aurora's, shared";
-    io.BackendFlags = game_io.BackendFlags | ImGuiBackendFlags_HasGamepad;
+    io.BackendFlags = game_io.BackendFlags;
     ImGui::SetCurrentContext(game);
 }
 
-// The pointers and keys given since the last frame, as ImGui's mouse and keyboard, on a layout of
-// width x height.
-void give_pointers(ImGuiIO& io, float width, float height) {
+// The fingers given since the last frame.
+void follow_fingers(float width, float height) {
     std::vector<Pointer> pointers;
-    std::vector<Key> keys;
     {
         std::lock_guard lock(g_mutex);
         pointers.swap(g_pointers);
-        keys.swap(g_keys);
     }
     for (const Pointer& pointer : pointers) {
-        const ImVec2 at(pointer.x * width, pointer.y * height);
-        if (pointer.mouse) {
-            io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
-            io.AddMousePosEvent(at.x, at.y);
-            if (pointer.action == Touch::Down || pointer.action == Touch::Up) {
-                io.AddMouseButtonEvent(0, pointer.action == Touch::Down);
+        if (pointer.finger == EVERY_FINGER) {
+            g_fingers.clear();
+            g_taps.clear();
+        } else if (pointer.action == Touch::Up || pointer.action == Touch::Cancel) {
+            g_fingers.erase(pointer.finger);
+        } else {
+            g_fingers[pointer.finger] = ImVec2(pointer.x * width, pointer.y * height);
+            if (pointer.action == Touch::Down) {
+                g_taps.push_back(Tap{g_fingers[pointer.finger], TAP_FRAMES});
             }
+        }
+    }
+}
+
+// The buttons in the band under the menu's picture, in one row of eight as on the controller: the
+// stick's four ways at the left, B and A at the right, and L and R between them.
+void lay_out_buttons(float width, float height) {
+    const Area area = picture_area(width, height, g_picture_aspect.load());
+    const float margin = width * 0.03f;
+    const float top = area.height + height * 0.02f;
+    const float bottom = height - height * 0.03f;
+    // Eight buttons and the gaps between them (a fifth of a button, and three between the groups).
+    const float size = std::min(bottom - top, (width - 2.f * margin) / (8.f + 7.f * 0.2f + 4.f * 0.2f));
+    const float gap = size * 0.2f;
+    const float group_gap = (width - 2.f * margin - 8.f * size - 5.f * gap) / 2.f;
+    const float middle = (top + bottom) * 0.5f;
+    g_buttons.clear();
+    float x = margin;
+    const auto add = [&](Job job, const char* label, float after) {
+        g_buttons.push_back(Button{job, label, ImVec2(x, middle - size * 0.5f), ImVec2(x + size, middle + size * 0.5f)});
+        x += size + after;
+    };
+    add(Job::Left, "", gap);
+    add(Job::Up, "", gap);
+    add(Job::Down, "", gap);
+    add(Job::Right, "", group_gap);
+    add(Job::L, "L", gap);
+    add(Job::R, "R", group_gap);
+    add(Job::B, "B", gap);
+    add(Job::A, "A", 0.f);
+}
+
+bool held(const Button& button) {
+    const auto inside = [&](ImVec2 p) {
+        return p.x >= button.min.x && p.x <= button.max.x && p.y >= button.min.y && p.y <= button.max.y;
+    };
+    return std::any_of(g_fingers.begin(), g_fingers.end(), [&](const auto& finger) { return inside(finger.second); }) ||
+           std::any_of(g_taps.begin(), g_taps.end(), [&](const Tap& tap) { return inside(tap.at); });
+}
+
+// The buttons' look: the touch buttons' (input/touch_buttons.cpp), cream with a dark blue edge,
+// A green and B red as on the GameCube controller.
+void draw_button(ImDrawList* draw, const Button& button, bool pressed) {
+    const ImU32 edge = IM_COL32(40, 52, 110, 255);
+    ImU32 fill = IM_COL32(244, 236, 214, 255);
+    if (button.job == Job::A) {
+        fill = IM_COL32(64, 186, 120, 255);
+    } else if (button.job == Job::B) {
+        fill = IM_COL32(222, 74, 70, 255);
+    }
+    if (pressed) {
+        fill = IM_COL32(150, 150, 150, 255);
+    }
+    const ImVec2 center((button.min.x + button.max.x) * 0.5f, (button.min.y + button.max.y) * 0.5f);
+    const float radius = (button.max.x - button.min.x) * 0.5f;
+    draw->AddCircleFilled(center, radius, fill, 48);
+    draw->AddCircle(center, radius, edge, 48, radius * 0.08f);
+    const float r = radius * 0.45f;
+    switch (button.job) {
+        case Job::Left:
+            draw->AddTriangleFilled(center + ImVec2(-r, 0), center + ImVec2(r * 0.6f, -r), center + ImVec2(r * 0.6f, r), edge);
+            return;
+        case Job::Right:
+            draw->AddTriangleFilled(center + ImVec2(r, 0), center + ImVec2(-r * 0.6f, r), center + ImVec2(-r * 0.6f, -r), edge);
+            return;
+        case Job::Up:
+            draw->AddTriangleFilled(center + ImVec2(0, -r), center + ImVec2(r, r * 0.6f), center + ImVec2(-r, r * 0.6f), edge);
+            return;
+        case Job::Down:
+            draw->AddTriangleFilled(center + ImVec2(0, r), center + ImVec2(-r, -r * 0.6f), center + ImVec2(r, -r * 0.6f), edge);
+            return;
+        default: {
+            ImFont* font = theme::fonts().heading;
+            const float size = radius * 1.1f;
+            const ImVec2 extent = font->CalcTextSizeA(size, FLT_MAX, 0.f, button.label);
+            draw->AddText(font, size, center - extent * 0.5f, button.job == Job::L || button.job == Job::R ? edge : IM_COL32_WHITE,
+                          button.label);
+        }
+    }
+}
+
+// What the held buttons play: the stick pushed all the way (the game's menus move with the stick),
+// and L, R, B and A.
+void play_held_buttons() {
+    g_held_buttons = 0;
+    g_stick_x = 0;
+    g_stick_y = 0;
+    for (const Button& button : g_buttons) {
+        if (!held(button)) {
             continue;
         }
-        // The first finger down is the mouse until it lifts; the others are not seen.
-        if (pointer.action == Touch::Down && g_finger < 0) {
-            g_finger = pointer.finger;
-            io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
-            io.AddMousePosEvent(at.x, at.y);
-            io.AddMouseButtonEvent(0, true);
-        } else if (pointer.finger == g_finger) {
-            io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
-            io.AddMousePosEvent(at.x, at.y);
-            if (pointer.action == Touch::Up || pointer.action == Touch::Cancel) {
-                io.AddMouseButtonEvent(0, false);
-                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  // a lifted finger hovers nothing
-                g_finger = -1;
-            }
+        switch (button.job) {
+            case Job::Left: g_stick_x = -100; break;
+            case Job::Right: g_stick_x = 100; break;
+            case Job::Up: g_stick_y = 100; break;
+            case Job::Down: g_stick_y = -100; break;
+            case Job::L: g_held_buttons |= PAD_TRIGGER_L; break;
+            case Job::R: g_held_buttons |= PAD_TRIGGER_R; break;
+            case Job::B: g_held_buttons |= PAD_BUTTON_B; break;
+            case Job::A: g_held_buttons |= PAD_BUTTON_A; break;
         }
     }
-    for (const Key& key : keys) {
-        io.AddKeyEvent(key.key, key.down);
-    }
 }
 
-// The controller's buttons and left stick as ImGui's gamepad, as ImGui's own SDL backend gives
-// them to the game screen's menu; all let go when the menu does not have the controller.
-void give_controller(ImGuiIO& io, SDL_Gamepad* controller) {
-    struct Button {
-        ImGuiKey key;
-        SDL_GamepadButton button;
-    };
-    static constexpr Button BUTTONS[] = {
-        {ImGuiKey_GamepadStart, SDL_GAMEPAD_BUTTON_START},
-        {ImGuiKey_GamepadBack, SDL_GAMEPAD_BUTTON_BACK},
-        {ImGuiKey_GamepadFaceLeft, SDL_GAMEPAD_BUTTON_WEST},
-        {ImGuiKey_GamepadFaceRight, SDL_GAMEPAD_BUTTON_EAST},
-        {ImGuiKey_GamepadFaceUp, SDL_GAMEPAD_BUTTON_NORTH},
-        {ImGuiKey_GamepadFaceDown, SDL_GAMEPAD_BUTTON_SOUTH},
-        {ImGuiKey_GamepadDpadLeft, SDL_GAMEPAD_BUTTON_DPAD_LEFT},
-        {ImGuiKey_GamepadDpadRight, SDL_GAMEPAD_BUTTON_DPAD_RIGHT},
-        {ImGuiKey_GamepadDpadUp, SDL_GAMEPAD_BUTTON_DPAD_UP},
-        {ImGuiKey_GamepadDpadDown, SDL_GAMEPAD_BUTTON_DPAD_DOWN},
-        {ImGuiKey_GamepadL1, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER},
-        {ImGuiKey_GamepadR1, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER},
-    };
-    for (const Button& button : BUTTONS) {
-        io.AddKeyEvent(button.key, controller != nullptr && SDL_GetGamepadButton(controller, button.button));
+// The buttons, as an ImGui frame of the second context, for the render thread to draw.
+void draw_buttons(int width, int height) {
+    if (g_context == nullptr) {
+        create_context();
     }
-    // The stick counts from a quarter of the way, as in ImGui's SDL backend.
-    const auto stick = [&](ImGuiKey key, SDL_GamepadAxis axis, float sign) {
-        const float value =
-            controller != nullptr ? sign * static_cast<float>(SDL_GetGamepadAxis(controller, axis)) / 32767.f : 0.f;
-        const float pushed = std::clamp((value - 0.25f) / 0.75f, 0.f, 1.f);
-        io.AddKeyAnalogEvent(key, pushed > 0.1f, pushed);
-    };
-    stick(ImGuiKey_GamepadLStickLeft, SDL_GAMEPAD_AXIS_LEFTX, -1.f);
-    stick(ImGuiKey_GamepadLStickRight, SDL_GAMEPAD_AXIS_LEFTX, 1.f);
-    stick(ImGuiKey_GamepadLStickUp, SDL_GAMEPAD_AXIS_LEFTY, -1.f);
-    stick(ImGuiKey_GamepadLStickDown, SDL_GAMEPAD_AXIS_LEFTY, 1.f);
-}
-
-// The test window's keys that move in the menu.
-ImGuiKey imgui_key(SDL_Keycode key) {
-    switch (key) {
-        case SDLK_UP: return ImGuiKey_UpArrow;
-        case SDLK_DOWN: return ImGuiKey_DownArrow;
-        case SDLK_LEFT: return ImGuiKey_LeftArrow;
-        case SDLK_RIGHT: return ImGuiKey_RightArrow;
-        case SDLK_RETURN: return ImGuiKey_Enter;
-        case SDLK_SPACE: return ImGuiKey_Space;
-        case SDLK_ESCAPE: return ImGuiKey_Escape;
-        case SDLK_TAB: return ImGuiKey_Tab;
-        default: return ImGuiKey_None;
+    ImGuiContext* game = ImGui::GetCurrentContext();
+    ImGui::SetCurrentContext(g_context);
+    ImGuiIO& io = ImGui::GetIO();
+    io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
+    io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
+    io.DeltaTime = 1.f / 60.f;
+    ImGui::NewFrame();
+    ImDrawList* draw = ImGui::GetBackgroundDrawList();
+    for (const Button& button : g_buttons) {
+        draw_button(draw, button, held(button));
     }
+    ImGui::Render();
+    auto frozen = std::make_shared<FrozenFrame>();
+    const ImDrawData* data = ImGui::GetDrawData();
+    frozen->data = *data;
+    frozen->data.CmdLists.resize(data->CmdListsCount);
+    for (int i = 0; i < data->CmdListsCount; ++i) {
+        frozen->lists.emplace_back(data->CmdLists[i]->CloneOutput());
+        frozen->data.CmdLists[i] = frozen->lists.back().get();
+    }
+    ImGui::SetCurrentContext(game);
+    std::lock_guard lock(g_mutex);
+    g_buttons_frame = std::move(frozen);
 }
 
 }  // namespace
@@ -369,7 +574,7 @@ void detach() {
     if (done.wait_for(DETACH_TIMEOUT) != std::future_status::ready) {
         runtime_log::warning("second screen", "the render thread did not let go of the surface in time");
     }
-    g_pointers.clear();
+    g_pointers.push_back(Pointer{.action = Touch::Cancel, .finger = EVERY_FINGER});
 }
 
 void touch(Touch action, int finger, float x, float y) {
@@ -378,6 +583,10 @@ void touch(Touch action, int finger, float x, float y) {
 }
 
 void update(bool wanted) {
+    if (!g_hooks_set) {
+        g_hooks_set = true;
+        webgpu::set_present_hooks(before_present, after_present);
+    }
     take_new_source();
 #if defined(__ANDROID__)
     // The app's GameActivity.useSecondScreen(boolean), which shows or takes away the other screen.
@@ -432,39 +641,83 @@ void handle_event(const SDL_Event& event) {
     int width = 0;
     int height = 0;
     SDL_GetWindowSize(g_test_window, &width, &height);
-    const auto pointer = [&](Touch action, float x, float y) {
-        std::lock_guard lock(g_mutex);
-        g_pointers.push_back(Pointer{.mouse = true,
-                                     .action = action,
-                                     .x = x / static_cast<float>(std::max(width, 1)),
-                                     .y = y / static_cast<float>(std::max(height, 1))});
+    const auto mouse = [&](Touch action, float x, float y) {
+        touch(action, MOUSE_FINGER, x / static_cast<float>(std::max(width, 1)), y / static_cast<float>(std::max(height, 1)));
     };
-    switch (event.type) {
-        case SDL_EVENT_MOUSE_MOTION:
-            if (event.motion.windowID == test_window) {
-                pointer(Touch::Move, event.motion.x, event.motion.y);
-            }
-            break;
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-            if (event.button.windowID == test_window && event.button.button == SDL_BUTTON_LEFT) {
-                pointer(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? Touch::Down : Touch::Up, event.button.x,
-                        event.button.y);
-            }
-            break;
-        case SDL_EVENT_KEY_DOWN:
-        case SDL_EVENT_KEY_UP:
-            if (event.key.windowID == test_window && imgui_key(event.key.key) != ImGuiKey_None) {
-                std::lock_guard lock(g_mutex);
-                g_keys.push_back(Key{imgui_key(event.key.key), event.type == SDL_EVENT_KEY_DOWN});
-            }
-            break;
-        default:
-            break;
+    static bool pressed = false;
+    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.windowID == test_window) {
+        pressed = true;
+        mouse(Touch::Down, event.button.x, event.button.y);
+    } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && event.button.windowID == test_window) {
+        pressed = false;
+        mouse(Touch::Up, event.button.x, event.button.y);
+    } else if (event.type == SDL_EVENT_MOUSE_MOTION && event.motion.windowID == test_window && pressed) {
+        mouse(Touch::Move, event.motion.x, event.motion.y);
+    }
+}
+
+void draw(bool game_menu_open, bool player_walks) {
+    const int width = g_ready_width.load();
+    const int height = g_ready_height.load();
+    if (game_menu_open) {
+        g_opening_frames = 0;
+        g_closing_frames = CLOSING_FRAMES;
+    } else if (g_opening_frames > 0) {
+        --g_opening_frames;
+    } else if (g_closing_frames > 0) {
+        --g_closing_frames;
+    }
+    g_player_walked = player_walks;
+    const bool shown =
+        (game_menu_open || g_opening_frames > 0 || g_closing_frames > 0) && width > 0 && height > 0;
+    g_menu_shown = shown;
+    follow_fingers(static_cast<float>(width), static_cast<float>(height));
+    if (!shown) {
+        g_fingers.clear();
+        g_taps.clear();
+        g_buttons.clear();
+        g_held_buttons = 0;
+        g_stick_x = 0;
+        g_stick_y = 0;
+        return;
+    }
+    lay_out_buttons(static_cast<float>(width), static_cast<float>(height));
+    play_held_buttons();
+    draw_buttons(width, height);
+    for (Tap& tap : g_taps) {
+        --tap.frames;
+    }
+    std::erase_if(g_taps, [](const Tap& tap) { return tap.frames <= 0; });
+}
+
+void add_to(PADStatus& status) {
+    // Y pressed while walking opens the menu, from this very frame (the one the game reads it in).
+    const bool y = (status.button & PAD_BUTTON_Y) != 0;
+    if (y && !g_y_held && g_player_walked && available()) {
+        g_opening_frames = OPENING_FRAMES + 1;
+    }
+    g_y_held = y;
+    if (g_held_buttons == 0 && g_stick_x == 0 && g_stick_y == 0) {
+        return;
+    }
+    status.err = PAD_ERR_NONE;
+    status.button |= g_held_buttons;
+    if (g_held_buttons & PAD_TRIGGER_L) {
+        status.triggerLeft = 255;
+    }
+    if (g_held_buttons & PAD_TRIGGER_R) {
+        status.triggerRight = 255;
+    }
+    if (g_stick_x != 0) {
+        status.stickX = static_cast<s8>(g_stick_x);
+    }
+    if (g_stick_y != 0) {
+        status.stickY = static_cast<s8>(g_stick_y);
     }
 }
 
 void shutdown() {
+    webgpu::set_present_hooks(nullptr, nullptr);
     render_worker::enqueue_work(release_surface);
     render_worker::synchronize();
     if (g_test_window != nullptr) {
@@ -473,64 +726,6 @@ void shutdown() {
 }
 
 bool available() { return g_ready_width.load() > 0; }
-
-void frame(SDL_Gamepad* controller, const std::function<void(ImVec2 size)>& draw) {
-    const int width = g_ready_width.load();
-    const int height = g_ready_height.load();
-    if (width <= 0 || height <= 0) {
-        return;
-    }
-    // Not more often than FRAME_INTERVAL_NS, unless the controller just came or went.
-    const Uint64 now = SDL_GetTicksNS();
-    const bool has_controller = controller != nullptr;
-    if (now - g_last_frame_ns < FRAME_INTERVAL_NS && has_controller == g_had_controller) {
-        return;
-    }
-    const float delta = g_last_frame_ns == 0 ? 1.f / 30.f : static_cast<float>(now - g_last_frame_ns) / 1e9f;
-    g_last_frame_ns = now;
-    g_had_controller = has_controller;
-    if (g_context == nullptr) {
-        create_context();
-    }
-
-    // The layout is in the game screen's ImGui units (its fonts are built for theme::px), made
-    // larger or smaller on the way to the screen so that it fills it at the second screen's scale.
-    const float game_scale = theme::px(1.f);
-    const float wanted_scale =
-        std::max(0.5f, std::min(static_cast<float>(width) / DESIGN_WIDTH, static_cast<float>(height) / DESIGN_HEIGHT));
-    const float to_pixels = wanted_scale / game_scale;
-    const ImVec2 size(static_cast<float>(width) / to_pixels, static_cast<float>(height) / to_pixels);
-
-    ImGuiContext* game = ImGui::GetCurrentContext();
-    ImFont* game_font = ImGui::GetIO().FontDefault;
-    ImGui::SetCurrentContext(g_context);
-    ImGuiIO& io = ImGui::GetIO();
-    io.FontDefault = game_font;  // the fonts are built again when the game's window changes size
-    io.DisplaySize = size;
-    io.DisplayFramebufferScale = ImVec2(to_pixels, to_pixels);
-    io.DeltaTime = std::max(delta, 1e-4f);
-    if (has_controller) {
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
-    } else {
-        io.ConfigFlags &= ~(ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard);
-    }
-    give_pointers(io, size.x, size.y);
-    give_controller(io, controller);
-
-    ImGui::NewFrame();
-    draw(size);
-    ImGui::Render();
-    auto frozen = std::make_shared<FrozenFrame>();
-    const ImDrawData* data = ImGui::GetDrawData();
-    frozen->data = *data;
-    frozen->data.CmdLists.resize(data->CmdListsCount);
-    for (int i = 0; i < data->CmdListsCount; ++i) {
-        frozen->lists.emplace_back(data->CmdLists[i]->CloneOutput());
-        frozen->data.CmdLists[i] = frozen->lists.back().get();
-    }
-    ImGui::SetCurrentContext(game);
-    render_worker::enqueue_work([frozen] { draw_frame(*frozen); });
-}
 
 }  // namespace second_screen
 

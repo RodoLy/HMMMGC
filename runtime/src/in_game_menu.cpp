@@ -500,84 +500,6 @@ void draw_menu(ImVec2 window) {
     draw_quit_question();
 }
 
-// Escape and the controller's B go back: from the question to the menu, from the menu to the
-// game. Returns whether the menu closed.
-bool go_back_if_asked() {
-    const bool back = (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || std::exchange(g_b_pressed, false)) &&
-                      !controls_editor::busy();
-    if (!back) {
-        return false;
-    }
-    if (g_asking_to_quit) {
-        g_asking_to_quit = false;
-        return false;
-    }
-    close();
-    return true;
-}
-
-// The same menus as the bar's, for the second screen (graphics/second_screen.h), where the menu is
-// always there to be touched: one under the other in a column at the left, each opening to its
-// right, in bigger letters, with what the controller does underneath.
-void draw_on_second_screen(ImVec2 screen) {
-    if (g_open) {
-        go_back_if_asked();  // closed, it stays on the screen without the controller
-    }
-    const PlainLook look;
-    ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-    ImGui::SetNextWindowSize(screen);
-    constexpr ImGuiWindowFlags SCREEN = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-                                        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
-    if (ImGui::Begin("###second screen", nullptr, SCREEN)) {
-        ImGui::TextDisabled("Harvest Moon MM");
-        ImGui::Separator();
-        settings::Settings& settings = player_options::current();
-        bool changed = false;
-        g_bar_is_wide = true;  // the menus' names have room for their values
-        ImGui::PushFont(theme::fonts().body);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(theme::px(10), theme::px(18)));
-        if (ImGui::BeginChild("##menus", ImVec2(screen.x * 0.48f, 0.f), ImGuiChildFlags_AutoResizeY)) {
-            changed |= draw_resolution_menu(settings);
-            changed |= draw_picture_menu(settings);
-            if (ImGui::MenuItem(text(Text::ControllerSettings))) {
-                g_controls_window = true;
-            }
-            changed |= draw_audio_menu(settings);
-            draw_language_menu();
-            draw_mods_menu();
-            ImGui::Separator();
-            if (g_open && ImGui::MenuItem(text(Text::BackToGame))) {
-                close();
-            }
-            if (ImGui::MenuItem(text(Text::QuitGame))) {
-                g_asking_to_quit = true;
-            }
-        }
-        ImGui::EndChild();
-        ImGui::PopStyleVar();
-        ImGui::PopFont();
-        if (changed) {
-            player_options::apply_changes();
-        }
-        if (player_options::restart_pending()) {
-            ImGui::TextColored(RESTART_COLOR, "%s", text(Text::RestartPending));
-        }
-        // What the controller does, at the bottom of the screen.
-        const char* note = text(g_open ? Text::SecondScreenControllerNote : Text::SecondScreenTouchNote);
-        ImGui::SetCursorPosY(std::max(ImGui::GetCursorPosY(), screen.y - ImGui::GetTextLineHeightWithSpacing() * 2.f -
-                                                                  ImGui::GetStyle().WindowPadding.y));
-        ImGui::Separator();
-        ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("%s", note);
-        ImGui::PopTextWrapPos();
-    }
-    ImGui::End();
-    if (g_controls_window && !controls_editor::draw_window(&g_controls_window)) {
-        controls_editor::stop();
-    }
-    draw_quit_question();
-}
-
 }  // namespace
 
 void handle_event(const SDL_Event& event) {
@@ -600,7 +522,7 @@ void before_frame() {
     const bool b = gamepad != nullptr && SDL_GetGamepadButton(gamepad, game_b_button());
     g_b_pressed = b && !g_b_held;
     g_b_held = b;
-    second_screen::update(!player_options::second_screen_off());
+    // The lettering is also for the buttons under the game's menu on a second screen.
     if (g_open || player_options::show_frame_rate() || touch_buttons::visible() || second_screen::available()) {
         get_ready();
         fit_to_window();
@@ -612,22 +534,22 @@ void draw() {
     if (!g_lettering_ready) {
         return;
     }
-    // With a second screen the menu is there, always, and the game's screen keeps only a note while
-    // the menu has the controller.
-    if (second_screen::available()) {
-        second_screen::frame(g_open ? first_port_gamepad() : nullptr, draw_on_second_screen);
-        if (player_options::show_frame_rate()) {
-            draw_frame_rate(0.f);
-        }
-        if (g_open) {
-            draw_note(text(Text::MenuOnSecondScreenNote), 0.f);
-        }
-        return;
-    }
     if (player_options::show_frame_rate()) {
         draw_frame_rate(g_open ? g_bar_height : 0.f);
     }
-    if (!g_open || go_back_if_asked()) {
+    if (!g_open) {
+        return;
+    }
+    // Escape and the controller's B go back: from the question to the menu, from the menu to the
+    // game. The controller's shoulder buttons change the page.
+    const bool back = (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || std::exchange(g_b_pressed, false)) &&
+                      !controls_editor::busy();
+    if (g_asking_to_quit) {
+        if (back) {
+            g_asking_to_quit = false;
+        }
+    } else if (back) {
+        close();
         return;
     }
     const ImVec2 window = ImGui::GetIO().DisplaySize;
