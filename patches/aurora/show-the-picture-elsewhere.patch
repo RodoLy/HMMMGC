@@ -1,0 +1,117 @@
+diff --git a/include/aurora/webgpu.hpp b/include/aurora/webgpu.hpp
+index b59774a..e1c599d 100644
+--- a/include/aurora/webgpu.hpp
++++ b/include/aurora/webgpu.hpp
+@@ -16,4 +16,22 @@ wgpu::PresentMode select_present_mode(const wgpu::SurfaceCapabilities& capabilit
+ /// Returns the application's current vsync mode.
+ bool vsync_enabled() noexcept;
+ 
++/// The picture of a frame, as the window is about to show it.
++struct PresentPicture {
++  wgpu::Texture texture;
++  wgpu::TextureView view;
++  wgpu::Extent3D size;
++  wgpu::TextureFormat format;
++  wgpu::Sampler sampler;
++  float aspect; ///< the shape it is shown at (width / height), or 0 when its size gives it
++};
++
++/// Called on the render thread once a frame, with the frame's command encoder, after the frame is
++/// drawn and before the window shows it: it may draw the picture somewhere else too (another
++/// surface), and may change `picture` so that the window shows another one instead.
++using PresentHook = void (*)(const wgpu::CommandEncoder& encoder, PresentPicture& picture);
++/// Called on the render thread once the frame's commands are submitted.
++using AfterPresentHook = void (*)();
++void set_present_hooks(PresentHook before, AfterPresentHook after) noexcept;
++
+ } // namespace aurora::webgpu
+diff --git a/lib/aurora.cpp b/lib/aurora.cpp
+index d08aa8d..924040a 100644
+--- a/lib/aurora.cpp
++++ b/lib/aurora.cpp
+@@ -22,6 +22,9 @@
+ #include "webgpu/gpu_prof.hpp"
+ #include "webgpu/metalfx.hpp"
+ #include <webgpu/webgpu_cpp.h>
++#include <aurora/webgpu.hpp>
++
++#include <atomic>
+ #endif
+ 
+ #ifdef AURORA_ENABLE_RMLUI
+@@ -41,6 +44,16 @@
+ #include "tracy/Tracy.hpp"
+ 
+ namespace aurora {
++namespace {
++std::atomic<webgpu::PresentHook> g_presentHook = nullptr;
++std::atomic<webgpu::AfterPresentHook> g_afterPresentHook = nullptr;
++} // namespace
++
++void webgpu::set_present_hooks(PresentHook before, AfterPresentHook after) noexcept {
++  g_presentHook = before;
++  g_afterPresentHook = after;
++}
++
+ AuroraConfig g_config;
+ uint32_t g_sdlCustomEventsStart;
+ char g_gameName[4];
+@@ -509,11 +522,12 @@ void end_frame_gx(imgui::DrawData imguiDrawData) noexcept {
+   const auto surfaceWidth = webgpu::g_graphicsConfig.surfaceConfiguration.width;
+   const auto surfaceHeight = webgpu::g_graphicsConfig.surfaceConfiguration.height;
+   float presentAspect = 0.f;
++  const bool hasPresentAspect = window::get_present_aspect_ratio(presentAspect);
+   const auto viewport =
+-      window::get_present_aspect_ratio(presentAspect)
+-          ? webgpu::calculate_present_viewport_for_aspect(surfaceWidth, surfaceHeight, presentAspect)
+-          : webgpu::calculate_present_viewport(surfaceWidth, surfaceHeight, presentSource.size.width,
+-                                               presentSource.size.height);
++      hasPresentAspect ? webgpu::calculate_present_viewport_for_aspect(surfaceWidth, surfaceHeight, presentAspect)
++                       : webgpu::calculate_present_viewport(surfaceWidth, surfaceHeight, presentSource.size.width,
++                                                            presentSource.size.height);
++  const float pictureAspect = hasPresentAspect ? presentAspect : 0.f;
+ 
+   wgpu::BindGroup rmlBindGroup;
+   bool rmlOverlay = false;
+@@ -529,11 +543,30 @@ void end_frame_gx(imgui::DrawData imguiDrawData) noexcept {
+   const bool black = video::is_black();
+   const float brightness = video::brightness();
+   const bool metalfxEnabled = g_metalfxRequested.load();
+-  gfx::end_frame([black, brightness, metalfxEnabled, rmlBindGroup = std::move(rmlBindGroup), rmlOverlay, viewport, presentSource,
++  gfx::end_frame([black, brightness, metalfxEnabled, rmlBindGroup = std::move(rmlBindGroup), rmlOverlay, viewport,
++                  givenSource = presentSource, pictureAspect,
+                   displayCopy = std::move(displayCopy), schedule,
+                   imguiDrawData = std::move(imguiDrawData)](
+                      wgpu::CommandEncoder& encoder, std::vector<gfx::AfterSubmitCallback> afterSubmitCallbacks,
+                      const gfx::InterpolationReplay& replay) {
++    // The present hook sees the frame's picture and may give the window another one to show.
++    webgpu::TextureWithSampler presentSource = givenSource;
++    if (const auto hook = g_presentHook.load()) {
++      webgpu::PresentPicture picture{
++          .texture = presentSource.texture,
++          .view = presentSource.view,
++          .size = presentSource.size,
++          .format = presentSource.format,
++          .sampler = presentSource.sampler,
++          .aspect = pictureAspect,
++      };
++      hook(encoder, picture);
++      presentSource.texture = picture.texture;
++      presentSource.view = picture.view;
++      presentSource.size = picture.size;
++      presentSource.format = picture.format;
++      presentSource.sampler = picture.sampler;
++    }
+     const auto presentMode = webgpu::g_graphicsConfig.surfaceConfiguration.presentMode;
+     const bool blockingPresent = presentMode == wgpu::PresentMode::Fifo || presentMode == wgpu::PresentMode::FifoRelaxed;
+     const auto present = [&](wgpu::CommandEncoder& encoder, bool finalPresent, bool show) {
+@@ -753,6 +786,9 @@ void end_frame_gx(imgui::DrawData imguiDrawData) noexcept {
+     }
+     gfx::presentation::wait_until(deadline(slots));
+     present(encoder, true, admit(deadline(slots)));
++    if (const auto after = g_afterPresentHook.load()) {
++      after();
++    }
+ 
+     for (auto& callback : afterSubmitCallbacks) {
+       if (callback) {

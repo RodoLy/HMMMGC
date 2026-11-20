@@ -445,6 +445,36 @@ git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-pairs-pa
 
 **Quitar:** el mismo `git apply` con `-R`.
 
+### `aurora/show-the-picture-elsewhere.patch`
+
+Para el runtime nativo, como los anteriores: `scripts/build_native_runtime.sh`
+y los workflows de los paquetes lo aplican a la copia de aurora de WiiCompiled,
+después de los otros.
+
+Agrega `aurora::webgpu::set_present_hooks` (en `<aurora/webgpu.hpp>`): una
+función que aurora llama en su hilo de dibujo con la imagen de cada cuadro
+antes de mostrarla en la ventana, y que puede darle a la ventana otra imagen,
+y otra que llama cuando los comandos del cuadro ya se enviaron. Con eso el
+runtime pone el menú del juego en la segunda pantalla de una consola con dos
+(`runtime/src/graphics/second_screen.h`) y deja arriba la imagen de antes del
+menú.
+
+**Probado:** en Linux, con la segunda pantalla simulada en otra ventana: el
+menú del juego sale abajo y arriba se queda el rancho; al cerrarlo, todo vuelve
+arriba.
+
+**Versiones a las que se aplica:** las mismas que los parches anteriores.
+
+**Licencia:** MIT, como aurora.
+
+**Aplicar a mano:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/show-the-picture-elsewhere.patch"
+```
+
+**Quitar:** el mismo `git apply` con `-R`.
+
 ---
 
 ## English
@@ -879,6 +909,36 @@ up to the right. With the patch, it is still to be tried on the laptop.
 
 ```bash
 git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/reject-pairs-past-the-game-limit.patch"
+```
+
+**Remove:** the same `git apply` with `-R`.
+
+### `aurora/show-the-picture-elsewhere.patch`
+
+For the native runtime, like the ones before: `scripts/build_native_runtime.sh`
+and the package workflows apply it to WiiCompiled's copy of aurora, after the
+others.
+
+It adds `aurora::webgpu::set_present_hooks` (in `<aurora/webgpu.hpp>`): a
+function that aurora calls on its render thread with each frame's picture
+before its window shows it, which may give the window another picture, and
+another one it calls once the frame's commands are submitted. With them the
+runtime puts the game's menu on the second screen of a handheld with two
+(`runtime/src/graphics/second_screen.h`) and leaves the picture from before
+the menu above.
+
+**Tried:** on Linux, with the second screen simulated in another window: the
+game's menu shows below and the farm stays above; when it closes, everything
+goes back above.
+
+**Versions it applies to:** the same as the patches before.
+
+**License:** MIT, like aurora.
+
+**Apply by hand:**
+
+```bash
+git -C "$WIICOMPILED_DIR/aurora-main" apply "$PWD/patches/aurora/show-the-picture-elsewhere.patch"
 ```
 
 **Remove:** the same `git apply` with `-R`.
