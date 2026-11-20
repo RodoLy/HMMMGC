@@ -18,20 +18,21 @@ import android.view.Window;
 import android.view.WindowManager;
 
 /**
- * The other screen of a handheld with two, such as the AYN Thor's lower one: the game draws its
- * options menu there, so that the menu never covers the game (runtime/src/graphics/second_screen.h).
+ * The other screen of a handheld with two, such as the AYN Thor's lower one: the game's own menu
+ * (the one Y opens) goes there, with buttons for the finger under it, while the upper screen keeps
+ * the farm as it was when the menu opened (runtime/src/graphics/second_screen.h).
  *
  * It is an Android Presentation: a window on another display that belongs to the game's activity,
- * with a SurfaceView whose surface goes to the game (nativeAttach) and whose fingers go to the menu
- * (nativeTouch). The window never takes the focus, so the controller keeps playing the game; the
- * menu gets the controller only when the player asks for it (Select, F10 or the options button).
+ * with a SurfaceView whose surface goes to the game (nativeAttach) and whose fingers press the
+ * buttons under the menu (nativeTouch). The window never takes the focus, so the controller keeps
+ * playing the game.
  *
  * Only a display that Android lists as one for presentations is used, and only when it is not
  * bigger than the game's own: a phone connected to a television keeps the menu on the phone.
  *
- * La otra pantalla de una consola con dos, como la de abajo del AYN Thor: el juego dibuja ahí su
- * menú de opciones, para que el menú nunca tape el juego. Es una Presentation de Android que nunca
- * toma el foco, así que el control sigue jugando.
+ * La otra pantalla de una consola con dos, como la de abajo del AYN Thor: ahí va el menú del propio
+ * juego (el que abre Y), con botones para el dedo debajo, y arriba se queda el rancho como estaba.
+ * Es una Presentation de Android que nunca toma el foco, así que el control sigue jugando.
  */
 final class SecondScreen implements DisplayManager.DisplayListener {
     private static final String TAG = "HMMM second screen";
@@ -127,7 +128,7 @@ final class SecondScreen implements DisplayManager.DisplayListener {
         return (long) mode.getPhysicalWidth() * mode.getPhysicalHeight();
     }
 
-    /** The window on the other display: one surface, all of it, for the menu. */
+    /** The window on the other display: one surface, all of it, for the game's menu. */
     private static final class MenuPresentation extends Presentation
             implements SurfaceHolder.Callback, View.OnTouchListener {
 
