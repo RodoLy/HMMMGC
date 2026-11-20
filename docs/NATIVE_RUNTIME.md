@@ -308,6 +308,46 @@ solo se puede probar en una pantalla táctil.
 
 ![Los botones táctiles sobre el juego en pantalla ancha, sueltos y con A, el stick, la flecha derecha y TURBO apretados](images/touch-buttons.jpg)
 
+### La segunda pantalla (2026-11-20)
+
+En una consola con dos pantallas, como el AYN Thor, el menú de opciones va a
+la pantalla de abajo y el juego se queda solo en la de arriba, así que el menú
+nunca lo tapa (`runtime/src/graphics/second_screen.cpp`). Abajo el menú está
+siempre, con los mismos menús que la barra de F10 uno debajo del otro, en letra
+más grande, y se toca en cualquier momento mientras se juega. Select, F10 o el
+botón de opciones de los botones táctiles le pasan el control al menú de abajo:
+mientras lo tiene, el juego no recibe los botones, como con el menú de siempre,
+y arriba solo sale una nota. B o Select se lo regresan al juego.
+
+Cómo funciona:
+
+- **La app** (`android/.../SecondScreen.java`) pone una `Presentation` de Android
+  en la otra pantalla: una ventana que pertenece a la actividad del juego, con
+  una `SurfaceView` cuya superficie le da al juego y cuyos dedos le pasa al
+  menú. Solo usa una pantalla que Android tenga como pantalla para
+  presentaciones, y solo si no es más grande que la del juego: un celular
+  conectado a una tele deja el menú en el celular. La ventana nunca toma el
+  foco, así que el control sigue jugando.
+- **El dibujo.** La segunda pantalla tiene su propia superficie de WebGPU sobre
+  el mismo dispositivo de aurora, y todo lo que se hace con ella (crearla,
+  dibujar, soltarla) se encola en el hilo de dibujo de aurora, así que el
+  dispositivo solo se usa desde un lugar. El menú se dibuja con un segundo
+  contexto de ImGui (su propio tamaño y su propio mouse) que comparte las
+  fuentes y el renderizador de ImGui de aurora. Se dibuja a lo más 30 veces por
+  segundo.
+- **La opción** «Sin segunda pantalla» (`secondScreenOff`; en Imagen del menú F10
+  en Android, en las Opciones del launcher y en RecompLauncher) deja el menú
+  sobre el juego, como antes.
+
+Sin la consola se prueba en la computadora: `HMMM_SECOND_SCREEN=1240x1080` abre
+una segunda ventana que hace de pantalla de abajo, con el mouse como dedo. Así
+se probó en Linux, con las ventanas del tamaño de las pantallas del Thor
+(1920x1080 y 1240x1080): el menú abre sus submenús y cambia las opciones al
+tocarlo, y Select o F10 le pasan el control. En un Thor de verdad todavía no se
+ha probado.
+
+![El juego arriba y el menú de opciones abajo, con Imagen abierto, a los tamaños de las pantallas del AYN Thor](images/second-screen.jpg)
+
 ### Qué sigue
 
 1. El paquete público para Windows: las bibliotecas compiladas en GitHub
@@ -618,6 +658,45 @@ game up. How they look was tried in the game on Linux; touching them can only be
 on a touch screen.
 
 ![The touch buttons over the game on a wide screen, at rest and with A, the stick, the right arrow and TURBO pressed](images/touch-buttons.jpg)
+
+### The second screen (2026-11-20)
+
+On a handheld with two screens, such as the AYN Thor, the options menu goes to
+the lower screen and the game keeps the upper one to itself, so the menu never
+covers it (`runtime/src/graphics/second_screen.cpp`). The menu is always there
+below, with the same menus as the F10 bar one under the other, in bigger
+letters, and it can be touched at any time while playing. Select, F10 or the
+touch buttons' options button give the lower menu the controller: while it has
+it, the game gets no buttons, as with the usual menu, and only a note shows
+above. B or Select give it back to the game.
+
+How it works:
+
+- **The app** (`android/.../SecondScreen.java`) puts an Android `Presentation` on
+  the other screen: a window that belongs to the game's activity, with a
+  `SurfaceView` whose surface it gives to the game and whose fingers it passes
+  to the menu. It only uses a display that Android lists for presentations, and
+  only when it is not bigger than the game's: a phone connected to a television
+  keeps the menu on the phone. The window never takes the focus, so the
+  controller keeps playing.
+- **The drawing.** The second screen has its own WebGPU surface on aurora's
+  device, and everything done with it (making it, drawing, letting it go) is
+  queued on aurora's render thread, so the device is only used from one place.
+  The menu is drawn with a second ImGui context (its own size and its own
+  mouse) that shares aurora's ImGui fonts and renderer. It is drawn at most 30
+  times a second.
+- **The option** "No second screen" (`secondScreenOff`; in the F10 menu's Picture
+  on Android, in the launcher's Options and in RecompLauncher) keeps the menu
+  over the game, as before.
+
+Without the handheld it is tried on a computer: `HMMM_SECOND_SCREEN=1240x1080`
+opens a second window that stands for the lower screen, with the mouse as the
+finger. That is how it was tried on Linux, with the windows at the sizes of the
+Thor's screens (1920x1080 and 1240x1080): the menu opens its submenus and
+changes the options when touched, and Select or F10 give it the controller. It
+has not been tried on a real Thor yet.
+
+![The game above and the options menu below, with Picture open, at the sizes of the AYN Thor's screens](images/second-screen.jpg)
 
 ### What comes next
 

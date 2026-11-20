@@ -65,6 +65,7 @@ la app te pide el disco la primera vez que la abres.
 | Idioma | Uno para el juego y el launcher: inglés, español, francés, alemán o italiano, los que trae el disco. El launcher y el menú F10 solo están en español e inglés. En el juego cambian los diálogos. Los menús y los nombres de los objetos siguen en inglés. |
 | Turbo | No es una opción: mantén Tab en el juego (o TURBO en la pantalla táctil) y va al 300%. |
 | Botones táctiles | Solo en Android: **Sin botones táctiles con control** los quita mientras haya un control conectado (vuelven si se desconecta), y **Sin botón TURBO táctil** quita solo TURBO. |
+| Segunda pantalla | Solo en Android: **Sin segunda pantalla** deja el menú sobre el juego en consolas con dos pantallas, como el AYN Thor (ve abajo). |
 | Pantalla completa | También con Alt+Enter mientras juegas. |
 | Contador de cuadros y volumen | Los cuadros por segundo sobre el juego, y el volumen de 0 a 100%. |
 
@@ -88,12 +89,22 @@ una imagen que no pudo leer) y ofrece abrir el registro.
 de arriba al centro abre las mismas opciones sin salir del juego, en una barra
 sencilla arriba con menús desplegables: la resolución, Imagen (pantalla
 completa, pantalla ancha, cuadros por segundo y el contador; en Android,
-también las dos opciones de los botones táctiles), Ajustes del control,
+también las opciones de los botones táctiles y de la segunda pantalla), Ajustes del control,
 Volumen, Idioma y Mods. Las opciones cambian al momento y se guardan para la
 próxima vez. Los mods también se prenden o apagan ahí, con los de calidad de
 vida aparte: los dos de la velocidad del personaje cambian al momento, y los
 demás la próxima vez que se abre el juego (el menú dice cuál es cuál). Mientras
 el menú está abierto, el juego no recibe el control.
+
+**Con dos pantallas.** En una consola Android con dos pantallas, como el AYN
+Thor, el menú va a la pantalla de abajo y el juego se queda solo en la de
+arriba. Abajo el menú está siempre y se toca en cualquier momento; Select (o F10)
+le pasa el control, y B o Select lo regresan al juego. La opción **Sin segunda
+pantalla** lo deja sobre el juego, como en un celular. Todavía no se ha probado
+en un Thor de verdad, solo simulando la segunda pantalla en la computadora
+([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md#la-segunda-pantalla-2026-11-20)).
+
+<p align="center"><img src="docs/images/second-screen.jpg" width="420" alt="El juego arriba y el menú de opciones abajo, a los tamaños de las pantallas del AYN Thor"></p>
 
 ### Mods
 

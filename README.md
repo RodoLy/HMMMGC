@@ -65,6 +65,7 @@ the disc the first time you open it.
 | Language | One for the game and the launcher: English, Spanish, French, German or Italian, the ones the disc has. The launcher and the F10 menu are only in Spanish and English. In the game the dialogues change. The menus and the names of the items stay in English. |
 | Turbo | Not an option: hold Tab in the game (or TURBO on the touch screen) and it goes at 300%. |
 | Touch buttons | Only on Android: **No touch buttons with a controller** takes them away while a controller is connected (they come back if it is disconnected), and **No TURBO touch button** takes away only TURBO. |
+| Second screen | Only on Android: **No second screen** keeps the menu over the game on handhelds with two screens, such as the AYN Thor (see below). |
 | Full screen | Also with Alt+Enter while playing. |
 | Frame counter and volume | The frames per second over the game, and the volume from 0 to 100%. |
 
@@ -88,12 +89,22 @@ it, an image it could not read) and offers to open the log.
 the top in the middle opens the same options without leaving the game, in a
 plain bar at the top with drop-down menus: the resolution, Picture (full
 screen, widescreen, frames per second and the counter; on Android, also the
-two options of the touch buttons), Controller settings, Volume, Language and
+options of the touch buttons and of the second screen), Controller settings, Volume, Language and
 Mods. The options change at once and are kept for the next time. The mods can
 be turned on or off there too, with the quality-of-life ones apart: the two of
 the character's speed change at once, and the rest the next time the game is
 opened (the menu says which is which). While the menu is open the game does
 not get the controller.
+
+**With two screens.** On an Android handheld with two screens, such as the AYN
+Thor, the menu goes to the lower screen and the game keeps the upper one to
+itself. The menu is always there below and can be touched at any time; Select
+(or F10) gives it the controller, and B or Select give it back to the game. The
+option **No second screen** keeps it over the game, as on a phone. It has not
+been tried on a real Thor yet, only with the second screen simulated on a
+computer ([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md#the-second-screen-2026-11-20)).
+
+<p align="center"><img src="docs/images/second-screen.jpg" width="420" alt="The game above and the options menu below, at the sizes of the AYN Thor's screens"></p>
 
 ### Mods
 
