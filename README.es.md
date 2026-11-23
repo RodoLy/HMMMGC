@@ -273,7 +273,9 @@ después puedes borrar tu copia). El APK trae el código del juego traducido a
 ARM64, pero nada de sus gráficos, música ni textos: eso siempre sale de tu
 disco. Se juega con control o con botones táctiles dibujados sobre el juego
 (ve [Controles](#controles)). Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
-quedan.
+quedan. Si algo falla, abre el menú de opciones (el botón **Options** de arriba
+al centro) y toca **Enviar el registro**: manda el registro del juego por
+correo o adjúntalo a un [issue](https://github.com/RodoLy/HMMMGC/issues).
 
 Si prefieres hacer el APK tú mismo con tu disco: descarga también el zip de
 Android, descomprímelo dentro de la carpeta del paquete de Windows o de Linux y

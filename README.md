@@ -270,7 +270,10 @@ you can delete your copy afterwards). The APK has the game's code translated to
 ARM64, but none of its graphics, music or text: those always come from your
 disc. It plays with a controller or with touch buttons drawn over the game
 (see [Controls](#controls)). To
-update, install the new APK over the old one: your saves stay.
+update, install the new APK over the old one: your saves stay. If something
+goes wrong, open the options menu (the **Options** button at the top in the
+middle) and tap **Send the log**: send the game's log by mail or attach it to
+an [issue](https://github.com/RodoLy/HMMMGC/issues).
 
 If you would rather make the APK yourself from your disc: download the Android
 zip too, unzip it inside the folder of the Windows or Linux package, and use
