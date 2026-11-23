@@ -119,6 +119,7 @@ enum class Text {
 
     BackToGame,
     QuitGame,
+    ShareLog,
     QuitQuestion,
     QuitYes,
     QuitNo,

@@ -46,5 +46,12 @@
             android:preferMinimalPostProcessing="true"
             android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+
+        <!-- The game's log, for the app the player sends it with (LogProvider). -->
+        <provider
+            android:name=".LogProvider"
+            android:authorities="io.github.rodoly.hmmmgc.log"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

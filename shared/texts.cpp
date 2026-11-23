@@ -172,6 +172,7 @@ constexpr Translation TRANSLATIONS[] = {
 
     {Text::BackToGame, "Volver al juego", "Back to the game"},
     {Text::QuitGame, "Salir del juego", "Quit the game"},
+    {Text::ShareLog, "Enviar el registro", "Send the log"},
     {Text::QuitQuestion, "¿Salir del juego? Lo que no hayas guardado en el juego se pierde.",
      "Quit the game? Whatever you have not saved in the game is lost."},
     {Text::QuitYes, "Sí, salir", "Yes, quit"},

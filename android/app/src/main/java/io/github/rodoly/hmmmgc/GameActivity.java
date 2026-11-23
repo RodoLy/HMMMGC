@@ -1,6 +1,8 @@
 package io.github.rodoly.hmmmgc;
 
+import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 
 import dev.encounter.aurora.AuroraSurface;
@@ -49,6 +51,22 @@ public class GameActivity extends SDLActivity {
             secondScreen.destroy();
         }
         super.onDestroy();
+    }
+
+    /**
+     * Called by the game (runtime/src/android_app.cpp, the F10 menu's "Send the log") on its own
+     * thread: Android's share sheet with native.log, which LogProvider lets the chosen app read.
+     */
+    public void shareLog() {
+        runOnUiThread(() -> {
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_STREAM, LogProvider.LOG);
+            send.putExtra(Intent.EXTRA_SUBJECT, "Harvest Moon MM native.log");
+            send.setClipData(ClipData.newRawUri("native.log", LogProvider.LOG));
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(send, getString(R.string.send_log)));
+        });
     }
 
     /**

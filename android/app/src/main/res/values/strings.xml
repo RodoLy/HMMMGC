@@ -9,5 +9,6 @@
     <string name="not_the_game">That file is not the disc of Harvest Moon: Magical Melody for the USA. If it is an .rvz, choose the .iso that the computer made instead.</string>
     <string name="not_whole">That disc image is not whole (or it is compressed, like an .rvz). Choose the .iso that the computer made.</string>
     <string name="not_read">The disc image could not be read. Try again, or copy it to the phone again.</string>
+    <string name="send_log">Send the game\'s log</string>
     <string name="no_space">There is not enough free space: the disc image needs about 1.5 GB.</string>
 </resources>

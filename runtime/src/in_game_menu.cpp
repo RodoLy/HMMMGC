@@ -5,6 +5,7 @@
 
 #include "crop_grid.h"
 #include "controls_editor.h"
+#include "android_app.h"
 #include "graphics/aurora_host.h"
 #include "graphics/second_screen.h"
 #include "mods/native_mods.h"
@@ -444,6 +445,12 @@ void draw_menu_bar(ImVec2 window) {
     changed |= draw_audio_menu(settings);
     draw_language_menu();
     draw_mods_menu();
+#if defined(__ANDROID__)
+    // On Android the log is in the app's storage, out of the player's reach: this sends it.
+    if (ImGui::MenuItem(text(Text::ShareLog))) {
+        android_app::share_log();
+    }
+#endif
     if (changed) {
         player_options::apply_changes();
     }
