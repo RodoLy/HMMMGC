@@ -222,7 +222,9 @@ private:
     ImGuiStyle saved_;
 };
 
-std::string resolution_label(int lines) { return lines == 0 ? text(Text::ResolutionWindow) : std::to_string(lines) + "p"; }
+std::string resolution_label(int lines) {
+    return lines == 0 ? text(Text::ResolutionWindow) : settings::resolution_lines_label(lines);
+}
 
 std::string frame_rate_label(int rate) {
     return rate == 30 ? text(Text::FrameRateGame) : texts::format(Text::FrameRateMade, rate);

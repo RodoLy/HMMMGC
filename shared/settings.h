@@ -56,10 +56,14 @@ inline constexpr const char* CHEATS_MOD = "cheats";
 inline constexpr const char* CHEATS_VARIABLE = "HM_MM_CHEATS";
 inline constexpr const char* CHEAT_NAMES[] = {"infiniteStamina", "infiniteMoney", "stopTime", "maxFriendship"};
 
-inline constexpr int RESOLUTIONS[] = {0, 480, 720, 1080, 1440};
+inline constexpr int RESOLUTIONS[] = {0, 480, 720, 1080, 1440, 2160};
 // How many times bigger than the console's 640x480 the game draws for a resolution (0 follows
-// the window): 720 lines is 1.5 times.
+// the window): 720 lines is 1.5 times, 2160 (4K) four and a half.
 constexpr float resolution_scale(int lines) { return static_cast<float>(lines) / 480.f; }
+// How a resolution other than the window's is called on the screens: "720p", and "2160p (4K)".
+inline std::string resolution_lines_label(int lines) {
+    return std::to_string(lines) + "p" + (lines == 2160 ? " (4K)" : "");
+}
 inline constexpr int FRAME_RATES[] = {30, 60, 120};
 
 class Settings {

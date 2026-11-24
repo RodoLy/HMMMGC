@@ -78,7 +78,7 @@ bool resolution(settings::Settings& settings, bool focus) {
     const int lines = settings.one_of(settings::RESOLUTION, settings::RESOLUTIONS);
     for (size_t i = 0; i < std::size(settings::RESOLUTIONS); ++i) {
         const int value = settings::RESOLUTIONS[i];
-        labels.push_back(value == 0 ? text(Text::ResolutionWindow) : std::to_string(value) + "p");
+        labels.push_back(value == 0 ? text(Text::ResolutionWindow) : settings::resolution_lines_label(value));
         if (value == lines) {
             index = static_cast<int>(i);
         }

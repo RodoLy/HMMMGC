@@ -511,7 +511,8 @@ std::vector<App::Row> App::options_rows() {
     };
 
     choice(settings::RESOLUTION, settings::RESOLUTIONS,
-           {text(Text::ResolutionWindow), "480p", "720p", "1080p", "1440p"}, Text::Resolution, Text::ResolutionHint);
+           {text(Text::ResolutionWindow), "480p", "720p", "1080p", "1440p", settings::resolution_lines_label(2160)},
+           Text::Resolution, Text::ResolutionHint);
     flag(settings::FULLSCREEN, Text::Fullscreen, Text::FullscreenHint);
     flag(settings::WIDESCREEN, Text::Widescreen, Text::WidescreenHint);
     choice(settings::FRAME_RATE, settings::FRAME_RATES, {text(Text::FrameRateGame), "60", "120"}, Text::FrameRate,
