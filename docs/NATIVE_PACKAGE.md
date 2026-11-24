@@ -97,6 +97,27 @@ Dónde queda cada cosa del jugador: `%LOCALAPPDATA%\HarvestMoonMM` en Windows
 partidas, `native.log`, `prepare.log` y, en `Native/Game`, el programa
 preparado, `prepared.json` y, si hizo falta convertir el disco, su ISO.
 
+Actualizarse (`launcher/src/updater.h`, solo en PC): al abrirse, el launcher
+le pregunta a GitHub en segundo plano cuál es la versión publicada más nueva
+(`releases/latest`), con el `curl` del sistema (Windows 10 y más nuevos, macOS
+y Linux lo traen). Sin internet, o si GitHub tarda más de 8 segundos, se rinde
+sin decir nada y no aparece nada; el juego no se entera, porque la pregunta se
+hace solo en el launcher y nunca mientras se juega. Si hay una versión más
+nueva con paquete para este sistema, la pestaña Juego muestra «Actualizar a
+vX.Y.Z». Esa fila abre una ventana con las novedades: la sección «##
+Novedades» o «## What's new» de las notas de la release, según el idioma del
+launcher, con «Actualizar» y «Ahora no». «Actualizar» baja el paquete
+(`HarvestMoonMM-native-<versión>-<sistema>`) a `Update` en la carpeta del
+jugador, lo desempaca con el `tar` del sistema (el de Windows también abre
+zip) y pone sus archivos sobre los de este paquete: cada archivo viejo se
+renombra antes a `.old-update` (Windows deja renombrar un programa abierto,
+no sobrescribirlo) y se borra la próxima vez que abre el launcher. Después
+el launcher se vuelve a abrir solo, y como cambió la versión del paquete,
+pide preparar el juego otra vez. Lo del jugador no se toca. No se puede
+mientras se prepara el juego o mientras el juego está abierto. En una Mac, lo
+que se reemplaza es la carpeta que tiene `HarvestMoonMM.app`. Un launcher
+compilado sin versión (`dev`) nunca pregunta.
+
 Sin su ventana, para otro launcher (`launcher/src/headless.h`):
 `HarvestMoonMM --prepare <imagen>` prepara el juego como «Preparar el juego»,
 imprime líneas `progress <0 a 1> <paso>` y termina con 0 cuando el juego está
@@ -455,6 +476,27 @@ Where the player's things go: `%LOCALAPPDATA%\HarvestMoonMM` on Windows
 (`~/.local/share/HarvestMoonMM` on Linux): `settings.json`, and in `Native` the
 saves, `native.log`, `prepare.log` and, in `Native/Game`, the prepared
 program, `prepared.json` and, if the disc had to be converted, its ISO.
+
+Updating itself (`launcher/src/updater.h`, PC only): when it opens, the
+launcher asks GitHub in the background which is the newest published version
+(`releases/latest`), with the system's `curl` (Windows 10 and newer, macOS and
+Linux bring it). Without internet, or when GitHub takes more than 8 seconds,
+it gives up without a word and nothing shows; the game never notices, since
+the question is asked only in the launcher and never while playing. When
+there is a newer version with a package for this system, the Game tab shows
+"Update to vX.Y.Z". That row opens a window with what is new: the "##
+Novedades" or "## What's new" section of the release notes, after the
+launcher's language, with "Update" and "Not now". "Update" downloads the
+package (`HarvestMoonMM-native-<version>-<system>`) into `Update` in the
+player's folder, unpacks it with the system's `tar` (Windows' opens zips too)
+and puts its files over this package's: each old file is first renamed to
+`.old-update` (Windows lets a running program be renamed, not overwritten)
+and deleted the next time the launcher opens. Then the launcher opens again
+by itself, and since the package's version changed, it asks to prepare the
+game again. The player's things are not touched. It cannot be done while the
+game is being prepared or while it is open. On a Mac, what is replaced is the
+folder that holds `HarvestMoonMM.app`. A launcher built without a version
+(`dev`) never asks.
 
 Without its window, for another launcher (`launcher/src/headless.h`):
 `HarvestMoonMM --prepare <image>` prepares the game as "Prepare the game"

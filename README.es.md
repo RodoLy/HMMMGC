@@ -80,6 +80,12 @@ español e inglés, y se usa con el mouse, el teclado o un control. Si algo
 falla, dice por qué en palabras sencillas (otro juego, otra versión del juego,
 una imagen que no pudo leer) y ofrece abrir el registro.
 
+Cuando sale una versión nueva, la pestaña Juego muestra **Actualizar a
+vX.Y.Z**: enseña las novedades y, si le das a **Actualizar**, baja la versión
+nueva, la pone sobre la tuya y vuelve a abrirse; tus partidas, opciones y
+controles se quedan. Lo busca al abrirse, en segundo plano: sin internet no
+aparece nada y el juego no se entera.
+
 ![La pestaña Juego del launcher, con el juego listo para jugar](docs/images/launcher-game-es.png)
 
 ### Opciones dentro del juego
@@ -387,7 +393,6 @@ de pruebas del mod de Jamie.
 - El juego en español, francés, alemán o italiano: el disco americano trae
   las traducciones de un lanzamiento europeo que nunca salió.
 - Más mods: adelantar las escenas.
-- Actualizar desde el launcher.
 - Después, las dos versiones de Wii del juego sobre el mismo runtime.
 
 ## Para desarrolladores

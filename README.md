@@ -80,6 +80,12 @@ Spanish, and is used with the mouse, the keyboard or a controller. If
 something fails it says why in plain words (another game, another version of
 it, an image it could not read) and offers to open the log.
 
+When a new version comes out, the Game tab shows **Update to vX.Y.Z**: it
+shows what is new and, if you choose **Update**, downloads the new version,
+puts it over yours and opens again; your saves, options and controls stay. It
+looks when it opens, in the background: without internet nothing shows and
+the game never notices.
+
 ![The launcher's Game tab, with the game ready to play](docs/images/launcher-game-en.png)
 
 ### Options inside the game
@@ -388,7 +394,6 @@ test bench of the Jamie mod.
 - The game in Spanish, French, German or Italian: the American disc carries
   the translations of a European release that never came out.
 - More mods: fast-forwarding the scenes.
-- Updating from the launcher.
 - Later, the two Wii versions of the game on the same runtime.
 
 ## For developers
