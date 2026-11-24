@@ -308,58 +308,6 @@ solo se puede probar en una pantalla táctil.
 
 ![Los botones táctiles sobre el juego en pantalla ancha, sueltos y con A, el stick, la flecha derecha y TURBO apretados](images/touch-buttons.jpg)
 
-### La segunda pantalla (2026-11-20)
-
-En una consola con dos pantallas, como el AYN Thor, el menú del propio juego
-(el que abre Y: pertenencias, granja, animales, el mapa y lo demás) va a la
-pantalla de abajo, y la de arriba se queda con el rancho como estaba al
-apretar Y, quieto (`runtime/src/graphics/second_screen.cpp`). Debajo del menú
-hay una fila de botones para el dedo: las cuatro direcciones del stick (los
-menús del juego se mueven con el stick), L y R para cambiar de página, y B y A.
-Juegan como el control 1, junto con el control de verdad. Al cerrar el menú,
-todo vuelve arriba y la pantalla de abajo se apaga. El menú de opciones (F10)
-se queda sobre el juego, como siempre.
-
-Cómo funciona:
-
-- **Cuándo está abierto el menú.** La palabra `0x80321D18` de la memoria del
-  juego vale 15 mientras su menú está en pantalla, en todas sus páginas, y 0
-  mientras el jugador camina. Se encontró comparando la memoria con el menú
-  abierto y cerrado. El juego pone la pantalla en negro antes de cambiarla a
-  15, así que la imagen de arriba se toma del cuadro en que se aprieta Y.
-- **La imagen.** El juego dibuja su menú en la misma imagen que el rancho, así
-  que lo que se mueve es la imagen entera. Un parche de aurora
-  (`patches/aurora/show-the-picture-elsewhere.patch`) llama al runtime con la
-  imagen de cada cuadro antes de mostrarla: con el menú cerrado se guarda una
-  copia; con el menú abierto la imagen se dibuja abajo y la ventana de arriba
-  recibe la copia guardada.
-- **La app** (`android/.../SecondScreen.java`) pone una `Presentation` de Android
-  en la otra pantalla, con una `SurfaceView` cuya superficie le da al juego y
-  cuyos dedos aprietan los botones. Solo usa una pantalla que Android tenga como
-  pantalla para presentaciones, y solo si no es más grande que la del juego: un
-  celular conectado a una tele no manda nada a la tele. La ventana nunca toma el
-  foco, así que el control sigue jugando.
-- **El dibujo.** La segunda pantalla tiene su propia superficie de WebGPU sobre
-  el dispositivo de aurora, y todo lo que se hace con ella pasa en el hilo de
-  dibujo de aurora. Los botones se dibujan con un segundo contexto de ImGui que
-  comparte las fuentes y el renderizador de aurora.
-- **La opción** «Sin segunda pantalla» (`secondScreenOff`; en Imagen del menú F10
-  en Android, en las Opciones del launcher y en RecompLauncher) lo deja todo en
-  la pantalla de arriba, como antes.
-
-Tocar directamente las cosas del menú (un objeto, una pestaña) todavía no se
-puede: el juego no sabe de pantallas táctiles, y para eso hay que saber, página
-por página, dónde está cada cosa. Por ahora el dedo usa los botones.
-
-Sin la consola se prueba en la computadora: `HMMM_SECOND_SCREEN=1240x1080` abre
-una segunda ventana que hace de pantalla de abajo, con el mouse como dedo. Así
-se probó en Linux, con una partida: Y abre el menú abajo y arriba se queda el
-rancho; R pasa a la página de la granja, la flecha abajo mueve la mano y B
-cierra el menú, todo con el mouse en los botones. En un Thor de verdad todavía
-no se ha probado.
-
-![El rancho arriba y el menú del juego abajo, en la página de la granja, con los botones para el dedo](images/second-screen.jpg)
-
 ### Qué sigue
 
 1. El paquete público para Windows: las bibliotecas compiladas en GitHub
@@ -670,58 +618,6 @@ game up. How they look was tried in the game on Linux; touching them can only be
 on a touch screen.
 
 ![The touch buttons over the game on a wide screen, at rest and with A, the stick, the right arrow and TURBO pressed](images/touch-buttons.jpg)
-
-### The second screen (2026-11-20)
-
-On a handheld with two screens, such as the AYN Thor, the game's own menu (the
-one Y opens: belongings, farm, animals, the map and the rest) goes to the lower
-screen, and the upper one keeps the farm as it was when Y was pressed, still
-(`runtime/src/graphics/second_screen.cpp`). Under the menu there is a row of
-buttons for the finger: the stick's four ways (the game's menus move with the
-stick), L and R to change the page, and B and A. They play as controller 1,
-together with the real controller. When the menu closes, everything goes back
-above and the lower screen goes dark. The options menu (F10) stays over the
-game, as always.
-
-How it works:
-
-- **When the menu is open.** The word at `0x80321D18` in the game's memory is
-  15 while its menu is on the screen, on all its pages, and 0 while the player
-  walks. It was found by comparing the memory with the menu open and closed.
-  The game turns the screen black before it turns to 15, so the picture above
-  is taken from the frame where Y is pressed.
-- **The picture.** The game draws its menu into the same picture as the farm,
-  so what moves is the whole picture. A patch to aurora
-  (`patches/aurora/show-the-picture-elsewhere.patch`) calls the runtime with each
-  frame's picture before it is shown: with the menu closed a copy is kept; with
-  the menu open the picture is drawn below and the window above gets the kept
-  copy.
-- **The app** (`android/.../SecondScreen.java`) puts an Android `Presentation` on
-  the other screen, with a `SurfaceView` whose surface it gives to the game and
-  whose fingers press the buttons. It only uses a display that Android lists for
-  presentations, and only when it is not bigger than the game's: a phone
-  connected to a television sends nothing to the television. The window never
-  takes the focus, so the controller keeps playing.
-- **The drawing.** The second screen has its own WebGPU surface on aurora's
-  device, and everything done with it happens on aurora's render thread. The
-  buttons are drawn with a second ImGui context that shares aurora's fonts and
-  renderer.
-- **The option** "No second screen" (`secondScreenOff`; in the F10 menu's Picture
-  on Android, in the launcher's Options and in RecompLauncher) keeps everything
-  on the upper screen, as before.
-
-Touching the menu's things directly (an item, a tab) cannot be done yet: the
-game knows nothing of touch screens, and for that one has to know, page by
-page, where each thing is. For now the finger uses the buttons.
-
-Without the handheld it is tried on a computer: `HMMM_SECOND_SCREEN=1240x1080`
-opens a second window that stands for the lower screen, with the mouse as the
-finger. That is how it was tried on Linux, with a save: Y opens the menu below
-and the farm stays above; R goes to the farm's page, the down arrow moves the
-hand and B closes the menu, all with the mouse on the buttons. It has not been
-tried on a real Thor yet.
-
-![The farm above and the game's menu below, on the farm's page, with the buttons for the finger](images/second-screen.jpg)
 
 ### What comes next
 

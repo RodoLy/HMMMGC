@@ -17,11 +17,4 @@ namespace game_scene {
 // outdoors.
 bool player_walks_outdoors();
 
-// Whether the game's own menu is open: the one Y opens, with the player's belongings, the farm,
-// the animals, the map and the rest (graphics/second_screen.h puts it on a second screen).
-bool game_menu_open();
-
-// Whether the player walks freely, where Y opens that menu.
-bool player_walks();
-
 }  // namespace game_scene

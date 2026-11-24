@@ -12,7 +12,6 @@
 //   Control Stick: arrow keys   C Stick: I J K L   D-Pad: T F G H
 //   A: X   B: Z   X: C   Y: S   Z: D   L: Q   R: W   START: Enter
 
-#include "graphics/second_screen.h"
 #include "guest_memory.h"
 #include "controls_editor.h"
 #include "in_game_menu.h"
@@ -118,8 +117,6 @@ uint32_t PADReadNative(uint32_t status_address) {
     const uint32_t rumble_ports = PADRead(statuses);
     // The touch buttons play as controller 1 too, with whatever else plays there (touch_buttons.h).
     touch_buttons::add_to(statuses[PAD_CHAN0]);
-    // And the buttons under the game's menu on a second screen (graphics/second_screen.h).
-    second_screen::add_to(statuses[PAD_CHAN0]);
     // Nothing reaches the game while the options menu is open (in_game_menu.h).
     in_game_menu::hold_back_controllers(statuses);
     for (uint32_t port = 0; port < PAD_CHANMAX; ++port) {

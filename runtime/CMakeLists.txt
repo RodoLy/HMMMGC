@@ -203,9 +203,6 @@ if("far_camera" IN_LIST NATIVE_MODS)
 endif()
 target_include_directories(hmmm-native PRIVATE src "${WIICOMPILED_RUNTIME_DIR}/include" mod_api
                                                "${CMAKE_BINARY_DIR}/generated")
-# The second screen (src/graphics/second_screen.cpp) draws with aurora's own WebGPU device and on
-# its render thread, which are inside aurora (its lib/ folder) and not in its public headers.
-target_include_directories(hmmm-native PRIVATE "${AURORA_DIR}/lib")
 target_compile_options(hmmm-native PRIVATE ${strict_floating_point} -Wall -Wextra -Wno-unused-parameter)
 # aurora's graphics ask aurora's video interface (aurora::vi) for the size of the embedded
 # frame buffer. The game keeps the console's own video interface (its VI library runs

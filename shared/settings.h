@@ -42,9 +42,6 @@ inline constexpr const char* SHOW_FRAME_RATE = "showFrameRate";  // over the gam
 inline constexpr const char* HIDE_TOUCH_BUTTONS = "hideTouchButtons";
 // No TURBO among the touch buttons (the turbo stays on its key, Tab, and its gamepad button).
 inline constexpr const char* HIDE_TOUCH_TURBO = "hideTouchTurbo";
-// The options menu over the game even on a handheld with two screens, where it otherwise goes to the
-// other one (runtime/src/graphics/second_screen.h).
-inline constexpr const char* SECOND_SCREEN_OFF = "secondScreenOff";
 inline constexpr const char* LANGUAGE = "language";  // of the game's dialogues, the launcher and the menu
 inline constexpr const char* DISC_IMAGE = "discImage";   // the player's disc image, as UTF-8
 

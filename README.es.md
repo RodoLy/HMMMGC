@@ -65,7 +65,6 @@ la app te pide el disco la primera vez que la abres.
 | Idioma | Uno para el juego y el launcher: inglés, español, francés, alemán o italiano, los que trae el disco. El launcher y el menú F10 solo están en español e inglés. En el juego cambian los diálogos. Los menús y los nombres de los objetos siguen en inglés. |
 | Turbo | No es una opción: mantén Tab en el juego (o TURBO en la pantalla táctil) y va al 300%. |
 | Botones táctiles | Solo en Android: **Sin botones táctiles con control** los quita mientras haya un control conectado (vuelven si se desconecta), y **Sin botón TURBO táctil** quita solo TURBO. |
-| Segunda pantalla | Solo en Android: **Sin segunda pantalla** deja el menú del juego (Y) en la pantalla de arriba en consolas con dos pantallas, como el AYN Thor (ve abajo). |
 | Pantalla completa | También con Alt+Enter mientras juegas. |
 | Contador de cuadros y volumen | Los cuadros por segundo sobre el juego, y el volumen de 0 a 100%. |
 
@@ -89,24 +88,12 @@ una imagen que no pudo leer) y ofrece abrir el registro.
 de arriba al centro abre las mismas opciones sin salir del juego, en una barra
 sencilla arriba con menús desplegables: la resolución, Imagen (pantalla
 completa, pantalla ancha, cuadros por segundo y el contador; en Android,
-también las opciones de los botones táctiles y de la segunda pantalla), Ajustes del control,
+también las dos opciones de los botones táctiles), Ajustes del control,
 Volumen, Idioma y Mods. Las opciones cambian al momento y se guardan para la
 próxima vez. Los mods también se prenden o apagan ahí, con los de calidad de
 vida aparte: los dos de la velocidad del personaje cambian al momento, y los
 demás la próxima vez que se abre el juego (el menú dice cuál es cuál). Mientras
 el menú está abierto, el juego no recibe el control.
-
-**Con dos pantallas.** En una consola Android con dos pantallas, como el AYN
-Thor, el menú del propio juego (el que abre Y: pertenencias, granja, animales,
-el mapa) va a la pantalla de abajo, y arriba se queda el rancho como estaba.
-Debajo del menú hay botones para manejarlo con el dedo (las cuatro direcciones,
-L, R, B y A), y el control también funciona. Al cerrarlo, todo vuelve arriba. La
-opción **Sin segunda pantalla** lo deja todo arriba, como en un celular.
-Todavía no se ha probado en un Thor de verdad, solo simulando la segunda
-pantalla en la computadora
-([docs/NATIVE_RUNTIME.md](docs/NATIVE_RUNTIME.md#la-segunda-pantalla-2026-11-20)).
-
-<p align="center"><img src="docs/images/second-screen.jpg" width="420" alt="El rancho arriba y el menú del juego abajo, con los botones para el dedo, a los tamaños de las pantallas del AYN Thor"></p>
 
 ### Mods
 

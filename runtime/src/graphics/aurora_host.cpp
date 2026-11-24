@@ -12,7 +12,6 @@
 #include "graphics/far_camera.h"
 #include "graphics/frame_interpolation.h"
 #include "graphics/map_draw_range.h"
-#include "graphics/second_screen.h"
 #include "graphics/shadow_range.h"
 #include "in_game_menu.h"
 #include "input/touch_buttons.h"
@@ -189,7 +188,6 @@ void initialize() {
                       static_cast<int>(info.backend), info.windowSize.width, info.windowSize.height,
                       g_display_options.resolution_scale > 0.f ? "fixed" : "following the window");
     g_initialized = true;
-    second_screen::open_test_window_if_asked();
     begin_next_frame();
     exit_if_window_closed();
 }
@@ -199,7 +197,6 @@ bool is_initialized() { return g_initialized; }
 void present_frame() {
     touch_buttons::draw();
     in_game_menu::draw();
-    second_screen::draw(game_scene::game_menu_open(), game_scene::player_walks());
     frame_interpolation::schedule_frame();
     aurora_end_frame();
     count_frame();
@@ -222,7 +219,6 @@ void present_frame() {
     // The menu's shortcut on the controller and its lettering for the window's size, before the
     // next frame starts (and with it ImGui's).
     in_game_menu::before_frame();
-    second_screen::update(!player_options::second_screen_off());
     begin_next_frame();
     exit_if_window_closed();
 }
@@ -234,7 +230,6 @@ bool process_events() {
         } else if (event->type == AURORA_SDL_EVENT) {
             touch_buttons::handle_event(event->sdl);
             in_game_menu::handle_event(event->sdl);
-            second_screen::handle_event(event->sdl);
         } else if (event->type == AURORA_WINDOW_RESIZED) {
             const AuroraWindowSize& size = event->windowSize;
             camera_view::set_window_size(size.width, size.height);
@@ -285,7 +280,6 @@ void shutdown() {
     if (g_initialized) {
         g_initialized = false;
         audio_output::shutdown();  // the sound plays through the SDL that aurora started
-        second_screen::shutdown();
         aurora_shutdown();
     }
 }
