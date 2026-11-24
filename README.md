@@ -59,7 +59,7 @@ the disc the first time you open it.
 
 | Option | What it does |
 |---|---|
-| Internal resolution | As the window, 480p, 720p, 1080p or 1440p. |
+| Internal resolution | As the window, 480p, 720p, 1080p, 1440p or 2160p (4K). |
 | Widescreen | The 3D shows more at the sides. For now the menus and the text are stretched. |
 | Frames per second | 30, as the game, or 60 and 120: the game draws 30 and the rest are made in between. |
 | Language | One for the game and the launcher: English, Spanish, French, German or Italian, the ones the disc has. The launcher and the F10 menu are only in Spanish and English. In the game the dialogues change. The menus and the names of the items stay in English. |

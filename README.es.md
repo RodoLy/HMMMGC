@@ -59,7 +59,7 @@ la app te pide el disco la primera vez que la abres.
 
 | Opción | Qué hace |
 |---|---|
-| Resolución interna | Como la ventana, 480p, 720p, 1080p o 1440p. |
+| Resolución interna | Como la ventana, 480p, 720p, 1080p, 1440p o 2160p (4K). |
 | Pantalla ancha | El 3D muestra más a los lados. Por ahora los menús y los textos se estiran. |
 | Cuadros por segundo | 30, como el juego, o 60 y 120: el juego dibuja 30 y los demás se hacen entre ellos. |
 | Idioma | Uno para el juego y el launcher: inglés, español, francés, alemán o italiano, los que trae el disco. El launcher y el menú F10 solo están en español e inglés. En el juego cambian los diálogos. Los menús y los nombres de los objetos siguen en inglés. |
