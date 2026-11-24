@@ -12,8 +12,8 @@ Una versión nativa de *Harvest Moon: Magical Melody* de GameCube para PC y
 Android. El código del propio juego se traduce por adelantado a C++ y se
 compila en un programa de Windows, Linux o Mac, o en una app de Android, que
 corre en tu procesador, Intel, AMD o ARM, sin ningún emulador de por medio. Se
-juega en pantalla ancha, a la resolución de tu pantalla y a 60 o 120 cuadros
-por segundo, con un launcher, un menú de opciones dentro del juego, trucos y
+juega en pantalla ancha, a la resolución de tu pantalla (hasta 4K) y a 60 o 120
+cuadros por segundo, con un launcher, un menú de opciones dentro del juego, trucos y
 mods, entre ellos uno con el que el juego sigue después de casarte con Jamie.
 En el celular se juega con control o con botones táctiles.
 
@@ -22,7 +22,13 @@ launcher arma el juego a partir de él la primera vez que juegas; en Android,
 la app te pide el disco la primera vez que la abres.
 
 > [!NOTE]
-> **Versión 0.4.2.** El juego arranca, se juega, guarda y carga en Windows,
+> **Versión 0.4.3: ya se juega en 4K.** Elige **2160p (4K)** en Resolución
+> interna (en el launcher, en el menú F10 o en RecompLauncher); con «Como la
+> ventana», en una pantalla 4K ya sale en 4K. Pide una tarjeta de video con
+> fuerza: si va lento, baja a 1440p o 1080p. Y desde esta versión el launcher se
+> actualiza solo.
+>
+> El juego arranca, se juega, guarda y carga en Windows,
 > Linux, Mac y Android, y ya se jugó en una laptop con Windows y un
 > Snapdragon X. Todavía no se ha jugado de principio a fin, que es lo que
 > significará la 1.0. Espera errores y guarda una copia de tus partidas.
@@ -59,7 +65,7 @@ la app te pide el disco la primera vez que la abres.
 
 | Opción | Qué hace |
 |---|---|
-| Resolución interna | Como la ventana, 480p, 720p, 1080p, 1440p o 2160p (4K). |
+| Resolución interna | Como la ventana (en una pantalla 4K, el juego ya sale en 4K), 480p, 720p, 1080p, 1440p o **2160p (4K)**. El 4K pide más a la tarjeta de video; si va lento, baja un paso. |
 | Pantalla ancha | El 3D muestra más a los lados. Por ahora los menús y los textos se estiran. |
 | Cuadros por segundo | 30, como el juego, o 60 y 120: el juego dibuja 30 y los demás se hacen entre ellos. |
 | Idioma | Uno para el juego y el launcher: inglés, español, francés, alemán o italiano, los que trae el disco. El launcher y el menú F10 solo están en español e inglés. En el juego cambian los diálogos. Los menús y los nombres de los objetos siguen en inglés. |

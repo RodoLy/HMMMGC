@@ -12,7 +12,8 @@ A native version of *Harvest Moon: Magical Melody* for the GameCube, for PC
 and Android. The game's own code is translated ahead of time into C++ and
 compiled into a Windows, Linux or Mac program, or an Android app, that runs on
 your processor, Intel, AMD or ARM, with no emulator in between. It plays in
-widescreen, at your screen's resolution and at 60 or 120 frames a second, with
+widescreen, at your screen's resolution (up to 4K) and at 60 or 120 frames a
+second, with
 a launcher, an options menu inside the game, cheats and mods, among them one
 that lets the game go on after marrying Jamie. On a phone it plays with a
 controller or with touch buttons.
@@ -22,7 +23,13 @@ makes the game from it the first time you play; on Android, the app asks for
 the disc the first time you open it.
 
 > [!NOTE]
-> **Version 0.4.2.** The game starts, plays, saves and loads on Windows,
+> **Version 0.4.3: it now plays in 4K.** Choose **2160p (4K)** in Internal
+> resolution (in the launcher, the F10 menu or RecompLauncher); with "As the
+> window", on a 4K screen it is already drawn at 4K. It needs a strong graphics
+> card: if it runs slow, go down to 1440p or 1080p. And from this version on
+> the launcher updates itself.
+>
+> The game starts, plays, saves and loads on Windows,
 > Linux, Mac and Android, and it has been played on a Windows laptop with a
 > Snapdragon X. It has not been played from start to finish yet, which is what
 > 1.0 will mean. Expect bugs, and keep a copy of your saves.
@@ -59,7 +66,7 @@ the disc the first time you open it.
 
 | Option | What it does |
 |---|---|
-| Internal resolution | As the window, 480p, 720p, 1080p, 1440p or 2160p (4K). |
+| Internal resolution | As the window (on a 4K screen the game is already drawn at 4K), 480p, 720p, 1080p, 1440p or **2160p (4K)**. 4K asks more of the graphics card; if it runs slow, go down a step. |
 | Widescreen | The 3D shows more at the sides. For now the menus and the text are stretched. |
 | Frames per second | 30, as the game, or 60 and 120: the game draws 30 and the rest are made in between. |
 | Language | One for the game and the launcher: English, Spanish, French, German or Italian, the ones the disc has. The launcher and the F10 menu are only in Spanish and English. In the game the dialogues change. The menus and the names of the items stay in English. |
