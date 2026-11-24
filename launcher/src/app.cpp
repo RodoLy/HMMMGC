@@ -47,6 +47,11 @@ App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_t
         start_preparation(disc);
     }
     disc_search_.start(package_.root, GAME_CODE);
+    // What an update left (the old files), and then, in the background, whether there is a newer one.
+    Updater::clean_up(package_, update_folder());
+    if (!still_) {
+        updater_.check(HMMM_PACKAGE_VERSION);
+    }
 }
 
 // -- What the launcher knows ----------------------------------------------------------------------
@@ -187,6 +192,14 @@ void App::open_log() {
 }
 
 void App::update() {
+    // The update is in place: the new launcher opens and this one closes.
+    if (updater_.state() == Updater::State::Installed) {
+        if (updater_.restart(package_)) {
+            quit_ = true;
+        } else {
+            toast_ = text(Text::LauncherUpdateRestart);
+        }
+    }
     if (game_ == nullptr) {
         return;
     }
@@ -290,6 +303,76 @@ std::string App::stage_text(const Preparation& preparation) {
 
 std::string disc_name(const std::string& code) { return code == GAME_CODE ? "GameCube USA" : code; }
 
+// The row of a newer version, once the check found one (updater.h): it downloads it and puts it
+// over this package, and shows how far that is.
+void App::update_row(std::vector<Row>& rows) {
+    const Updater::State state = updater_.state();
+    if (state != Updater::State::Available && state != Updater::State::Downloading &&
+        state != Updater::State::Installing && state != Updater::State::Installed && state != Updater::State::Failed) {
+        return;
+    }
+    const std::string version = updater_.latest();
+    Row row;
+    row.symbol = "\xE2\x86\x91";  // ↑
+    row.label = texts::format(Text::LauncherUpdate, version.c_str());
+    row.tone = Tone::Value;
+    const std::string megabytes = std::to_string(updater_.size() / (1024 * 1024));
+    row.hint = texts::format(Text::LauncherUpdateHint, version.c_str(), megabytes.c_str());
+    switch (state) {
+    case Updater::State::Downloading:
+        row.label = texts::format(Text::LauncherUpdating, version.c_str());
+        row.value = std::to_string(static_cast<int>(updater_.progress() * 100.f)) + "%";
+        row.progress = updater_.progress();
+        row.hint = text(Text::LauncherUpdatingHint);
+        break;
+    case Updater::State::Installing:
+    case Updater::State::Installed:
+        row.label = texts::format(Text::LauncherUpdating, version.c_str());
+        row.value = "100%";
+        row.progress = 1.f;
+        row.hint = text(Text::LauncherUpdatingHint);
+        break;
+    case Updater::State::Failed:
+        row.value = text(Text::TryAgain);
+        row.tone = Tone::Warning;
+        row.hint = texts::format(Text::LauncherUpdateFailed, updater_.error().c_str());
+        [[fallthrough]];
+    default:
+        if (row.value.empty()) {
+            row.value = version;
+        }
+        row.activate = [this] {
+            // A second try after a failed one goes at once; the first shows what is new.
+            if (updater_.state() == Updater::State::Failed) {
+                close_notes(true);
+            } else {
+                open_notes();
+            }
+        };
+    }
+    rows.push_back(std::move(row));
+}
+
+void App::open_notes() {
+    notes_open_ = true;
+    notes_choice_ = 0;
+    notes_scroll_ = 0.f;
+}
+
+void App::close_notes(bool update) {
+    notes_open_ = false;
+    if (!update) {
+        return;
+    }
+    // Not while the launcher prepares the game or makes the app, or while the game runs: their
+    // files are the ones that would change.
+    if (preparing_anything() || game_running()) {
+        toast_ = text(Text::LauncherUpdateBusy);
+        return;
+    }
+    updater_.install(package_, update_folder());
+}
+
 std::vector<App::Row> App::game_rows() {
     const Preparation::State state = preparation_.state();
     const bool preparing = state == Preparation::State::Running;
@@ -348,6 +431,7 @@ std::vector<App::Row> App::game_rows() {
         };
     }
     rows.push_back(std::move(play_row));
+    update_row(rows);
 
     Row disc;
     disc.symbol = "\xE2\x97\x8E";  // ◎

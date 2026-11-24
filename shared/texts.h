@@ -50,6 +50,18 @@ enum class Text {
 
     DiscFilter,
     UpdateBody,
+    LauncherUpdate,
+    LauncherUpdateHint,
+    LauncherUpdating,
+    LauncherUpdateFailed,
+    LauncherUpdateBusy,
+    LauncherUpdateRestart,
+    LauncherUpdatingHint,
+    UpdateNotesTitle,
+    UpdateNotesSize,
+    UpdateNotesNone,
+    UpdateNow,
+    NotNow,
     Prepare,
     PackageIncomplete,
 

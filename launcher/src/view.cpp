@@ -174,6 +174,10 @@ bool App::moves_window(ImVec2 window_point) {
 }
 
 bool App::hovered(float x, float y, float w, float h) {
+    // Under the notes of a new version nothing can be clicked, but the window's own buttons.
+    if (notes_open_ && !drawing_notes_ && y >= TOP) {
+        return false;
+    }
     const bool inside = Rect{x, y, w, h}.contains(look::to_design(ImGui::GetIO().MousePos));
     if (inside) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -194,6 +198,10 @@ void App::handle_keys(const std::vector<Row>& rows) {
     const bool preparing = preparation_.state() == Preparation::State::Running;
     // While a part of the controls waits for its key, the keys are its own (handle_event).
     if (choosing_controls()) {
+        return;
+    }
+    if (notes_open_) {
+        handle_notes_keys();
         return;
     }
     for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key) {
@@ -302,6 +310,9 @@ void App::draw(double seconds, const std::vector<Row>& rows) {
         message = rows[static_cast<size_t>(selected_)].hint;
     }
     draw_message(draw, seconds, message);
+    if (notes_open_) {
+        draw_notes(draw);
+    }
     draw->PopClipRect();
 }
 
@@ -980,4 +991,155 @@ void App::draw_message(ImDrawList* draw, double seconds, const std::string& mess
         look::draw_text(draw, words, 56.f, look::baseline_in_line(words, top + static_cast<float>(i) * line, line),
                         lines[i]);
     }
+}
+
+// -- The notes of a new version -------------------------------------------------------------------
+
+namespace {
+
+// Where the window with the notes is, and its parts.
+constexpr Rect NOTES_BOX{190.f, 70.f + TOP, 900.f, 580.f};
+constexpr float NOTES_LINE = 29.f;
+constexpr float NOTES_TOP = NOTES_BOX.y + 128.f;
+constexpr float NOTES_HEIGHT = NOTES_BOX.h - 128.f - 104.f;
+constexpr float NOTES_SCROLL_STEP = 3.f * NOTES_LINE;
+
+}  // namespace
+
+void App::handle_notes_keys() {
+    const auto pressed = [](std::initializer_list<ImGuiKey> keys, bool repeat) {
+        return std::ranges::any_of(keys, [&](ImGuiKey key) { return ImGui::IsKeyPressed(key, repeat); });
+    };
+    if (pressed({ImGuiKey_Escape, ImGuiKey_GamepadFaceRight}, false)) {
+        close_notes(false);
+        return;
+    }
+    if (pressed({ImGuiKey_Enter, ImGuiKey_KeypadEnter, ImGuiKey_GamepadFaceDown}, false)) {
+        close_notes(notes_choice_ == 0);
+        return;
+    }
+    if (pressed({ImGuiKey_LeftArrow, ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadLStickLeft}, true)) {
+        notes_choice_ = 0;
+    }
+    if (pressed({ImGuiKey_RightArrow, ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadLStickRight}, true)) {
+        notes_choice_ = 1;
+    }
+    // Up and down, and the wheel, scroll the notes when they are long (draw_notes keeps them in).
+    if (pressed({ImGuiKey_UpArrow, ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadLStickUp}, true)) {
+        notes_scroll_ -= NOTES_SCROLL_STEP;
+    }
+    if (pressed({ImGuiKey_DownArrow, ImGuiKey_GamepadDpadDown, ImGuiKey_GamepadLStickDown}, true)) {
+        notes_scroll_ += NOTES_SCROLL_STEP;
+    }
+    notes_scroll_ -= ImGui::GetIO().MouseWheel * NOTES_SCROLL_STEP;
+}
+
+void App::draw_notes(ImDrawList* draw) {
+    drawing_notes_ = true;
+    // The launcher darkens behind it.
+    look::fill(draw, {0.f, TOP, look::WIDTH, look::HEIGHT - TOP}, 0.f, rgb(0x000028, 0.55f));
+    const Rect box = NOTES_BOX;
+    look::draw_box(draw, Box{.rect = box, .radius = 34.f, .background = rgb(0xffe594), .border = 6.f,
+                             .border_color = rgb(0xf29a1f), .shadows = {{{.y = 6.f, .color = rgb(0x000028, 0.3f)}}},
+                             .inner_ring = 3.f, .inner_ring_color = rgb(0xfff3c4)});
+
+    // The title, and which version the player has and how big the download is.
+    const std::string version = updater_.latest();
+    const TextStyle title = style(Face::Baloo800, 26, 0.02f, rgb(0x2a2560));
+    look::draw_text(draw, title, box.x + 44.f, look::baseline_centered(title, box.y + 50.f),
+                    texts::format(Text::UpdateNotesTitle, version.c_str()));
+    const std::string megabytes = std::to_string(updater_.size() / (1024 * 1024));
+    const TextStyle under = style(Face::Dosis700, 19, 0.06f, rgb(0x8a5a10));
+    look::draw_text(draw, under, box.x + 46.f, look::baseline_centered(under, box.y + 86.f),
+                    texts::format(Text::UpdateNotesSize, HMMM_SHOWN_VERSION, megabytes.c_str()));
+    look::fill(draw, {box.x + 36.f, box.y + 110.f, box.w - 72.f, 3.f}, 1.5f, rgb(0xf29a1f, 0.55f));
+
+    // The notes: each point of the list with its bullet apart, so that its next lines go under
+    // its words.
+    const TextStyle words = style(Face::Dosis700, 20, 0.04f, rgb(0x2a2560));
+    const float left = box.x + 48.f;
+    const float width = box.w - 96.f - 14.f;
+    const std::string bullet = "\xE2\x80\xA2 ";
+    struct Line {
+        float x;
+        std::string text;
+        bool gap;     // a little room before it: the first line of a point or a paragraph
+        bool bullet;  // the first line of a point, with the bullet at its left
+    };
+    std::vector<Line> lines;
+    std::vector<std::string> notes = updater_.notes(texts::language() == texts::Language::Spanish);
+    if (notes.empty()) {
+        notes.push_back(text(Text::UpdateNotesNone));
+    }
+    for (const std::string& note : notes) {
+        const bool point = note.starts_with(bullet);
+        const float indent = point ? 24.f : 0.f;
+        const std::vector<std::string> wrapped =
+            look::wrap(words, point ? note.substr(bullet.size()) : note, width - indent);
+        for (size_t i = 0; i < wrapped.size(); ++i) {
+            lines.push_back({left + indent, wrapped[i], i == 0 && !lines.empty(), i == 0 && point});
+        }
+    }
+    float total = 0.f;
+    for (const Line& line : lines) {
+        total += (line.gap ? 10.f : 0.f) + NOTES_LINE;
+    }
+    notes_scroll_ = std::clamp(notes_scroll_, 0.f, std::max(0.f, total - NOTES_HEIGHT));
+    draw->PushClipRect(look::to_window(ImVec2(box.x, NOTES_TOP)),
+                       look::to_window(ImVec2(box.right(), NOTES_TOP + NOTES_HEIGHT)), true);
+    float y = NOTES_TOP - notes_scroll_;
+    for (const Line& line : lines) {
+        y += line.gap ? 10.f : 0.f;
+        const float baseline = look::baseline_in_line(words, y, NOTES_LINE);
+        if (line.bullet) {
+            TextStyle dot = words;
+            dot.color = rgb(0xe0751a);
+            look::draw_text(draw, dot, left + 2.f, baseline, "\xE2\x80\xA2");
+        }
+        look::draw_text(draw, words, line.x, baseline, line.text);
+        y += NOTES_LINE;
+    }
+    draw->PopClipRect();
+    // A thin bar at the right shows how far down the notes are, when they do not fit.
+    if (total > NOTES_HEIGHT) {
+        const Rect track{box.right() - 36.f, NOTES_TOP, 6.f, NOTES_HEIGHT};
+        look::fill(draw, track, 3.f, rgb(0xf29a1f, 0.25f));
+        const float knob = std::max(30.f, track.h * NOTES_HEIGHT / total);
+        const float knob_y = track.y + (track.h - knob) * notes_scroll_ / (total - NOTES_HEIGHT);
+        look::fill(draw, {track.x, knob_y, track.w, knob}, 3.f, rgb(0xf29a1f));
+    }
+
+    // The two buttons: "Update", orange like "Play", and "Not now", blue like the rows.
+    const float buttons_y = box.bottom() - 84.f;
+    const Rect update_button{box.center_x() - 286.f, buttons_y, 270.f, 58.f};
+    const Rect later_button{box.center_x() + 16.f, buttons_y, 270.f, 58.f};
+    const Rect buttons[] = {update_button, later_button};
+    const std::string labels[] = {text(Text::UpdateNow), text(Text::NotNow)};
+    for (int i = 0; i < 2; ++i) {
+        const Rect& button = buttons[i];
+        if (hovered(button.x, button.y, button.w, button.h) && mouse_moved_) {
+            notes_choice_ = i;
+        }
+        if (clicked(button.x, button.y, button.w, button.h)) {
+            later([this, i] { close_notes(i == 0); });
+        }
+        const bool chosen = notes_choice_ == i;
+        TextStyle label = style(Face::Dosis700, 26, 0.07f, ROW_TEXT);
+        label.shadow_y = 2.f;
+        label.shadow_color = ROW_SHADOW;
+        if (i == 0) {
+            look::draw_box(draw, Box{.rect = button, .radius = 16.f, .background = rgb(0xffb850),
+                                     .background_bottom = rgb(0xf07f1e), .border = 3.f,
+                                     .border_color = chosen ? rgb(0xffffff) : rgb(0xffd89a)});
+            label.stroke = 5.f;
+            label.stroke_color = rgb(0x8a3c00);
+            label.shadow_color = look::over(ROW_SHADOW, rgb(0xf89c37));
+        } else {
+            look::draw_box(draw, Box{.rect = button, .radius = 16.f,
+                                     .background = chosen ? rgb(0x3e9199) : rgb(0x2d5f95), .border = 3.f,
+                                     .border_color = chosen ? rgb(0xa6ece4) : rgb(0x5c8fc2)});
+        }
+        draw_centered(draw, label, button.center_x(), button.center_y(), labels[i]);
+    }
+    drawing_notes_ = false;
 }

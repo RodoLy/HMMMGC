@@ -16,6 +16,7 @@
 #include "paths.h"
 #include "preparation.h"
 #include "settings.h"
+#include "updater.h"
 
 #include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_events.h>
@@ -147,6 +148,20 @@ private:
     Preparation android_app_;  // the Android app being made (tools/make_android_app.py)
     Preparation::State seen_android_state_ = Preparation::State::Idle;
     std::unique_ptr<ChildProcess> game_;
+    // The newest published version, asked for when the launcher opens (updater.h).
+    Updater updater_;
+    std::filesystem::path update_folder() const { return player_.root / "Update"; }
+    void update_row(std::vector<Row>& rows);
+    // The window with the new version's notes, opened by the update row: "Update" downloads it,
+    // "Not now" closes it. While it is open, the keys and the mouse are its own.
+    bool notes_open_ = false;
+    int notes_choice_ = 0;  // 0 "Update", 1 "Not now"
+    float notes_scroll_ = 0.f;
+    bool drawing_notes_ = false;
+    void open_notes();
+    void close_notes(bool update);
+    void handle_notes_keys();
+    void draw_notes(ImDrawList* draw);
 
     // The file dialog answers from any thread: what it chose waits here for the next frame.
     static void SDLCALL disc_chosen(void* user_data, const char* const* files, int filter);
