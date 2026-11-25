@@ -61,6 +61,9 @@ Package find_package();
 // read-only copy until it is moved, for example).
 void let_the_tools_run(const Package& package);
 Player find_player();
+// The player's things all in one folder, as inside the Android app (the app's own storage, which
+// the game is given with --user-folder): settings.json, the controls and native.log.
+Player player_in(const std::filesystem::path& folder);
 
 // Paths as UTF-8 text and back, the same on every system.
 std::string utf8(const std::filesystem::path& path);

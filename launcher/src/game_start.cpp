@@ -54,15 +54,10 @@ std::vector<std::string> kit_mods(const paths::Package& package) {
     return ids;
 }
 
-ChildProcess::Options game_start_options(const paths::Package& package, const paths::Player& player,
-                                         const settings::Settings& settings, const std::vector<mods::Mod>& mods,
-                                         const PreparedGame& prepared) {
-    std::vector<std::string> enabled;
+std::vector<std::pair<std::string, std::string>> mod_environment(const settings::Settings& settings,
+                                                                   const std::vector<mods::Mod>& mods) {
     std::vector<std::pair<std::string, std::string>> environment;
     for (const mods::Mod& mod : mods) {
-        if (settings.mod_enabled(mod.id)) {
-            enabled.push_back(mod.id);
-        }
         for (const mods::Setting& setting : mod.settings) {
             if (!setting.environment.empty()) {
                 const int value =
@@ -71,6 +66,19 @@ ChildProcess::Options game_start_options(const paths::Package& package, const pa
             }
         }
     }
+    return environment;
+}
+
+ChildProcess::Options game_start_options(const paths::Package& package, const paths::Player& player,
+                                         const settings::Settings& settings, const std::vector<mods::Mod>& mods,
+                                         const PreparedGame& prepared) {
+    std::vector<std::string> enabled;
+    for (const mods::Mod& mod : mods) {
+        if (settings.mod_enabled(mod.id)) {
+            enabled.push_back(mod.id);
+        }
+    }
+    std::vector<std::pair<std::string, std::string>> environment = mod_environment(settings, mods);
     // The cheats mod is not in the Mods tab: it goes with the cheats that are on.
     if (!settings.cheats_on().empty() && std::ranges::find(enabled, settings::CHEATS_MOD) == enabled.end()) {
         enabled.emplace_back(settings::CHEATS_MOD);

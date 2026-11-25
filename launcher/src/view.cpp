@@ -110,6 +110,8 @@ void draw_centered(ImDrawList* draw, const TextStyle& lettering, float center_x,
 // moves it, in the design's pixels.
 constexpr float LIST_HEIGHT = 310.f;
 constexpr float WHEEL_STEP = 60.f;
+// How far a finger moves, in the design's pixels, before it scrolls instead of choosing.
+constexpr float TOUCH_SCROLL_START = 12.f;
 
 // A game controller `width` wide around a point, for the Controls tab: its body with the two
 // grips, and in the colour of what is behind it the cross at the left and two buttons at the right.
@@ -186,6 +188,15 @@ bool App::hovered(float x, float y, float w, float h) {
 }
 
 bool App::clicked(float x, float y, float w, float h) {
+    // On a phone a finger also scrolls the lists: what it touched is chosen when it lifts without
+    // having dragged.
+    if (in_app_) {
+        return hovered(x, y, w, h) && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !touch_scrolled_;
+    }
+    return hovered(x, y, w, h) && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+}
+
+bool App::pressed_on(float x, float y, float w, float h) {
     return hovered(x, y, w, h) && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 }
 
@@ -283,6 +294,27 @@ void App::handle_keys(const std::vector<Row>& rows) {
             follow_selection_ = false;
         }
     }
+
+    // On a phone, a finger dragged up or down scrolls the list (or the mod's description it is on),
+    // as the wheel does.
+    if (in_app_) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            touch_scrolled_ = false;
+            touch_on_description_ =
+                tab_ == Tab::Mods && at(634, 234, 550, 310).contains(look::to_design(ImGui::GetIO().MousePos));
+        }
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !dragging_bar_ &&
+            (touch_scrolled_ || ImGui::IsMouseDragging(ImGuiMouseButton_Left, look::to_window(TOUCH_SCROLL_START)))) {
+            touch_scrolled_ = true;
+            const float moved = ImGui::GetIO().MouseDelta.y / look::to_window(1.f);
+            if (touch_on_description_) {
+                description_scroll_ = std::max(0.f, description_scroll_ - moved);
+            } else {
+                scroll_ -= moved;
+                follow_selection_ = false;
+            }
+        }
+    }
 }
 
 // -- The frame ------------------------------------------------------------------------------------
@@ -325,7 +357,7 @@ void App::draw_title_bar(ImDrawList* draw) {
     const float baseline = look::baseline_centered(title, 15.f);
     look::draw_text(draw, note, 14.f, baseline, NOTE);
     look::draw_text(draw, title, 14.f + look::text_width(note, NOTE) + 8.f, baseline,
-                    std::string("Harvest Moon: Magical Melody \xE2\x80\x94 ") + text(Text::Subtitle));
+                    std::string("Harvest Moon: Magical Melody \xE2\x80\x94 ") + text(in_app_ ? Text::SubtitleAndroid : Text::Subtitle));
 
     // Minimize and close, which light up under the mouse.
     struct Button {
@@ -337,6 +369,9 @@ void App::draw_title_bar(ImDrawList* draw) {
     const Button buttons[] = {{1192.f, "\xE2\x80\x93", rgb(0xffffff, 0.12f), false},  // –
                               {1234.f, "\xE2\x9C\x95", rgb(0xc0392b), true}};          // ✕
     for (const Button& button : buttons) {
+        if (in_app_) {
+            break;  // a phone's app has no window to minimize or close: the system's buttons do it
+        }
         if (hovered(button.x, 2.f, 40.f, 26.f)) {
             look::fill(draw, {button.x, 2.f, 40.f, 26.f}, 4.f, button.lit);
         }
@@ -420,9 +455,11 @@ void App::draw_header(ImDrawList* draw, double seconds) {
 
     // The shoulder buttons that change the tab.
     const TextStyle shoulder = style(Face::Baloo800, 18, 0.f, rgb(0x7a3fa8));
-    // They name the keys of what the person is using: Q and E on the keyboard, L and R on a controller.
-    const std::string labels[] = {std::string(LEFT_ARROW) + (using_pad_ ? " L" : " Q"),
-                                  std::string(using_pad_ ? "R " : "E ") + RIGHT_ARROW};
+    // They name the keys of what the person is using: Q and E on the keyboard, L and R on a controller;
+    // on a phone's screen, only the arrows.
+    const bool touch = in_app_ && !using_pad_;
+    const std::string labels[] = {std::string(LEFT_ARROW) + (using_pad_ ? " L" : touch ? "" : " Q"),
+                                  std::string(using_pad_ ? "R " : touch ? "" : "E ") + RIGHT_ARROW};
     const float lefts[] = {12.f, 168.f};
     for (int i = 0; i < 2; ++i) {
         const float width = look::text_width(shoulder, labels[i]) + 20.f;
@@ -505,18 +542,26 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     look::draw_box(draw, Box{.rect = at(992.f, 16.f, 272.f, 54.f), .radius = 27.f, .background = ROYAL,
                              .border = 4.f, .border_color = rgb(0x7fe0d0)});
     const TextStyle key = style(Face::Baloo800, 19, 0.f, rgb(0xffffff));
-    const char* leave_key = using_pad_ ? "B" : "Esc";
-    const float key_width = look::text_width(key, leave_key) + 28.f;
-    look::draw_box(draw, Box{.rect = at(1010.f, 28.f, key_width, 30.f), .radius = 14.f, .background = rgb(0x4f6fe0),
-                             .shadows = {{{.y = 3.f, .color = rgb(0x101a5c)}}}});
-    look::draw_text(draw, key, 1024.f, look::baseline_in_line(key, 28.f + TOP, 30.f), leave_key);
-    const TextStyle arrow = style(Face::Baloo800, 24, 0.f, rgb(0xffffff));
-    const float arrow_x = 1010.f + key_width + 12.f;
-    look::draw_text(draw, arrow, arrow_x, look::baseline_centered(arrow, 43.f + TOP), "\xE2\x86\x92");  // →
     const TextStyle leave = style(Face::Dosis700, 23, 0.08f, rgb(0xffffff));
     const bool preparing = state == Preparation::State::Running;
-    look::draw_text(draw, leave, arrow_x + look::text_width(arrow, "\xE2\x86\x92") + 12.f,
-                    look::baseline_centered(leave, 43.f + TOP), preparing ? text(Text::Cancel) : text(Text::Exit));
+    if (in_app_ && !using_pad_) {
+        // On a phone's screen there is no key to name: the box is a button that says what it does.
+        const char* close = "\xE2\x9C\x95  ";  // ✕
+        const std::string label = std::string(close) + text(Text::Exit);
+        draw_centered(draw, leave, 992.f + 136.f, 43.f + TOP, label);
+    } else {
+        const char* leave_key = using_pad_ ? "B" : "Esc";
+        const float key_width = look::text_width(key, leave_key) + 28.f;
+        look::draw_box(draw, Box{.rect = at(1010.f, 28.f, key_width, 30.f), .radius = 14.f,
+                                 .background = rgb(0x4f6fe0), .shadows = {{{.y = 3.f, .color = rgb(0x101a5c)}}}});
+        look::draw_text(draw, key, 1024.f, look::baseline_in_line(key, 28.f + TOP, 30.f), leave_key);
+        const TextStyle arrow = style(Face::Baloo800, 24, 0.f, rgb(0xffffff));
+        const float arrow_x = 1010.f + key_width + 12.f;
+        look::draw_text(draw, arrow, arrow_x, look::baseline_centered(arrow, 43.f + TOP), "\xE2\x86\x92");  // →
+        look::draw_text(draw, leave, arrow_x + look::text_width(arrow, "\xE2\x86\x92") + 12.f,
+                        look::baseline_centered(leave, 43.f + TOP),
+                        preparing ? text(Text::Cancel) : text(Text::Exit));
+    }
     if (clicked(992.f, 16.f + TOP, 272.f, 54.f)) {
         later([this, preparing] {
             if (preparing) {
@@ -948,7 +993,7 @@ void App::draw_scroll_bar(ImDrawList* draw) {
             scroll_ += WHEEL_STEP;
             follow_selection_ = false;
         }
-        if (clicked(track.x - 4.f, track.y, track.w + 8.f, track.h)) {
+        if (pressed_on(track.x - 4.f, track.y, track.w + 8.f, track.h)) {
             dragging_bar_ = true;
         }
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {

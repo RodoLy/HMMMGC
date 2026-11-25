@@ -5,6 +5,10 @@
 // El launcher: sus cuatro pestañas (el juego, las opciones, los mods y los controles) y lo que
 // hacen (elegir el disco, preparar el juego y arrancarlo, guardar las opciones y los mods). Lo que
 // hace está en app.cpp; cómo se ve, según su diseño, en view.cpp.
+//
+// The same launcher also opens inside the Android app, before the game (in_app.h). There the disc
+// is already the app's and the game is in the same program, so its Game tab only plays, chooses the
+// language and sends the log; the other tabs are the same.
 #pragma once
 
 #include "child_process.h"
@@ -37,6 +41,14 @@
 // own code for any other.
 std::string disc_name(const std::string& code);
 
+// What the launcher is given inside the Android app (in_app.h).
+struct InApp {
+    paths::Player player;                  // the app's folder: settings.json, the controls, the log
+    std::vector<std::string> mods;         // the mods compiled into the game
+    std::function<std::string(const std::string& id)> manifest;  // each one's mod.json
+    std::function<void()> send_log;        // shares the log of the last time the game ran
+};
+
 class App {
 public:
     enum class Tab { Game, Options, Mods, Cheats, Controls };
@@ -45,6 +57,8 @@ public:
     // `disc`: an image given when the launcher was started (dropped on it), prepared at once.
     // `still`: no animations (to take pictures of the tabs that can be compared).
     App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_tab, bool still);
+    // Inside the Android app.
+    App(SDL_Window* window, InApp in_app, bool still);
 
     // Draws one frame (between ImGui's NewFrame and Render); `seconds` is the time since the start.
     void frame(double seconds);
@@ -52,6 +66,10 @@ public:
     // Watches the game while it runs; call it every frame, even while the window is hidden.
     void update();
     bool wants_to_quit() const { return quit_; }
+    // Inside the Android app: Play was chosen (the launcher closes and the game starts).
+    bool wants_to_play() const { return play_; }
+    // The variables that give the mods their settings, for the game started in the same program.
+    std::vector<std::pair<std::string, std::string>> game_environment() const;
     bool game_running() const { return game_ != nullptr; }
     // Whether the window is dragged from this point of it (the title bar, but not its buttons).
     static bool moves_window(ImVec2 window_point);
@@ -94,6 +112,9 @@ private:
     void move_selection(int step);
 
     std::vector<Row> game_rows();
+    std::vector<Row> game_rows_in_app();
+    void language_row(std::vector<Row>& rows);
+    void load_mods();
     std::vector<Row> options_rows();
     std::vector<Row> cheats_rows();
     std::vector<Row> controls_rows();
@@ -130,6 +151,8 @@ private:
     // Whether the mouse is over `rect` of the design: then a hand shows it can be clicked.
     bool hovered(float x, float y, float w, float h);
     bool clicked(float x, float y, float w, float h);
+    // Pressed down there (where a drag starts), with the mouse or a finger.
+    bool pressed_on(float x, float y, float w, float h);
     // What a click does, done after the frame is drawn.
     void later(std::function<void()> action) { pending_ = std::move(action); }
 
@@ -138,7 +161,9 @@ private:
     paths::Player player_;
     settings::Settings settings_;
     std::vector<std::string> missing_;
+    std::optional<InApp> in_app_;  // inside the Android app
     bool quit_ = false;
+    bool play_ = false;
     bool still_ = false;
 
     PreparedGame prepared_;
@@ -190,6 +215,10 @@ private:
     bool follow_selection_ = true;
     float list_total_ = 0.f;   // the height of all the rows of the list on screen
     bool dragging_bar_ = false;
+    // On a phone: the finger that is down has scrolled (it chooses nothing when it lifts), and
+    // whether it started on a mod's description.
+    bool touch_scrolled_ = false;
+    bool touch_on_description_ = false;
     bool using_pad_ = false;  // the last key came from a controller, so the tab labels say L and R
     float description_scroll_ = 0.f;
     double started_ = -1.0;

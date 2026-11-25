@@ -74,6 +74,8 @@ target_link_libraries(launcher_imgui PUBLIC SDL3::SDL3-static)
 include("${CMAKE_CURRENT_SOURCE_DIR}/../shared/shared.cmake")
 
 file(GLOB launcher_sources CONFIGURE_DEPENDS src/*.cpp)
+# The Android app's part (in_app.cmake puts it into the game's library there).
+list(FILTER launcher_sources EXCLUDE REGEX "_android\\.cpp$")
 if(WIN32)
     list(FILTER launcher_sources EXCLUDE REGEX "_posix\\.cpp$")
 else()

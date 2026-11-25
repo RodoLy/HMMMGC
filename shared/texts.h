@@ -16,6 +16,7 @@ const char* language_code();
 
 enum class Text {
     Subtitle,
+    SubtitleAndroid,
     Play,
     Options,
     Mods,
@@ -130,6 +131,9 @@ enum class Text {
     BackToGame,
     QuitGame,
     ShareLog,
+    ShareLogHint,
+    PlayHintInApp,
+    ExitHintInApp,
     QuitQuestion,
     QuitYes,
     QuitNo,

@@ -54,6 +54,16 @@ App::App(SDL_Window* window, const std::string& disc, std::optional<Tab> first_t
     }
 }
 
+// Inside the Android app: no package beside it, nothing to prepare or look for, no update to ask
+// for (the app updates as an app). The game's tab plays the game in the same program.
+App::App(SDL_Window* window, InApp in_app, bool still)
+    : window_(window), player_(in_app.player), in_app_(std::move(in_app)), still_(still) {
+    settings_ = settings::Settings::load(player_.settings);
+    apply_language();
+    mods_ = mods::load(in_app_->mods, in_app_->manifest);
+    controls_ = controls_profile::Profile::load(controls_profile::file_beside(player_.settings));
+}
+
 // -- What the launcher knows ----------------------------------------------------------------------
 
 void App::apply_language() {
@@ -61,11 +71,21 @@ void App::apply_language() {
     texts::set_language(chosen == "es" ? texts::Language::Spanish : texts::Language::English);
 }
 
+// The mods again, in the launcher's language (after it changed).
+void App::load_mods() {
+    mods_ = in_app_ ? mods::load(in_app_->mods, in_app_->manifest) : mods::load(package_.mods, package_mods());
+}
+
 void App::save_settings() { settings_.save(player_.settings); }
 
 void App::read_prepared() { prepared_ = PreparedGame::read(player_); }
 
-bool App::prepared_is_current() const { return prepared_.is_current(player_); }
+// Inside the Android app the game is always ready: the app has its disc (DiscActivity).
+bool App::prepared_is_current() const { return in_app_ || prepared_.is_current(player_); }
+
+std::vector<std::pair<std::string, std::string>> App::game_environment() const {
+    return mod_environment(settings_, mods_);
+}
 
 // The disc the player chose before, if it is still there.
 std::string App::remembered_disc() const {
@@ -157,6 +177,10 @@ void App::after_preparation() {
 }
 
 void App::play() {
+    if (in_app_) {
+        play_ = true;  // in_app.cpp closes the launcher, and the game starts
+        return;
+    }
     if (!prepared_is_current()) {
         return;
     }
@@ -171,6 +195,10 @@ void App::play() {
 
 // The newer of the two logs: the preparation's or the game's.
 void App::open_log() {
+    if (in_app_) {
+        in_app_->send_log();
+        return;
+    }
     std::error_code error;
     std::optional<std::filesystem::path> newest;
     std::filesystem::file_time_type newest_time;
@@ -373,7 +401,62 @@ void App::close_notes(bool update) {
     updater_.install(package_, update_folder());
 }
 
+// The Game tab inside the Android app: play, the language, and the log of the last time.
+std::vector<App::Row> App::game_rows_in_app() {
+    std::vector<Row> rows;
+    Row play_row;
+    play_row.play = true;
+    play_row.label = text(Text::Play);
+    play_row.value = using_pad_ ? "A" : "";
+    play_row.tone = using_pad_ ? Tone::Key : Tone::None;
+    play_row.hint = text(Text::PlayHintInApp);
+    play_row.activate = [this] { play(); };
+    rows.push_back(std::move(play_row));
+    language_row(rows);
+
+    Row log;
+    log.symbol = "\xE2\x89\xA1";  // ≡
+    log.label = text(Text::ShareLog);
+    log.hint = text(Text::ShareLogHint);
+    log.activate = [this] { open_log(); };
+    rows.push_back(std::move(log));
+
+    Row exit;
+    exit.symbol = "\xE2\x9C\x95";  // ✕
+    exit.label = text(Text::Exit);
+    exit.value = using_pad_ ? "B" : "";
+    exit.tone = using_pad_ ? Tone::Key : Tone::None;
+    exit.hint = text(Text::ExitHintInApp);
+    exit.activate = [this] { quit_ = true; };
+    rows.push_back(std::move(exit));
+    return rows;
+}
+
+// One language for the game's dialogues and for the launcher, of those the disc has.
+void App::language_row(std::vector<Row>& rows) {
+    Row row;
+    const int index = settings_.language();
+    row.label = text(Text::GameLanguage);
+    row.hint = text(Text::GameLanguageHint);
+    row.value = settings::GAME_LANGUAGE_NAMES[index];
+    row.tone = Tone::Value;
+    row.arrows = true;
+    row.symbol = "\xE2\x99\xAA";  // ♪
+    row.change = [this, index](int step) {
+        const int count = static_cast<int>(std::size(settings::GAME_LANGUAGES));
+        settings_.set(settings::LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
+        save_settings();
+        apply_language();
+        load_mods();
+    };
+    row.activate = [change = row.change] { change(1); };
+    rows.push_back(std::move(row));
+}
+
 std::vector<App::Row> App::game_rows() {
+    if (in_app_) {
+        return game_rows_in_app();
+    }
     const Preparation::State state = preparation_.state();
     const bool preparing = state == Preparation::State::Running;
     const std::vector<std::string> found_discs = disc_search_.found();
@@ -491,26 +574,7 @@ std::vector<App::Row> App::game_rows() {
         rows.push_back(std::move(row));
     }
 
-    {
-        // One language for the game's dialogues and for the launcher, of those the disc has.
-        Row row;
-        const int index = settings_.language();
-        row.label = text(Text::GameLanguage);
-        row.hint = text(Text::GameLanguageHint);
-        row.value = settings::GAME_LANGUAGE_NAMES[index];
-        row.tone = Tone::Value;
-        row.arrows = true;
-        row.symbol = "\xE2\x99\xAA";  // ♪
-        row.change = [this, index](int step) {
-            const int count = static_cast<int>(std::size(settings::GAME_LANGUAGES));
-            settings_.set(settings::LANGUAGE, settings::GAME_LANGUAGES[(index + step + count) % count]);
-            save_settings();
-            apply_language();
-            mods_ = mods::load(package_.mods, package_mods());
-        };
-        row.activate = [change = row.change] { change(1); };
-        rows.push_back(std::move(row));
-    }
+    language_row(rows);
 
     // Here, beside what fails, so that the details are one row away when the box says to look.
     Row log;
@@ -597,7 +661,9 @@ std::vector<App::Row> App::options_rows() {
     choice(settings::RESOLUTION, settings::RESOLUTIONS,
            {text(Text::ResolutionWindow), "480p", "720p", "1080p", "1440p", settings::resolution_lines_label(2160)},
            Text::Resolution, Text::ResolutionHint);
-    flag(settings::FULLSCREEN, Text::Fullscreen, Text::FullscreenHint);
+    if (!in_app_) {
+        flag(settings::FULLSCREEN, Text::Fullscreen, Text::FullscreenHint);  // a phone's is always
+    }
     flag(settings::WIDESCREEN, Text::Widescreen, Text::WidescreenHint);
     choice(settings::FRAME_RATE, settings::FRAME_RATES, {text(Text::FrameRateGame), "60", "120"}, Text::FrameRate,
            Text::FrameRateHint);
@@ -760,6 +826,10 @@ void App::give_button(std::uint32_t native) {
 }
 
 void App::follow_disc() {
+    if (in_app_) {
+        disc_code_ = GAME_CODE;  // the app took only this disc
+        return;
+    }
     std::string disc = prepared_is_current() ? prepared_.disc : remembered_disc();
     if (disc.empty()) {
         // None chosen yet: the first one found is the one "Prepare the game" uses.

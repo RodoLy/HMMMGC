@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iterator>
 
 namespace mods {
 namespace {
@@ -35,13 +36,20 @@ std::string text_of(const nlohmann::json& manifest, const char* name) {
 }  // namespace
 
 std::vector<Mod> load(const std::filesystem::path& folder, const std::vector<std::string>& ids) {
+    return load(ids, [&folder](const std::string& id) {
+        std::ifstream stream(folder / id / "mod.json", std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+    });
+}
+
+std::vector<Mod> load(const std::vector<std::string>& ids,
+                      const std::function<std::string(const std::string& id)>& manifest_of) {
     std::vector<Mod> loaded;
     for (const std::string& id : ids) {
         Mod mod;
         mod.id = id;
         mod.name = id;
-        std::ifstream stream(folder / id / "mod.json", std::ios::binary);
-        const nlohmann::json manifest = nlohmann::json::parse(stream, nullptr, /*allow_exceptions=*/false);
+        const nlohmann::json manifest = nlohmann::json::parse(manifest_of(id), nullptr, /*allow_exceptions=*/false);
         // A mod that the launcher turns on by itself (the cheats, from the options) is not listed.
         if (manifest.is_object() && manifest.value("hidden", false)) {
             continue;

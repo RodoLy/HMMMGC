@@ -38,6 +38,9 @@
 // On Android the game is a library that SDL's Java activity loads and starts by calling SDL_main:
 // this header names main so.
 #include <SDL3/SDL_main.h>
+// The launcher, which the app shows before the game (launcher/src/in_app.h).
+#include "android_app.h"
+#include "in_app.h"
 #endif
 
 #include <algorithm>
@@ -141,11 +144,36 @@ void keep_the_log_in_the_player_folder([[maybe_unused]] const Options& options) 
 #endif
 }
 
+#if defined(__ANDROID__)
+// The launcher, before the game, as on a computer (launcher/src/in_app.h): the player chooses the
+// options, the mods, the cheats and the controls there, and its settings.json is the one the game
+// reads next. False when the player left from it. It comes before the log is begun, so that its
+// "Send the log" sends the last game's.
+bool the_launcher_says_play(const Options& options) {
+    InApp in_app{.player = paths::player_in(options.user_folder),
+                 .mods = native_mods::compiled_in(),
+                 .manifest = in_app::mod_manifest,
+                 .send_log = android_app::share_log};
+    const in_app::Result result = in_app::run(std::move(in_app));
+    // The mods' settings, which they read from their variables, as the launcher gives them on a
+    // computer.
+    for (const auto& [name, value] : result.environment) {
+        setenv(name.c_str(), value.c_str(), 1);
+    }
+    return result.play;
+}
+#endif
+
 }  // namespace
 
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
+#if defined(__ANDROID__)
+        if (!the_launcher_says_play(options)) {
+            return EXIT_SUCCESS;  // Exit in the launcher: the app closes
+        }
+#endif
         keep_the_log_in_the_player_folder(options);
         if (!options.symbols_path.empty() && !guest_symbols::load(options.symbols_path)) {
             runtime_log::warning("boot", "could not read the symbols in %s", options.symbols_path.c_str());

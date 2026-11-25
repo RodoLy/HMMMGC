@@ -11,6 +11,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -42,5 +43,9 @@ struct Mod {
 // now, in the order of `ids` but with the quality of life mods after the others. A mod without a
 // readable manifest is listed by its id alone.
 std::vector<Mod> load(const std::filesystem::path& folder, const std::vector<std::string>& ids);
+// The same, with the text of each manifest given by `manifest` (empty when it has none): inside the
+// Android app the manifests go inside the program (in_app.h).
+std::vector<Mod> load(const std::vector<std::string>& ids,
+                      const std::function<std::string(const std::string& id)>& manifest);
 
 }  // namespace mods

@@ -12,9 +12,13 @@
 //   --still draws without animations (to take pictures of the tabs that can be compared).
 //   --prepare <disc image> and --play do what Prepare and Play do, without the window, for another
 //   launcher (headless.h).
+//   --in-app <folder> opens the launcher as the Android app shows it, with <folder> as the app's
+//   own (in_app.h).
 
 #include "app.h"
+#include "game_start.h"
 #include "headless.h"
+#include "in_app.h"
 #include "lettering.h"
 #include "look.h"
 #include "paths.h"
@@ -31,6 +35,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <iterator>
 #include <optional>
 #include <string>
 
@@ -44,6 +50,7 @@ struct Arguments {
     bool still = false;
     std::optional<std::string> prepare;  // --prepare: the disc to prepare, without the window
     bool play = false;                   // --play: start the game, without the window
+    std::optional<std::string> in_app;   // --in-app: the app's folder
 };
 
 Arguments parse_arguments(int argc, char** argv) {
@@ -66,6 +73,8 @@ Arguments parse_arguments(int argc, char** argv) {
             arguments.still = true;
         } else if (argument == "--prepare" && i + 1 < argc) {
             arguments.prepare = argv[++i];
+        } else if (argument == "--in-app" && i + 1 < argc) {
+            arguments.in_app = argv[++i];
         } else if (argument == "--play") {
             arguments.play = true;
         } else if (!argument.starts_with("-")) {
@@ -122,6 +131,27 @@ int main(int argc, char** argv) {
     }
     if (arguments.play) {
         return headless::play();
+    }
+    if (arguments.in_app) {
+        // As the app would: the mods of this package, the log only said to be sent.
+        const paths::Package package = paths::find_package();
+        InApp in_app{.player = paths::player_in(paths::from_utf8(*arguments.in_app)),
+                     .mods = kit_mods(package),
+                     .manifest =
+                         [folder = package.mods](const std::string& id) {
+                             std::ifstream stream(folder / id / "mod.json", std::ios::binary);
+                             return std::string(std::istreambuf_iterator<char>(stream),
+                                                std::istreambuf_iterator<char>());
+                         },
+                     .send_log = [] { SDL_Log("in-app: send the log"); }};
+        SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+        const in_app::Result result = in_app::run(std::move(in_app), arguments.still);
+        SDL_Log("in-app: %s", result.play ? "play" : "exit");
+        for (const auto& [name, value] : result.environment) {
+            SDL_Log("in-app: %s=%s", name.c_str(), value.c_str());
+        }
+        SDL_Quit();
+        return 0;
     }
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, WINDOW_TITLE, SDL_GetError(), nullptr);

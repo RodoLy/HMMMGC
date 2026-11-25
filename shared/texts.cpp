@@ -21,6 +21,7 @@ struct Translation {
 // One line per text; the order does not matter (checked when the program starts).
 constexpr Translation TRANSLATIONS[] = {
     {Text::Subtitle, "versión nativa para PC", "native PC version"},
+    {Text::SubtitleAndroid, "versión nativa para Android", "native Android version"},
     {Text::Play, "Jugar", "Play"},
     {Text::Options, "Opciones", "Options"},
     {Text::Mods, "Mods", "Mods"},
@@ -189,6 +190,13 @@ constexpr Translation TRANSLATIONS[] = {
     {Text::BackToGame, "Volver al juego", "Back to the game"},
     {Text::QuitGame, "Salir del juego", "Quit the game"},
     {Text::ShareLog, "Enviar el registro", "Send the log"},
+    {Text::ShareLogHint,
+     "Manda el registro de la última vez que se abrió el juego (por correo, un chat o Drive), para ver qué falló.",
+     "Sends the log of the last time the game was opened (by email, a chat or Drive), to see what went wrong."},
+    {Text::PlayHintInApp,
+     "Abre el juego. Dentro del juego, el botón Options abre las opciones y los mods, y TURBO lo acelera.",
+     "Opens the game. Inside the game, the Options button opens the options and the mods, and TURBO speeds it up."},
+    {Text::ExitHintInApp, "Cierra la app.", "Closes the app."},
     {Text::QuitQuestion, "¿Salir del juego? Lo que no hayas guardado en el juego se pierde.",
      "Quit the game? Whatever you have not saved in the game is lost."},
     {Text::QuitYes, "Sí, salir", "Yes, quit"},

@@ -11,6 +11,7 @@
 #include "settings.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 // What the preparation left (prepared.json in the player's game folder, tools/prepare_game.py).
@@ -29,6 +30,11 @@ struct PreparedGame {
 
 // The mods the package's runtime has (the kit's recipe), which are the game's.
 std::vector<std::string> kit_mods(const paths::Package& package);
+
+// The variables that give the mods their settings (the percentages of their manifests), from the
+// player's settings: what the game is started with.
+std::vector<std::pair<std::string, std::string>> mod_environment(const settings::Settings& settings,
+                                                                   const std::vector<mods::Mod>& mods);
 
 // The game's program and what it is given: the disc, the options and the mods the player chose.
 ChildProcess::Options game_start_options(const paths::Package& package, const paths::Player& player,

@@ -197,6 +197,15 @@ else()
     add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
 endif()
 add_shared_ui(hmmm-native)
+# On Android, the launcher too, which the app shows before the game (launcher/in_app.cmake).
+if(ANDROID)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/../launcher/in_app.cmake")
+    add_launcher_in_app(hmmm-native "${mods_directory}" "${NATIVE_MODS}")
+    # It draws with Dear ImGui's SDL3 backends, which aurora builds (imgui_backends) and whose
+    # headers are in Dear ImGui's backends folder.
+    FetchContent_GetProperties(imgui SOURCE_DIR imgui_source)
+    target_include_directories(hmmm-native PRIVATE "${imgui_source}/backends")
+endif()
 # The far_camera mod gives the runtime how far the camera goes (src/graphics/far_camera.h).
 if("far_camera" IN_LIST NATIVE_MODS)
     target_compile_definitions(hmmm-native PRIVATE HMMM_FAR_CAMERA_MOD)

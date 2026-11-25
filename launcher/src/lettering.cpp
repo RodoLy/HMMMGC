@@ -291,6 +291,12 @@ bool build(float scale) {
     return true;
 }
 
+void forget() {
+    Fonts& all = fonts();
+    all.made.clear();
+    all.scale = 0.f;
+}
+
 ImFont* font(Face face, int size) {
     const Fonts& all = fonts();
     ImFont* nearest = nullptr;

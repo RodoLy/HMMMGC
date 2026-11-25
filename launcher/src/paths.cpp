@@ -151,6 +151,19 @@ Player find_player() {
     return player;
 }
 
+Player player_in(const std::filesystem::path& folder) {
+    Player player;
+    player.root = folder;
+    player.native = folder;
+    player.game = folder;
+    player.settings = folder / "settings.json";
+    player.prepare_log = folder / "prepare.log";
+    player.game_log = folder / "native.log";
+    std::error_code error;
+    std::filesystem::create_directories(folder, error);
+    return player;
+}
+
 void open_in_system(const std::filesystem::path& path) {
     // A file URL: forward slashes, and the few characters that a URL gives a meaning escaped.
     std::string url = "file://";

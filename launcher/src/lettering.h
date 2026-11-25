@@ -20,6 +20,8 @@ enum class Face { Dosis600, Dosis700, Baloo800 };
 // Makes every font the design uses, `scale` times its size in the design (1 at 100% of the
 // screen's scaling). True when they changed: the renderer's font texture must then be made again.
 bool build(float scale);
+// Forgets the fonts made, for an ImGui made again (the launcher inside the Android app, in_app.h).
+void forget();
 
 // The font of `face` at `size` pixels of the design, one of the sizes the design uses (the
 // nearest one otherwise). Its glyphs are already `scale` times bigger.
