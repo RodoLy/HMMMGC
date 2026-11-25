@@ -17,6 +17,7 @@
 #include "guest_memory.h"
 #include "guest_symbols.h"
 #include "hardware/hardware_registers.h"
+#include "os/guest_os.h"
 #include "runtime_log.h"
 
 #include "guest_abi/guest_abi.h"
@@ -27,6 +28,7 @@
 #else
 #include <execinfo.h>
 #endif
+#include <pthread.h>
 #include <signal.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -35,13 +37,18 @@
 #endif
 #include <unistd.h>
 
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 
 namespace fault_handler {
 
 #if defined(__ANDROID__)
+
+// How often the watchdog reports on Android, where the app passes no watchdog of its own.
+constexpr unsigned ANDROID_WATCHDOG_SECONDS = 10;
 
 // Android's C library has no backtrace(): the frames come from the unwinder.
 namespace {
@@ -240,6 +247,19 @@ void on_watchdog(int) {
     print_host_backtrace(10);
 }
 
+#if defined(__ANDROID__)
+// On Android the timer's signal can go to any of the app's threads (Java's too), so the
+// watchdog is a thread, as on Windows: it sees the game's registers as of its last call.
+void run_watchdog(unsigned seconds) {
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(seconds));
+        runtime_log::info("watchdog", "still running (%s; %s); the game is at:",
+                          hardware_registers::describe_activity().c_str(), guest_os::describe_interrupts().c_str());
+        print_guest_location();
+    }
+}
+#endif
+
 void install_alternate_signal_stack() {
     // A fault caused by a broken stack must still be reported.
     static uint8_t alternate_stack[64 * 1024];
@@ -267,6 +287,19 @@ void install(unsigned watchdog_seconds) {
     install_handler(SIGTRAP, on_single_step);
 #endif
     signal(SIGABRT, on_abort);
+#if defined(__ANDROID__)
+    // A phone's log is the only way to see where a game that stopped is, and the app cannot be
+    // given other options: there the watchdog always reports.
+    std::thread(run_watchdog, watchdog_seconds != 0 ? watchdog_seconds : ANDROID_WATCHDOG_SECONDS).detach();
+    // The game runs on the thread SDL's Java activity made, whose stack Java chose.
+    pthread_attr_t attributes;
+    if (pthread_getattr_np(pthread_self(), &attributes) == 0) {
+        size_t stack_size = 0;
+        pthread_attr_getstacksize(&attributes, &stack_size);
+        pthread_attr_destroy(&attributes);
+        runtime_log::info("runtime", "the game's thread has a stack of %zu KiB", stack_size / 1024);
+    }
+#else
     if (watchdog_seconds != 0) {
         signal(SIGALRM, on_watchdog);
         itimerval interval{};
@@ -274,6 +307,7 @@ void install(unsigned watchdog_seconds) {
         interval.it_value.tv_sec = watchdog_seconds;
         setitimer(ITIMER_REAL, &interval, nullptr);
     }
+#endif
 }
 
 }  // namespace fault_handler

@@ -17,11 +17,17 @@
 // same thread and needs no second host stack.
 #pragma once
 
+#include <string>
+
 struct CpuContext;
 
 namespace guest_os {
 
 // Takes the interrupts and exceptions that are due, if the guest has them enabled.
 void take_pending_interrupts(CpuContext* cpu);
+
+// How the interrupts go, for the watchdog's report (fault_handler.h): how many were taken,
+// the last one, and whether one is being taken now.
+std::string describe_interrupts();
 
 }  // namespace guest_os

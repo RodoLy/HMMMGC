@@ -27,8 +27,10 @@ void print_guest_location() {
     std::fprintf(stderr, "  last dispatched function: %s\n", guest_symbols::describe(translated_function).c_str());
     const CpuContext* cpu = TryGetCpuContext();
     if (cpu == nullptr) {
-        std::fprintf(stderr, "  (no guest CPU context on this thread)\n");
-        return;
+        // Another thread (the watchdog's): the game's registers as they were at its last call
+        // out of translated code, which is where a loop without calls stays.
+        cpu = &GetPersistentCpuContext();
+        std::fprintf(stderr, "  (the game's registers at its last call)\n");
     }
     std::fprintf(stderr, "  lr %s  r1 0x%08X  r3 0x%08X  r4 0x%08X  r5 0x%08X  msr 0x%08X\n",
                  guest_symbols::describe(cpu->lr).c_str(), cpu->gpr[1], cpu->gpr[3], cpu->gpr[4], cpu->gpr[5],

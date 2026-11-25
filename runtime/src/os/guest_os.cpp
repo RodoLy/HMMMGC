@@ -14,6 +14,8 @@
 #include "native_functions.h"
 #include "runtime_log.h"
 
+#include <atomic>
+#include <cstdio>
 #include <thread>
 
 namespace guest_os {
@@ -75,13 +77,23 @@ struct ReturnFromInterrupt {
 };
 
 bool g_taking_interrupt = false;
+// For the watchdog, which reads them from its own thread.
+std::atomic<bool> g_in_handler{false};
+std::atomic<uint64_t> g_exceptions_taken{0};
+std::atomic<uint32_t> g_last_exception{0};
 uint32_t g_main_thread = 0;  // the game's only thread: the one running at the first SelectThread
 
 // Marks that an interrupt handler is running, until the end of the scope.
 class InterruptInProgress {
 public:
-    InterruptInProgress() { g_taking_interrupt = true; }
-    ~InterruptInProgress() { g_taking_interrupt = false; }
+    InterruptInProgress() {
+        g_taking_interrupt = true;
+        g_in_handler = true;
+    }
+    ~InterruptInProgress() {
+        g_taking_interrupt = false;
+        g_in_handler = false;
+    }
     InterruptInProgress(const InterruptInProgress&) = delete;
     InterruptInProgress& operator=(const InterruptInProgress&) = delete;
 };
@@ -243,6 +255,8 @@ void take_exception(CpuContext* cpu, uint32_t exception) {
     handler_cpu.msr = cpu->msr & ~EXTERNAL_INTERRUPTS_ENABLED;
 
     InterruptInProgress interrupt;
+    ++g_exceptions_taken;
+    g_last_exception = exception;
     try {
         CpuContextScope scope(&handler_cpu);
         InvokeIndirectCpu(handler, &handler_cpu);
@@ -298,6 +312,14 @@ void OSLoadContextNative(CpuContext* cpu) {
 PPC_NATIVE_OVERRIDE_VOID(8017108C, OSLoadContextNative, (CpuContext * cpu), (cpu));
 
 }  // namespace
+
+std::string describe_interrupts() {
+    char text[160];
+    std::snprintf(text, sizeof(text), "%llu exceptions taken, the last %u%s",
+                  static_cast<unsigned long long>(g_exceptions_taken.load()), g_last_exception.load(),
+                  g_in_handler ? ", one being handled now" : "");
+    return text;
+}
 
 void take_pending_interrupts(CpuContext* cpu) {
     if ((cpu->msr & EXTERNAL_INTERRUPTS_ENABLED) == 0 || g_taking_interrupt) {

@@ -245,11 +245,14 @@ uint64_t next_event_time() {
 }
 
 std::string describe_activity() {
-    char text[160];
-    std::snprintf(text, sizeof(text), "%llu video fields, %llu bytes of graphics commands, %llu disc commands",
+    char text[200];
+    std::snprintf(text, sizeof(text),
+                  "%llu video fields, %llu bytes of graphics commands, %llu disc commands, interrupts pending 0x%X "
+                  "of 0x%X unmasked",
                   static_cast<unsigned long long>(video_interface::fields_shown()),
                   static_cast<unsigned long long>(graphics_status::bytes_sent()),
-                  static_cast<unsigned long long>(dvd_interface::commands_run()));
+                  static_cast<unsigned long long>(dvd_interface::commands_run()), pending_interrupts(),
+                  enabled_interrupts());
     return text;
 }
 
