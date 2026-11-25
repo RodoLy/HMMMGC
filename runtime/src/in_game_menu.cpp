@@ -7,6 +7,7 @@
 #include "controls_editor.h"
 #include "android_app.h"
 #include "graphics/aurora_host.h"
+#include "launcher_overlay.h"
 #include "mods/native_mods.h"
 #include "player_options.h"
 #include "runtime_log.h"
@@ -112,6 +113,12 @@ SDL_GamepadButton game_b_button() {
 }
 
 void open() {
+#if HMMM_LAUNCHER_IN_THE_GAME
+    // On Android, the Options button (and Select, and F10) brings back the launcher over the game
+    // instead (launcher_overlay.h).
+    launcher_overlay::request();
+    return;
+#endif
     get_ready();
     g_open = true;
     g_controls_window = false;

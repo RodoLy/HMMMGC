@@ -14,6 +14,7 @@ struct State {
     Clock::time_point speed_changed_at = Clock::now();
     uint64_t ticks_when_speed_changed = 0;
     bool turbo = false;
+    bool stopped = false;
 };
 State g_clock;
 
@@ -38,6 +39,9 @@ unsigned speed_percent() {
 }
 
 uint64_t elapsed_ticks() {
+    if (g_clock.stopped) {
+        return g_clock.ticks_when_speed_changed;
+    }
     const auto since_change =
         std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - g_clock.speed_changed_at);
     const auto nanoseconds = static_cast<uint64_t>(since_change.count());
@@ -51,5 +55,19 @@ std::chrono::nanoseconds real_duration(uint64_t ticks) {
 }
 
 void set_turbo(bool held) { change_speed(held); }
+
+void stop() {
+    if (!g_clock.stopped) {
+        g_clock.ticks_when_speed_changed = elapsed_ticks();
+        g_clock.stopped = true;
+    }
+}
+
+void go_on() {
+    if (g_clock.stopped) {
+        g_clock.stopped = false;
+        g_clock.speed_changed_at = Clock::now();  // the ticks count on from where they stopped
+    }
+}
 
 }  // namespace game_clock

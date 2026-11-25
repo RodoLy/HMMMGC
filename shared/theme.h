@@ -32,6 +32,9 @@ const Fonts& fonts();
 // 100% of the screen's scaling). True when it changed them; the renderer's font texture must
 // then be made again (aurora makes it again by itself in the game).
 bool set_scale(float scale);
+// Forgets the fonts made, so that the next set_scale makes them again (another lettering used
+// ImGui's atlas meanwhile: the launcher over the game on Android).
+void forget_fonts();
 float px(float design_pixels);
 
 // The landscape behind every screen. `seconds` moves the clouds and the notes.

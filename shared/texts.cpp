@@ -197,6 +197,13 @@ constexpr Translation TRANSLATIONS[] = {
      "Abre el juego. Dentro del juego, el botón Options abre las opciones y los mods, y TURBO lo acelera.",
      "Opens the game. Inside the game, the Options button opens the options and the mods, and TURBO speeds it up."},
     {Text::ExitHintInApp, "Cierra la app.", "Closes the app."},
+    {Text::BackToGameHint,
+     "Vuelve al juego justo donde estabas. La imagen, el sonido y los controles cambian al momento; los mods y los "
+     "trucos, la próxima vez que abras la app.",
+     "Goes back to the game right where you were. The picture, the sound and the controls change at once; the mods "
+     "and the cheats, the next time you open the app."},
+    {Text::ExitHintInGame, "Cierra el juego y la app. Lo que no hayas guardado en el juego se pierde.",
+     "Closes the game and the app. What you have not saved in the game is lost."},
     {Text::QuitQuestion, "¿Salir del juego? Lo que no hayas guardado en el juego se pierde.",
      "Quit the game? Whatever you have not saved in the game is lost."},
     {Text::QuitYes, "Sí, salir", "Yes, quit"},

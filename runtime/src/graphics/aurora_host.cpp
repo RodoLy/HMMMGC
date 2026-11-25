@@ -15,6 +15,7 @@
 #include "graphics/shadow_range.h"
 #include "in_game_menu.h"
 #include "input/touch_buttons.h"
+#include "launcher_overlay.h"
 #include "player_folder.h"
 #include "player_options.h"
 #include "runtime_log.h"
@@ -203,6 +204,10 @@ void present_frame() {
     process_events();
     if (in_game_menu::quit_requested()) {
         g_window_closed = true;  // the menu's "Quit the game", as the window's close button
+    }
+    // On Android, the launcher over the game, which waits here until the player goes back to it.
+    if (launcher_overlay::requested() && !launcher_overlay::show()) {
+        g_window_closed = true;  // Exit in the launcher
     }
     // What the next frame shows: the game's camera, or the zoom while walking outdoors, and
     // as much of the map, its characters, its shadows and the farm's tilled soil as that shows.

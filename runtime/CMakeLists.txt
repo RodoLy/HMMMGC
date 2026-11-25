@@ -197,8 +197,12 @@ else()
     add_executable(hmmm-native ${runtime_sources} ${native_mod_objects})
 endif()
 add_shared_ui(hmmm-native)
-# On Android, the launcher too, which the app shows before the game (launcher/in_app.cmake).
-if(ANDROID)
+# On Android, the launcher too, which the app shows before the game and over it when the Options
+# button is pressed (launcher/in_app.cmake, src/launcher_overlay.h). On a computer it can be built
+# in the same way, to try it: F10 then brings the launcher over the game.
+option(HMMM_LAUNCHER_IN_THE_GAME "the launcher inside the game's program, as on Android" ${ANDROID})
+if(HMMM_LAUNCHER_IN_THE_GAME)
+    target_compile_definitions(hmmm-native PRIVATE HMMM_LAUNCHER_IN_THE_GAME=1)
     include("${CMAKE_CURRENT_SOURCE_DIR}/../launcher/in_app.cmake")
     add_launcher_in_app(hmmm-native "${mods_directory}" "${NATIVE_MODS}")
     # It draws with Dear ImGui's SDL3 backends, which aurora builds (imgui_backends) and whose

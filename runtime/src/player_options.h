@@ -64,6 +64,9 @@ bool restart_pending();
 // each option that changed to the part of the runtime that uses it, at once.
 settings::Settings& current();
 void apply_changes();
+// Reads settings.json again (the launcher over the game wrote it, launcher_overlay.h) and applies
+// what changed, as apply_changes does.
+void reload();
 // Full screen as it is now: Alt+Enter changes it without the menu.
 void note_fullscreen(bool fullscreen);
 // Writes current() to settings.json when the menu changed something since the last time.

@@ -134,6 +134,8 @@ enum class Text {
     ShareLogHint,
     PlayHintInApp,
     ExitHintInApp,
+    BackToGameHint,
+    ExitHintInGame,
     QuitQuestion,
     QuitYes,
     QuitNo,

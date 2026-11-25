@@ -181,6 +181,8 @@ const Fonts& fonts() { return g_fonts; }
 
 float px(float design_pixels) { return design_pixels * g_scale; }
 
+void forget_fonts() { g_scale = 0.f; }
+
 bool set_scale(float scale) {
     scale = std::clamp(scale, 0.5f, 4.f);
     if (g_scale > 0.f && std::abs(scale - g_scale) < 0.03f) {

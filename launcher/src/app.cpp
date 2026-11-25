@@ -406,10 +406,10 @@ std::vector<App::Row> App::game_rows_in_app() {
     std::vector<Row> rows;
     Row play_row;
     play_row.play = true;
-    play_row.label = text(Text::Play);
+    play_row.label = text(over_the_game() ? Text::BackToGame : Text::Play);
     play_row.value = using_pad_ ? "A" : "";
     play_row.tone = using_pad_ ? Tone::Key : Tone::None;
-    play_row.hint = text(Text::PlayHintInApp);
+    play_row.hint = text(over_the_game() ? Text::BackToGameHint : Text::PlayHintInApp);
     play_row.activate = [this] { play(); };
     rows.push_back(std::move(play_row));
     language_row(rows);
@@ -426,7 +426,7 @@ std::vector<App::Row> App::game_rows_in_app() {
     exit.label = text(Text::Exit);
     exit.value = using_pad_ ? "B" : "";
     exit.tone = using_pad_ ? Tone::Key : Tone::None;
-    exit.hint = text(Text::ExitHintInApp);
+    exit.hint = text(over_the_game() ? Text::ExitHintInGame : Text::ExitHintInApp);
     exit.activate = [this] { quit_ = true; };
     rows.push_back(std::move(exit));
     return rows;

@@ -27,6 +27,11 @@ std::chrono::nanoseconds real_duration(uint64_t ticks);
 
 // The turbo key is held, or no longer.
 void set_turbo(bool held);
+
+// Stops the game's time, and lets it go on from where it stopped: while the launcher is over the
+// game on Android (launcher_overlay.h), the game is where it was when it comes back.
+void stop();
+void go_on();
 // The speed now: the turbo's while it is held, otherwise the console's.
 unsigned speed_percent();
 

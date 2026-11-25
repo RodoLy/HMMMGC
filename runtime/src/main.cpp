@@ -38,7 +38,9 @@
 // On Android the game is a library that SDL's Java activity loads and starts by calling SDL_main:
 // this header names main so.
 #include <SDL3/SDL_main.h>
-// The launcher, which the app shows before the game (launcher/src/in_app.h).
+#endif
+#if HMMM_LAUNCHER_IN_THE_GAME
+// The launcher, which the Android app shows before the game (launcher/src/in_app.h).
 #include "android_app.h"
 #include "in_app.h"
 #endif
@@ -144,7 +146,7 @@ void keep_the_log_in_the_player_folder([[maybe_unused]] const Options& options) 
 #endif
 }
 
-#if defined(__ANDROID__)
+#if HMMM_LAUNCHER_IN_THE_GAME
 // The launcher, before the game, as on a computer (launcher/src/in_app.h): the player chooses the
 // options, the mods, the cheats and the controls there, and its settings.json is the one the game
 // reads next. False when the player left from it. It comes before the log is begun, so that its
@@ -169,7 +171,7 @@ bool the_launcher_says_play(const Options& options) {
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
-#if defined(__ANDROID__)
+#if HMMM_LAUNCHER_IN_THE_GAME
         if (!the_launcher_says_play(options)) {
             return EXIT_SUCCESS;  // Exit in the launcher: the app closes
         }

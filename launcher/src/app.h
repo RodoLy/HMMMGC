@@ -47,6 +47,7 @@ struct InApp {
     std::vector<std::string> mods;         // the mods compiled into the game
     std::function<std::string(const std::string& id)> manifest;  // each one's mod.json
     std::function<void()> send_log;        // shares the log of the last time the game ran
+    bool in_game = false;  // over the game, which waits where it was (launcher_overlay.h)
 };
 
 class App {
@@ -115,6 +116,8 @@ private:
     std::vector<Row> game_rows_in_app();
     void language_row(std::vector<Row>& rows);
     void load_mods();
+    // Over the game: Esc, B and the box at the top go back to it rather than closing the app.
+    bool over_the_game() const { return in_app_ && in_app_->in_game; }
     std::vector<Row> options_rows();
     std::vector<Row> cheats_rows();
     std::vector<Row> controls_rows();

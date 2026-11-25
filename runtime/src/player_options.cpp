@@ -183,6 +183,12 @@ void set_game_language(const std::string& language) {
 
 settings::Settings& current() { return g_settings; }
 
+void reload() {
+    g_settings = settings::Settings::load(g_file);
+    apply_changes();
+    g_unsaved = false;  // the file is what was read
+}
+
 void apply_changes() {
     const Options wanted = read(g_settings);
     const Options& before = g_from_settings;

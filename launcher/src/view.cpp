@@ -228,7 +228,9 @@ void App::handle_keys(const std::vector<Row>& rows) {
         return;
     }
     if (pressed({ImGuiKey_Escape, ImGuiKey_GamepadFaceRight}, false)) {
-        if (preparing) {
+        if (over_the_game()) {
+            play_ = true;  // back to the game
+        } else if (preparing) {
             preparation_.cancel();
         } else {
             quit_ = true;
@@ -546,8 +548,8 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     const bool preparing = state == Preparation::State::Running;
     if (in_app_ && !using_pad_) {
         // On a phone's screen there is no key to name: the box is a button that says what it does.
-        const char* close = "\xE2\x9C\x95  ";  // ✕
-        const std::string label = std::string(close) + text(Text::Exit);
+        const char* close = over_the_game() ? "\xE2\x97\x80  " : "\xE2\x9C\x95  ";  // ◀ back, or ✕
+        const std::string label = std::string(close) + text(over_the_game() ? Text::BackToGame : Text::Exit);
         draw_centered(draw, leave, 992.f + 136.f, 43.f + TOP, label);
     } else {
         const char* leave_key = using_pad_ ? "B" : "Esc";
@@ -564,7 +566,9 @@ void App::draw_header(ImDrawList* draw, double seconds) {
     }
     if (clicked(992.f, 16.f + TOP, 272.f, 54.f)) {
         later([this, preparing] {
-            if (preparing) {
+            if (over_the_game()) {
+                play_ = true;
+            } else if (preparing) {
                 preparation_.cancel();
             } else {
                 quit_ = true;
