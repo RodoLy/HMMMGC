@@ -529,7 +529,7 @@ void draw_text(ImDrawList* draw, const TextStyle& style, float x, float baseline
     const bool whole = static_cast<float>(style.size) * g_scale > 34.f;
     const float stroke = to_window(style.stroke * 0.5f);
     if (style.shadow_color != 0) {
-        put_grown(draw, placed, line, ascent, to_window(ImVec2(style.shadow_x, style.shadow_y)), stroke,
+        put_grown(draw, placed, line, ascent, ImVec2(to_window(style.shadow_x), to_window(style.shadow_y)), stroke,
                   style.shadow_color, whole);
     }
     if (style.stroke > 0.f && style.stroke_color != 0) {
