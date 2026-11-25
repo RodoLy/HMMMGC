@@ -327,6 +327,22 @@ sustituto del juego con el clang de llvm-mingw y el kit, hace la app y revisa
 su firma con `apksigner` de Android. Los botones táctiles están en
 [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md).
 
+El launcher dentro de la app (`launcher/src/in_app.h`, `launcher/in_app.cmake`):
+la biblioteca del juego trae también el código del launcher, sus letras y los
+`mod.json` de los mods, y antes de arrancar el juego muestra el mismo launcher
+que en la computadora, con su propia ventana y el renderizador 2D de SDL3
+(OpenGL ES), aparte de los gráficos del juego (aurora, Vulkan). Su pestaña
+Juego solo tiene Jugar, Idioma, Enviar el registro y Salir (la app ya tiene su
+disco y no prepara nada); Opciones, Mods, Trucos y Controles son las mismas, sin
+Pantalla completa. Guarda en el `settings.json` de la app, que el juego lee
+después, y pasa a los mods sus ajustes en las mismas variables que en la
+computadora. Jugar cierra su ventana y el juego abre la suya en el mismo
+programa; Salir cierra la app. Se maneja con toques: lo tocado se elige al
+levantar el dedo sin arrastrarlo, y arrastrarlo desliza la lista. Como sale
+antes de que el juego empiece su registro, su «Enviar el registro» manda el de
+la última vez, aunque el juego se haya congelado. En la computadora,
+`HarvestMoonMM --in-app <carpeta>` lo abre como en un celular, para verlo.
+
 Así se probó: en GitHub el kit compila y enlaza con el clang de llvm-mingw,
 `libmain.so` solo pide bibliotecas de Android (`libc`, `libm`, `libdl`, `liblog`,
 `libandroid`, `libOpenSLES`, `libGLESv1_CM`, `libGLESv2`) y `apksigner` aprueba
@@ -704,6 +720,22 @@ At the end, the workflow does what a Linux computer would do: it compiles the
 stand-in game with llvm-mingw's clang and the kit, makes the app and checks its
 signature with Android's `apksigner`. The touch buttons are in
 [NATIVE_RUNTIME.md](NATIVE_RUNTIME.md).
+
+The launcher inside the app (`launcher/src/in_app.h`, `launcher/in_app.cmake`):
+the game's library also carries the launcher's code, its lettering and the
+mods' `mod.json`, and before starting the game it shows the same launcher as on
+a computer, with its own window and SDL3's 2D renderer (OpenGL ES), apart from
+the game's graphics (aurora, Vulkan). Its Game tab only has Play, Language,
+Send the log and Exit (the app already has its disc and prepares nothing);
+Options, Mods, Cheats and Controls are the same, without Fullscreen. It saves to
+the app's `settings.json`, which the game reads next, and gives the mods their
+settings in the same variables as on a computer. Play closes its window and the
+game opens its own in the same program; Exit closes the app. It is used with
+touches: what is touched is chosen when the finger lifts without having
+dragged, and dragging it scrolls the list. Since it comes before the game
+begins its log, its "Send the log" sends the last one, even when the game
+froze. On a computer, `HarvestMoonMM --in-app <folder>` opens it as on a phone,
+to look at it.
 
 How it was tried: on GitHub the kit compiles and links with llvm-mingw's clang,
 `libmain.so` only asks for Android's libraries (`libc`, `libm`, `libdl`, `liblog`,

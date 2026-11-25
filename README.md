@@ -269,12 +269,17 @@ image on the phone too, as `.iso` or `.gcm` (an `.rvz` can be turned into an
 app opens it asks for the disc, checks it and copies it into the app (1.4 GB;
 you can delete your copy afterwards). The APK has the game's code translated to
 ARM64, but none of its graphics, music or text: those always come from your
-disc. It plays with a controller or with touch buttons drawn over the game
-(see [Controls](#controls)). To
-update, install the new APK over the old one: your saves stay. If something
-goes wrong, open the options menu (the **Options** button at the top in the
-middle) and tap **Send the log**: send the game's log by mail or attach it to
-an [issue](https://github.com/RodoLy/HMMMGC/issues).
+disc. Each time the app opens, the same launcher as on a computer comes first,
+used with touches (the lists scroll with a finger) or with a controller: there
+you choose the options, the mods (the quality of life ones too), the cheats and
+the controls, and **Play** opens the game. It plays with a controller or with
+touch buttons drawn over the game (see [Controls](#controls)). To update,
+install the new APK over the old one: your saves stay. If something goes
+wrong, close the app, open it again and tap **Send the log** in the launcher:
+it sends the log of the last time the game was opened (even when the game
+froze), by mail or attached to an [issue](https://github.com/RodoLy/HMMMGC/issues).
+Inside the game it is also in the options menu (the **Options** button at the
+top in the middle).
 
 If you would rather make the APK yourself from your disc: download the Android
 zip too, unzip it inside the folder of the Windows or Linux package, and use

@@ -270,11 +270,17 @@ celular la imagen de tu disco, en `.iso` o `.gcm` (una `.rvz` se convierte a
 vez que abres la app te pide el disco, lo revisa y lo copia a la app (1.4 GB;
 después puedes borrar tu copia). El APK trae el código del juego traducido a
 ARM64, pero nada de sus gráficos, música ni textos: eso siempre sale de tu
-disco. Se juega con control o con botones táctiles dibujados sobre el juego
-(ve [Controles](#controles)). Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
-quedan. Si algo falla, abre el menú de opciones (el botón **Options** de arriba
-al centro) y toca **Enviar el registro**: manda el registro del juego por
-correo o adjúntalo a un [issue](https://github.com/RodoLy/HMMMGC/issues).
+disco. Cada vez que abres la app sale primero el mismo launcher que en la
+computadora, manejado con toques (las listas se deslizan con el dedo) o con
+control: ahí eliges las opciones, los mods (también los de calidad de vida),
+los trucos y los controles, y **Jugar** abre el juego. Se juega con control o
+con botones táctiles dibujados sobre el juego (ve [Controles](#controles)).
+Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
+quedan. Si algo falla, cierra la app, vuelve a abrirla y toca **Enviar el
+registro** en el launcher: manda el registro de la última vez que se abrió el
+juego (sirve aunque el juego se haya congelado), por correo o adjunto a un
+[issue](https://github.com/RodoLy/HMMMGC/issues). Dentro del juego también
+está en el menú de opciones (el botón **Options** de arriba al centro).
 
 Si prefieres hacer el APK tú mismo con tu disco: descarga también el zip de
 Android, descomprímelo dentro de la carpeta del paquete de Windows o de Linux y
