@@ -57,7 +57,7 @@ uint32_t call_guest(CpuContext* cpu, uint32_t function, uint32_t argument = 0) {
     return cpu->gpr[3];
 }
 
-void StartAxOnTheDspNative(CpuContext* cpu) {
+void fn_801811A0Native(CpuContext* cpu) {
     const uint32_t small_data = cpu->gpr[13];
     // The task, field by field as the game fills it in (DSPTaskInfo: +0x04 its state, +0x0C the
     // program, +0x10 its length, +0x18 the data, +0x24 and +0x26 where they go in the DSP,
@@ -89,4 +89,4 @@ void StartAxOnTheDspNative(CpuContext* cpu) {
 
 }  // namespace
 
-PPC_NATIVE_OVERRIDE_VOID(801811A0, StartAxOnTheDspNative, (CpuContext * cpu), (cpu));
+PPC_NATIVE_OVERRIDE_VOID(801811A0, fn_801811A0Native, (CpuContext * cpu), (cpu));
