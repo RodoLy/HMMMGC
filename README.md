@@ -278,8 +278,10 @@ install the new APK over the old one: your saves stay. If something goes
 wrong, close the app, open it again and tap **Send the log** in the launcher:
 it sends the log of the last time the game was opened (even when the game
 froze), by mail or attached to an [issue](https://github.com/RodoLy/HMMMGC/issues).
-Inside the game it is also in the options menu (the **Options** button at the
-top in the middle).
+Inside the game, the **Options** button at the top in the middle brings the
+launcher back with the game paused: **Back to the game** goes on right where
+you were. The picture, the sound and the controls change at once; the mods and
+the cheats, the next time you open the app.
 
 If you would rather make the APK yourself from your disc: download the Android
 zip too, unzip it inside the folder of the Windows or Linux package, and use

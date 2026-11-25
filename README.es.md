@@ -279,8 +279,11 @@ Para actualizar, instala el APK nuevo encima del anterior: tus partidas se
 quedan. Si algo falla, cierra la app, vuelve a abrirla y toca **Enviar el
 registro** en el launcher: manda el registro de la última vez que se abrió el
 juego (sirve aunque el juego se haya congelado), por correo o adjunto a un
-[issue](https://github.com/RodoLy/HMMMGC/issues). Dentro del juego también
-está en el menú de opciones (el botón **Options** de arriba al centro).
+[issue](https://github.com/RodoLy/HMMMGC/issues). Dentro del juego, el botón
+**Options** de arriba al centro trae de vuelta el launcher con el juego en
+pausa: **Volver al juego** sigue justo donde estabas. La imagen, el sonido y
+los controles cambian al momento; los mods y los trucos, la próxima vez que
+abras la app.
 
 Si prefieres hacer el APK tú mismo con tu disco: descarga también el zip de
 Android, descomprímelo dentro de la carpeta del paquete de Windows o de Linux y

@@ -343,6 +343,15 @@ antes de que el juego empiece su registro, su «Enviar el registro» manda el de
 la última vez, aunque el juego se haya congelado. En la computadora,
 `HarvestMoonMM --in-app <carpeta>` lo abre como en un celular, para verlo.
 
+Dentro del juego, el botón Options (y Select, y F10) trae el mismo launcher
+sobre el juego (`runtime/src/launcher_overlay.h`): entre dos cuadros del juego,
+el runtime detiene el reloj del juego (`game_clock::stop`) y dibuja el launcher
+con la ventana y el Dear ImGui del juego (aurora) hasta «Volver al juego»;
+entonces vuelve a leer `settings.json` y los controles, rehace las letras del
+menú y el reloj sigue desde donde se detuvo, así que el juego sigue justo donde
+estaba. «Salir» cierra el juego. El runtime de la computadora se puede compilar
+igual con `-DHMMM_LAUNCHER_IN_THE_GAME=ON`, para probarlo con F10.
+
 Así se probó: en GitHub el kit compila y enlaza con el clang de llvm-mingw,
 `libmain.so` solo pide bibliotecas de Android (`libc`, `libm`, `libdl`, `liblog`,
 `libandroid`, `libOpenSLES`, `libGLESv1_CM`, `libGLESv2`) y `apksigner` aprueba
@@ -736,6 +745,15 @@ dragged, and dragging it scrolls the list. Since it comes before the game
 begins its log, its "Send the log" sends the last one, even when the game
 froze. On a computer, `HarvestMoonMM --in-app <folder>` opens it as on a phone,
 to look at it.
+
+Inside the game, the Options button (and Select, and F10) brings the same
+launcher over the game (`runtime/src/launcher_overlay.h`): between two of the
+game's frames, the runtime stops the game's clock (`game_clock::stop`) and draws
+the launcher with the game's window and Dear ImGui (aurora) until "Back to the
+game"; it then reads `settings.json` and the controls again, makes the menu's
+lettering again and the clock goes on from where it stopped, so the game goes
+on right where it was. "Exit" ends the game. The computer's runtime can be
+built the same way with `-DHMMM_LAUNCHER_IN_THE_GAME=ON`, to try it with F10.
 
 How it was tried: on GitHub the kit compiles and links with llvm-mingw's clang,
 `libmain.so` only asks for Android's libraries (`libc`, `libm`, `libdl`, `liblog`,
